@@ -10,7 +10,7 @@ ndet=64
 
 # Do you want to generate electron integrals?
 elec_gen=True
-# If already generated add he file name. Program currently only works for pyscf and MOLPRO
+# If already generated add the file name. Program currently only works for pyscf and MOLPRO
 filename='example.dat'
 
 
