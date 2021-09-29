@@ -1,20 +1,9 @@
 from pyscf import gto, scf, ao2mo
 import math, numpy
 from functools import reduce
+import hell
 
-def integral_gen():
-    mol = gto.M(
-        unit = 'Bohr',
-        atom = 'Li 0 0 0; Li 0 0 6', #[['H', 0, 0, i] for i in range(6)],
-        basis = '6-31g**',
-        verbose = 1,
-        symmetry = True,
-        # spin=1,
-        # charge=-1
-        symmetry_subgroup = 0, #0 is code for A1 point group
-    )
-    myhf=scf.RHF(mol)
-    return mol, myhf
+hell.hi()
 
 def spatospin1(H1ea,norb):
     """Converting H1ea from spatial to spin"""
@@ -29,6 +18,59 @@ def spatospin1(H1ea,norb):
             H1ei[ii,jj] = H1ea[i,j] # alpha spin
             H1ei[ii+1,jj+1] = H1ea[i,j] # beta spin
     return H1ei
+
+
+# Program to generate one and two electron integrals from PyScf
+# Some of this code has been adapted from George Booth
+
+def pyscf_gen(norb):
+    mol = gto.M(
+    unit = 'Bohr',
+    atom = 'Li 0 0 0; Li 0 0 6', #[['H', 0, 0, i] for i in range(6)],
+    basis = '6-31g**',
+    verbose = 1,
+    symmetry = True,
+    # spin=1,
+    # charge=-1
+    symmetry_subgroup = 0, #0 is code for A1 point group
+    )
+    myhf=scf.RHF(mol)
+    myhf.kernel()
+    """Obtaining one and two electron integrals from pyscf calculation
+    Code adapted from George Booth"""
+    # Extract AO->MO transformation matrix
+    c = myhf.mo_coeff
+    # Get 1-electron integrals and convert to MO basis
+    h1e = reduce(numpy.dot, (c.T, myhf.get_hcore(), c))
+    # Get 2-electron integrals and transform them
+    eri = ao2mo.kernel(mol, c)
+    # Ignore all permutational symmetry, and write as four-index tensor, in chemical notation
+    eri_full = ao2mo.restore(1, eri, c.shape[1])
+    # Scalar nuclear repulsion energy
+    Hnuc = myhf.energy_nuc()
+    # Now convert from sppatial to spin orbitals
+    print(numpy.shape(h1e))
+    h1e=numpy.asarray(h1e)
+    H1ei = spatospin1(h1e,norb)
+    test = numpy.zeros((norb,norb))
+    test2 = elec.spatospin(h1e,norb,test)
+    # print(H1ei)
+    # H2ei = spatospin2(eri_full,norb)
+    # H1ei, H2ei = spatospin(h1e,eri_full,norb)
+    return mol, myhf 
+    # return Hnuc, H1ei, H2ei
+
+
+pyscf_gen(10)
+
+
+
+
+
+
+
+
+
 
 def spatospin2(H2ea,norb):
     """Converting H2ea from spatial orbitals to spin orbitals
@@ -52,32 +94,15 @@ def spatospin2(H2ea,norb):
                     H2ei[ii+1,kk+1,jj+1,ll+1] = Ht
     return H2ei
 
-def spatospin(H1ea,H2ea,norb):
-    H1ei = spatospin1(H1ea,norb)
-    H2ei = spatospin2(H2ea,norb)
-    return H1ei, H2ei
 
-def pyscfint(mol,myhf, norb):
-    """Obtaining one and two electron integrals from pyscf calculation
-    Code adapted from George Booth"""
-    # Extract AO->MO transformation matrix
-    c = myhf.mo_coeff
-    # Get 1-electron integrals and convert to MO basis
-    h1e = reduce(numpy.dot, (c.T, myhf.get_hcore(), c))
-    # Get 2-electron integrals and transform them
-    eri = ao2mo.kernel(mol, c)
-    # Ignore all permutational symmetry, and write as four-index tensor, in chemical notation
-    eri_full = ao2mo.restore(1, eri, c.shape[1])
-    # Scalar nuclear repulsion energy
-    Hnuc = myhf.energy_nuc()
-    # Now convert from sppatial to spin orbitals
-    H1ei, H2ei = spatospin(h1e,eri_full,norb)
-    return Hnuc, H1ei, H2ei
 
-def pyscf_gen(norb):
-    mol, myhf = integral_gen()
-    Hnuc, H1ei, H2ei = pyscfint(mol, myhf, norb)
-    return Hnuc, H1ei, H2ei 
+
+
+
+   
+    
+
+
 
 def molpro_read(filename,norb):
     file = open(filename,'r')

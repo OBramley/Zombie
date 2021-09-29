@@ -1,6 +1,4 @@
 import elec_integrals
-
-
 # Set up Parameters of simulation 
 # Number of spin orbitals
 norb=10
@@ -12,7 +10,6 @@ ndet=64
 elec_gen=True
 # If already generated add the file name. Program currently only works for pyscf and MOLPRO
 filename='example.dat'
-
 
 
 # Generate Zombie states?
