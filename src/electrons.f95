@@ -1,9 +1,12 @@
-subroutine spatospin(H1ea,norb,elecs)
+subroutine spatospin(H1ea,norb,elecs,n)
     implicit none
     integer, intent(in) :: norb
-    real(kind=8), dimension(28,28), intent(in) :: H1ea
+    real(kind=8), dimension(n,n) :: H1ea
     real(kind=8), dimension(norb,norb), intent(out) :: elecs
-    integer :: i, j, nspao, ii, jj
+    !f2py intent(in) :: norb
+    !f2py intent(hide), depend(H1ea) :: n=shape(H1ea,0)
+    !f2py intent(out) output
+    integer :: i, j, nspao, ii, jj, n
 
     elecs=0.00d0
     nspao=int(norb/2)

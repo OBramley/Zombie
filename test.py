@@ -1,8 +1,12 @@
+# import primes
+# import pyscf
 import hello
-print(hello.__doc__)
 
-print(hello.logical_to_integer.__doc__)
+hello.printer()
+# print(primes.__doc__)
 
-sieve_array=hello.sieve(100)
-prime_numbers=hello.primes.logical_to_integer(sieve_array, sum(sieve_array))
-print(prime_numbers)
+# print(primes.logical_to_integer.__doc__)
+
+# sieve_array=primes.sieve(100)
+# prime_numbers=primes.primes.logical_to_integer(sieve_array, sum(sieve_array))
+# print(prime_numbers)
