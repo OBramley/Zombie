@@ -7,8 +7,6 @@ module zombie
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 
-    implicit none
-
     contains
 
     subroutine zommake(norb, ndet, zombie, zomtyp)

@@ -1,26 +1,19 @@
-import elec_integrals
-# Set up Parameters of simulation 
-# Number of spin orbitals
-norb=10
+###################################################################################################
+# 
+# This is the main script for the Zombie states method. It has been written in a modular manner
+# to allow it to form the basis of any molecular dynamics program. The program has a v ery simple 
+# strucure: one and two electron integrals are created or loaded into the program; zombie states
+# are generated; the hamiltonian matrix is generated; an initial state is set; imaginary time 
+# propagation is carried out. 
+# 
+###################################################################################################
 
-# Number of Zombie states
-ndet=64
+# Load paramters
 
-# Do you want to generate electron integrals?
-elec_gen=True
-# If already generated add the file name. Program currently only works for pyscf and MOLPRO
-filename='example.dat'
+# Generate 1 and 2 electron integrals
 
+# Generate zombie states
 
-# Generate Zombie states?
+# Generate Hamiltonian and overlap matrix
 
-
-
-# Generate 1&2 electron integrals? or read them in?
-if(elec_gen==True):
-    Hnuc, H1ei, H2ei = elec_integrals.pyscf_gen(norb)
-else:
-    Hnuc, H1ei, H2ei = elec_integrals.molpro_read(filename,norb)
-# Generate Hamiltonian 
-# Initialise starting state 
-# Imaginary time propagation 
+# Imaginary time propagation
