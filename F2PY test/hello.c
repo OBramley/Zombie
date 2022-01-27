@@ -1,24 +1,40 @@
 // #define PY_SSIZE_T_CLEAN
-#include <Python/Python.h>
-#include <string.h>
+#include <Python.h>
 
-static PyObject * helloworld(PyObject *self, PyObject *args){
-    char *name;
-    char greeting[255]="Hello";
-    if(!PyArg_ParseTuple(args,"s",&name)){
-        return NULL;
-    }
-    strcat(greeting,name);
-    return Py_BuildValue("s", greeting);
+int Cfib(int n){
+    if(n<2)
+        return n;
+    else
+    return Cfib(n-1)+Cfib(n-2);
 }
 
-static char greeting_doc[]= 
-    "name( ): Greets with your name\n";
+static PyObject* fib(PyObject *self, PyObject *args){
+    
+    int n;
+    if (!PyArg_ParseTuple(args, "i", &n))
+        return NULL;
 
-static PyMethodDef greetModule[] = {
-    {"helloworld",(PyCFunction)helloworld, METH_VARARGS, greeting_doc}, {NULL}
+    return Py_BuildValue("i", Cfib(n));
+}
+
+static PyObject* version(PyObject* self){
+    return Py_BuildValue("s", "Version 1.0");
+}
+
+static PyMethodDef myMethods[]={
+    {"fib",fib, METH_VARARGS, "Calculates the fibonacci numbers"},
+    {"version", (PyCFunction)version, METH_NOARGS, "returns the version"},
+    {NULL, NULL, 0, NULL}
 };
 
-void initname(void){
-    Py_InitModule3("helloworld", greetModule, "Extension module example!");
+static struct PyModuleDef myModule = {
+    PyModuleDef_HEAD_INIT,
+    "my module",
+    "Fibonaci Module",
+    -1,
+    myMethods
+};
+
+PyMODINIT_FUNC PyInit_myModule(void){
+    return PyModule_Create(&myModule);
 }
