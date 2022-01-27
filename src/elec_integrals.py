@@ -2,18 +2,7 @@ from pyscf import gto, scf, ao2mo
 import math, numpy
 from functools import reduce
 
-# from numpy.distutils.fcompiler import new_fcompiler
-# compiler=new_fcompiler()
-# compiler.dump_properties()
-from numpy import f2py
-with open("electrons.f95") as sourcefile:
-    sourcecode=sourcefile.read()
-    print('Fortran code')
-    print(sourcecode)
 
-f2py.compile(sourcecode, modulename='elec', extra_args = '--fcompiler=gfortran')
-
-import elec
 
 def spatospin1(H1ea,norb):
     """Converting H1ea from spatial to spin"""

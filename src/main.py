@@ -7,10 +7,21 @@
 # propagation is carried out. 
 # 
 ###################################################################################################
+import inputs
+import elec_integrals
 
 # Load paramters
+ndet=inputs.zombs['ndet']
+norb=inputs.zombs['norb']
 
 # Generate 1 and 2 electron integrals
+if((inputs.run['elecs'])=='pyscf'):
+    Hnuc, H1ei, H2ei=elec_integrals.pyscf_gen(norb)
+elif((inputs.run['elecs'])=='mol'):
+    Hnuc, H1ei, H2ei=elec_integrals.molpro_read(norb,inputs.run['elecfile'])
+elif((inputs.run['elecs'])=='no'):
+    Hnuc, H1ei, H2ei = elec_integrals.read_in(inputs.run['elecfile'])
+
 
 # Generate zombie states
 

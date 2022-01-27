@@ -1,7 +1,7 @@
 subroutine spatospin(H1ea,norb,elecs,n)
     implicit none
     integer, intent(in) :: norb
-    real(kind=8), dimension(n,n) :: H1ea
+    complex(kind=8), dimension(n,n) :: H1ea
     real(kind=8), dimension(norb,norb), intent(out) :: elecs
     !f2py intent(in) :: norb
     !f2py intent(hide), depend(H1ea) :: n=shape(H1ea,0)
