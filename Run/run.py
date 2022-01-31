@@ -81,7 +81,7 @@ if os.path.exists(EXDIR+"/"+inputs.run['runfolder']):
     if(value=='y'):
         shutil.rmtree(EXDIR+"/"+inputs.run['runfolder'])
     else:
-        sys.exit("Runfolder already exists. Change the Runfolder name or delte/move it")
+        sys.exit("Runfolder already exists. Change the Runfolder name or delete/move it")
 
 os.mkdir(EXDIR+"/"+inputs.run['runfolder'])
 EXDIR1=EXDIR+"/"+inputs.run['runfolder']
