@@ -23,9 +23,9 @@ run={
     # as such the program takes 3 inputs 'pyscf', 'mol' or 'no' if the one and two
     # electron integrals have already been generated or using MOLPRO integrals
     # then the relevant file needs to be  placed in the run folder
-    'elecs':'pyscf',
+    'elecs':'no',
 
-    'elecfile':'filename',
+    'elecfile':'electron_integrals.csv',
 
     # Do you want to generate new zombie states. The program can work using previously gerated
     # Zombie states. Takes input 'y' or 'n'.

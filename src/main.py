@@ -20,10 +20,17 @@ if((inputs.run['elecs'])=='pyscf'):
 elif((inputs.run['elecs'])=='mol'):
     Hnuc, H1ei, H2ei=elec_integrals.molpro_read(norb,inputs.run['elecfile'])
 elif((inputs.run['elecs'])=='no'):
-    Hnuc, H1ei, H2ei = elec_integrals.read_in(inputs.run['elecfile'])
+    Hnuc, H1ei, H2ei = elec_integrals.read_in(norb, inputs.run['elecfile'])
+    elec_integrals.write(Hnuc,H1ei,H2ei,norb)
 
 
+exit()
 # Generate zombie states
+# if((inputs.run['zomgen'])=='y'):
+#     ZOMBIE GENERATION Program
+# elif((inputs.run['zomgen'])=='n'):
+#     ZOMBIE READ IN ROUTINE
+
 
 # Generate Hamiltonian and overlap matrix
 
