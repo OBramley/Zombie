@@ -9,29 +9,50 @@
 ###################################################################################################
 import inputs
 import elec_integrals
+import zom
+import in_outputs
+import ham
+import gc
 
 # Load paramters
 ndet=inputs.zombs['ndet']
 norb=inputs.zombs['norb']
 
-# Generate 1 and 2 electron integrals
-if((inputs.run['elecs'])=='pyscf'):
-    Hnuc, H1ei, H2ei=elec_integrals.pyscf_gen(norb)
-elif((inputs.run['elecs'])=='mol'):
-    Hnuc, H1ei, H2ei=elec_integrals.molpro_read(norb,inputs.run['elecfile'])
-elif((inputs.run['elecs'])=='no'):
-    Hnuc, H1ei, H2ei = elec_integrals.read_in(norb, inputs.run['elecfile'])
-    elec_integrals.write(Hnuc,H1ei,H2ei,norb)
+# Check to read in or generate Hamiltonian and overlap matrix
+if((inputs.run['hamgen'])=='n'):
+    Bigham=in_outputs.read_ham(inputs.run['hamfile'])
+    print('Hamiltonian read in')
+    Kover=in_outputs.read_ham(inputs.run['ovrlfile'])
+    print('Overlap matrix read in')
+elif((inputs.run['hamgen'])=='n'):
+    # Generate or read in 1 and 2 electron integrals
+    if((inputs.run['elecs'])=='pyscf'):
+        Ham = elec_integrals.pyscf_gen(norb)
+    elif((inputs.run['elecs'])=='mol'):
+        Ham = elec_integrals.molpro_read(norb,inputs.run['elecfile'])
+    elif((inputs.run['elecs'])=='no'):
+        Ham = elec_integrals.read_in(norb, inputs.run['elecfile'])
+        # elec_integrals.write(Hnuc,H1ei,H2ei,norb)
 
+    # Generate or read in zombie states
+    if((inputs.run['zomgen'])=='y'):
+        zstore=zom.zom_gen(norb,ndet,inputs.zombs['zomtyp'],'zombie_states.pkl')
+        print('Zombie states generated')
+    elif((inputs.run['zomgen'])=='n'):
+        zstore=in_outputs.read_object(inputs.run['zombiefile'])
+        print('Zombie states read in')
 
-exit()
-# Generate zombie states
-# if((inputs.run['zomgen'])=='y'):
-#     ZOMBIE GENERATION Program
-# elif((inputs.run['zomgen'])=='n'):
-#     ZOMBIE READ IN ROUTINE
+    Bigham, Kover = ham.hamiltonian(ndet,Ham,zstore)
 
-
-# Generate Hamiltonian and overlap matrix
+del Ham
+gc.collect()
 
 # Imaginary time propagation
+if(inputs.run['imagprop']=='y'):
+# Check if Gram Schmidt orthogonalisation is to be used
+    if(inputs.run['gram']=='y'):
+        SEND_GRAM_SCHMIDT_IMAGINARY_TIME_PROP
+    elif(inputs.run['gram']=='n'):
+        SEND_TO_SINGLE_IMAGINARY_TIME_PROP
+elif(inputs.run['imagprop']=='n'):
+    print('End of program')

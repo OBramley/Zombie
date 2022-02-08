@@ -1,41 +1,12 @@
 from pyscf import gto, scf, ao2mo
-import math, numpy
+import numpy
 from functools import reduce
 import inputs
 import csv
+import op
+import in_outputs
 
-def write(Hnuc, H1ei, H2ei,norb):
-    with open('electron_integrals_1.csv','w',newline='')as csvfile:
-        spamwriter=csv.writer(csvfile, delimiter=',')
-        spamwriter.writerow([Hnuc,0,0,0,0,0,0,0,0,0])
-        spamwriter.writerows(H1ei)
-        for i in range(norb):
-            for j in range(norb):
-                spamwriter.writerows(H2ei[i,j,:,:])
-
-
-    return
-
-def read_in(norb, filename):
-    H2ei =  numpy.zeros((norb,norb,norb,norb))
-    file = open(filename)
-    numpy_array=numpy.loadtxt(file,delimiter=',')
-    Hnuc=numpy_array[0,0]
-    H1ei=numpy_array[1:norb+1,:]
-    counter=norb+1
-
-    for i in range(norb):
-        for j in range(norb):
-            H2ei[i,j,0:norb,0:norb]=numpy_array[counter:(counter+norb),:]
-            counter=+norb
-
-    return Hnuc,H1ei,H2ei
         
-
-                
-
-
-
 # Program to generate one and two electron integrals from PyScf
 # Some of this code has been adapted from George Booth
 def spatospin1(H1ea,norb):
@@ -74,6 +45,68 @@ def spatospin2(H2ea,norb):
                     H2ei[ii+1,kk+1,jj+1,ll+1] = Ht
     return H2ei
 
+class system:
+    """Class holding the system parameters for zombie state calculation"""
+    def __init__(self, norb, Hnr, H1ei, H2ei):
+        self.Hnr = Hnr
+        self.H1ei = H1ei
+        self.H2ei = H2ei
+        self.norb = norb
+        if norb%2 != 0:
+            raise ValueError('norb must be even')
+        self.nspao = int(norb/2)
+    def Ham1z(self,zom1,zom2):
+        Ht1 = 0.0
+        for ii in range(self.norb):
+            for jj in range(self.norb):
+                zomt = numpy.copy(zom2)
+                zomt = op.an(zomt,ii)
+                zomt = op.cr(zomt,jj)
+                ov = op.overlap(zom1,zomt)
+                # print(ii,jj,ov)
+                Ht1 += ov*self.H1ei[ii,jj]
+        return Ht1
+    def Ham2z_v5(self,zom1,zom2):
+        Ht2 = 0.0
+        if type(zom1[0,0].item()) is complex:
+            Z1ij = numpy.zeros((self.norb,self.norb,self.norb,2),dtype=complex)
+        else:
+            Z1ij = numpy.zeros((self.norb,self.norb,self.norb,2),dtype=float)
+        if type(zom2[0,0].item()) is complex:
+            Z2k = numpy.zeros((self.norb,self.norb,2),dtype=complex)
+        else:
+            Z2k = numpy.zeros((self.norb,self.norb,2),dtype=float)
+        for ii in range(self.norb):
+            for jj in range(self.norb):
+                zomt = numpy.copy(zom1)
+                zomt = op.an(zomt,ii)
+                zomt = op.an(zomt,jj)
+                Z1ij[ii,jj,:,:] = zomt[:,:]
+        for kk in range(self.norb):
+            zomt = numpy.copy(zom2)
+            zomt = op.an(zomt,kk)
+            Z2k[kk,:,:] = zomt[:,:]
+        for ii in range(self.norb):
+            if zom1[ii,1] == 0.0:
+                continue
+            ispin = ii%2
+            for jj in range(self.norb):
+                if op.iszero(Z1ij[ii,jj,:,:]):
+                    continue
+                jspin = jj%2
+                for kk in range(ispin,self.norb,2):
+                    if zom2[kk,1] == 0.0:
+                        continue
+                    Ht2 += op.z_an_z3(Z1ij[ii,jj,:,:],Z2k[kk,:,:], \
+                                        self.norb,self.H2ei[ii,jj,kk,:])
+        return 0.5*Ht2
+    def HTot(self,zom1,zom2):
+        H1et = self.Ham1z(zom1,zom2)
+        H2et = self.Ham2z_v5(zom1,zom2)
+        HH = H1et + H2et + self.Hnr*op.overlap_f(zom1,zom2)
+        return HH
+
+
 def pyscf_gen(norb):
     mol = gto.M(
     unit = inputs.pyscf['units'],
@@ -103,8 +136,10 @@ def pyscf_gen(norb):
     h1e=numpy.asarray(h1e)
     H1ei = spatospin1(h1e,norb)
     H2ei = spatospin2(eri_full,norb)
-    write(Hnuc, H1ei, H2ei,norb)
-    return Hnuc, H1ei, H2ei
+    in_outputs.write_integrals(Hnuc, H1ei, H2ei,norb)
+    Ham=system(norb, Hnuc, H1ei, H2ei)
+    in_outputs.save_object(Ham,'integrals.pkl')
+    return Ham
 
 # Routine to read in MOLPRO data
 def molpro_read(filename,norb):
@@ -161,5 +196,7 @@ def molpro_read(filename,norb):
                     H2ei[ii,kk+1,jj,ll+1] = Ht
                     H2ei[ii+1,kk+1,jj+1,ll+1] = Ht
     
-    write(Hnr, H1ei, H2ei,norb)
-    return Hnr, H1ei, H2ei
+    in_outputs.write_integrals(Hnr, H1ei, H2ei,norb)
+    Ham=system(norb, Hnr, H1ei, H2ei)
+    in_outputs.save_object(Ham,'integrals.pkl')
+    return Ham

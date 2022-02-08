@@ -60,7 +60,7 @@ zombs={
     'ndet':64, 
 
     # Type of zombie states. Random (ran), Hartree Fock (HF) or biased (bb)
-    'zomtyp':'random',
+    'zomtyp':'ran',
 
     # Do you want the first Zombie state to be the Restricted Hartree Fock Determinant
     # Takes input 'y' or 'n' and then a number to defined the number of electrons

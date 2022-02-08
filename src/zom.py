@@ -1,9 +1,7 @@
-import math, numpy, scipy
-from functools import reduce
-from pyscf import gto, scf, ao2mo
-from pyscf import tools
-from pyscf import symm
-import operators
+import op
+import math, numpy
+import in_outputs
+
 
 def make(norb):
     # Returns a completely empty zombie state (all zeros)
@@ -28,6 +26,19 @@ def new_ran(norb):
     zz[:,1] = numpy.sin(rantemp)
     return zz
 
+
+def zom_gen(norb,ndet,type,filename):
+    zstore=[]
+    if(type == 'ran'):
+        for i in range(ndet):
+            zstore.append(zom(norb,typ='ran'))
+    elif(type=='HF'):
+        for i in range(ndet):
+            zstore.append(zom(norb, typ='binary', ib=i))
+    elif(type=='bb'):
+        print('need to write biasing module')
+    in_outputs.save_object(zstore,filename)
+
 # Trying a zombie class
 class zom:
     """Class of a single zombie state"""
@@ -45,7 +56,7 @@ class zom:
         elif typ == 'coef':
             self.zs = coefs
         elif typ == 'binary':
-            bini = operators.numtodet(ib,self.norb)
+            bini = op.numtodet(ib,self.norb)
             self.zs = new(self.norb,bini)
         elif typ == 'aufbau':
             occ = numpy.zeros((self.norb),dtype=int)
@@ -58,7 +69,7 @@ class zom:
         else:
             raise ValueError('Invalid type')
     def ov(self):
-        return operators.overlap_f(self.zs,self.zs)
+        return op.overlap_f(self.zs,self.zs)
     def cr(self,iorb):
         self.zs[iorb,1] = self.zs[iorb,0]
         self.zs[iorb,0] = 0.0
@@ -69,69 +80,10 @@ class zom:
         self.zs[:iorb,1] *= -1.0
     def num(self):
         "Number of electrons in the zombie state"
-        return operators.numf(self.zs,self.zs)
+        return op.numf(self.zs,self.zs)
     def isdet(self):
-        return operators.isdet(self.zs,self.norb)
+        return op.isdet(self.zs,self.norb)
     def sz(self):
-        return operators.szf(self.zs,self.zs,self.norb)
+        return op.szf(self.zs,self.zs,self.norb)
 # Make a class for the Hamiltonian parameters and functions?
-class system:
-    """Class holding the system parameters for zombie state calculation"""
-    def __init__(self, norb, Hnr, H1ei, H2ei):
-        self.Hnr = Hnr
-        self.H1ei = H1ei
-        self.H2ei = H2ei
-        self.norb = norb
-        if norb%2 != 0:
-            raise ValueError('norb must be even')
-        self.nspao = int(norb/2)
-    def Ham1z(self,zom1,zom2):
-        Ht1 = 0.0
-        for ii in range(self.norb):
-            for jj in range(self.norb):
-                zomt = numpy.copy(zom2)
-                zomt = operators.an(zomt,ii)
-                zomt = operators.cr(zomt,jj)
-                ov = operators.overlap(zom1,zomt)
-                # print(ii,jj,ov)
-                Ht1 += ov*self.H1ei[ii,jj]
-        return Ht1
-    def Ham2z_v5(self,zom1,zom2):
-        Ht2 = 0.0
-        if type(zom1[0,0].item()) is complex:
-            Z1ij = numpy.zeros((self.norb,self.norb,self.norb,2),dtype=complex)
-        else:
-            Z1ij = numpy.zeros((self.norb,self.norb,self.norb,2),dtype=float)
-        if type(zom2[0,0].item()) is complex:
-            Z2k = numpy.zeros((self.norb,self.norb,2),dtype=complex)
-        else:
-            Z2k = numpy.zeros((self.norb,self.norb,2),dtype=float)
-        for ii in range(self.norb):
-            for jj in range(self.norb):
-                zomt = numpy.copy(zom1)
-                zomt = operators.an(zomt,ii)
-                zomt = operators.an(zomt,jj)
-                Z1ij[ii,jj,:,:] = zomt[:,:]
-        for kk in range(self.norb):
-            zomt = numpy.copy(zom2)
-            zomt = operators.an(zomt,kk)
-            Z2k[kk,:,:] = zomt[:,:]
-        for ii in range(self.norb):
-            if zom1[ii,1] == 0.0:
-                continue
-            ispin = ii%2
-            for jj in range(self.norb):
-                if operators.iszero(Z1ij[ii,jj,:,:]):
-                    continue
-                jspin = jj%2
-                for kk in range(ispin,self.norb,2):
-                    if zom2[kk,1] == 0.0:
-                        continue
-                    Ht2 += operators.z_an_z3(Z1ij[ii,jj,:,:],Z2k[kk,:,:], \
-                                        self.norb,self.H2ei[ii,jj,kk,:])
-        return 0.5*Ht2
-    def HTot(self,zom1,zom2):
-        H1et = self.Ham1z(zom1,zom2)
-        H2et = self.Ham2z_v5(zom1,zom2)
-        HH = H1et + H2et + self.Hnr*operators.overlap_f(zom1,zom2)
-        return HH
+

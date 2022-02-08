@@ -37,6 +37,8 @@ run={
 
     'hamfile':'filename',
 
+    'ovrlfile':'filename',
+
     # Do you want to perform imaginary time evolution? The program can be used to just generate
     # the Zombie state Hamiltonian. Takes input 'y' or 'n'.
     'imagprop':'y',

@@ -11,6 +11,7 @@ import os
 import socket
 import getpass
 import shutil
+from math import comb
 
 # Checking input paramaters 
 if(isinstance(inputs.run['nodes'],int)==False):
@@ -39,6 +40,13 @@ elif((inputs.run['gram']!='y')or(inputs.run['gram']!='n')):
     sys.exit("The Gram Schmidt pramater must be either 'y' or 'n'")
 elif((inputs.zombs['zomhf']!='y')or(inputs.zombs['zomhf']!='n')):
     sys.exit("Setting the first zombie state as a RHF determinant must be either 'y' or 'n'")
+
+if(inputs.zombs['zomtyp']=='HF'):
+    ndetcheck=0
+    for i in range(inputs.zombs['norb']+1):
+        ndetcheck=ndetcheck+comb(inputs.zombs['norb'],i)
+    if(inputs.zombs['zomtyp']!=ndetcheck):
+        sys.exit('A Hartree Fock Basis for',inputs.zombs['norb'], 'orbitals should have', ndetcheck, 'basis functions')
 
 if(inputs.run['elecs']=='mol'):
     if not os.path.isfile('../'+ inputs.run['elecfile']):
