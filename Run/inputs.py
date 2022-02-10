@@ -43,6 +43,15 @@ run={
     # the Zombie state Hamiltonian. Takes input 'y' or 'n'.
     'imagprop':'y',
 
+    'beta':200,
+
+    'timesteps':2000,
+
+    # Do you want the first Zombie state to be the Restricted Hartree Fock Determinant
+    # Takes input 'y' or 'n' and then a number to defined the number of electrons
+   'zomhf':'n',
+   'hfnum':'6' 
+
     # Do you want to find other energy states other than the ground state. If so turn on 
     # Gram Schmidt orthogonalisation and then specify the number of states. Takes input
     # 'y' or 'n' and an integer number note gramnum=1 will not find an excited state just a 
@@ -61,12 +70,7 @@ zombs={
     'ndet':64, 
 
     # Type of zombie states. Random (ran), Hartree Fock (HF) or biased (bb)
-    'zomtyp':'random',
-
-    # Do you want the first Zombie state to be the Restricted Hartree Fock Determinant
-    # Takes input 'y' or 'n' and then a number to defined the number of electrons
-   'zomhf':'n',
-   'hfnum':'6' 
+    'zomtyp':'random' 
 }
 
 

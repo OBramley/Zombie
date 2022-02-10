@@ -8,11 +8,11 @@
 # 
 ###################################################################################################
 import inputs
-import elec_integrals
+import ham
 import zom
 import in_outputs
-import ham
 import gc
+import imgtp
 
 # Load paramters
 ndet=inputs.zombs['ndet']
@@ -27,11 +27,11 @@ if((inputs.run['hamgen'])=='n'):
 elif((inputs.run['hamgen'])=='n'):
     # Generate or read in 1 and 2 electron integrals
     if((inputs.run['elecs'])=='pyscf'):
-        Ham = elec_integrals.pyscf_gen(norb)
+        Ham = ham.pyscf_gen(norb)
     elif((inputs.run['elecs'])=='mol'):
-        Ham = elec_integrals.molpro_read(norb,inputs.run['elecfile'])
+        Ham = ham.molpro_read(norb,inputs.run['elecfile'])
     elif((inputs.run['elecs'])=='no'):
-        Ham = elec_integrals.read_in(norb, inputs.run['elecfile'])
+        Ham = ham.read_in(norb, inputs.run['elecfile'])
         # elec_integrals.write(Hnuc,H1ei,H2ei,norb)
 
     # Generate or read in zombie states
@@ -51,8 +51,8 @@ gc.collect()
 if(inputs.run['imagprop']=='y'):
 # Check if Gram Schmidt orthogonalisation is to be used
     if(inputs.run['gram']=='y'):
-        SEND_GRAM_SCHMIDT_IMAGINARY_TIME_PROP
+        eb=imgtp.itime_prop_gs(Bigham, Kover,inputs.run['beta'],inputs.run['timesteps'],norb,inputs.run['zomhf'],inputs.run['zomhf'],zstore,ndet, inputs.run['gramnum'])    
     elif(inputs.run['gram']=='n'):
-        SEND_TO_SINGLE_IMAGINARY_TIME_PROP
+        eb=imgtp.itime_prop(Bigham, Kover,inputs.run['beta'],inputs.run['timesteps'],norb,inputs.run['zomhf'],inputs.run['zomhf'],zstore,ndet)
 elif(inputs.run['imagprop']=='n'):
     print('End of program')
