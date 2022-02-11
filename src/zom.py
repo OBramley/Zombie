@@ -38,6 +38,7 @@ def zom_gen(norb,ndet,type,filename):
     elif(type=='bb'):
         print('need to write biasing module')
     in_outputs.save_object(zstore,filename)
+    return zstore
 
 # Trying a zombie class
 class zom:

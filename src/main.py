@@ -24,7 +24,7 @@ if((inputs.run['hamgen'])=='n'):
     print('Hamiltonian read in')
     Kover=in_outputs.read_ham(inputs.run['ovrlfile'])
     print('Overlap matrix read in')
-elif((inputs.run['hamgen'])=='n'):
+elif((inputs.run['hamgen'])=='y'):
     # Generate or read in 1 and 2 electron integrals
     if((inputs.run['elecs'])=='pyscf'):
         Ham = ham.pyscf_gen(norb)
@@ -43,6 +43,8 @@ elif((inputs.run['hamgen'])=='n'):
         print('Zombie states read in')
 
     Bigham, Kover = ham.hamiltonian(ndet,Ham,zstore)
+    # print(Bigham)
+
 
 del Ham
 gc.collect()
@@ -56,3 +58,9 @@ if(inputs.run['imagprop']=='y'):
         eb=imgtp.itime_prop(Bigham, Kover,inputs.run['beta'],inputs.run['timesteps'],norb,inputs.run['zomhf'],inputs.run['zomhf'],zstore,ndet)
 elif(inputs.run['imagprop']=='n'):
     print('End of program')
+
+if(inputs.run['gram']=='y'):
+    rnum=inputs.run['gramnum']=='y'
+else:
+    rnum=1
+in_outputs.plot(eb,rnum, inputs.run['beta'],'results.png')

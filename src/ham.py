@@ -209,7 +209,7 @@ def hamiltonian(ndet,Ham,zstore):
             Kover[idet,jdet] = op.overlap_f(zstore[idet].zs, zstore[jdet].zs)
             Kover[jdet,idet] = Kover[idet,jdet]
             Bigham[idet,jdet] = Ham.HTot(zstore[idet].zs, zstore[jdet].zs)
-            Bigham[jdet,idet] = Ham[idet,jdet]
+            Bigham[jdet,idet] = Bigham[idet,jdet]
     in_outputs.write_ham(Kover,'kover.csv')
     in_outputs.write_ham(Bigham,'bigham.csv')
     return Bigham, Kover

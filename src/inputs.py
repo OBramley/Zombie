@@ -21,26 +21,36 @@ run={
     # 1 and 2 electron integrals can be calcualted by PySCF by the program
     # or they can be inputed as a seperate file at the moment only from MOLPRO
     # as such the program takes 3 inputs 'pyscf', 'mol' or 'no' if the one and two
-    # electron integrals have already been generated or using MOLPRO integrals
-    # then the relevant file needs to be  placed in the run folder
-    'elecs':'no',
+    # electron integrals have already been generated and placed in the run file
+    'elecs':'pyscf',
 
-    'elecfile':'electron_integrals.csv',
+    'elecfile':'filename',
 
     # Do you want to generate new zombie states. The program can work using previously gerated
     # Zombie states. Takes input 'y' or 'n'.
     'zomgen':'y',
 
-    'zombiefile':'filename',
+    'zombiefile':'zombfile',
 
     # Do you want to generate a new Hamiltonian? Takes input 'y' or 'n'
     'hamgen':'y',
 
-    'hamfile':'filename',
+    'hamfile':'ham.csv',
+
+    'ovrlfile':'ovrk.csv',
 
     # Do you want to perform imaginary time evolution? The program can be used to just generate
     # the Zombie state Hamiltonian. Takes input 'y' or 'n'.
     'imagprop':'y',
+
+    'beta':200,
+
+    'timesteps':2000,
+
+    # Do you want the first Zombie state to be the Restricted Hartree Fock Determinant
+    # Takes input 'y' or 'n' and then a number to defined the number of electrons
+   'zomhf':'n',
+   'hfnum':'6', 
 
     # Do you want to find other energy states other than the ground state. If so turn on 
     # Gram Schmidt orthogonalisation and then specify the number of states. Takes input
@@ -57,15 +67,10 @@ zombs={
     'norb':10,
 
     # Number of Zombie states
-    'ndet':64, 
+    'ndet':100, 
 
     # Type of zombie states. Random (ran), Hartree Fock (HF) or biased (bb)
-    'zomtyp':'ran',
-
-    # Do you want the first Zombie state to be the Restricted Hartree Fock Determinant
-    # Takes input 'y' or 'n' and then a number to defined the number of electrons
-   'zomhf':'n',
-   'hfnum':'6' 
+    'zomtyp':'ran' 
 }
 
 

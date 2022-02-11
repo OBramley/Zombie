@@ -24,7 +24,7 @@ def itime_prop(Bigham, Kover, beta, steps, norb, hfflg, hfnum, zstore, ndet):
         dvec[0]=1
     KinvH=numpy.matmul(Ki,Bigham)
     db=beta/steps
-    eb=numpy.zeros(steps+1,2)
+    eb=numpy.zeros((steps+1,2))
     for i in range(steps+1):
         den=numpy.einsum('i,ij,j',dvec,Bigham,dvec)
         eb[i,0]=i*db
@@ -67,7 +67,7 @@ def itime_prop_gs(Bigham, Kover, beta, steps, norb, hfflg, hfnum, zstore, ndet, 
     dvecs=gs(dvecs,Kover,gramnum)
     KinvH=numpy.matmul(Ki,Bigham)
     db=beta/steps
-    eb=numpy.zeros(steps+1,gramnum+1)
+    eb=numpy.zeros((steps+1,gramnum+1))
     for i in range(steps+1):
         den=numpy.einsum('i,ij,j',dvecs,Bigham,dvecs)
         eb[i,0]=i*db

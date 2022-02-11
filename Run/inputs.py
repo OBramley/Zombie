@@ -50,7 +50,7 @@ run={
     # Do you want the first Zombie state to be the Restricted Hartree Fock Determinant
     # Takes input 'y' or 'n' and then a number to defined the number of electrons
    'zomhf':'n',
-   'hfnum':'6' 
+   'hfnum':'6', 
 
     # Do you want to find other energy states other than the ground state. If so turn on 
     # Gram Schmidt orthogonalisation and then specify the number of states. Takes input
