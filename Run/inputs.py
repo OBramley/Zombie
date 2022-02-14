@@ -24,20 +24,20 @@ run={
     # electron integrals have already been generated and placed in the run file
     'elecs':'pyscf',
 
-    'elecfile':'filename',
+    'elecfile':'integrals.pkl',
 
     # Do you want to generate new zombie states. The program can work using previously gerated
     # Zombie states. Takes input 'y' or 'n'.
     'zomgen':'y',
 
-    'zombiefile':'filename',
+    'zombiefile':'zombie_states.pkl',
 
     # Do you want to generate a new Hamiltonian? Takes input 'y' or 'n'
-    'hamgen':'y',
+    'hamgen':'n',
 
-    'hamfile':'filename',
+    'hamfile':'bigham.csv',
 
-    'ovrlfile':'filename',
+    'ovrlfile':'kover.csv',
 
     # Do you want to perform imaginary time evolution? The program can be used to just generate
     # the Zombie state Hamiltonian. Takes input 'y' or 'n'.
@@ -49,15 +49,15 @@ run={
 
     # Do you want the first Zombie state to be the Restricted Hartree Fock Determinant
     # Takes input 'y' or 'n' and then a number to defined the number of electrons
-   'zomhf':'n',
-   'hfnum':'6', 
+    'zomhf':'n',
+    'hfnum':'6', 
 
     # Do you want to find other energy states other than the ground state. If so turn on 
     # Gram Schmidt orthogonalisation and then specify the number of states. Takes input
     # 'y' or 'n' and an integer number note gramnum=1 will not find an excited state just a 
     # single ground state
     'gram':'n',
-    'gramnum':'4'
+    'gramnum':4
 
 }
 

@@ -15,7 +15,7 @@ def hf_state(norb,hfnum,zstore,ndet,Ki):
     return dvec
 
 # Imaginar time propagation routine
-def itime_prop(Bigham, Kover, beta, steps, norb, hfflg, hfnum, zstore, ndet):
+def itime_prop(Bigham, Kover, beta, steps, norb, hfflg, hfnum, zstore, ndet,filenamer):
     Ki = numpy.linalg.inv(Kover)
     if(hfflg=='y'):
         dvec=hf_state(norb, hfnum, zstore, ndet, Ki)
@@ -33,7 +33,10 @@ def itime_prop(Bigham, Kover, beta, steps, norb, hfflg, hfnum, zstore, ndet):
         dvec = dvec + db*ddot
         norm = abs(numpy.einsum('i,ij,j',dvec,Kover,dvec))
         dvec /= math.sqrt(norm)
-    in_outputs.write_ham(eb,'energy.csv')
+    filename=filenamer+'_energy.csv'
+    filename1=filenamer+"_dvect.csv" 
+    in_outputs.write_ham(eb,filename)
+    in_outputs.write_ham(dvec,filename1)
     return eb
 
 
@@ -51,7 +54,7 @@ def gs(dvecs,Kr,nst):
     return uecs
 
 # Imaginar time propagation routine
-def itime_prop_gs(Bigham, Kover, beta, steps, norb, hfflg, hfnum, zstore, ndet, gramnum):
+def itime_prop_gs(Bigham, Kover, beta, steps, norb, hfflg, hfnum, zstore, ndet, gramnum, filenamer):
     Ki = numpy.linalg.inv(Kover)
     if(hfflg=='y'):
         dvec=hf_state(norb, hfnum, zstore, ndet, Ki)
@@ -69,13 +72,16 @@ def itime_prop_gs(Bigham, Kover, beta, steps, norb, hfflg, hfnum, zstore, ndet, 
     db=beta/steps
     eb=numpy.zeros((steps+1,gramnum+1))
     for i in range(steps+1):
-        den=numpy.einsum('i,ij,j',dvecs,Bigham,dvecs)
+        den=numpy.einsum('ik,ij,jk->k',dvecs,Bigham,dvecs)
         eb[i,0]=i*db
         eb[i,1:]=den
         ddot = -numpy.dot(KinvH,dvecs)
         dvecs = dvecs + db*ddot
         dvecs = gs(dvecs,Kover,gramnum)
-        
-    in_outputs.write_ham(eb,'energy.csv')
+
+    filename=filenamer+'_energy.csv'
+    filename1=filenamer+"_dvect.csv"   
+    in_outputs.write_ham(eb,filename)
+    in_outputs.write_ham(dvecs,filename1)
     return eb
 

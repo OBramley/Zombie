@@ -27,7 +27,7 @@ def new_ran(norb):
     return zz
 
 
-def zom_gen(norb,ndet,type,filename):
+def zom_gen(norb,ndet,type,filenamer):
     zstore=[]
     if(type == 'ran'):
         for i in range(ndet):
@@ -37,6 +37,7 @@ def zom_gen(norb,ndet,type,filename):
             zstore.append(zom(norb, typ='binary', ib=i))
     elif(type=='bb'):
         print('need to write biasing module')
+    filename=filenamer+'_zombie_states.pkl'
     in_outputs.save_object(zstore,filename)
     return zstore
 

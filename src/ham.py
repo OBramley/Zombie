@@ -2,12 +2,10 @@ from pyscf import gto, scf, ao2mo
 import numpy
 from functools import reduce
 import inputs
-import csv
 import op
 import in_outputs
 
-        
-# Program to generate one and two electron integrals from PyScf
+        # Program to generate one and two electron integrals from PyScf
 # Some of this code has been adapted from George Booth
 def spatospin1(H1ea,norb):
     """Converting H1ea from spatial to spin"""
@@ -107,7 +105,7 @@ class system:
         return HH
 
 
-def pyscf_gen(norb):
+def pyscf_gen(norb,filenamer):
     mol = gto.M(
     unit = inputs.pyscf['units'],
     atom = inputs.pyscf['atoms'],
@@ -138,11 +136,12 @@ def pyscf_gen(norb):
     H2ei = spatospin2(eri_full,norb)
     # in_outputs.write_integrals(Hnuc, H1ei, H2ei,norb)
     Ham=system(norb, Hnuc, H1ei, H2ei)
-    in_outputs.save_object(Ham,'integrals.pkl')
+    filename=filenamer+'_inegrals.pkl'
+    in_outputs.save_object(Ham,filename)
     return Ham
 
 # Routine to read in MOLPRO data
-def molpro_read(filename,norb):
+def molpro_read(filename,norb,filenamer):
     file = open(filename,'r')
     if norb%2 != 0:
         raise ValueError('norb must be even')
@@ -198,10 +197,11 @@ def molpro_read(filename,norb):
     
     # in_outputs.write_integrals(Hnr, H1ei, H2ei,norb)
     Ham=system(norb, Hnr, H1ei, H2ei)
-    in_outputs.save_object(Ham,'integrals.pkl')
+    filename1=filenamer+'_inegrals.pkl'
+    in_outputs.save_object(Ham,filename1)
     return Ham
 
-def hamiltonian(ndet,Ham,zstore):
+def hamiltonian(ndet,Ham,zstore,filenamer):
     Kover = numpy.zeros((ndet,ndet))
     Bigham = numpy.zeros((ndet,ndet))
     for idet in range(ndet):
@@ -210,6 +210,8 @@ def hamiltonian(ndet,Ham,zstore):
             Kover[jdet,idet] = Kover[idet,jdet]
             Bigham[idet,jdet] = Ham.HTot(zstore[idet].zs, zstore[jdet].zs)
             Bigham[jdet,idet] = Bigham[idet,jdet]
-    in_outputs.write_ham(Kover,'kover.csv')
-    in_outputs.write_ham(Bigham,'bigham.csv')
+    hamname=filenamer+'_hamiltonian.csv'
+    ovrlname=filenamer+'_overlap.csv'
+    in_outputs.write_ham(Kover,ovrlname)
+    in_outputs.write_ham(Bigham,hamname)
     return Bigham, Kover
