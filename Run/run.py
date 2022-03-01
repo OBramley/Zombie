@@ -32,22 +32,27 @@ elif(inputs.zombs['norb']<1):
     sys.exit("Not enough orbitals. Must be 1 or greater")
 elif(inputs.zombs['ndet']<2):
     sys.exit("Not enough zombie states. Must be 2 or greater")
-elif((inputs.run['elecs']!='pyscf')or(inputs.run['elecs']!='mol')or(inputs.run['elecs']!='n')):
+elif(inputs.zombs['zomtyp'] not in {'ran','HF','bb'}):
+    sys.exit("Type of zombie state must be ran, HF or bb")
+elif(inputs.run['elecs'] not in {'pyscf','mol','n'}):
     sys.exit("one and two electron integral paramter must be 'pyscf', 'mol' or 'n'")
-elif((inputs.run['zomgen']!='y')or(inputs.run['zomgen']!='n')):
+elif(inputs.run['zomgen'] not in {'y','n'}):
     sys.exit("Generation of a new set of zombie states must be either 'y' or 'n'")
-elif((inputs.run['imagprop']!='y')or(inputs.run['imagprop']!='n')):
+elif(inputs.run['imagprop'] not in {'y','n'}):
     sys.exit("The imaginary time propagation parameter has been inccorectly set must be either 'y' or 'n'")
 elif(isinstance(inputs.run['beta'],int)==False):
     sys.exit("Beta must be an integer")
 elif(isinstance(inputs.run['timesteps'],int)==False):
     sys.exit("Beta must be an integer")
-elif((inputs.run['gram']!='y')or(inputs.run['gram']!='n')):
+elif(inputs.run['gram'] not in {'y','n'}):
     sys.exit("The Gram Schmidt pramater must be either 'y' or 'n'")
-elif((inputs.run['zomhf']!='y')or(inputs.run['zomhf']!='n')):
+elif(inputs.run['zomhf'] not in {'y','n'}):
     sys.exit("Setting the first zombie state as a RHF determinant must be either 'y' or 'n'")
+elif(isinstance(inputs.run['hfnum'],int)==False):
+    sys.exit("Number of the RHF determinant must be an integer")
 elif(isinstance(inputs.run['gramnum'],int)==False):
     sys.exit("Number of states to be investiated must be an integer")
+
 
 if(inputs.zombs['zomtyp']=='HF'):
     ndetcheck=0
@@ -101,19 +106,22 @@ if os.path.exists(EXDIR+"/"+inputs.run['runfolder']):
 
 os.mkdir(EXDIR+"/"+inputs.run['runfolder'])
 EXDIR1=EXDIR+"/"+inputs.run['runfolder']
-os.mkdir(EXDIR1="/outputs")
-
 
 
 # Move the relevant files to the execution file
+shutil.copy2("inputs.py",EXDIR1)
+shutil.copy2("../src/ham.py",EXDIR1)
+shutil.copy2("../src/imgtp.py",EXDIR1)
+shutil.copy2("../src/in_outputs.py",EXDIR1)
+shutil.copy2("../src/main.py",EXDIR1)
+shutil.copy2("../src/op.py",EXDIR1)
+shutil.copy2("../src/zom.py",EXDIR1)
 
 # Run the program
-# 
-#
-# #If on a SGE machine make job submission file
+# If on a SGE machine make job submission file
 if(HPCFLG==1):
     number=random.randint(99999,1000000)
-    file1="MCE"+str(number)+".sh"
+    file1="zombie"+str(number)+".sh"
     f=open(file1,"w")
     f.write("#$ -cwd -V \n")
     if(inputs.run['cores']!=1):
@@ -133,6 +141,10 @@ if(HPCFLG==1):
 else:
     if(inputs.run['cores']!=1):
         os.environ["OMP_NUM_THREADS"]=str(inputs.run['cores'])
-    for i in range(inputs.run['nodes']):
-        SUBDIR=EXDIR1+"/run-"+str(i+1)
-        subprocess.Popen('',executable=SUBDIR+"python main.py",cwd=SUBDIR) 
+    number=random.randint(99999,1000000)
+    file1="zombie"+str(number)+".sh"
+    f=open("../Run/"+file1,"w")
+    f.write("python " + EXDIR1+"/main.py")
+    f.close()
+    subprocess.run(['chmod', 'u+x', '../Run/zombie'+str(number)+'.sh'])
+    

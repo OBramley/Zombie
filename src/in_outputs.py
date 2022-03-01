@@ -20,6 +20,12 @@ def write_ham(obj,filename):
         spamwriter=csv.writer(csvfile, delimiter=',')
         spamwriter.writerows(obj)
 
+def write_dvec(dvec,filename):
+    with open(filename,'w', newline='')as csvfile:
+        spamwriter=csv.writer(csvfile, delimiter=',')
+        spamwriter.writerow(dvec)
+    
+
 def read_ham(filename):
     with open(filename, 'rb')as file:
         obj = numpy.loadtxt(file,delimiter=',')

@@ -64,9 +64,9 @@ elif((inputs.run['hamgen'])=='y'):
 if(inputs.run['imagprop']=='y'):
 # Check if Gram Schmidt orthogonalisation is to be used
     if(inputs.run['gram']=='y'):
-        eb=imgtp.itime_prop_gs(Bigham,Kover,beta,timesteps,norb,inputs.run['zomhf'],inputs.run['zomhf'],zstore,ndet, inputs.run['gramnum'], filenamer)    
+        eb=imgtp.itime_prop_gs(Bigham,Kover,beta,timesteps,norb,inputs.run['zomhf'],inputs.run['hfnum'],zstore,ndet, inputs.run['gramnum'], filenamer)    
     elif(inputs.run['gram']=='n'):
-        eb=imgtp.itime_prop(Bigham, Kover,beta,timesteps,norb,inputs.run['zomhf'],inputs.run['zomnum'],zstore,ndet,filenamer)
+        eb=imgtp.itime_prop(Bigham, Kover,beta,timesteps,norb,inputs.run['zomhf'],inputs.run['hfnum'],zstore,ndet,filenamer)
 elif(inputs.run['imagprop']=='n'):
     print('End of program')
 

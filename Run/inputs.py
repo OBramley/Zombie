@@ -33,7 +33,7 @@ run={
     'zombiefile':'zombie_states.pkl',
 
     # Do you want to generate a new Hamiltonian? Takes input 'y' or 'n'
-    'hamgen':'n',
+    'hamgen':'y',
 
     'hamfile':'bigham.csv',
 
@@ -50,7 +50,7 @@ run={
     # Do you want the first Zombie state to be the Restricted Hartree Fock Determinant
     # Takes input 'y' or 'n' and then a number to defined the number of electrons
     'zomhf':'n',
-    'hfnum':'6', 
+    'hfnum': 6, 
 
     # Do you want to find other energy states other than the ground state. If so turn on 
     # Gram Schmidt orthogonalisation and then specify the number of states. Takes input
@@ -66,10 +66,10 @@ zombs={
     'norb':10,
 
     # Number of Zombie states
-    'ndet':64, 
+    'ndet':10, 
 
     # Type of zombie states. Random (ran), Hartree Fock (HF) or biased (bb)
-    'zomtyp':'random' 
+    'zomtyp':'ran' 
 }
 
 

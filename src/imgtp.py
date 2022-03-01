@@ -36,7 +36,7 @@ def itime_prop(Bigham, Kover, beta, steps, norb, hfflg, hfnum, zstore, ndet,file
     filename=filenamer+'_energy.csv'
     filename1=filenamer+"_dvect.csv" 
     in_outputs.write_ham(eb,filename)
-    in_outputs.write_ham(dvec,filename1)
+    in_outputs.write_dvec(dvec,filename1)
     return eb
 
 
