@@ -56,7 +56,7 @@ run={
     # Gram Schmidt orthogonalisation and then specify the number of states. Takes input
     # 'y' or 'n' and an integer number note gramnum=1 will not find an excited state just a 
     # single ground state
-    'gram':'y',
+    'gram':'n',
     'gramnum':3
 
 }

@@ -11,6 +11,8 @@ import os
 import socket
 import getpass
 import shutil
+import subprocess
+import random
 from math import comb
 
 # Checking input paramaters 
@@ -36,10 +38,16 @@ elif((inputs.run['zomgen']!='y')or(inputs.run['zomgen']!='n')):
     sys.exit("Generation of a new set of zombie states must be either 'y' or 'n'")
 elif((inputs.run['imagprop']!='y')or(inputs.run['imagprop']!='n')):
     sys.exit("The imaginary time propagation parameter has been inccorectly set must be either 'y' or 'n'")
+elif(isinstance(inputs.run['beta'],int)==False):
+    sys.exit("Beta must be an integer")
+elif(isinstance(inputs.run['timesteps'],int)==False):
+    sys.exit("Beta must be an integer")
 elif((inputs.run['gram']!='y')or(inputs.run['gram']!='n')):
     sys.exit("The Gram Schmidt pramater must be either 'y' or 'n'")
-elif((inputs.zombs['zomhf']!='y')or(inputs.zombs['zomhf']!='n')):
+elif((inputs.run['zomhf']!='y')or(inputs.run['zomhf']!='n')):
     sys.exit("Setting the first zombie state as a RHF determinant must be either 'y' or 'n'")
+elif(isinstance(inputs.run['gramnum'],int)==False):
+    sys.exit("Number of states to be investiated must be an integer")
 
 if(inputs.zombs['zomtyp']=='HF'):
     ndetcheck=0
@@ -93,9 +101,38 @@ if os.path.exists(EXDIR+"/"+inputs.run['runfolder']):
 
 os.mkdir(EXDIR+"/"+inputs.run['runfolder'])
 EXDIR1=EXDIR+"/"+inputs.run['runfolder']
+os.mkdir(EXDIR1="/outputs")
 
-# Compile the fortran modules
+
 
 # Move the relevant files to the execution file
 
-# Run the program 
+# Run the program
+# 
+#
+# #If on a SGE machine make job submission file
+if(HPCFLG==1):
+    number=random.randint(99999,1000000)
+    file1="MCE"+str(number)+".sh"
+    f=open(file1,"w")
+    f.write("#$ -cwd -V \n")
+    if(inputs.run['cores']!=1):
+        f.write("#$ -pe smp "+str(inputs.run['cores'])+" \n") #Use shared memory parallel environemnt 
+    f.write("#$ -l h_rt=40:00:00 \n")
+    f.write("#$ -l h_vmem=4G \n")
+    f.write("#$ -t 1-"+str(inputs.run['nodes'])+" \n")
+    f.write("date \n")
+    f.write("cd "+EXDIR1+"/run-$SGE_TASK_ID/ \n")
+    f.write("echo "'"Running on $HOSTNAME in folder $PWD" \n')
+    f.write("time ./MCE.exe \n")
+    f.write("date \n")
+    f.close()
+    if(inputs.run['cores']!=1):
+        os.environ["OMP_NUM_THREADS"]=str(inputs.run['cores'])
+    subprocess.call(['qsub',file1])
+else:
+    if(inputs.run['cores']!=1):
+        os.environ["OMP_NUM_THREADS"]=str(inputs.run['cores'])
+    for i in range(inputs.run['nodes']):
+        SUBDIR=EXDIR1+"/run-"+str(i+1)
+        subprocess.Popen('',executable=SUBDIR+"python main.py",cwd=SUBDIR) 

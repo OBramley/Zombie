@@ -58,7 +58,6 @@ run={
     # single ground state
     'gram':'n',
     'gramnum':4
-
 }
 
 
