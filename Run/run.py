@@ -116,7 +116,14 @@ shutil.copy2("../src/in_outputs.py",EXDIR1)
 shutil.copy2("../src/main.py",EXDIR1)
 shutil.copy2("../src/op.py",EXDIR1)
 shutil.copy2("../src/zom.py",EXDIR1)
+if(inputs.run['elecs']=='mol'):
+    shutil.copy2('../'+ inputs.run['elecfile'],EXDIR1)
+if(inputs.run['elecs']=='n'and inputs.run['hamgen']=='y'):
+    shutil.copy2('../'+ inputs.run['elecfile'],EXDIR1)
+if(inputs.run['elecs']=='n'and inputs.run['hamgen']=='n'):
+    shutil.copy2('../'+ inputs.run['hamfile'],EXDIR1)
 
+os.chdir(EXDIR1)
 # Run the program
 # If on a SGE machine make job submission file
 if(HPCFLG==1):
@@ -124,27 +131,22 @@ if(HPCFLG==1):
     file1="zombie"+str(number)+".sh"
     f=open(file1,"w")
     f.write("#$ -cwd -V \n")
-    if(inputs.run['cores']!=1):
-        f.write("#$ -pe smp "+str(inputs.run['cores'])+" \n") #Use shared memory parallel environemnt 
-    f.write("#$ -l h_rt=40:00:00 \n")
-    f.write("#$ -l h_vmem=4G \n")
-    f.write("#$ -t 1-"+str(inputs.run['nodes'])+" \n")
-    f.write("date \n")
-    f.write("cd "+EXDIR1+"/run-$SGE_TASK_ID/ \n")
-    f.write("echo "'"Running on $HOSTNAME in folder $PWD" \n')
-    f.write("time ./MCE.exe \n")
-    f.write("date \n")
+    f.write("#$ -l h_rt=00:30:00 \n")
+    f.write("#$ -l h_vmem=2G \n")
+    f.write('#$ -m be')#Get email at start and end of the job
+    f.write('module load anaconda')
+    f.write('source activate base')
+    f.write('python main.py')
     f.close()
-    if(inputs.run['cores']!=1):
-        os.environ["OMP_NUM_THREADS"]=str(inputs.run['cores'])
     subprocess.call(['qsub',file1])
 else:
-    if(inputs.run['cores']!=1):
-        os.environ["OMP_NUM_THREADS"]=str(inputs.run['cores'])
-    number=random.randint(99999,1000000)
-    file1="zombie"+str(number)+".sh"
-    f=open("../Run/"+file1,"w")
-    f.write("python " + EXDIR1+"/main.py")
-    f.close()
-    subprocess.run(['chmod', 'u+x', '../Run/zombie'+str(number)+'.sh'])
+    # if(inputs.run['cores']!=1):
+    #     os.environ["OMP_NUM_THREADS"]=str(inputs.run['cores'])
+    # number=random.randint(99999,1000000)
+    # file1="zombie"+str(number)+".sh"
+    # f=open("../Run/"+file1,"w")
+    # f.write("python " + EXDIR1+"/main.py")
+    # f.close()
+    # subprocess.run(['chmod', 'u+x', '../Run/zombie'+str(number)+'.sh'])
+    subprocess.run(['python', 'main.py'])
     
