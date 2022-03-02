@@ -13,7 +13,7 @@ import getpass
 import shutil
 import subprocess
 import random
-from math import comb
+import math #import comb
 
 # Checking input paramaters 
 if(isinstance(inputs.run['nodes'],int)==False):
@@ -57,7 +57,7 @@ elif(isinstance(inputs.run['gramnum'],int)==False):
 if(inputs.zombs['zomtyp']=='HF'):
     ndetcheck=0
     for i in range(inputs.zombs['norb']+1):
-        ndetcheck=ndetcheck+comb(inputs.zombs['norb'],i)
+        ndetcheck=ndetcheck+math.comb(inputs.zombs['norb'],i)
     if(inputs.zombs['zomtyp']!=ndetcheck):
         sys.exit('A Hartree Fock Basis for',inputs.zombs['norb'], 'orbitals should have', ndetcheck, 'basis functions')
 
