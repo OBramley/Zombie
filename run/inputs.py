@@ -12,11 +12,14 @@
 
 run={
     # What is the name of the run
-    'runfolder':'Test1',
+    'runfolder':'pyscf_test',
 
     'nodes':1,
 
     'cores':1,
+
+    # Set the numpy random seed for Zombie state generation
+    'seed':1,
 
     # 1 and 2 electron integrals can be calcualted by PySCF by the program
     # or they can be inputed as a seperate file at the moment only from MOLPRO
@@ -47,7 +50,7 @@ run={
 
     'timesteps':2000,
 
-    # Do you want the first Zombie state to be the Restricted Hartree Fock Determinant
+    # Do you want the starting energy to be the HF energy
     # Takes input 'y' or 'n' and then a number to defined the number of electrons
     'zomhf':'n',
     'hfnum': 6, 
@@ -63,7 +66,7 @@ run={
 
 zombs={
     # Number of orbitals
-    'norb':10,
+    'norb':38,
 
     # Number of Zombie states
     'ndet':10, 
@@ -75,13 +78,13 @@ zombs={
 
 pyscf={
      # The units the geometry of the molecule is set up in
-    'units':'Bohr',
+    'units':'Angstrom',
      # The geometry of the molecule being investigated
-    'atoms' :'Li 0 0 0; Li 0 0 6',
+    'atoms' :'B 0 0 0; H 0 0 1.2324',
     # The type of basis used to generate the 1 and 2 electron integrals
     'bs' : '6-31g**',
     # How verbose do you want the PyScf output to be in your terminal?
-    'verbosity' : 1,
+    'verbosity' : 4,
     'symmetry' :True,
     'spin':0,
     'charge':0,

@@ -31,7 +31,7 @@ if((inputs.run['hamgen'])=='n'):
         zstore=[]
     else:
         if((inputs.run['zomgen'])=='y'):
-            zstore=zom.zom_gen(norb,ndet,inputs.zombs['zomtyp'],filenamer)
+            zstore=zom.zom_gen(norb,ndet,inputs.zombs['zomtyp'],filenamer,inputs.run['seed'])
             print('Zombie states generated')
         elif((inputs.run['zomgen'])=='n'):
             zstore=in_outputs.read_object(inputs.run['zombiefile'])

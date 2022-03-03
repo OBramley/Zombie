@@ -27,8 +27,9 @@ def new_ran(norb):
     return zz
 
 
-def zom_gen(norb,ndet,type,filenamer):
+def zom_gen(norb,ndet,type,filenamer,seed):
     zstore=[]
+    numpy.random.seed(seed)
     if(type == 'ran'):
         for i in range(ndet):
             zstore.append(zom(norb,typ='ran'))
