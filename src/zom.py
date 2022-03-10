@@ -28,7 +28,7 @@ def new_ran(norb):
 
 
 def biased_basis(norb,zom_bias,ndet,zstore):
-    orbitals=norb/2
+    orbitals=int(norb/2)
     alive=zom_bias['alive']
     astart=zom_bias['alive_start']
     aend=zom_bias['alive_end']

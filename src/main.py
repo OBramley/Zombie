@@ -17,7 +17,7 @@ import imgtp
 # Load paramters
 filenamer=inputs.run['runfolder']
 ndet=inputs.zombs['ndet']
-norb=inputs.zombs['norb']
+norb=inputs.zombs['norb']*2
 beta=inputs.run['beta']
 timesteps=inputs.run['timesteps']
 
@@ -56,6 +56,7 @@ elif((inputs.run['hamgen'])=='y'):
         print('Zombie states read in')
 
     Bigham, Kover = ham.hamiltonian(ndet,Ham,zstore,filenamer)
+    print('Hamiltonian generated')
     del Ham
     gc.collect()
 
