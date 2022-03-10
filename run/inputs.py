@@ -65,16 +65,35 @@ run={
 
 
 zombs={
-    # Number of orbitals
+    # Number of electrons
     'norb':38,
 
     # Number of Zombie states
     'ndet':10, 
 
     # Type of zombie states. Random (ran), Hartree Fock (HF) or biased (bb)
-    'zomtyp':'ran' 
+    'zomtyp':'ran'
 }
 
+# Parameters for the biasing protocol
+# The biasing method uses sampling of a trasformation of tanh graph
+# Note no paramter chekcing has been implemented for these values yet
+zom_bias={
+    # Number of ocuupied spin orbitals
+    # THE NUMBER OF SPIN ORBITALS IS HALF THE NUMBER OF ELECTRONS
+    'alive':3,
+    # Alive aplitude of 1st spin orbital
+    'alive_start':0.99,
+    # Alive aplitude of last "alive" orbital
+    'alive_end':0.94,
+    # Number of spin orbitals approximately 50/50 alive/dead aplitudes
+    'mid':0,
+    # Alive aplitude of 1st dead spin orbtial
+    'dead_start':0.008,
+    # Alive aplitude of last spin orbital
+    'dead_end':0.00006
+
+}
 
 pyscf={
      # The units the geometry of the molecule is set up in

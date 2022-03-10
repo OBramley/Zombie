@@ -31,7 +31,7 @@ if((inputs.run['hamgen'])=='n'):
         zstore=[]
     else:
         if((inputs.run['zomgen'])=='y'):
-            zstore=zom.zom_gen(norb,ndet,inputs.zombs['zomtyp'],filenamer,inputs.run['seed'])
+            zstore=zom.zom_gen(norb,ndet,inputs.zombs['zomtyp'],filenamer,inputs.run['seed'],inputs.zom_bias)
             print('Zombie states generated')
         elif((inputs.run['zomgen'])=='n'):
             zstore=in_outputs.read_object(inputs.run['zombiefile'])
@@ -49,7 +49,7 @@ elif((inputs.run['hamgen'])=='y'):
         print('Electron integrals read in')
     # Generate or read in zombie states
     if((inputs.run['zomgen'])=='y'):
-        zstore=zom.zom_gen(norb,ndet,inputs.zombs['zomtyp'],filenamer)
+        zstore=zom.zom_gen(norb,ndet,inputs.zombs['zomtyp'],filenamer,inputs.run['seed'],inputs.zom_bias)
         print('Zombie states generated')
     elif((inputs.run['zomgen'])=='n'):
         zstore=in_outputs.read_object(inputs.run['zombiefile'])

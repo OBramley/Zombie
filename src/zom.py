@@ -27,7 +27,54 @@ def new_ran(norb):
     return zz
 
 
-def zom_gen(norb,ndet,type,filenamer,seed):
+def biased_basis(norb,zom_bias,ndet,zstore):
+    orbitals=norb/2
+    alive=zom_bias['alive']
+    astart=zom_bias['alive_start']
+    aend=zom_bias['alive_end']
+    mid=zom_bias['mid']
+    dstart=zom_bias['dead_start']
+    dend=zom_bias['dead_end']
+
+    def bform(x):
+        return 1/2*(1-numpy.tanh((x)))
+
+    def bforminv(y):
+        return numpy.arctanh(-1*(2*y-1))
+
+    values=numpy.zeros(norb)
+    astartx=bforminv(astart)
+    aendx=bforminv(aend)
+    dead=orbitals-alive-mid
+    dstartx=bforminv(dstart)
+    dendx=bforminv(dend)
+    astep=abs((astartx-aendx)/(alive-1))
+    dstep=abs((dstartx-dendx)/(dead-1))
+
+    for i in range(alive):
+        val=bform((astartx+(i*astep)))
+        j=2*i
+        values[j]=val
+        values[j+1]=val
+    
+    values[(2*alive):2*(alive+mid)]=0.5
+
+    for i in range(dead):
+        val=bform(dstartx+(i*dstep))
+        j= 2*(i+alive+mid)
+        values[j]=val
+        values[j+1]=val
+    
+    randoms=(numpy.random.uniform(0.0,0.25,size=(ndet,norb)))
+    randoms=numpy.exp(-randoms)
+    for i in range(ndet):
+        theta=numpy.multiply(values,randoms[i,:])
+        zstore.append(zom(norb,typ='theta',thetas=theta))
+    
+    return zstore
+    
+
+def zom_gen(norb,ndet,type,filenamer,seed,zom_bias):
     zstore=[]
     numpy.random.seed(seed)
     if(type == 'ran'):
@@ -37,7 +84,7 @@ def zom_gen(norb,ndet,type,filenamer,seed):
         for i in range(ndet):
             zstore.append(zom(norb, typ='binary', ib=i))
     elif(type=='bb'):
-        print('need to write biasing module')
+        zstore=biased_basis(norb,zom_bias,ndet,zstore)
     filename=filenamer+'_zombie_states.pkl'
     in_outputs.save_object(zstore,filename)
     return zstore
