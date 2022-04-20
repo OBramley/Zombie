@@ -74,16 +74,11 @@ run={
 
 
 zombs={
-<<<<<<< HEAD
     # Number of spin orbitals
     'norb':19,
 
     # Number of electrons in the molecule
     'nel':6,
-=======
-    # Number of Spin orbitals
-    'norb':19,
->>>>>>> 63a26d28dfc43bf6746e12d569851e5263181620
 
     # Number of Zombie states
     'ndet':500, 
@@ -130,4 +125,3 @@ pyscf={
     'spin':0,
     'charge':0,
     'symmetry_subgroup' : 0 #0 is code for A1 point group
-}
