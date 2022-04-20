@@ -52,7 +52,8 @@ elif(isinstance(inputs.run['hfnum'],int)==False):
     sys.exit("Number of the RHF determinant must be an integer")
 elif(isinstance(inputs.run['gramnum'],int)==False):
     sys.exit("Number of states to be investiated must be an integer")
-
+elif(inputs.run['clean'] not in {'y','n','f'}):
+    sys.exit("Setting cleaning on or off must be 'y' or 'n' or 'f' (to clean from a previously generated file)")
 
 if(inputs.zombs['zomtyp']=='HF'):
     ndetcheck=0
@@ -72,6 +73,12 @@ if(inputs.run['elecs']=='n'and inputs.run['hamgen']=='y'):
 if(inputs.run['elecs']=='n'and inputs.run['hamgen']=='n'):
     if not os.path.isfile('../'+ inputs.run['hamfile']):
         sys.exit("No Hamiltonian input file")
+
+if(inputs.run['clean']=='f'):
+    if not os.path.isfile('../'+inputs.run['cleanham']):
+        sys.exit("No clean hamiltonian")
+    elif not os.path.isfile('../'+inputs.run['cleanzom']):
+        sys.exit("No clean zombie states")
 
 if(inputs.run['gram']=='y'):
     if(isinstance(inputs.run['gramnum'],int)==False):
@@ -133,7 +140,7 @@ if(HPCFLG==1):
     f.write("#$ -cwd -V \n")
     f.write("#$ -l h_rt=00:30:00 \n")
     f.write("#$ -l h_vmem=2G \n")
-    f.write('#$ -m be')#Get email at start and end of the job
+    # f.write('#$ -m be')#Get email at start and end of the job
     f.write('module load anaconda')
     f.write('source activate base')
     f.write('python main.py')

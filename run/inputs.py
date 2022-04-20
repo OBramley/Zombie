@@ -12,7 +12,7 @@
 
 run={
     # What is the name of the run
-    'runfolder':'pyscf_test',
+    'runfolder':'li_test',
 
     'nodes':1,
 
@@ -97,9 +97,9 @@ zom_bias={
 
 pyscf={
      # The units the geometry of the molecule is set up in
-    'units':'Angstrom',
+    'units':'Bohr',
      # The geometry of the molecule being investigated
-    'atoms' :'B 0 0 0; H 0 0 1.2324',
+    'atoms' :'Li 0 0 0; Li 0 0 6',
     # The type of basis used to generate the 1 and 2 electron integrals
     'bs' : '6-31g**',
     # How verbose do you want the PyScf output to be in your terminal?
@@ -107,5 +107,5 @@ pyscf={
     'symmetry' :True,
     'spin':0,
     'charge':0,
-    'symmetry_subgroup' : 0, #0 is code for A1 point group
+    'symmetry_subgroup' : 'Dooh', #0 is code for A1 point group
 }
