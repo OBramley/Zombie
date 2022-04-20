@@ -26,6 +26,15 @@ def new_ran(norb):
     zz[:,1] = numpy.sin(rantemp)
     return zz
 
+def spf(norb,thetas):
+    zz=make(norb)
+    for iorb in range(norb):
+        if iorb in thetas:
+            zz[iorb,0]=1
+        else:
+            zz[iorb,1]=1
+    return zz
+
 
 def biased_basis(norb,zom_bias,ndet,zstore):
     orbitals=int(norb/2)
@@ -116,6 +125,8 @@ class zom:
             self.zs = make(self.norb)
             self.zs[:,0] = numpy.cos(2.0*math.pi*thetas)
             self.zs[:,1] = numpy.sin(2.0*math.pi*thetas)
+        elif typ == 'clean':
+            self.zs = spf(norb,thetas)
         else:
             raise ValueError('Invalid type')
     def ov(self):

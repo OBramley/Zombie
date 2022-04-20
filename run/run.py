@@ -129,6 +129,9 @@ if(inputs.run['elecs']=='n'and inputs.run['hamgen']=='y'):
     shutil.copy2('../'+ inputs.run['elecfile'],EXDIR1)
 if(inputs.run['elecs']=='n'and inputs.run['hamgen']=='n'):
     shutil.copy2('../'+ inputs.run['hamfile'],EXDIR1)
+if(inputs.run['clean']=='f'):
+    shutil.copy2('../'+ inputs.run['cleanham'],EXDIR1)
+    shutil.copy2('../'+ inputs.run['cleanzom'],EXDIR1)
 
 os.chdir(EXDIR1)
 # Run the program

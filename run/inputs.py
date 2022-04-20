@@ -80,6 +80,10 @@ zombs={
     # Number of electrons in the molecule
     'nel':6,
 
+    # Spin of the moleucle 
+
+    'spin':0,
+
     # Number of Zombie states
     'ndet':500, 
 
@@ -125,3 +129,4 @@ pyscf={
     'spin':0,
     'charge':0,
     'symmetry_subgroup' : 0 #0 is code for A1 point group
+}
