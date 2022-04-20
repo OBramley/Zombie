@@ -138,7 +138,7 @@ if(HPCFLG==1):
     file1="zombie"+str(number)+".sh"
     f=open(file1,"w")
     f.write("#$ -cwd -V \n")
-    f.write("#$ -l h_rt=00:30:00 \n")
+    f.write(inputs.run['runtime'])
     f.write("#$ -l h_vmem=2G \n")
     # f.write('#$ -m be')#Get email at start and end of the job
     f.write('module load anaconda')

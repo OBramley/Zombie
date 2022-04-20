@@ -78,6 +78,9 @@ if(inputs.run['imagprop']=='y'):
 elif(inputs.run['imagprop']=='n'):
     print('End of program')
 
+
+
+
 if(inputs.run['gram']=='y'):
     rnum=inputs.run['gramnum']
 else:

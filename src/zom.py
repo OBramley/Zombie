@@ -70,7 +70,7 @@ def biased_basis(norb,zom_bias,ndet,zstore):
     for i in range(ndet):
         theta=numpy.multiply(values,randoms[i,:])
         zstore.append(zom(norb,typ='theta',thetas=theta))
-    
+   
     return zstore
     
 

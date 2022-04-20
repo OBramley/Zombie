@@ -12,7 +12,10 @@
 
 run={
     # What is the name of the run
-    'runfolder':'li_test',
+    'runfolder':'BH_500_bf',
+
+    # Amount of time to request on HPC 
+    'runtime': "#$ -l h_rt=24:00:00 \n",
 
     'nodes':1,
 
@@ -71,17 +74,27 @@ run={
 
 
 zombs={
+<<<<<<< HEAD
     # Number of spin orbitals
     'norb':19,
 
     # Number of electrons in the molecule
     'nel':6,
+=======
+    # Number of Spin orbitals
+    'norb':19,
+>>>>>>> 63a26d28dfc43bf6746e12d569851e5263181620
 
     # Number of Zombie states
-    'ndet':10, 
+    'ndet':500, 
 
     # Type of zombie states. Random (ran), Hartree Fock (HF) or biased (bb)
-    'zomtyp':'ran'
+    'zomtyp':'bb',
+    
+    # Biased basis improvement if 0 no loops to improve biased > 0 number of loops to improve the basis
+
+    'bb_imprv':0
+
 }
 
 # Parameters for the biasing protocol
@@ -116,5 +129,5 @@ pyscf={
     'symmetry' :True,
     'spin':0,
     'charge':0,
-    'symmetry_subgroup' : 'Dooh', #0 is code for A1 point group
+    'symmetry_subgroup' : 0 #0 is code for A1 point group
 }
