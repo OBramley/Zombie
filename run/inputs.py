@@ -12,14 +12,10 @@
 
 run={
     # What is the name of the run
-<<<<<<< HEAD
     'runfolder':'BH_500_bf',
 
     # Amount of time to request on HPC 
     'runtime': "#$ -l h_rt=24:00:00 \n",
-=======
-    'runfolder':'li_test',
->>>>>>> 85dc351ea9dd7f06718f3cfd041fd707d0054f95
 
     'nodes':1,
 
@@ -119,9 +115,5 @@ pyscf={
     'symmetry' :True,
     'spin':0,
     'charge':0,
-<<<<<<< HEAD
     'symmetry_subgroup' : 0 #0 is code for A1 point group
-=======
-    'symmetry_subgroup' : 'Dooh', #0 is code for A1 point group
->>>>>>> 85dc351ea9dd7f06718f3cfd041fd707d0054f95
 }

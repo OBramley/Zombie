@@ -140,15 +140,9 @@ if(HPCFLG==1):
     f.write("#$ -cwd -V \n")
     f.write(inputs.run['runtime'])
     f.write("#$ -l h_vmem=2G \n")
-<<<<<<< HEAD
-    #f.write('#$ -m be')#Get email at start and end of the job
-    f.write('module load anaconda \n')
-    f.write('source activate base \n')
-=======
     # f.write('#$ -m be')#Get email at start and end of the job
     f.write('module load anaconda')
     f.write('source activate base')
->>>>>>> 85dc351ea9dd7f06718f3cfd041fd707d0054f95
     f.write('python main.py')
     f.close()
     subprocess.call(['qsub',file1])
