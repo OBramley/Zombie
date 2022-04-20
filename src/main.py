@@ -36,6 +36,9 @@ if((inputs.run['hamgen'])=='n'):
         elif((inputs.run['zomgen'])=='n'):
             zstore=in_outputs.read_object(inputs.run['zombiefile'])
             print('Zombie states read in')
+    if(inputs.run['clean']=='y'):
+        Ham = ham.pyscf_gen(norb,filenamer)
+        # run cleaning generating program
 elif((inputs.run['hamgen'])=='y'):
     # Generate or read in 1 and 2 electron integrals
     if((inputs.run['elecs'])=='pyscf'):
@@ -47,6 +50,10 @@ elif((inputs.run['hamgen'])=='y'):
     elif((inputs.run['elecs'])=='no'):
         Ham = in_outputs.read_object(inputs.run['elecfile'])
         print('Electron integrals read in')
+    if(inputs.run['clean']=='y'):
+        s=1 #tis is a place holer
+        # run cleaning generating program
+
     # Generate or read in zombie states
     if((inputs.run['zomgen'])=='y'):
         zstore=zom.zom_gen(norb,ndet,inputs.zombs['zomtyp'],filenamer,inputs.run['seed'],inputs.zom_bias)

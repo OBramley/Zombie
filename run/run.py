@@ -89,7 +89,7 @@ if(inputs.run['gram']=='y'):
 print("Arguments checked")
 # Check if on HPC
 Hostname=socket.gethostname()
-if(Hostname==("login2.arc4.leeds.ac.uk")):
+if((Hostname==("login2.arc4.leeds.ac.uk"))or(Hostname==("login1.arc4.leeds.ac.uk"))):
     HPCFLG=1
 else:
     HPCFLG=0

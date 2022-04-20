@@ -53,7 +53,13 @@ run={
     # Do you want the starting energy to be the HF energy
     # Takes input 'y' or 'n' and then a number to defined the number of electrons
     'zomhf':'n',
-    'hfnum': 6, 
+    'hfnum': 6,
+
+    # Do you want to clean after propagation takes 'y', 'n' or 'f' to use a previosuly generated
+    # cleaning hamiltonian and zombie state files
+    'clean':'y',
+    'cleanham':'clean_ham.csv',
+    'cleanzom':'clean_zom.pkl', 
 
     # Do you want to find other energy states other than the ground state. If so turn on 
     # Gram Schmidt orthogonalisation and then specify the number of states. Takes input
@@ -65,8 +71,11 @@ run={
 
 
 zombs={
-    # Number of electrons
-    'norb':38,
+    # Number of spin orbitals
+    'norb':19,
+
+    # Number of electrons in the molecule
+    'nel':6,
 
     # Number of Zombie states
     'ndet':10, 
