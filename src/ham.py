@@ -8,6 +8,7 @@ import in_outputs
         # Program to generate one and two electron integrals from PyScf
 # Some of this code has been adapted from George Booth
 def spatospin1(H1ea,norb):
+    print(norb)
     """Converting H1ea from spatial to spin"""
     if norb%2 != 0:
         raise ValueError('norb must be even')
