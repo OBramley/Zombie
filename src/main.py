@@ -13,7 +13,7 @@ import zom
 import in_outputs
 import gc
 import imgtp
-import clean
+import cleaning
 
 # Load paramters
 filenamer=inputs.run['runfolder']
@@ -39,7 +39,7 @@ if((inputs.run['hamgen'])=='n'):
             print('Zombie states read in')
     if(inputs.run['clean']=='y'):
         Ham = ham.pyscf_gen(norb,filenamer)
-        clean.clean_setup(norb,inputs.zombs['nel'],inputs.zombs['spin'], Ham, filenamer)
+        cleaning.clean_setup(norb,inputs.zombs['nel'],inputs.zombs['spin'], Ham, filenamer)
 elif((inputs.run['hamgen'])=='y'):
     # Generate or read in 1 and 2 electron integrals
     if((inputs.run['elecs'])=='pyscf'):
@@ -52,7 +52,7 @@ elif((inputs.run['hamgen'])=='y'):
         Ham = in_outputs.read_object(inputs.run['elecfile'])
         print('Electron integrals read in')
     if(inputs.run['clean']=='y'):
-        clean.clean_setup(norb,inputs.zombs['nel'],inputs.zombs['spin'], Ham, filenamer)
+        cleaning.clean_setup(norb,inputs.zombs['nel'],inputs.zombs['spin'], Ham, filenamer)
 
     # Generate or read in zombie states
     if((inputs.run['zomgen'])=='y'):
@@ -79,9 +79,11 @@ elif(inputs.run['imagprop']=='n'):
     print('End of program')
 
 if(inputs.run['clean']=='y'):
-    clean_energy = clean.cleaner(ndet, zstore, filenamer+'_clean_hamiltonian.csv', filenamer+'clean_zombie_states.pkl',filenamer)
+    clean_energy = cleaning.cleaner(ndet, zstore, filenamer+'_clean_hamiltonian.csv', filenamer+'clean_zombie_states.pkl',filenamer)
+    print(clean_energy)
 elif(inputs.run['clean']=='f'):
-    clean_energy = clean.cleaner(ndet, zstore, inputs.run['cleanham'], inputs.run['cleanzom'],filenamer)
+    clean_energy = cleaning.cleaner(ndet, zstore, inputs.run['cleanham'], inputs.run['cleanzom'],filenamer)
+    print(clean_energy)
 
 
 if(inputs.run['gram']=='y'):

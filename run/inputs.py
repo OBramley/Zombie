@@ -12,7 +12,7 @@
 
 run={
     # What is the name of the run
-    'runfolder':'BH_500_bf',
+    'runfolder':'cleaning test',
 
     # Amount of time to request on HPC 
     'runtime': "#$ -l h_rt=24:00:00 \n",
@@ -75,7 +75,7 @@ run={
 
 zombs={
     # Number of spin orbitals
-    'norb':19,
+    'norb':10,
 
     # Number of electrons in the molecule
     'nel':6,
@@ -85,7 +85,7 @@ zombs={
     'spin':0,
 
     # Number of Zombie states
-    'ndet':500, 
+    'ndet':25, 
 
     # Type of zombie states. Random (ran), Hartree Fock (HF) or biased (bb)
     'zomtyp':'bb',
