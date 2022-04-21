@@ -123,6 +123,7 @@ shutil.copy2("../src/in_outputs.py",EXDIR1)
 shutil.copy2("../src/main.py",EXDIR1)
 shutil.copy2("../src/op.py",EXDIR1)
 shutil.copy2("../src/zom.py",EXDIR1)
+shutil.copy2("../src/cleaning.py",EXDIR1)
 if(inputs.run['elecs']=='mol'):
     shutil.copy2('../'+ inputs.run['elecfile'],EXDIR1)
 if(inputs.run['elecs']=='n'and inputs.run['hamgen']=='y'):

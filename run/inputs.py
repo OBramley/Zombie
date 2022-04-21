@@ -12,7 +12,7 @@
 
 run={
     # What is the name of the run
-    'runfolder':'cleaning test',
+    'runfolder':'cleaning_test',
 
     # Amount of time to request on HPC 
     'runtime': "#$ -l h_rt=24:00:00 \n",
@@ -75,10 +75,10 @@ run={
 
 zombs={
     # Number of spin orbitals
-    'norb':10,
+    'norb':5,
 
     # Number of electrons in the molecule
-    'nel':6,
+    'nel':1,
 
     # Spin of the moleucle 
 

@@ -40,6 +40,7 @@ if((inputs.run['hamgen'])=='n'):
     if(inputs.run['clean']=='y'):
         Ham = ham.pyscf_gen(norb,filenamer)
         cleaning.clean_setup(norb,inputs.zombs['nel'],inputs.zombs['spin'], Ham, filenamer)
+        print('Cleaning hamiltonian generated')
 elif((inputs.run['hamgen'])=='y'):
     # Generate or read in 1 and 2 electron integrals
     if((inputs.run['elecs'])=='pyscf'):
@@ -53,7 +54,7 @@ elif((inputs.run['hamgen'])=='y'):
         print('Electron integrals read in')
     if(inputs.run['clean']=='y'):
         cleaning.clean_setup(norb,inputs.zombs['nel'],inputs.zombs['spin'], Ham, filenamer)
-
+        print('Cleaning hamiltonian generated')
     # Generate or read in zombie states
     if((inputs.run['zomgen'])=='y'):
         zstore=zom.zom_gen(norb,ndet,inputs.zombs['zomtyp'],filenamer,inputs.run['seed'],inputs.zom_bias)
@@ -79,11 +80,15 @@ elif(inputs.run['imagprop']=='n'):
     print('End of program')
 
 if(inputs.run['clean']=='y'):
-    clean_energy = cleaning.cleaner(ndet, zstore, filenamer+'_clean_hamiltonian.csv', filenamer+'clean_zombie_states.pkl',filenamer)
+    clean_energy, norm = cleaning.cleaner(ndet, zstore, filenamer+'_clean_hamiltonian.csv', filenamer+'_clean_zombie_states.pkl',filenamer)
     print(clean_energy)
+    print(norm)
+    print(clean_energy/norm)
 elif(inputs.run['clean']=='f'):
-    clean_energy = cleaning.cleaner(ndet, zstore, inputs.run['cleanham'], inputs.run['cleanzom'],filenamer)
+    clean_energy, norm = cleaning.cleaner(ndet, zstore, inputs.run['cleanham'], inputs.run['cleanzom'],filenamer)
     print(clean_energy)
+    print(norm)
+    print(clean_energy/norm)
 
 
 if(inputs.run['gram']=='y'):
@@ -92,6 +97,6 @@ else:
     rnum=1
 
 if(inputs.run['clean']=='y')or(inputs.run['clean']=='f'):
-    in_outputs.clean_plot(eb,rnum, inputs.run['beta'], clean_energy,'results.png')
+    in_outputs.clean_plot(eb,rnum, inputs.run['beta'], (clean_energy/norm),timesteps,'results.png')
 else:
-    in_outputs.plot(eb,rnum, inputs.run['beta'],'results.png')
+    in_outputs.plot(eb,rnum, inputs.run['beta'],timesteps,'results.png')

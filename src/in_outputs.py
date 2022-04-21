@@ -35,7 +35,7 @@ def read_ham(filename):
         obj = numpy.loadtxt(file,delimiter=',')
     return obj
 
-def plot(eb,rnum, beta, filename):
+def plot(eb,rnum, beta, timesteps, filename):
     x=eb[:,0]
     mpl.rcParams['font.family']='Avenir'
     plt.rcParams['font.size']=18
@@ -43,29 +43,34 @@ def plot(eb,rnum, beta, filename):
     colors =cm.get_cmap('Set1',rnum)
     fig=plt.figure(figsize=(3.37,5.055))
     ax=fig.add_axes([0,0,2,1])
-    for i in range(rnum):
-        ax.plot(x,eb[:,i+1], linewidth=2, color=colors(i))
+    if(rnum==1):
+        ax.plot(x,eb[:,i+1], linewidth=2, color=colors(i),label='Converged energy = '+"{:.5f}".format(eb[timesteps-1,i+1]))
+    else:
+        for i in range(rnum):
+            ax.plot(x,eb[:,i+1], linewidth=2, color=colors(i),label='State '+str(rnum+1)+' = '+"{:.5f}".format(eb[timesteps-1,i+1]))
     ax.set_xlim(0,beta)
+    ax.legend()
     # ax.set_ylim(-14.8615,-14.8575)
     ax.set_ylabel('Energy [au]',labelpad=10)
     ax.set_xlabel(r'$\mathregular{\beta}$',labelpad=10)
     plt.savefig(filename,dpi=300, transparent=False,bbox_inches='tight')
     return
 
-def clean_plot(eb,rnum, beta, clean, filename) :
-    clean_text='Cleaned energy = '+str(clean)
+def clean_plot(eb,rnum, beta, clean, timesteps, filename) :
     x=eb[:,0]
     mpl.rcParams['font.family']='Avenir'
     plt.rcParams['font.size']=18
     plt.rcParams['axes.linewidth']=2
-    colors =cm.get_cmap('Set1',rnum)
+    colors =cm.get_cmap('Set1',rnum+1)
     fig=plt.figure(figsize=(3.37,5.055))
     ax=fig.add_axes([0,0,2,1])
     for i in range(rnum):
-        ax.plot(x,eb[:,i+1], linewidth=2, color=colors(i))
+        ax.plot(x,eb[:,i+1], linewidth=2, color=colors(i), label='Converged energy = '+"{:.5f}".format(eb[timesteps-1,i+1]))
+    ax.axhline(y=clean, color=colors(rnum), linewidth=2,label='Cleaned energy = '+"{:.5f}".format(clean))
+    ax.legend()
     ax.set_xlim(0,beta)
+    
     # ax.set_ylim(-14.8615,-14.8575)
     ax.set_ylabel('Energy [au]',labelpad=10)
     ax.set_xlabel(r'$\mathregular{\beta}$',labelpad=10)
-    ax.text(clean_text,xy=(0.5,0.5),xycoords='figure fraction')
     plt.savefig(filename,dpi=300, transparent=False,bbox_inches='tight')

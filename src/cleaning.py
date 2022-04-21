@@ -27,6 +27,7 @@ def cleaner(ndet, zstore, ham_name, zom_name,filenamer):
     dvec = in_outputs.read_dvec(filenamer+'_dvect.csv')
     ndet_clean=len(sdstore)
     dvec_new=numpy.zeros((ndet_clean))
+    norm=0
 
     for kdet in range(ndet_clean):
         hfz=sdstore[kdet].zs
@@ -40,6 +41,7 @@ def cleaner(ndet, zstore, ham_name, zom_name,filenamer):
                 val=dvec_c[jdet]*dvec[idet]*op.overlap_f(jzom,hfz)*ioverlap
                 norm=norm+val
     
+    in_outputs.write_dvec(dvec_new,filenamer+'_clean_dvect.csv')
     energy=numpy.einsum('i,ij,j',dvec_new,clean_ham,dvec_new)
 
-    return energy
+    return energy, norm
