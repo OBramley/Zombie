@@ -32,19 +32,19 @@ if((inputs.run['hamgen'])=='n'):
         zstore=[]
     else:
         if((inputs.run['zomgen'])=='y'):
-            zstore=zom.zom_gen(norb,ndet,inputs.zombs['zomtyp'],filenamer,inputs.run['seed'],inputs.zom_bias)
+            zstore=zom.zom_gen(norb,ndet,inputs.zombs,filenamer,inputs.run['seed'],inputs.zom_bias)
             print('Zombie states generated')
         elif((inputs.run['zomgen'])=='n'):
             zstore=in_outputs.read_object(inputs.run['zombiefile'])
             print('Zombie states read in')
-    if(inputs.run['clean']=='y'):
-        Ham = ham.pyscf_gen(norb,filenamer)
-        cleaning.clean_setup(norb,inputs.zombs['nel'],inputs.zombs['spin'], Ham, filenamer)
-        print('Cleaning hamiltonian generated')
+        if(inputs.run['clean']=='y'):
+            Ham = ham.pyscf_gen(norb,filenamer,inputs.pyscf)
+            cleaning.clean_setup(norb,inputs.zombs['nel'],ndet,inputs.zombs['spin'], Ham, zstore, filenamer)
+            print('Cleaning hamiltonian generated')
 elif((inputs.run['hamgen'])=='y'):
     # Generate or read in 1 and 2 electron integrals
     if((inputs.run['elecs'])=='pyscf'):
-        Ham = ham.pyscf_gen(norb,filenamer)
+        Ham = ham.pyscf_gen(norb,filenamer,inputs.pyscf)
         print('pyscf generated integrals')
     elif((inputs.run['elecs'])=='mol'):
         Ham = ham.molpro_read(norb,inputs.run['elecfile'],filenamer)
@@ -52,33 +52,49 @@ elif((inputs.run['hamgen'])=='y'):
     elif((inputs.run['elecs'])=='no'):
         Ham = in_outputs.read_object(inputs.run['elecfile'])
         print('Electron integrals read in')
-    if(inputs.run['clean']=='y'):
-        cleaning.clean_setup(norb,inputs.zombs['nel'],inputs.zombs['spin'], Ham, filenamer)
-        print('Cleaning hamiltonian generated')
     # Generate or read in zombie states
     if((inputs.run['zomgen'])=='y'):
-        zstore=zom.zom_gen(norb,ndet,inputs.zombs['zomtyp'],filenamer,inputs.run['seed'],inputs.zom_bias)
+        zstore=zom.zom_gen(norb,ndet,inputs.zombs,filenamer,inputs.run['seed'],inputs.zom_bias)
         print('Zombie states generated')
     elif((inputs.run['zomgen'])=='n'):
         zstore=in_outputs.read_object(inputs.run['zombiefile'])
         print('Zombie states read in')
+    if(inputs.run['clean']=='y'):
+        cleaning.clean_setup(norb,inputs.zombs['nel'],ndet,inputs.zombs['spin'], Ham, zstore, filenamer)
+        print('Cleaning hamiltonian generated')
 
     Bigham, Kover = ham.hamiltonian(ndet,Ham,zstore,filenamer)
     print('Hamiltonian generated')
     del Ham
     gc.collect()
 
+if(inputs.zombs['bb_imprv']==0):
+    # Imaginary time propagation
+    if(inputs.run['imagprop']=='y'):
+    # Check if Gram Schmidt orthogonalisation is to be used
+        if(inputs.run['gram']=='y'):
+            eb=imgtp.itime_prop_gs(Bigham,Kover,beta,timesteps,norb,inputs.run['zomhf'],inputs.run['hfnum'],zstore,ndet, inputs.run['gramnum'], filenamer)    
+        elif(inputs.run['gram']=='n'):
+            eb=imgtp.itime_prop(Bigham, Kover,beta,timesteps,norb,inputs.run['zomhf'],inputs.run['hfnum'],zstore,ndet,filenamer)
+    elif(inputs.run['imagprop']=='n'):
+        print('End of program')
+else:
+    for i in range(inputs.zombs['bb_imprv']):
+        # Imaginary time propagation
+        if(inputs.run['imagprop']=='y'):
+        # Check if Gram Schmidt orthogonalisation is to be used
+            if(inputs.run['gram']=='y'):
+                eb=imgtp.itime_prop_gs(Bigham,Kover,beta,timesteps,norb,inputs.run['zomhf'],inputs.run['hfnum'],zstore,ndet, inputs.run['gramnum'], filenamer+'_'+str(i))    
+            elif(inputs.run['gram']=='n'):
+                eb=imgtp.itime_prop(Bigham, Kover,beta,timesteps,norb,inputs.run['zomhf'],inputs.run['hfnum'],zstore,ndet,filenamer+'_'+str(i))
 
-# Imaginary time propagation
-if(inputs.run['imagprop']=='y'):
-# Check if Gram Schmidt orthogonalisation is to be used
-    if(inputs.run['gram']=='y'):
-        eb=imgtp.itime_prop_gs(Bigham,Kover,beta,timesteps,norb,inputs.run['zomhf'],inputs.run['hfnum'],zstore,ndet, inputs.run['gramnum'], filenamer)    
-    elif(inputs.run['gram']=='n'):
-        eb=imgtp.itime_prop(Bigham, Kover,beta,timesteps,norb,inputs.run['zomhf'],inputs.run['hfnum'],zstore,ndet,filenamer)
-elif(inputs.run['imagprop']=='n'):
-    print('End of program')
+        zom.biased_check(zstore,norb,ndet,filenamer+'_'+str(i))
+        
 
+
+
+
+# Cleaning Protocol
 if(inputs.run['clean']=='y'):
     clean_energy, norm = cleaning.cleaner(ndet, zstore, filenamer+'_clean_hamiltonian.csv', filenamer+'_clean_zombie_states.pkl',filenamer)
     print(clean_energy)

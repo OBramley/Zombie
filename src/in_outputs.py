@@ -44,7 +44,7 @@ def plot(eb,rnum, beta, timesteps, filename):
     fig=plt.figure(figsize=(3.37,5.055))
     ax=fig.add_axes([0,0,2,1])
     if(rnum==1):
-        ax.plot(x,eb[:,i+1], linewidth=2, color=colors(i),label='Converged energy = '+"{:.5f}".format(eb[timesteps-1,i+1]))
+        ax.plot(x,eb[:,1], linewidth=2, color=colors(0),label='Converged energy = '+"{:.5f}".format(eb[timesteps-1,1]))
     else:
         for i in range(rnum):
             ax.plot(x,eb[:,i+1], linewidth=2, color=colors(i),label='State '+str(rnum+1)+' = '+"{:.5f}".format(eb[timesteps-1,i+1]))

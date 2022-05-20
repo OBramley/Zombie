@@ -1,3 +1,4 @@
+from xml.dom import NoDataAllowedErr
 import numpy
 import in_outputs
 import zom
@@ -5,19 +6,35 @@ from itertools import combinations
 import ham
 import op
 
-def clean_setup(norb, nel, spin, Ham, filenamer):
+def clean_setup(norb, nel,ndet, spin, Ham, zstore, filenamer):
     filenamer=filenamer+"_clean"
-    zstore=[]
-    combs=list(combinations(range(norb),nel))
-    ndet=len(combs)
-    for i in range(ndet):
-        zstore.append(zom.zom(norb,typ='clean',thetas=combs[i]))
+    cstore=[]
+    combs=numpy.asarray(list(combinations(range(norb),nel)))
+    rawdet=combs.shape[0]
+    ndew=0
+    spinchecker=combs%2
+    for i in range(rawdet):
+        if(numpy.sum((spinchecker[i]))==(((nel/2)-spin))):
+            cstore.append(zom.zom(norb,typ='clean',thetas=combs[i]))
+            ndew=ndew+1
+    
+    magnitude=numpy.zeros((ndew))
+    cstore_f=[]
+    ndew2=0
+    for i in range(ndew):
+        for j in range(ndet):
+            magnitude[i]=magnitude[i]+op.overlap_f(cstore[i].zs,zstore[j].zs)
+        if(magnitude[i]>0.00001):
+            cstore_f.append(cstore[i])
+            ndew2=ndew2+1
+
+    del cstore
 
     # output zombie states
-    in_outputs.save_object(zstore,filenamer+'_zombie_states.pkl')
+    in_outputs.save_object(cstore_f,filenamer+'_zombie_states.pkl')
 
     # Generate the clean Hamiltonian
-    cleanham, cleanovrl = ham.hamiltonian(ndet,Ham,zstore,filenamer)
+    cleanham, cleanovrl = ham.hamiltonian(ndew2,Ham,cstore_f,filenamer)
 
     return
 

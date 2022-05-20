@@ -12,7 +12,7 @@
 
 run={
     # What is the name of the run
-    'runfolder':'cleaning_test',
+    'runfolder':'BH_biasing_20bf2',
 
     # Amount of time to request on HPC 
     'runtime': "#$ -l h_rt=24:00:00 \n",
@@ -55,14 +55,14 @@ run={
 
     # Do you want the starting energy to be the HF energy
     # Takes input 'y' or 'n' and then a number to defined the number of electrons
-    'zomhf':'n',
+    'zomhf':'y',
     'hfnum': 6,
 
     # Do you want to clean after propagation takes 'y', 'n' or 'f' to use a previosuly generated
     # cleaning hamiltonian and zombie state files
     'clean':'y',
-    'cleanham':'clean_ham.csv',
-    'cleanzom':'clean_zom.pkl', 
+    'cleanham':'li6_cleaning_test_clean_hamiltonian.csv',
+    'cleanzom':'li6_cleaning_test_clean_zombie_states.pkl', 
 
     # Do you want to find other energy states other than the ground state. If so turn on 
     # Gram Schmidt orthogonalisation and then specify the number of states. Takes input
@@ -75,24 +75,27 @@ run={
 
 zombs={
     # Number of spin orbitals
-    'norb':5,
+    'norb':10,
 
     # Number of electrons in the molecule
-    'nel':1,
+    'nel':6,
 
     # Spin of the moleucle 
 
     'spin':0,
 
     # Number of Zombie states
-    'ndet':25, 
+    'ndet':20, 
 
     # Type of zombie states. Random (ran), Hartree Fock (HF) or biased (bb)
     'zomtyp':'bb',
     
     # Biased basis improvement if 0 no loops to improve biased > 0 number of loops to improve the basis
 
-    'bb_imprv':0
+    'bb_imprv':0,
+
+    # Make the first Zombie state the RHF det? Takes y or n
+    'rhf_1':'n'
 
 }
 
@@ -102,25 +105,25 @@ zombs={
 zom_bias={
     # Number of ocuupied spin orbitals
     # THE NUMBER OF SPIN ORBITALS IS HALF THE NUMBER OF ELECTRONS
-    'alive':3,
+    'alive':2,
     # Alive aplitude of 1st spin orbital
-    'alive_start':0.99,
+    'alive_start':0.999,
     # Alive aplitude of last "alive" orbital
-    'alive_end':0.94,
+    'alive_end':0.175,
     # Number of spin orbitals approximately 50/50 alive/dead aplitudes
     'mid':0,
     # Alive aplitude of 1st dead spin orbtial
-    'dead_start':0.008,
+    'dead_start':0.351,
     # Alive aplitude of last spin orbital
-    'dead_end':0.00006
+    'dead_end':0.120
 
 }
 
 pyscf={
      # The units the geometry of the molecule is set up in
-    'units':'Bohr',
+    'units':'Angstrom',
      # The geometry of the molecule being investigated
-    'atoms' :'Li 0 0 0; Li 0 0 6',
+    'atoms': 'B 0 0 0; H 0 0 1.2324',
     # The type of basis used to generate the 1 and 2 electron integrals
     'bs' : '6-31g**',
     # How verbose do you want the PyScf output to be in your terminal?

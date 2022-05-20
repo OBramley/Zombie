@@ -54,6 +54,8 @@ elif(isinstance(inputs.run['gramnum'],int)==False):
     sys.exit("Number of states to be investiated must be an integer")
 elif(inputs.run['clean'] not in {'y','n','f'}):
     sys.exit("Setting cleaning on or off must be 'y' or 'n' or 'f' (to clean from a previously generated file)")
+elif(isinstance(inputs.zombs['bb_imprv'],int)==False):
+    sys.exit("bb_imprv must be an integer 0 for no improvement loops or greater if wanting to improve the bias")
 
 if(inputs.zombs['zomtyp']=='HF'):
     ndetcheck=0
@@ -85,6 +87,9 @@ if(inputs.run['gram']=='y'):
         sys.exit("Number of states for Gram Schmidt must be an integer")
     elif(inputs.run['gramnum']<2):
         sys.exit("If using Gram Schmidt more than one state must investigated")
+
+if((inputs.zombs['bb_imprv']>=1)and(inputs.zombs['zomtyp']!='bb')):
+    sys.exit('Biased basis improvement can only be used when the basis type is set to bb')
 
 print("Arguments checked")
 # Check if on HPC

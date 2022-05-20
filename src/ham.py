@@ -1,7 +1,6 @@
 from pyscf import gto, scf, ao2mo
 import numpy
 from functools import reduce
-import inputs
 import op
 import in_outputs
 
@@ -106,16 +105,16 @@ class system:
         return HH
 
 
-def pyscf_gen(norb,filenamer):
+def pyscf_gen(norb,filenamer,pyscf):
     mol = gto.M(
-    unit = inputs.pyscf['units'],
-    atom = inputs.pyscf['atoms'],
-    basis = inputs.pyscf['bs'],
-    verbose = inputs.pyscf['verbosity'],
-    symmetry = inputs.pyscf['symmetry'],
-    spin=inputs.pyscf['spin'],
-    charge=inputs.pyscf['charge'],
-    symmetry_subgroup = inputs.pyscf['symmetry_subgroup'], #0 is code for A1 point group
+    unit = pyscf['units'],
+    atom = pyscf['atoms'],
+    basis = pyscf['bs'],
+    verbose = pyscf['verbosity'],
+    symmetry = pyscf['symmetry'],
+    spin=pyscf['spin'],
+    charge=pyscf['charge'],
+    symmetry_subgroup = pyscf['symmetry_subgroup'], #0 is code for A1 point group
     )
     myhf=scf.RHF(mol)
     myhf.kernel()
@@ -211,6 +210,7 @@ def hamiltonian(ndet,Ham,zstore,filenamer):
             Kover[jdet,idet] = Kover[idet,jdet]
             Bigham[idet,jdet] = Ham.HTot(zstore[idet].zs, zstore[jdet].zs)
             Bigham[jdet,idet] = Bigham[idet,jdet]
+        print('Hamiltonian row '+ str(idet)+' completed')
     hamname=filenamer+'_hamiltonian.csv'
     ovrlname=filenamer+'_overlap.csv'
     in_outputs.write_ham(Kover,ovrlname)
