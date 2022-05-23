@@ -12,7 +12,7 @@
 
 run={
     # What is the name of the run
-    'runfolder':'BH_biasing_20bf2',
+    'runfolder':'BH_biasing_25BF',
 
     # Amount of time to request on HPC 
     'runtime': "#$ -l h_rt=24:00:00 \n",
@@ -60,7 +60,7 @@ run={
 
     # Do you want to clean after propagation takes 'y', 'n' or 'f' to use a previosuly generated
     # cleaning hamiltonian and zombie state files
-    'clean':'y',
+    'clean':'n',
     'cleanham':'li6_cleaning_test_clean_hamiltonian.csv',
     'cleanzom':'li6_cleaning_test_clean_zombie_states.pkl', 
 
@@ -75,7 +75,7 @@ run={
 
 zombs={
     # Number of spin orbitals
-    'norb':10,
+    'norb':19,
 
     # Number of electrons in the molecule
     'nel':6,
@@ -85,7 +85,7 @@ zombs={
     'spin':0,
 
     # Number of Zombie states
-    'ndet':20, 
+    'ndet':25, 
 
     # Type of zombie states. Random (ran), Hartree Fock (HF) or biased (bb)
     'zomtyp':'bb',
