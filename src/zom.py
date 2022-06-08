@@ -149,8 +149,7 @@ def biased_basis3(norb, ndet, zstore):
             num[j+1]=centre*randompick[j+1]
         zstore.append(zom(norb,typ='theta',thetas=num))
 
-    for i in range(ndet):
-        in_outputs.write_ham(zstore[i].zs,'zombie_'+str(i)+'.csv')
+    
     
     return zstore
 
@@ -175,7 +174,9 @@ def zom_gen(norb,ndet,zombs,filenamer,seed,zom_bias):
         zstore=biased_basis2(norb,ndet,zstore)
     if((rhf=='y')):
         zstore[0]=zom(norb,typ='aufbau',nel=nelc)
-    print(zstore[0].zs)
+    for i in range(ndet):
+        in_outputs.write_ham(zstore[i].zs,'zombie_'+str(i)+'.csv')
+
     filename=filenamer+'_zombie_states.pkl'
     in_outputs.save_object(zstore,filename)
     return zstore
