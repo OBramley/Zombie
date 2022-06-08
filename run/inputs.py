@@ -12,7 +12,7 @@
 
 run={
     # What is the name of the run
-    'runfolder':'BH_biasing_25BF',
+    'runfolder':'sanity',
 
     # Amount of time to request on HPC 
     'runtime': "#$ -l h_rt=24:00:00 \n",
@@ -75,7 +75,7 @@ run={
 
 zombs={
     # Number of spin orbitals
-    'norb':19,
+    'norb':10,
 
     # Number of electrons in the molecule
     'nel':6,
@@ -85,7 +85,7 @@ zombs={
     'spin':0,
 
     # Number of Zombie states
-    'ndet':25, 
+    'ndet':2, 
 
     # Type of zombie states. Random (ran), Hartree Fock (HF) or biased (bb)
     'zomtyp':'bb',
@@ -95,7 +95,7 @@ zombs={
     'bb_imprv':0,
 
     # Make the first Zombie state the RHF det? Takes y or n
-    'rhf_1':'n'
+    'rhf_1':'y'
 
 }
 
@@ -121,9 +121,9 @@ zom_bias={
 
 pyscf={
      # The units the geometry of the molecule is set up in
-    'units':'Angstrom',
+    'units':'Bohr',
      # The geometry of the molecule being investigated
-    'atoms': 'B 0 0 0; H 0 0 1.2324',
+    'atoms': 'Li 0 0 0; Li 0 0 6',
     # The type of basis used to generate the 1 and 2 electron integrals
     'bs' : '6-31g**',
     # How verbose do you want the PyScf output to be in your terminal?
