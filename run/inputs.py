@@ -12,10 +12,10 @@
 
 run={
     # What is the name of the run
-    'runfolder':'BH_biasing_25BF',
+    'runfolder':'bh_biasing_250bf_clean',
 
     # Amount of time to request on HPC 
-    'runtime': "#$ -l h_rt=24:00:00 \n",
+    'runtime': "#$ -l h_rt=48:00:00 \n",
 
     'nodes':1,
 
@@ -55,14 +55,14 @@ run={
 
     # Do you want the starting energy to be the HF energy
     # Takes input 'y' or 'n' and then a number to defined the number of electrons
-    'zomhf':'y',
+    'zomhf':'n',
     'hfnum': 6,
 
     # Do you want to clean after propagation takes 'y', 'n' or 'f' to use a previosuly generated
     # cleaning hamiltonian and zombie state files
-    'clean':'n',
-    'cleanham':'li6_cleaning_test_clean_hamiltonian.csv',
-    'cleanzom':'li6_cleaning_test_clean_zombie_states.pkl', 
+    'clean':'f',
+    'cleanham':'BH_clean_hamiltonian.csv',
+    'cleanzom':'BH_clean_zombie_states.pkl', 
 
     # Do you want to find other energy states other than the ground state. If so turn on 
     # Gram Schmidt orthogonalisation and then specify the number of states. Takes input
@@ -85,7 +85,7 @@ zombs={
     'spin':0,
 
     # Number of Zombie states
-    'ndet':25, 
+    'ndet':250, 
 
     # Type of zombie states. Random (ran), Hartree Fock (HF) or biased (bb)
     'zomtyp':'bb',
@@ -95,7 +95,7 @@ zombs={
     'bb_imprv':0,
 
     # Make the first Zombie state the RHF det? Takes y or n
-    'rhf_1':'n'
+    'rhf_1':'y'
 
 }
 
