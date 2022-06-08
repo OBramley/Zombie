@@ -13,7 +13,9 @@ import zom
 import in_outputs
 import gc
 import imgtp
+import socket
 import cleaning
+import subprocess
 
 # Load paramters
 filenamer=inputs.run['runfolder']
@@ -116,3 +118,9 @@ if(inputs.run['clean']=='y')or(inputs.run['clean']=='f'):
     in_outputs.clean_plot(eb,rnum, inputs.run['beta'], (clean_energy/norm),timesteps,'results.png')
 else:
     in_outputs.plot(eb,rnum, inputs.run['beta'],timesteps,'results.png')
+
+
+
+subprocess.run(['rclone', 'copy', '/nobackup/cm14oab/'+filenamer,'onedrive:'+filenamer])
+
+
