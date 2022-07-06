@@ -83,7 +83,7 @@ long double z_an_z3(int norb,long double z1ij[norb][norb][norb][2],long double z
             break;
         }
     }
-
+    hmin=0;
     hh[norb-1]=vmult[norb-1][0]+vmult[norb-1][1];
     for(n=norb-2;n>0;n--){
         hh[n]=hh[n+1]*(vmult[n][0]+vmult[n][1]);
@@ -238,7 +238,7 @@ int csvwriter(int ndet, long double input[ndet][ndet],char filename[]){
     }
     for(i=0; i<ndet;i++){
         for(j=0; j<ndet; j++){
-            fprintf(fp1, "%lf%s",input[i][j],
+            fprintf(fp1, "%Lf%s",input[i][j],
                 (j<ndet-1?",":""));
         }
         fprintf(fp1,"\n");
@@ -274,7 +274,7 @@ int control(const long double * z_in, const long double * h1in, const long doubl
     // int ndet=10;
     // int norb=10;
     long double zstore[ndet][norb][2], H1ei[norb][norb],H2ei[norb][norb][norb][norb];
-    long double temp; //, Hnuc=1.5;
+    // long double temp; //, Hnuc=1.5;
     int i,j,k,l,n,m,p;
     // char *record,*line, *eptr;
     // char buffer[100000] ;

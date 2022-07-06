@@ -7,7 +7,8 @@
 # propagation is carried out. 
 # 
 ###################################################################################################
-from ctypes import c_int, c_void_p, cdll
+from ctypes import CDLL, c_int, c_void_p, cdll
+#from numpy.ctypeslib
 import inputs
 import ham
 import zom
@@ -18,9 +19,9 @@ import socket
 import cleaning
 import subprocess
 
-# lib=cdll.LoadLibrary("c_ham.so")
-# c_hamiltonian = lib.control
-# c_hamiltonian.restype = c_int
+lib=CDLL("c_ham.so")
+c_hamiltonian = lib.control
+c_hamiltonian.restype = c_int
 
 # Load paramters
 filenamer=inputs.run['runfolder']
@@ -72,7 +73,7 @@ elif((inputs.run['hamgen'])=='y'):
 
     Bigham, Kover = ham.hamiltonian(ndet,Ham,zstore,filenamer)
     print('Hamiltonian generated')
-    # result = c_hamiltonian(c_void_p(zstore.ctypes.data),c_void_p(Ham.H1ei),c_void_p(Ham.H2ei),c_void_p(Ham.Hnr),c_int(ndet),c_int(norb))
+    result = c_hamiltonian(c_void_p(zstore.ctypes.data),c_void_p(Ham.H1ei),c_void_p(Ham.H2ei),c_void_p(Ham.Hnr),c_int(ndet),c_int(norb))
     del Ham
     gc.collect()
 
