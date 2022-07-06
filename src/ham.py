@@ -19,6 +19,8 @@ def spatospin1(H1ea,norb):
             jj = j*2
             H1ei[ii,jj] = H1ea[i,j] # alpha spin
             H1ei[ii+1,jj+1] = H1ea[i,j] # beta spin
+    # in_outputs.write_ham(H1ei,"H1ei.csv")
+    
     return H1ei
 
 def spatospin2(H2ea,norb):
@@ -41,6 +43,11 @@ def spatospin2(H2ea,norb):
                     H2ei[ii+1,kk,jj+1,ll] = Ht
                     H2ei[ii,kk+1,jj,ll+1] = Ht
                     H2ei[ii+1,kk+1,jj+1,ll+1] = Ht
+
+    # for i in range(norb):
+    #     for j in range(norb):
+    #         obj=H2ei[i,j,:,:]
+    #         in_outputs.write_ham(obj,"H2ei_"+str(i)+"_"+str(j)+".csv")
     return H2ei
 
 class system:
@@ -134,6 +141,7 @@ def pyscf_gen(norb,filenamer,pyscf):
     h1e=numpy.asarray(h1e)
     H1ei = spatospin1(h1e,norb)
     H2ei = spatospin2(eri_full,norb)
+    print(Hnuc)
     # in_outputs.write_integrals(Hnuc, H1ei, H2ei,norb)
     Ham=system(norb, Hnuc, H1ei, H2ei)
     filename=filenamer+'_inegrals.pkl'

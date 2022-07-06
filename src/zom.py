@@ -179,6 +179,7 @@ def zom_gen(norb,ndet,zombs,filenamer,seed,zom_bias):
 
     filename=filenamer+'_zombie_states.pkl'
     in_outputs.save_object(zstore,filename)
+    zstore=numpy.array(zstore)
     return zstore
 
 # Trying a zombie class

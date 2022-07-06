@@ -12,7 +12,7 @@
 
 run={
     # What is the name of the run
-    'runfolder':'sanity',
+    'runfolder':'C_checker',
 
     # Amount of time to request on HPC 
     'runtime': "#$ -l h_rt=48:00:00 \n",
@@ -74,8 +74,8 @@ run={
 
 
 zombs={
-    # Number of spin orbitals
-    'norb':10,
+    # Number of orbitals
+    'norb':5,
 
     # Number of electrons in the molecule
     'nel':6,
@@ -85,10 +85,10 @@ zombs={
     'spin':0,
 
     # Number of Zombie states
-    'ndet':2, 
+    'ndet':10, 
 
     # Type of zombie states. Random (ran), Hartree Fock (HF) or biased (bb)
-    'zomtyp':'bb',
+    'zomtyp':'ran',
     
     # Biased basis improvement if 0 no loops to improve biased > 0 number of loops to improve the basis
 
