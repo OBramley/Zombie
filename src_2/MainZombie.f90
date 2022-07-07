@@ -11,7 +11,7 @@ program MainZombie
     ! Private variables
     type(zombiest), dimension(:), allocatable:: zstore
     type(dvector), dimension(:), allocatable:: dvecs
-    type()
+    
     integer:: j, k, n, m 
 
     ! Public variables

@@ -5,6 +5,7 @@ MODULE alarrays
 
     contains
 
+    ! Routine to allcoate 1&2 electron electron integral matrices
     subroutine allocintgrl(elecs)
 
         implicit none
@@ -31,6 +32,7 @@ MODULE alarrays
         return
     end subroutine allocintgrl
 
+    ! Routine to deallcoate 1&2 electron electron integral matrices
     subroutine deallocintgrl(elecs)
 
         implicit none
@@ -54,6 +56,62 @@ MODULE alarrays
         return
 
     end subroutine deallocintgrl
+
+    ! Routine to allocate set of zombie states
+
+    subroutine alloczs(zstore,nbf)
+        implicit none
+
+        type(zombiest),dimension(:),allocatable,intent(inout)::zstore
+        integer, intent (in) :: nbf
+
+        integer::j,ierr
+
+        if (errorflag .ne. 0) return
+
+        ierr=0
+
+        if(allocated(zstore).eqv..false.)then
+            allocate(zstore(nbf),stat=ierr)
+            if (ierr/=0) then
+                write(0,"(a,i0)") "Error in zombie set allocation. ierr had value ", ierr
+                errorflag=1
+                return
+            end if
+        end if
+
+        do j=1,size(zstore)
+            call alloczf(zstore(j))
+        end do
+
+        return 
+
+    end subroutine alloczs
+
+    !  Routine to allocate individual zombie states
+
+    subroutine alloczf(zs)
+        type(zombiest),intent(inout)::zs
+
+        integer::ierr
+
+        if (errorflag .ne. 0) return
+
+        ierr = 0
+
+        allocate(zs%alive(norb),stat=ierr)
+        if(ierr==0) allocate(zs%dead(norb), stat=ierr)
+        if (ierr/=0) then
+            write(0,"(a,i0)") "Error in Zombie state allocation. ierr had value ", ierr
+            errorflag=1
+            return
+        end if
+
+        zs%alive(1:norb)=(0.0d0,0.0d0)
+        zs%dead(1:norb)=(0.0d0,0.0d0)
+
+        return
+    end subroutine alloczf
 
 
 END MODULE alarrays

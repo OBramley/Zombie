@@ -2,7 +2,6 @@ MODULE globvars
 
 
 
-
     ! Type defining the zombie state
     type zombiest
         complex(kind=8), dimension(:), allocatable::alive

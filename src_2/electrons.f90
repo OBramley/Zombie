@@ -5,6 +5,8 @@ use alarrays
 
 contains
 
+! Program to generate one and two electron integrals from PyScf
+! Some of this code has been adapted from George Booth
 subroutine electronintegrals(elecs)
 
     implicit none
@@ -12,6 +14,7 @@ subroutine electronintegrals(elecs)
     type(elecintrgl), allocatable, intent(inout)::elecs
 
     integer:: ierr, nlines
+    
 
     if (errorflag .ne. 0) return
     ierr = 0
@@ -22,6 +25,21 @@ subroutine electronintegrals(elecs)
     call spattospin1(elecs,nlines)
     call spattospin2(elecs,nlines)
 
+    open(unit=128, file='h1ea.csv',status='old',iostat=ierr)
+    if (ierr.ne.0) then
+        write(0,"(a)") 'Error in opening hnuc.csv file'
+        errorflag = 1
+        return
+    end if
+    read(128,*, iostat=ierr)elecs%hnuc
+    if (ierr .ne. 0) then
+        write(0,"(a)") 'Error reading Hnuc'
+        errorflag = 1
+        return
+      end if
+    close(128)
+
+    return
 
 end subroutine electronintegrals
 
@@ -31,6 +49,7 @@ Integer Function lines(nlines)
     integer, intent(INOUT):: nlines
     integer:: ierr
     
+    ierr=0
     nlines=0
     open(unit=129, file='h1ea.csv',status='old',iostat=ierr)
     if (ierr.ne.0) then
@@ -65,6 +84,7 @@ subroutine spattospin1(elecs,nlines)
     real(kind=8), dimension(:,:),allocatable ::h1ea
     integer:: ierr, j, k,jj,kk, nspao
 
+    ierr=0 
     allocate (h1ea(nlines,nlines), stat=ierr)
     if (ierr/=0) then
         write(0,"(a,i0)") "Error in h1ea allocation. ierr had value ", ierr
@@ -115,6 +135,7 @@ subroutine spattospin2(elecs,nlines)
     integer:: ierr, j, k, l, m, jj, kk, ll, mm, nspao
     character(len=4)::val1,val2
 
+    ierr=0 
     allocate (h2ea(nlines,nlines,nlines,nlines), stat=ierr)
     if (ierr/=0) then
         write(0,"(a,i0)") "Error in h2ea allocation. ierr had value ", ierr
