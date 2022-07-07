@@ -7,11 +7,11 @@ MODULE operators
 
 
     ! Overlap 
-    real function overlap(z1,z2,ovrl)
+    real function overlap(z1,z2)
         implicit none
 
         type(zombiest),intent(in)::z1,z2
-        real(kind=8),intent(inout)::ovrl
+        real(kind=8)::ovrl
         real(kind=8)::tt
         integer:: j
 
@@ -26,7 +26,7 @@ MODULE operators
             end if
             ovrl=ovrl*tt
         end do
-
+        overlap=ovrl
         return
 
     end function overlap
@@ -74,11 +74,11 @@ MODULE operators
     end subroutine an
 
     ! Application of number operator
-    real function numf(z1,z2,temp)
+    real function numf(z1,z2)
         implicit none
 
         type(zombiest),intent(in)::z1,z2
-        real(kind=8),intent(inout)::temp
+        real(kind=8)::temp
         real(kind=8),dimension(:),allocatable::cc, dd, mult, multb
         integer:: j, ierr,iorb 
 
@@ -125,6 +125,7 @@ MODULE operators
             return
         end if
 
+        numf=temp
         return
 
     end function numf
@@ -134,7 +135,7 @@ MODULE operators
         implicit none
 
         type(zombiest),intent(inout)::zs
-        real(kind=8),intent(in)::iorb
+        integer, intent(in)::iorb
 
         if (errorflag .ne. 0) return
 
@@ -144,11 +145,11 @@ MODULE operators
     end subroutine num
 
     ! N squared operator
-    real function nsq(z1,z2,temp)
+    real function nsq(z1,z2)
         implicit none
 
         type(zombiest),intent(in)::z1,z2
-        real(kind=8),intent(inout)::temp
+        real(kind=8)::temp
         type(zombiest),dimension(:),allocatable::zt
         integer:: j, ierr
 
@@ -169,9 +170,69 @@ MODULE operators
         end do
 
         call dealloczs(zt)
-
+        nsq=temp
         return
     end function nsq
+
+    ! Checks if a given zombie state is equal to a single determiant an the entreis for each
+    ! spin orbital are either 0 and 1 or 0 and -1
+    logical function isdet(zs)
+        
+        implicit none
+
+        type(zombiest),intent(in)::zs
+        integer:: j
+
+        do j=1, norb
+            if(zs%dead(j)==(0.0d0,0.0d0))then
+                if((zs%alive(j)==(1.0d0,0.0d0)).or.(zs%alive(j)==(-1.0d0,0.0d0))) then
+                    CYCLE
+                else
+                    isdet=.false.
+                    return
+                end if
+            else if((zs%dead(j)==(1.0d0,0.0d0)).or.(zs%dead(j)==(-1.0d0,0.0d0))) then
+                if(zs%alive(j)==(0.0d0,0.0d0)) then
+                    CYCLE
+                else
+                    isdet=.false.
+                    return
+                end if
+            else 
+                isdet=.false.
+                return
+            end if
+        end do
+        
+        isdet=.true.
+        return
+    end function isdet
+
+        ! Determines if a given zombie state vanishes. Returns True if state vanishes
+        ! False otherwise
+    logical function iszero(zs)
+        implicit none
+
+        type(zombiest),intent(in)::zs
+        integer:: j
+        real(kind=8)::tt 
+
+        do j=1, size(zs%alive)
+            tt=dconjg(zs%dead(j))*zs%dead(j) + dconjg(zs%alive(j))*zs%alive(j)
+            if(tt==0.0)then
+                iszero=.true.
+            end if
+        end do
+
+        iszero=.false.
+        return
+    end function iszero
+
+    
+
+
+
+
 
 
     
