@@ -37,6 +37,8 @@ program MainZombie
 
     ! generate 1 and 2 electron integrals
 
+    !written
+
     ! generate zombie states
 
     ! generate Hamiltonian and overlap

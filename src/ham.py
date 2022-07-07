@@ -137,6 +137,17 @@ def pyscf_gen(norb,filenamer,pyscf):
     eri_full = ao2mo.restore(1, eri, c.shape[1])
     # Scalar nuclear repulsion energy
     Hnuc = myhf.energy_nuc()
+
+    # in_outputs.write_ham(h1e,"h1ea.csv")
+    # exit()
+    # # # Test to see if h2ea info can be fulled easily
+    # for i in range(norb):
+    #     for j in range(norb):
+    #         obj=eri_full[i,j,:,:]
+    #         in_outputs.write_ham(obj,"h2ea_"+str(i+1)+"_"+str(j+1)+".csv")
+
+    # exit()
+
     # Now convert from sppatial to spin orbitals
     h1e=numpy.asarray(h1e)
     H1ei = spatospin1(h1e,norb)

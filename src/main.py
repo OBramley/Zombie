@@ -19,9 +19,9 @@ import socket
 import cleaning
 import subprocess
 
-lib=CDLL("c_ham.so")
-c_hamiltonian = lib.control
-c_hamiltonian.restype = c_int
+# lib=CDLL("c_ham.so")
+# c_hamiltonian = lib.control
+# c_hamiltonian.restype = c_int
 
 # Load paramters
 filenamer=inputs.run['runfolder']
