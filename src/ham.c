@@ -131,7 +131,7 @@ long double Ham1z(int norb,long double H1ei[norb][norb],long double zom1[norb][2
     long double zomt[norb][2], Ht1=0.0;
     int i,j,n;
     
-    for(i=0;j<norb;i++){
+    for(i=0;i<norb;i++){
         for(j=0;j<norb;j++){
             memcpy(zomt,zom2,2*norb*sizeof(long double));
             //anhilation Operator
