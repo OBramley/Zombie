@@ -113,6 +113,56 @@ MODULE alarrays
         return
     end subroutine alloczf
 
+    subroutine dealloczs(zstore)
+        implicit none
+
+        type(zombiest),dimension(:),allocatable,intent(inout)::zstore
+
+        integer::j,ierr
+
+        if (errorflag .ne. 0) return
+
+        ierr=0
+
+        do j=1,size(zstore)
+            call dealloczf(zstore(j))
+        end do
+
+        if(ierr==0) deallocate(zstore,stat=ierr)
+        if (ierr/=0) then
+            write(0,"(a,i0)") "Error in zombie set deallocation. ierr had value ", ierr
+            errorflag=1
+            return
+        end if
+
+
+        
+
+        return 
+
+    end subroutine dealloczs
+
+    subroutine dealloczf(zs)
+        type(zombiest),intent(inout)::zs
+
+        integer::ierr
+
+        if (errorflag .ne. 0) return
+
+        ierr = 0
+
+        deallocate(zs%alive,stat=ierr)
+        if(ierr==0) deallocate(zs%dead, stat=ierr)
+        if (ierr/=0) then
+            write(0,"(a,i0)") "Error in Zombie state deallocation. ierr had value ", ierr
+            errorflag=1
+            return
+        end if
+
+        
+        return
+    end subroutine dealloczf
+
 
 END MODULE alarrays
 

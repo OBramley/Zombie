@@ -2,8 +2,8 @@ program MainZombie
     
     
     use globvars
-    
-    
+    use alarrays
+    use electrons
     
     
     implicit none
@@ -11,7 +11,7 @@ program MainZombie
     ! Private variables
     type(zombiest), dimension(:), allocatable:: zstore
     type(dvector), dimension(:), allocatable:: dvecs
-    
+    type(elecintrgl),allocatable::elect
     integer:: j, k, n, m 
 
     ! Public variables
@@ -36,10 +36,14 @@ program MainZombie
     ! Read in run conditions
 
     ! generate 1 and 2 electron integrals
+    call allocintgrl(elect)
+    call electronintegrals(elecs)
+
 
     !written
 
     ! generate zombie states
+    call alloczs(zstore,ndet)
 
     ! generate Hamiltonian and overlap
     

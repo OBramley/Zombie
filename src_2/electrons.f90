@@ -1,7 +1,6 @@
 MODULE electrons
 
 use globvars
-use alarrays
 
 contains
 
@@ -11,7 +10,7 @@ subroutine electronintegrals(elecs)
 
     implicit none
 
-    type(elecintrgl), allocatable, intent(inout)::elecs
+    type(elecintrgl), intent(inout)::elecs
 
     integer:: ierr, nlines
     
@@ -20,7 +19,6 @@ subroutine electronintegrals(elecs)
     ierr = 0
 
     ! n=0
-    call allocintgrl(elecs)
     nlines = lines(nlines)
     call spattospin1(elecs,nlines)
     call spattospin2(elecs,nlines)

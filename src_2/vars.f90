@@ -42,7 +42,6 @@ MODULE globvars
     character(LEN=1)::cleanflg   ! Flag to determine if cleaning is
     character(LEN=1)::gram       ! Flag to determine if gram schmidt orthogolnalisation should be carried out
     integer::gramnum        ! Number of additional states to be generated for GS orthogonalisation
-    character(LEN=3)::zomtyp     ! Type of zombie states to be generated
     character(LEN=1)::rhf_1      ! Flag to decide if the first zombie state should be st as the RHF determinant
 
     real(kind=8)::pirl      ! pi
