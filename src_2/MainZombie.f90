@@ -12,6 +12,7 @@ program MainZombie
     ! Private variables
     type(zombiest), dimension(:), allocatable:: zstore
     type(dvector), dimension(:), allocatable:: dvecs
+    type(energy):: en
     type(elecintrgl),allocatable::elect
     integer:: j, k, n, m 
 
@@ -52,6 +53,16 @@ program MainZombie
     call hamgen(ham,zstore,elecs,ndet)
     
     ! Imaginary time propagation
+    if(gram.eq."n")then
+        call allocdv(dvecs,1)
+        call allocerg(en,1)
+    else if(gramflg.eq."y")then
+        call allocdv(dvecs,1+gramnum)
+        call allocerg(en,1+gramnum)
+    else
+        write(0,) "Error in gramflg setting. This should have been caught ", ierr
+            errorflag=1
+    end if
 
 
 

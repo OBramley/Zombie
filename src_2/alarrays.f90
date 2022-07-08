@@ -227,6 +227,9 @@ MODULE alarrays
     end subroutine dealloczs2d
 
     subroutine allocham(ham,size)
+
+        implicit none
+
         type(hamiltonian),intent(inout)::ham 
 
         integer::ierr,size
@@ -237,6 +240,8 @@ MODULE alarrays
 
         allocate(ham%hjk(size,size), stat=ierr)
         if(ierr==0) allocate(ham%ovrlp(size,size), stat=ierr)
+        if(ierr==0) allocate(ham%inv(size,size), stat=ierr)
+        if(ierr==0) allocate(ham%kinvh(size,size), stat=ierr)
         if (ierr/=0) then
             write(0,"(a,i0)") "Error in Hamiltonian allocation. ierr had value ", ierr
             errorflag=1
@@ -245,11 +250,15 @@ MODULE alarrays
 
         ham%hjk(1:size,1:size)=(0.0d0,0.0d0)
         ham%ovrlp(1:size,1:size)=(0.0d0,0.0d0)
+        ham%inv(1:size,1:size)=(0.0d0,0.0d0)
 
 
     end subroutine allocham
 
     subroutine deallocham(ham)
+
+        implicit none
+
         type(hamiltonian), intent(inout)::ham 
 
         integer::ierr
@@ -260,6 +269,8 @@ MODULE alarrays
 
         deallocate(ham%Hjk, stat=ierr)
         if(ierr==0) deallocate(ham%ovrlp, stat=ierr)
+        if(ierr==0) deallocate(ham%inv, stat=ierr)
+        if(ierr==0) deallocate(ham%kinvh, stat=ierr)
         if (ierr/=0) then
             write(0,"(a,i0)") "Error in Hamiltonian deallocation. ierr had value ", ierr
             errorflag=1
@@ -267,6 +278,119 @@ MODULE alarrays
         end if
 
     end subroutine deallocham
+
+    subroutine allocdv(dvecs,x,length)
+
+        implicit none
+
+        type(dvector),intent(inout),allocatable,dimension(:)::dvecs
+        integer, intent(in)::x,length
+        integer::j,ierr
+
+        if (errorflag .ne. 0) return
+
+        ierr=0
+        if(allocated(dvecs).eqv..false.)then
+            allocate(dvecs(x),stat=ierr)
+            if (ierr/=0) then
+                write(0,"(a,i0)") "Error in dvecs allocation. ierr had value ", ierr
+                errorflag=1
+                return
+            end if
+        end if
+
+        do j=1, x
+            allocate(dvecs(j)%d(length),stat=ierr)
+            if (ierr/=0) then
+                write(0,"(a,i0)") "Error in d allocation. ierr had value ", ierr
+                errorflag=1
+                return
+            end if
+            dvecs(j)%d(1:length)=(0.0,0.0)
+        end do
+    end subroutine allocdv
+
+    subroutine deallocdv(dvecs)
+
+        implicit none 
+        type(dvector),intent(inout),allocatable,dimension(:)::dvecs
+        integer::j,ierr
+
+        if (errorflag .ne. 0) return
+
+        ierr=0
+
+        do j=1, size(dvecs)
+            deallocate(dvecs(j)%d,stat=ierr)
+            if (ierr/=0) then
+                write(0,"(a,i0)") "Error in d deallocation. ierr had value ", ierr
+                errorflag=1
+                return
+            end if
+        end do
+
+    
+        deallocate(dvecs,stat=ierr)
+        if (ierr/=0) then
+            write(0,"(a,i0)") "Error in dvecs deallocation. ierr had value ", ierr
+            errorflag=1
+            return
+        end if
+  
+
+       
+    end subroutine deallocdv
+
+
+    subroutine allocerg(en,x)
+
+        implicit none
+
+        type(energy),intent(inout)::en
+        integer, intent(in)::x
+        integer::ierr
+
+        if (errorflag .ne. 0) return
+
+        ierr=0
+
+        
+        allocate(en%t(timesteps+1),stat=ierr)
+        if(ierr==0) allocate(en%erg(timesteps+1,x))
+        if (ierr/=0) then
+            write(0,"(a,i0)") "Error in energy allocation. ierr had value ", ierr
+            errorflag=1
+            return
+        end if
+
+        return
+     
+    end subroutine allocerg
+
+    subroutine deallocerg(en)
+
+        implicit none
+
+        type(energy),intent(inout)::en
+        integer::ierr
+
+        if (errorflag .ne. 0) return
+
+        ierr=0
+        
+        deallocate(en%t,stat=ierr)
+        if(ierr==0) deallocate(en%erg)
+        if (ierr/=0) then
+            write(0,"(a,i0)") "Error in energy deallocation. ierr had value ", ierr
+            errorflag=1
+            return
+        end if
+
+        return
+     
+    end subroutine deallocerg
+
+
 
 END MODULE alarrays
 

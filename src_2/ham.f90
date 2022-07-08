@@ -3,10 +3,8 @@ MODULE ham
     use globvars
     use alarrays
     use operators
-    
 
-    
-    
+
     
     contains
     
@@ -35,6 +33,9 @@ MODULE ham
                 tot = tot + (overlap(z1,zomt)*elecs%h1ei(j,k))
             end do
         end do
+
+        call dealloczf(zomt)
+        
         h1et=tot
         return
 
@@ -110,13 +111,9 @@ MODULE ham
         call dealloczs(z2l)
         call dealloczf(zomt)
 
-        h2et=tot
+        h2et=tot*0.5
+        
         return
-
-
-
-
-
 
     end function h2et
 
@@ -146,17 +143,47 @@ MODULE ham
         type(hamiltonian), intent(inout)::ham 
         type(zombiest),dimension(:),intent(inout)::zstore
         type(elecintrgl),intent(inout)::elecs
-        integer:: j,k,size
+        integer, allocatable,dimension(:)::IPIV
+        integer:: j,k,size,ierr
 
         do j=1, size
             do k=j,size
                 ham%ovrlp(j,k)=overlap(zstore(j),zstore(k))
                 ham%ovrlp(k,j)= ham%ovrlp(j,k)
+                ham%inv(j,k)=ham%ovrlp(j,k)
+                ham%inv(k,j)=ham%ovrlp(j,k)
                 ham%hjk(j,k)= hamval(zstore(j),zstore(k),elecs,ham%ovrlp(j,k))
                 ham%hjk(k,j)=ham%hjk(j,k)
             end do
         end do
 
+        allocate(IPIV(size),stat=ierr)
+        if (ierr/=0) then
+            write(0,"(a,i0)") "Error in IPIV vector allocation . ierr had value ", ierr
+            errorflag=1
+            return
+        end if        
+
+        call ZGETRF(size,size,ham%inv,ierr)
+        if (ierr/=0) then
+            write(0,"(a,i0)")"Error in ZGETRF",ierr
+        end if
+        call ZGETRI(size,ham%inv,size,IPIV,size,ierr)
+        if (ierr/=0) then
+            write(0,"(a,i0)")"Error in ZGETRF",ierr
+        end if
+
+        deallocate(IPIV,sta=ierr)
+        if (ierr/=0) then
+            write(0,"(a,i0)") "Error in IPIV vector allocation . ierr had value ", ierr
+            errorflag=1
+            return
+        end if
+        
+        ham%kinvh=matmul(ham%inv,ham%hjk)
+        
+        return
+        
     end subroutine hamgen
 
 

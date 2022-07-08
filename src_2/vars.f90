@@ -12,11 +12,18 @@ MODULE globvars
     type hamiltonian
         complex(kind=8), dimension(:,:), allocatable::hjk
         complex(kind=8), dimension(:,:), allocatable::ovrlp
+        complex(kind=8), dimension(:,:), allocatable::inv
+        complex(kind=8), dimension(:,:), allocatable::kinvh
     end type hamiltonian
 
     type dvector
         complex(kind=8), dimension(:), allocatable::d
     end type dvector
+
+    type energy
+        real(kind=8), dimension(:),allocatable::t
+        complex(kind=8), dimension(:,:),allocatable::erg 
+    end type energy
 
     ! Type defining the 1&2 electron integrals
     type elecintrgl
@@ -36,7 +43,7 @@ MODULE globvars
     character(LEN=1)::zomgflg    ! Flag to generate zombie states or not
     character(LEN=1)::hamgflg    ! Flag to generate Hamiltonian or not
     character(LEN=1)::cleanflg   ! Flag to determine if cleaning is
-    character(LEN=1)::gram       ! Flag to determine if gram schmidt orthogolnalisation should be carried out
+    character(LEN=1)::gramflg       ! Flag to determine if gram schmidt orthogolnalisation should be carried out
     integer::gramnum        ! Number of additional states to be generated for GS orthogonalisation
     character(LEN=1)::rhf_1      ! Flag to decide if the first zombie state should be st as the RHF determinant
 
