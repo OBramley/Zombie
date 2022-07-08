@@ -8,15 +8,11 @@ MODULE globvars
         complex(kind=8), dimension(:), allocatable::dead
     end type zombiest
 
-    ! Type defining the Hamiltonian matrix
+    ! Type defining the Hamiltonian matrix and the overlap matrix
     type hamiltonian
         complex(kind=8), dimension(:,:), allocatable::Hjk
+        complex(kind=8), dimension(:,:), allocatable::ovrlp
     end type hamiltonian
-
-    ! Type defining the overlap matrix
-    type ovrlp
-        complex(kind=8), dimension(:,:), allocatable::kover
-    end type ovrlp
 
     type dvector
         complex(kind=8), dimension(:), allocatable::d
