@@ -80,7 +80,7 @@ MODULE alarrays
             end if
         end if
 
-        do j=1,size(zstore)
+        do j=1,nbf
             call alloczf(zstore(j))
         end do
 
@@ -163,6 +163,110 @@ MODULE alarrays
         return
     end subroutine dealloczf
 
+    subroutine alloczs2d(zstore,nbf)
+        implicit none
+
+        type(zombiest),dimension(:,:),allocatable,intent(inout)::zstore
+        integer, intent (in) :: nbf
+
+        integer::j,k,ierr
+
+        if (errorflag .ne. 0) return
+
+        ierr=0
+
+        if(allocated(zstore).eqv..false.)then
+            allocate(zstore(nbf,nbf),stat=ierr)
+            if (ierr/=0) then
+                write(0,"(a,i0)") "Error in zombie set allocation. ierr had value ", ierr
+                errorflag=1
+                return
+            end if
+        end if
+        
+        do j=1,nbf
+            do k=1, nbf
+                call alloczf(zstore(j,k))
+            end do
+        end do
+
+        return 
+
+    end subroutine alloczs2d
+
+    subroutine dealloczs2d(zstore)
+        implicit none
+
+        type(zombiest),dimension(:,:),allocatable,intent(inout)::zstore
+
+        integer::j,k,ierr
+
+        if (errorflag .ne. 0) return
+
+        ierr=0
+
+        do j=1, size(zstore, dim=1)
+            do k=1, size(zstore, dim=1)
+                call dealloczf(zstore(j,k))
+            end do
+        end do
+
+       
+        deallocate(zstore,stat=ierr)
+        if (ierr/=0) then
+            write(0,"(a,i0)") "Error in zombie set allocation. ierr had value ", ierr
+            errorflag=1
+            return
+        end if
+  
+
+        
+
+        return 
+
+    end subroutine dealloczs2d
+
+    subroutine allocham(ham,size)
+        type(hamiltonian),intent(inout)::ham 
+
+        integer::ierr,size
+
+        if (errorflag .ne. 0) return
+
+        ierr = 0
+
+        allocate(ham%hjk(size,size), stat=ierr)
+        if(ierr==0) allocate(ham%ovrlp(size,size), stat=ierr)
+        if (ierr/=0) then
+            write(0,"(a,i0)") "Error in Hamiltonian allocation. ierr had value ", ierr
+            errorflag=1
+            return
+        end if
+
+        ham%hjk(1:size,1:size)=(0.0d0,0.0d0)
+        ham%ovrlp(1:size,1:size)=(0.0d0,0.0d0)
+
+
+    end subroutine allocham
+
+    subroutine deallocham(ham)
+        type(hamiltonian), intent(inout)::ham 
+
+        integer::ierr
+
+        if (errorflag .ne. 0) return
+
+        ierr = 0
+
+        deallocate(ham%Hjk, stat=ierr)
+        if(ierr==0) deallocate(ham%ovrlp, stat=ierr)
+        if (ierr/=0) then
+            write(0,"(a,i0)") "Error in Hamiltonian deallocation. ierr had value ", ierr
+            errorflag=1
+            return
+        end if
+
+    end subroutine deallocham
 
 END MODULE alarrays
 

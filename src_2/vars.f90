@@ -10,7 +10,7 @@ MODULE globvars
 
     ! Type defining the Hamiltonian matrix and the overlap matrix
     type hamiltonian
-        complex(kind=8), dimension(:,:), allocatable::Hjk
+        complex(kind=8), dimension(:,:), allocatable::hjk
         complex(kind=8), dimension(:,:), allocatable::ovrlp
     end type hamiltonian
 

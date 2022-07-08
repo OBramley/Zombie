@@ -7,21 +7,21 @@ MODULE operators
 
 
     ! Overlap 
-    real function overlap(z1,z2)
+    complex(kind=8) function overlap(z1,z2)
         implicit none
 
         type(zombiest),intent(in)::z1,z2
-        real(kind=8)::ovrl
-        real(kind=8)::tt
+        complex(kind=8)::ovrl
+        complex(kind=8)::tt
         integer:: j
 
         if (errorflag .ne. 0) return
 
         ovrl=1.0d0
         do j=1, size(z1%alive)
-            tt=dble(dconjg(z1%alive(j))*z2%alive(j))+(dconjg(z1%dead(j))*z2%dead(j))
+            tt=(conjg(z1%alive(j))*z2%alive(j))+(conjg(z1%dead(j))*z2%dead(j))
             if(tt==0.0) then
-                ovrl = 0.0d0
+                ovrl = (0.0d0,0.0d0)
                 EXIT 
             end if
             ovrl=ovrl*tt
@@ -74,12 +74,12 @@ MODULE operators
     end subroutine an
 
     ! Application of number operator
-    real function numf(z1,z2)
+    complex(kind=8) function numf(z1,z2)
         implicit none
 
         type(zombiest),intent(in)::z1,z2
-        real(kind=8)::temp
-        real(kind=8),dimension(:),allocatable::cc, dd, mult, multb
+        complex(kind=8)::temp
+        complex(kind=8),dimension(:),allocatable::cc, dd, mult, multb
         integer:: j, ierr,iorb 
 
         if (errorflag .ne. 0) return
@@ -97,8 +97,8 @@ MODULE operators
         end if
 
         do j=1, iorb
-            mult(j)=dble(dconjg(z1%alive(j))*z2%alive(j))
-            multb(j)=mult(j) + dble(dconjg(z1%dead(j))*z2%dead(j))
+            mult(j)=(conjg(z1%alive(j))*z2%alive(j))
+            multb(j)=mult(j) + (conjg(z1%dead(j))*z2%dead(j))
         end do
 
         cc(1)=mult(1)
@@ -145,11 +145,11 @@ MODULE operators
     end subroutine num
 
     ! N squared operator
-    real function nsq(z1,z2)
+    complex(kind=8) function nsq(z1,z2)
         implicit none
 
         type(zombiest),intent(in)::z1,z2
-        real(kind=8)::temp
+        complex(kind=8)::temp
         type(zombiest),dimension(:),allocatable::zt
         integer:: j, ierr
 
@@ -215,11 +215,11 @@ MODULE operators
 
         type(zombiest),intent(in)::zs
         integer:: j
-        real(kind=8)::tt 
+        complex(kind=8)::tt 
 
         do j=1, size(zs%alive)
-            tt=dconjg(zs%dead(j))*zs%dead(j) + dconjg(zs%alive(j))*zs%alive(j)
-            if(tt==0.0)then
+            tt=conjg(zs%dead(j))*zs%dead(j) + conjg(zs%alive(j))*zs%alive(j)
+            if(tt==(0.0,0.0))then
                 iszero=.true.
             end if
         end do
@@ -279,13 +279,13 @@ MODULE operators
 
     ! Fast algorithm for application of sz operator O(N) steps
 
-    real function szf(z1,z2)
+    complex(kind=8) function szf(z1,z2)
 
         implicit none
 
         type(zombiest),intent(in)::z1,z2
-        real(kind=8)::temp
-        real(kind=8),dimension(:),allocatable::cc, dd, mult, multb
+        complex(kind=8)::temp
+        complex(kind=8),dimension(:),allocatable::cc, dd, mult, multb
         integer:: j, ierr,iorb 
 
         if (errorflag .ne. 0) return
@@ -303,8 +303,8 @@ MODULE operators
         end if
 
         do j=1, iorb
-            mult(j)=dble(dconjg(z1%alive(j))*z2%alive(j))
-            multb(j)=mult(j) + dble(dconjg(z1%dead(j))*z2%dead(j))
+            mult(j)=(conjg(z1%alive(j))*z2%alive(j))
+            multb(j)=mult(j) + (conjg(z1%dead(j))*z2%dead(j))
         end do
 
         cc(1)=mult(1)
@@ -339,12 +339,12 @@ MODULE operators
     end function szf
 
     ! Computing <zs1 | S_z^2 | zs2 > O(M^2) not O(M^3)
-    real function sz2f(z1,z2)
+    complex(kind=8) function sz2f(z1,z2)
 
         implicit none
 
         type(zombiest),intent(in)::z1,z2
-        real(kind=8)::temp
+        complex(kind=8)::temp
         type(zombiest),dimension(:),allocatable::zt
         integer:: j, ierr,orb 
 
@@ -375,13 +375,13 @@ MODULE operators
 
     ! Fastest calcualtion of <zs1 |S_+S_- |zs2>
 
-    real function spsmfast(z1,z2)
+    complex(kind=8) function spsmfast(z1,z2)
 
         implicit none
 
         type(zombiest),intent(in)::z1,z2
-        real(kind=8)::tot,p1,p2,p3
-        real(kind=8),dimension(:),allocatable::cc, dd, ss, tt
+        complex(kind=8)::tot,p1,p2,p3
+        complex(kind=8),dimension(:),allocatable::cc, dd, ss, tt
         integer:: j, ierr,orb,kmax,a,b,k,l  
 
         if (errorflag .ne. 0) return
@@ -402,11 +402,11 @@ MODULE operators
         do j=1, kmax
             a=(2*j)-1
             b=a+1
-            cc(j)=(dble(dconjg(z1%alive(a))*z2%alive(a))+dble(dconjg(z1%dead(a))*z2%dead(a))) &
-                    *(dble(dconjg(z1%alive(b))*z2%alive(b))+dble(dconjg(z1%dead(b))*z2%dead(b)))
-            dd(j)=(dble(dconjg(z1%dead(a))*z2%dead(a)))*(dble(dconjg(z1%alive(b))*z2%alive(b)))
-            ss(j)=(dble(dconjg(z1%alive(a))*z2%dead(a)))*(dble(dconjg(z1%dead(b))*z2%alive(b)))
-            tt(j)=(dble(dconjg(z1%alive(a))*z2%alive(a)))*(dble(dconjg(z1%dead(b))*z2%dead(b)))
+            cc(j)=((conjg(z1%alive(a))*z2%alive(a))+(conjg(z1%dead(a))*z2%dead(a))) &
+                    *((conjg(z1%alive(b))*z2%alive(b))+(conjg(z1%dead(b))*z2%dead(b)))
+            dd(j)=((conjg(z1%dead(a))*z2%dead(a)))*((conjg(z1%alive(b))*z2%alive(b)))
+            ss(j)=((conjg(z1%alive(a))*z2%dead(a)))*((conjg(z1%dead(b))*z2%alive(b)))
+            tt(j)=((conjg(z1%alive(a))*z2%alive(a)))*((conjg(z1%dead(b))*z2%dead(b)))
         end do
           
         tot=0.0
@@ -465,13 +465,92 @@ MODULE operators
         return
     end function spsmfast
 
-    real function stotfast(z1,z2)
+    complex(kind=8) function stotfast(z1,z2)
         
         implicit none
         type(zombiest),intent(in)::z1,z2
         stotfast=spsmfast(z1,z2)-szf(z1,z2)+sz2f(z1,z2)
         return
     end function stotfast
+
+    ! Finding sum_k <zom1 | b_k | zom2> vec_k for all k in norb
+    complex(kind=8) function z_an_z3(z1,z2,vec)
+
+        implicit none
+        type(zombiest),intent(in)::z1,z2
+        type(zombiest)::vmult
+        real(kind=8),dimension(norb),intent(in)::vec
+        complex(kind=8),dimension(norb)::gg,hh
+        complex(kind=8)::tot
+        integer::j,gmax,hmin,ierr
+
+        if (errorflag .ne. 0) return
+        ierr=0
+
+        call alloczf(vmult)
+
+
+        do j=1, norb
+            vmult%alive(j)=conjg(z1%alive(j))*z2%alive(j)
+            vmult%dead(j)=conjg(z1%dead(j))*z2%dead(j)
+        end do
+
+        gg(1:norb)=(0.0,0.0)
+        hh(1:norb)=(0.0,0.0)
+        gmax=norb
+        gg(1)=vmult%dead(1)-vmult%alive(1)
+
+        do j=2, norb
+            gg(j)=gg(j-1)*(vmult%dead(j)-vmult%alive(j))
+            if(gg(j)==(0.0,0.0))then
+                gmax=j
+                EXIT 
+            end if
+        end do
+        
+        hmin=0
+        hh(norb) = vmult%dead(norb)+vmult%alive(norb)
+        do j=(norb-1),1,-(1)
+            hh(j)=hh(j+1)*(vmult%dead(j)+vmult%alive(j))
+            if(hh(j)==(0.0,0.0))then
+                hmin=j
+                EXIT 
+            end if
+        end do
+
+        tot=(0.0,0.0)
+
+        if (gmax < hmin) then
+            z_an_z3=tot
+            return
+        end if
+
+        if(vec(1).ne.0) then
+            tot = tot+(conjg(z1%dead(1))*z2%alive(0)*hh(2)*vec(1))
+        end if
+
+        do j=2,norb-1
+            if(vec(j).ne.0) then
+                tot = tot+ (gg(j-1)*conjg(z1%dead(j))*z2%alive(j)*hh(j+1)*vec(j))
+            end if
+        end do
+
+        if(vec(norb).ne.0) then
+            tot = tot +(gg(norb-1)*conjg(z1%dead(norb))*z2%alive(norb)*vec(norb))
+        end if
+
+        call dealloczf(vmult)
+        z_an_z3=tot
+        return
+
+    end function z_an_z3
+        
+
+
+
+
+
+
 
     
 

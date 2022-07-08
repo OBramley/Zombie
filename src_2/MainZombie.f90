@@ -4,6 +4,7 @@ program MainZombie
     use globvars
     use alarrays
     use electrons
+    use ham
     
     
     implicit none
@@ -46,6 +47,9 @@ program MainZombie
     call alloczs(zstore,ndet)
 
     ! generate Hamiltonian and overlap
+
+    call allocham(ham,ndet)
+    call hamgen(ham,zstore,elecs,ndet)
     
     ! Imaginary time propagation
 
