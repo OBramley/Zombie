@@ -5,6 +5,7 @@ program MainZombie
     use alarrays
     use electrons
     use ham
+    use imgtp
     
     
     implicit none
@@ -14,6 +15,7 @@ program MainZombie
     type(dvector), dimension(:), allocatable:: dvecs
     type(energy):: en
     type(elecintrgl),allocatable::elect
+    type(hamiltonian)::haml
     integer:: j, k, n, m 
 
     ! Public variables
@@ -49,8 +51,8 @@ program MainZombie
 
     ! generate Hamiltonian and overlap
 
-    call allocham(ham,ndet)
-    call hamgen(ham,zstore,elecs,ndet)
+    call allocham(haml,ndet)
+    call hamgen(haml,zstore,elecs,ndet)
     
     ! Imaginary time propagation
     if(gram.eq."n")then
@@ -63,6 +65,8 @@ program MainZombie
         write(0,) "Error in gramflg setting. This should have been caught ", ierr
             errorflag=1
     end if
+
+    call imgtime_prop(dvecs,en,haml)
 
 
 
