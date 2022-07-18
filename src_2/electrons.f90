@@ -23,7 +23,7 @@ subroutine electronintegrals(elecs)
     call spattospin1(elecs,nlines)
     call spattospin2(elecs,nlines)
 
-    open(unit=128, file='h1ea.csv',status='old',iostat=ierr)
+    open(unit=128, file='/integrals/hnuc.csv',status='old',iostat=ierr)
     if (ierr.ne.0) then
         write(0,"(a)") 'Error in opening hnuc.csv file'
         errorflag = 1
@@ -41,7 +41,7 @@ subroutine electronintegrals(elecs)
 
 end subroutine electronintegrals
 
-Integer Function lines(nlines)
+integer function lines(nlines)
     implicit none
 
     integer, intent(INOUT):: nlines
@@ -49,7 +49,7 @@ Integer Function lines(nlines)
     
     ierr=0
     nlines=0
-    open(unit=129, file='h1ea.csv',status='old',iostat=ierr)
+    open(unit=129, file='/integrals/h1ea.csv',status='old',iostat=ierr)
     if (ierr.ne.0) then
         write(0,"(a)") 'Error in opening h1ea.csv file'
         errorflag = 1
@@ -90,7 +90,7 @@ subroutine spattospin1(elecs,nlines)
         return
     end if
 
-    open(unit=130, file='h1ea.csv',status='old',iostat=ierr)
+    open(unit=130, file='/integrals/h1ea.csv',status='old',iostat=ierr)
     if (ierr.ne.0) then
         write(0,"(a)") 'Error in opening h1ea.csv file'
         errorflag = 1
@@ -146,7 +146,7 @@ subroutine spattospin2(elecs,nlines)
         do k=1, norb
             write(val1,'(i0)')j
             write(val2,'(i0)')k
-            open(unit=(131+j+k), file='h2ea_'//trim(val1)//'_'//trim(val2)//'.csv', status='old',iostat=ierr)
+            open(unit=(131+j+k), file='/integrals/h2ea_'//trim(val1)//'_'//trim(val2)//'.csv', status='old',iostat=ierr)
             if (ierr.ne.0) then
                 write(0,"(a)") 'Error in opening h1ea.csv file'
                 errorflag = 1

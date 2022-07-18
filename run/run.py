@@ -13,7 +13,11 @@ import getpass
 import shutil
 import subprocess
 import random
-import math #import comb
+import math 
+from pyscf import gto, scf, ao2mo
+from functools import reduce
+import numpy
+import csv
 
 # Checking input paramaters 
 if(isinstance(inputs.run['nodes'],int)==False):
@@ -119,50 +123,108 @@ if os.path.exists(EXDIR+"/"+inputs.run['runfolder']):
 os.mkdir(EXDIR+"/"+inputs.run['runfolder'])
 EXDIR1=EXDIR+"/"+inputs.run['runfolder']
 
+if(inputs.run['language']=="python"):
+    # Move the relevant files to the execution file
+    shutil.copy2("inputs.py",EXDIR1)
+    shutil.copy2("../src/ham.py",EXDIR1)
+    shutil.copy2("../src/imgtp.py",EXDIR1)
+    shutil.copy2("../src/in_outputs.py",EXDIR1)
+    shutil.copy2("../src/main.py",EXDIR1)
+    shutil.copy2("../src/op.py",EXDIR1)
+    shutil.copy2("../src/zom.py",EXDIR1)
+    shutil.copy2("../src/cleaning.py",EXDIR1)
+    if(inputs.run['elecs']=='mol'):
+        shutil.copy2('../'+ inputs.run['elecfile'],EXDIR1)
+    if(inputs.run['elecs']=='n'and inputs.run['hamgen']=='y'):
+        shutil.copy2('../'+ inputs.run['elecfile'],EXDIR1)
+    if(inputs.run['elecs']=='n'and inputs.run['hamgen']=='n'):
+        shutil.copy2('../'+ inputs.run['hamfile'],EXDIR1)
+    if(inputs.run['clean']=='f'):
+        shutil.copy2('../'+ inputs.run['cleanham'],EXDIR1)
+        shutil.copy2('../'+ inputs.run['cleanzom'],EXDIR1)
 
-# Move the relevant files to the execution file
-shutil.copy2("inputs.py",EXDIR1)
-shutil.copy2("../src/ham.py",EXDIR1)
-shutil.copy2("../src/imgtp.py",EXDIR1)
-shutil.copy2("../src/in_outputs.py",EXDIR1)
-shutil.copy2("../src/main.py",EXDIR1)
-shutil.copy2("../src/op.py",EXDIR1)
-shutil.copy2("../src/zom.py",EXDIR1)
-shutil.copy2("../src/cleaning.py",EXDIR1)
-if(inputs.run['elecs']=='mol'):
-    shutil.copy2('../'+ inputs.run['elecfile'],EXDIR1)
-if(inputs.run['elecs']=='n'and inputs.run['hamgen']=='y'):
-    shutil.copy2('../'+ inputs.run['elecfile'],EXDIR1)
-if(inputs.run['elecs']=='n'and inputs.run['hamgen']=='n'):
-    shutil.copy2('../'+ inputs.run['hamfile'],EXDIR1)
-if(inputs.run['clean']=='f'):
-    shutil.copy2('../'+ inputs.run['cleanham'],EXDIR1)
-    shutil.copy2('../'+ inputs.run['cleanzom'],EXDIR1)
+    os.chdir(EXDIR1)
+    # Run the program
+    # If on a SGE machine make job submission file
+    if(HPCFLG==1):
+        number=random.randint(99999,1000000)
+        file1="zombie"+str(number)+".sh"
+        f=open(file1,"w")
+        f.write("#$ -cwd -V \n")
+        f.write(inputs.run['runtime'])
+        f.write("#$ -l h_vmem=2G \n")
+        # f.write('#$ -m be')#Get email at start and end of the job
+        f.write('module load anaconda\n')
+        f.write('source activate base\n')
+        f.write('python main.py')
+        f.close()
+        subprocess.call(['qsub',file1])
+    else:
+        # if(inputs.run['cores']!=1):
+        #     os.environ["OMP_NUM_THREADS"]=str(inputs.run['cores'])
+        # number=random.randint(99999,1000000)
+        # file1="zombie"+str(number)+".sh"
+        # f=open("../Run/"+file1,"w")
+        # f.write("python " + EXDIR1+"/main.py")
+        # f.close()
+        # subprocess.run(['chmod', 'u+x', '../Run/zombie'+str(number)+'.sh'])
+        subprocess.run(['python', 'main.py'])
+elif(inputs.run['language']=="fortran"):
+    os.mkdir(EXDIR1+"/integrals")
+    if(inputs.run['elecs']=='mol'):
+        shutil.copy2('../'+ inputs.run['elecfile'],EXDIR1+"/integrals")
+    if(inputs.run['elecs']=='pyscf'):
+        mol = gto.M(
+        unit = inputs.pyscf['units'],
+        atom = inputs.pyscf['atoms'],
+        basis = inputs.pyscf['bs'],
+        verbose = inputs.pyscf['verbosity'],
+        symmetry = inputs.pyscf['symmetry'],
+        spin=inputs.pyscf['spin'],
+        charge=inputs.pyscf['charge'],
+        symmetry_subgroup = inputs.pyscf['symmetry_subgroup'], #0 is code for A1 point group
+        )
+        myhf=scf.RHF(mol)
+        myhf.kernel()
+        """Obtaining one and two electron integrals from pyscf calculation
+        Code adapted from George Booth"""
+        # Extract AO->MO transformation matrix
+        c = myhf.mo_coeff
+        # Get 1-electron integrals and convert to MO basis
+        h1e = reduce(numpy.dot, (c.T, myhf.get_hcore(), c))
+        # Get 2-electron integrals and transform them
+        eri = ao2mo.kernel(mol, c)
+        # Ignore all permutational symmetry, and write as four-index tensor, in chemical notation
+        eri_full = ao2mo.restore(1, eri, c.shape[1])
+        # Scalar nuclear repulsion energy
+        Hnuc = myhf.energy_nuc()
 
-os.chdir(EXDIR1)
-# Run the program
-# If on a SGE machine make job submission file
-if(HPCFLG==1):
-    number=random.randint(99999,1000000)
-    file1="zombie"+str(number)+".sh"
-    f=open(file1,"w")
-    f.write("#$ -cwd -V \n")
-    f.write(inputs.run['runtime'])
-    f.write("#$ -l h_vmem=2G \n")
-    # f.write('#$ -m be')#Get email at start and end of the job
-    f.write('module load anaconda\n')
-    f.write('source activate base\n')
-    f.write('python main.py')
-    f.close()
-    subprocess.call(['qsub',file1])
-else:
-    # if(inputs.run['cores']!=1):
-    #     os.environ["OMP_NUM_THREADS"]=str(inputs.run['cores'])
-    # number=random.randint(99999,1000000)
-    # file1="zombie"+str(number)+".sh"
-    # f=open("../Run/"+file1,"w")
-    # f.write("python " + EXDIR1+"/main.py")
-    # f.close()
-    # subprocess.run(['chmod', 'u+x', '../Run/zombie'+str(number)+'.sh'])
-    subprocess.run(['python', 'main.py'])
+        with open("/integrals/h1ea.csv",'w', newline='')as csvfile:
+            spamwriter=csv.writer(csvfile, delimiter=',')
+            spamwriter.writerows(h1e)
+
+        for i in range(inputs.zombs['norb']*2):
+            for j in range(inputs.zombs['norb']*2):
+                obj=eri_full[i,j,:,:]
+                with open("/integrals/h2ea_"+str(i+1)+"_"+str(j+1)+".csv",'w', newline='')as csvfile:
+                    spamwriter=csv.writer(csvfile, delimiter=',')
+                    spamwriter.writerows(obj)
+
+        with open("/integrals/hnuc.csv",'w', newline='')as csvfile:
+            spamwriter=csv.writer(csvfile, delimiter=',')
+            spamwriter.writerow(Hnuc)
+
+        
+
+    if(HPCFLG==1):
+        number=random.randint(99999,1000000)
+        file1="zombie"+str(number)+".sh"
+        f=open(file1,"w")
+        f.write("#$ -cwd -V \n")
+        f.write(inputs.run['runtime'])
+        f.write("#$ -l h_vmem=2G \n")
+        f.write('module add netlib\n')
+        f.write('')
+        f.close()
+        subprocess.call(['qsub',file1])
     

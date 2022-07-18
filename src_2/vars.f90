@@ -46,6 +46,7 @@ MODULE globvars
     character(LEN=1)::gramflg       ! Flag to determine if gram schmidt orthogolnalisation should be carried out
     integer::gramnum        ! Number of additional states to be generated for GS orthogonalisation
     character(LEN=1)::rhf_1      ! Flag to decide if the first zombie state should be st as the RHF determinant
+    character(LEN=1)::imagflg    ! Flag to decide if zombie states are imaginary or real
 
     real(kind=8)::pirl      ! pi
     real(kind=8) :: sqrtpi  ! square root of pi

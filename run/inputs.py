@@ -10,7 +10,14 @@
 ####################################################################################################
 
 
+
 run={
+    # Decides if the program will run in Python or Fortran
+    # Fortran program is faster and will use OpenMP for multiple threads
+    # The python program is possibly easier to understand and is still effective for 
+    # small runs. Takes input python or fortran
+    'language':'python',
+
     # What is the name of the run
     'runfolder':'C_checker',
 
@@ -95,7 +102,10 @@ zombs={
     'bb_imprv':0,
 
     # Make the first Zombie state the RHF det? Takes y or n
-    'rhf_1':'y'
+    'rhf_1':'y',
+
+    # Make the zombie states imaginary (y) or real (n)
+    'imagflg':'n'
 
 }
 

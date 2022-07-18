@@ -3,6 +3,7 @@ MODULE ham
     use globvars
     use alarrays
     use operators
+    use outputs
 
 
     
