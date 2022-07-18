@@ -5,7 +5,9 @@ program MainZombie
     use alarrays
     use electrons
     use ham
+    use outputs
     use imgtp
+
     
     
     implicit none
@@ -16,7 +18,7 @@ program MainZombie
     type(energy):: en
     type(elecintrgl),allocatable::elect
     type(hamiltonian)::haml
-    integer:: j, k, n, m 
+    integer:: j, k, n, m, istat 
 
     ! Public variables
     real(kind=8):: starttime, stoptime, runtime
@@ -39,12 +41,23 @@ program MainZombie
 
     ! Read in run conditions
 
+
+    open(unit=570, file="/dev/urandom", access="stream", &
+    form="unformatted", action="read", status="old", iostat=istat)
+    if (istat == 0) then
+        read(570) ranseed    ! This takes the random seed from the true-random bin. If
+        close(570)           ! the urandom bin does not exist the random seed is set
+    else                   ! to zero which forces the date to be used
+        ranseed=0
+    end if
+
+    ranseed = abs(ranseed)    ! Negative seed values seem to cause instability
+
+    call ZBQLINI(ranseed,0)   ! Generates the seed value using the UCL random library
+
     ! generate 1 and 2 electron integrals
     call allocintgrl(elect)
     call electronintegrals(elecs)
-
-
-    !written
 
     ! generate zombie states
     call alloczs(zstore,ndet)
@@ -53,6 +66,9 @@ program MainZombie
 
     call allocham(haml,ndet)
     call hamgen(haml,zstore,elecs,ndet)
+    call matrixwriter(ham%hjk,ndet,"ham.csv")
+    call matrixwriter(ham%ovrlp,ndet,"ovlp.csv")
+
     
     ! Imaginary time propagation
     if(gram.eq."n")then

@@ -142,8 +142,8 @@ MODULE ham
         implicit none
 
         type(hamiltonian), intent(inout)::ham 
-        type(zombiest),dimension(:),intent(inout)::zstore
-        type(elecintrgl),intent(inout)::elecs
+        type(zombiest),dimension(:),intent(in)::zstore
+        type(elecintrgl),intent(in)::elecs
         integer, allocatable,dimension(:)::IPIV
         integer:: j,k,size,ierr
 
@@ -183,6 +183,7 @@ MODULE ham
         
         ham%kinvh=matmul(ham%inv,ham%hjk)
         
+
         return
         
     end subroutine hamgen
