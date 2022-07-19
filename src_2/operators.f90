@@ -183,6 +183,8 @@ MODULE operators
         type(zombiest),intent(in)::zs
         integer:: j
 
+        if (errorflag .ne. 0) return
+
         do j=1, norb
             if(zs%dead(j)==(0.0d0,0.0d0))then
                 if((zs%alive(j)==(1.0d0,0.0d0)).or.(zs%alive(j)==(-1.0d0,0.0d0))) then
@@ -217,6 +219,8 @@ MODULE operators
         integer:: j
         complex(kind=8)::tt 
 
+        if (errorflag .ne. 0) return
+
         do j=1, size(zs%alive)
             tt=conjg(zs%dead(j))*zs%dead(j) + conjg(zs%alive(j))*zs%alive(j)
             if(tt==(0.0,0.0))then
@@ -239,6 +243,8 @@ MODULE operators
         integer, intent(in)::j,orb
         integer, dimension(orb)::bini
         integer::jt,k
+
+        if (errorflag .ne. 0) return
 
         if(j>=2**orb) then
             write(0) "j too big"
@@ -267,6 +273,8 @@ MODULE operators
         integer, intent(in)::orb
         integer, dimension(orb),intent(in)::bini
         integer::temp, j 
+
+        if (errorflag .ne. 0) return
 
         temp=0
         do j=1,orb
@@ -469,6 +477,9 @@ MODULE operators
         
         implicit none
         type(zombiest),intent(in)::z1,z2
+
+        if (errorflag .ne. 0) return
+        
         stotfast=spsmfast(z1,z2)-szf(z1,z2)+sz2f(z1,z2)
         return
     end function stotfast

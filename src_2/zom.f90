@@ -1,6 +1,7 @@
 MODULE zom 
 
     use globvars
+    use outputs
 
     contains
 
@@ -13,6 +14,8 @@ MODULE zom
         integer::j,k
         real(kind=8)::dummy,temp
         real(kind=8),dimension(norb)::rands
+
+        if (errorflag .ne. 0) return
 
         dummy=1
         do j=1,num
@@ -37,6 +40,7 @@ MODULE zom
         integer::j,k,total,ierr,count
         integer, allocatable, dimension(:,:)::combs
 
+        if (errorflag .ne. 0) return
         ierr=0
 
         zstore(1)%dead(1:norb)=(1.0d0,0.0d0)
@@ -115,6 +119,8 @@ MODULE zom
         integer, dimension(:), intent(in)::occ
         integer::j
 
+        if (errorflag .ne. 0) return
+
         zom%dead(1:norb)=(1.0d0,0.0d0)
 
         do j=1, size(occ)
@@ -127,16 +133,16 @@ MODULE zom
     end subroutine zomhf
 
 
-    subroutine genzf(zstore,zomtyp,num)
+    subroutine genzf(zstore,num)
         
         implicit none
         type(zombiest), dimension(:), intent(inout)::zstore
-        character(LEN=2), intent(in):: zomtyp
         integer, intent(in)::num
+        integer::j
 
         if (errorflag .ne. 0) return
 
-        select case(zomtyp)
+        select case(zst)
             case('HF')
                 call gen_hf_zs(zstore)
             case('RN')
@@ -149,6 +155,10 @@ MODULE zom
                 errorflag = 1
                 return
         end select
+
+        do j=1,num
+            call zombiewriter(zstore(j),j)
+        end do
 
         return
     

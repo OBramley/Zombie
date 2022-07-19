@@ -9,9 +9,11 @@ MODULE outputs
 
         complex(kind=8),dimension(:,:),intent(in)::out
         integer,intent(in)::size
-        character(LEN=8),intent(in)::filenm
+        character(LEN=13),intent(in)::filenm
         integer::ierr,j,k
 
+        if (errorflag .ne. 0) return
+        
         ierr=0
 
         open(unit=200,file=filenm,status="new",iostat=ierr)
@@ -41,6 +43,8 @@ MODULE outputs
         integer::ierr,zomnum,j
         character(LEN=4)::nums
 
+        if (errorflag .ne. 0) return
+
         ierr=0
 
         write(nums,"(i4.4)")num
@@ -64,6 +68,35 @@ MODULE outputs
         return
 
     end subroutine zombiewriter
+
+    subroutine energywriter(time,erg,filenm,j)
+
+        implicit none
+
+        real(kind=8), dimension(:),intent(in)::time
+        complex(kind=8), dimension(:),intent(in)::erg 
+        character(LEN=30),intent(in)::filenm
+        integer,intent(in)::j
+        integer::ergnum,ierr,k
+
+        if (errorflag .ne. 0) return
+
+        ergnum=400+j
+        ierr=0
+        open(unit=ergnum,file=trim(filenm),status="new",iostat=ierr)
+        if(ierr/=0)then
+            write(0,"(a,i0)") "Error in opening energy output file. ierr had value ", ierr
+            errorflag=1
+            return
+        end if
+
+        write(ergnum,*) (time(k),k=1,timesteps+1)
+        write(ergnum,*) (erg(k),k=1,timesteps+1)
+        close(ergnum)
+
+        return
+
+    end subroutine energywriter
 
 
 

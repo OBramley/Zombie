@@ -15,6 +15,8 @@ MODULE imgtp
         integer::j,k,states
         real::db
 
+        if (errorflag .ne. 0) return
+
         do j=1,size(dvecs)
             dvecs(j)%d(j)=(1.0,1.0)
         end do
@@ -46,11 +48,13 @@ MODULE imgtp
     complex(kind=8) function ergcalc(bham,dvec)
 
         implicit none
+
         complex(kind=8),intent(in),dimension(:)::dvec
         complex(kind=8),intent(in),dimension(:,:)::bham
         complex(kind=8),dimension(ndet)::temp
         
-
+        if (errorflag .ne. 0) return
+        
         temp=matmul(bham,dvec)
         ergcalc=dot_product(dvec,temp)
 

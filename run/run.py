@@ -6,6 +6,8 @@
 # 
 ###################################################################################################
 import sys
+
+from sqlalchemy import values
 import inputs
 import os
 import socket
@@ -151,7 +153,7 @@ if(inputs.run['language']=="python"):
         file1="zombie"+str(number)+".sh"
         f=open(file1,"w")
         f.write("#$ -cwd -V \n")
-        f.write(inputs.run['runtime'])
+        f.write("#$ -l h_rt="+inputs.run['runtime']+"\n")
         f.write("#$ -l h_vmem=2G \n")
         # f.write('#$ -m be')#Get email at start and end of the job
         f.write('module load anaconda\n')
@@ -169,6 +171,7 @@ if(inputs.run['language']=="python"):
         # f.close()
         # subprocess.run(['chmod', 'u+x', '../Run/zombie'+str(number)+'.sh'])
         subprocess.run(['python', 'main.py'])
+
 elif(inputs.run['language']=="fortran"):
     os.mkdir(EXDIR1+"/integrals")
     if(inputs.run['elecs']=='mol'):
@@ -199,32 +202,58 @@ elif(inputs.run['language']=="fortran"):
         # Scalar nuclear repulsion energy
         Hnuc = myhf.energy_nuc()
 
-        with open("/integrals/h1ea.csv",'w', newline='')as csvfile:
+        with open(EXDIR1+"/integrals/h1ea.csv",'w', newline='')as csvfile:
             spamwriter=csv.writer(csvfile, delimiter=',')
             spamwriter.writerows(h1e)
 
         for i in range(inputs.zombs['norb']*2):
             for j in range(inputs.zombs['norb']*2):
                 obj=eri_full[i,j,:,:]
-                with open("/integrals/h2ea_"+str(i+1)+"_"+str(j+1)+".csv",'w', newline='')as csvfile:
+                with open(EXDIR1+"/integrals/h2ea_"+str(i+1)+"_"+str(j+1)+".csv",'w', newline='')as csvfile:
                     spamwriter=csv.writer(csvfile, delimiter=',')
                     spamwriter.writerows(obj)
 
-        with open("/integrals/hnuc.csv",'w', newline='')as csvfile:
+        with open(EXDIR1+"/integrals/hnuc.csv",'w', newline='')as csvfile:
             spamwriter=csv.writer(csvfile, delimiter=',')
             spamwriter.writerow(Hnuc)
 
-        
+        with open(EXDIR1+'rundata'+str(i+1)+'.csv','w',newline='')as file:
+            writer = csv.writer(file)
+            writer.writerow(inputs.run['zomgen'],inputs.run['hamgen'],inputs.run['imagprop'],inputs.run['beta'],inputs.run['timesteps'],inputs.run['clean'],inputs.run['gram'],inputs.run['gramnum'])
+            writer.writerow(inputs.zombs.values())
+
+
+    os.chdir("../build")
+    if(HPCFLG==1):
+        shutil.copy2("../build/makefile_arc","../build/Makefile")
+        subprocess.run(["make"])
+    else:
+        shutil.copy2("../build/makefile_chmlin","../build/Makefile")
+        subprocess.run(["make"])
+    
+    shutil.copy2("ZOMBIE.exe",EXDIR1)
+
+    os.chdir(EXDIR1)
 
     if(HPCFLG==1):
         number=random.randint(99999,1000000)
         file1="zombie"+str(number)+".sh"
         f=open(file1,"w")
         f.write("#$ -cwd -V \n")
-        f.write(inputs.run['runtime'])
+        if(inputs.run['cores']!=1):
+            f.write("#$ -pe smp "+str(inputs.run['cores'])+" \n") #Use shared memory parallel environemnt 
+        f.write("#$ -l h_rt="+inputs.run['runtime']+"\n")
         f.write("#$ -l h_vmem=2G \n")
         f.write('module add netlib\n')
-        f.write('')
+        f.write("module add mkl \n")
+        f.write('time ./ZOMBIE.exe')
         f.close()
+        if(inputs.run['cores']!=1):
+            os.environ["OMP_NUM_THREADS"]=str(inputs.run['cores'])
         subprocess.call(['qsub',file1])
+    else:
+        if(inputs.run['cores']!=1):
+            os.environ["OMP_NUM_THREADS"]=str(inputs.run['cores'])
+        subprocess.Popen('',executable=+"/ZOMBIE.exe",cwd=EXDIR1)
+        
     

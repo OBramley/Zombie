@@ -174,7 +174,7 @@ MODULE ham
             write(0,"(a,i0)")"Error in ZGETRF",ierr
         end if
 
-        deallocate(IPIV,sta=ierr)
+        deallocate(IPIV,stat=ierr)
         if (ierr/=0) then
             write(0,"(a,i0)") "Error in IPIV vector allocation . ierr had value ", ierr
             errorflag=1

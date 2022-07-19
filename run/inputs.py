@@ -22,7 +22,7 @@ run={
     'runfolder':'C_checker',
 
     # Amount of time to request on HPC 
-    'runtime': "#$ -l h_rt=48:00:00 \n",
+    'runtime': "48:00:00",
 
     'nodes':1,
 
@@ -106,7 +106,6 @@ zombs={
 
     # Make the zombie states imaginary (y) or real (n)
     'imagflg':'n'
-
 }
 
 # Parameters for the biasing protocol

@@ -39,15 +39,17 @@ MODULE globvars
     real(kind=8)::spin  ! Spin of the molecule
     integer::beta       ! Distance proagated in imaginary time
     integer::timesteps  ! Number of time steps
+    character(LEN=2)::zst !Type of zombie state to be generated
 
     character(LEN=1)::zomgflg    ! Flag to generate zombie states or not
     character(LEN=1)::hamgflg    ! Flag to generate Hamiltonian or not
-    character(LEN=1)::cleanflg   ! Flag to determine if cleaning is
-    character(LEN=1)::gramflg       ! Flag to determine if gram schmidt orthogolnalisation should be carried out
-    integer::gramnum        ! Number of additional states to be generated for GS orthogonalisation
+    character(LEN=1)::propflg    ! Flag to propagate in imaginary time or not
+    character(LEN=1)::cleanflg   ! Flag to determine if cleaning is to occur
+    character(LEN=1)::gramflg    ! Flag to determine if gram schmidt orthogolnalisation should be carried out
+    integer::gramnum             ! Number of additional states to be generated for GS orthogonalisation
     character(LEN=1)::rhf_1      ! Flag to decide if the first zombie state should be st as the RHF determinant
     character(LEN=1)::imagflg    ! Flag to decide if zombie states are imaginary or real
-
+    integer::bb_improv           ! Flag to improve the biasing (not yet implemented)
     real(kind=8)::pirl      ! pi
     real(kind=8) :: sqrtpi  ! square root of pi
     complex(kind=8)::i      ! The imagianry unit
