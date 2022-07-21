@@ -1,98 +1,124 @@
-#Makefile for use on chmlinxx computers.
-#Made with the aid of the fmkmf utility (Copyright (c) The University of Edinburgh) 
+# Makefile for use on chmlinxx computers.
+# Adapted from make file written by C. Symmonds for the MCE program which was inturn
+# made with the aid of the fmkmf utility (Copyright (c) The University of Edinburgh)
 
 F90=gfortran
-FFLAGS=-fopenmp -O3
-FLINKS=-lm -Warray-bounds
-VPATH=../src
+FFLAGS= #-fopenmp -O3
+FLINKS= -lm -Warray-bounds -lblas
+VPATH=../src_2
 
 # Link step
 
-all: Main avrgpops timehist subavrg interpolate integrator
+all: Main
 
-Main:BLAS.o zgesv_with_dpndnss.o zheev_with_dpndnss.o randgen.o vars.o alarrays.o sb.o hp.o mp.o outputs.o redirect.o Ham.o Chks.o bsetalter.o readpars.o derivsMCE.o propMCE.o bsetgen.o MainMCE.o 
-	 $(F90) $(FFLAGS) -o MCE.exe BLAS.o zgesv_with_dpndnss.o zheev_with_dpndnss.o randgen.o vars.o alarrays.o sb.o hp.o mp.o outputs.o redirect.o Ham.o Chks.o bsetalter.o readpars.o derivsMCE.o propMCE.o bsetgen.o MainMCE.o $(FLINKS)
+Main:randgen.o zgetrf.o zgetri.o alarrays.o readpars.o operators.o electrons.o zom.o ham.o outputs.o imgtp.o clean.o  MainZombie.o
+	 $(F90) $(FFLAGS) -o ZOMBIE.exe randgen.o zgetrf.o zgetri.o vars.o alarrays.o readpars.o operators.o electrons.o zom.o ham.o outputs.o imgtp.o clean.o MainZombie.o $(FLINKS)
 
-avrgpops:avrgpops.f90
-	 $(F90) -O3 -o avrgpops.exe $<
-
-subavrg:subavrg.f90
-	 $(F90) -O3 -o subavrg.exe $<
-
-timehist:timehist.f90
-	 $(F90) -O3 -o timehist.exe $<
-
-interpolate:neville.o interpolate.o
-	 $(F90) -O3 -o interpolate.exe neville.o interpolate.o
-
-integrator:integrator.f90
-	 $(F90) -O3 -o integrator.exe $<
 
 # Compile steps
 
-BLAS.o:BLAS.f
+ieeeck.o:ieeeck.f 
 	 $(F90) $(FFLAGS) -c $<
 
-zgesv_with_dpndnss.o:zgesv_with_dpndnss.f
+iparmq.o:iparmq.f 
 	 $(F90) $(FFLAGS) -c $<
 
-zheev_with_dpndnss.o:zheev_with_dpndnss.f
+ilaenv.o:ilaenv.f ieeeck.o iparmq.o
+	 $(F90) $(FFLAGS) -c $<
+
+xerbla.o:xerbla.f 
+	 $(F90) $(FFLAGS) -c $<
+
+lsame.o:lsame.f
+	 $(F90) $(FFLAGS) -c $<
+
+dcabs1.o:dcabs1.f
+	 $(F90) $(FFLAGS) -c $<
+
+zgemm.o:zgemm.f xerbla.o 
+	 $(F90) $(FFLAGS) -c $<
+
+ztrsm.o:ztrsm.f xerbla.o 
+	 $(F90) $(FFLAGS) -c $<
+
+dlamch.o:dlamch.f lsame.o 
+	 $(F90) $(FFLAGS) -c $<
+
+izamax.o:izamax.f dcabs1.o 
+	 $(F90) $(FFLAGS) -c $<
+
+zscal.o:zscal.f 
+	 $(F90) $(FFLAGS) -c $<
+
+zlaswp.o:zlaswp.f 
+	 $(F90) $(FFLAGS) -c $<
+
+zgetrf2.o:zgetrf2.f zgemm.o ztrsm.o dlamch.o izamax.o zscal.o zlaswp.o 
+	 $(F90) $(FFLAGS) -c $<
+
+zgetrf.o:zgetrf.f ilaenv.o xerbla.o zgemm.o ztrsm.o zgetrf2.o zlaswp.o
+	 $(F90) $(FFLAGS) -c $<
+
+zgemv.o:zgemv.f xerbla.o 
+	 $(F90) $(FFLAGS) -c $<
+
+zswap.o:zswap.f 
+	 $(F90) $(FFLAGS) -c $<
+
+ztrmm.o:ztrmm.f xerbla.o 
+	 $(F90) $(FFLAGS) -c $<
+
+ztrmv.o:ztrmv.f xerbla.o
+	 $(F90) $(FFLAGS) -c $<
+
+ztrti2.o:ztrti2.f xerbla.o zscal.o ztrmv.o 
+	 $(F90) $(FFLAGS) -c $<
+
+ztrtri.o:ztrtri.f ilaenv.o ztrsm.o xerbla.o ztrmm.o ztrti2.o 
+	 $(F90) $(FFLAGS) -c $<
+
+zgetri.o:zgetri.f ilaenv.o xerbla.o zgemm.o zgemv.o zswap.o ztrsm.o ztrtri.o 
 	 $(F90) $(FFLAGS) -c $<
 
 randgen.o:randgen.f
 	 $(F90) $(FFLAGS) -c $<
 
-vars.o:vars.f90  
+vars.o:vars.f90
 	 $(F90) $(FFLAGS) -c $<
 
-alarrays.o:alarrays.f90 vars.o 
+alarrays.o:alarrays.f90 vars.o
 	 $(F90) $(FFLAGS) -c $<
 
-sb.o:sb.f90 vars.o 
+readpars.o:readpars.f90 vars.o
 	 $(F90) $(FFLAGS) -c $<
 
-hp.o:hp.f90 vars.o 
+operators.o:operators.f90 vars.o alarrays.o
 	 $(F90) $(FFLAGS) -c $<
 
-mp.o:mp.f90 vars.o 
+electrons.o:electrons.f90 vars.o
 	 $(F90) $(FFLAGS) -c $<
 
-outputs.o:outputs.f90 vars.o 
+zom.o:zom.f90 vars.o outputs.o
+	 $(F90) $(FFLAGS) -c $<
+	 
+ham.o:ham.f90 vars.o alarrays.o operators.o
 	 $(F90) $(FFLAGS) -c $<
 
-redirect.o:redirect.f90 vars.o sb.o hp.o mp.o
+outputs.o:outputs.f90 vars.o
 	 $(F90) $(FFLAGS) -c $<
 
-Ham.o:Ham.f90 vars.o alarrays.o redirect.o 
+imgtp.o:imgtp.f90 vars.o
 	 $(F90) $(FFLAGS) -c $<
 
-Chks.o:Chks.f90 vars.o Ham.o redirect.o
+clean.o:clean.f90 vars.o alarrays.o zom.o ham.o operators.o outputs.o
 	 $(F90) $(FFLAGS) -c $<
 
-bsetalter.o:bsetalter.f90 vars.o Ham.o alarrays.o outputs.o 
+MainZombie.o:MainZombie.f90 vars.o alarrays.o readpars.o operators.o electrons.o zom.o ham.o outputs.o imgtp.o clean.o
 	 $(F90) $(FFLAGS) -c $<
 
-readpars.o:readpars.f90 vars.o alarrays.o Ham.o redirect.o 
-	 $(F90) $(FFLAGS) -c $<
-
-derivsMCE.o:derivsMCE.f90 vars.o Ham.o alarrays.o outputs.o redirect.o readpars.o 
-	 $(F90) $(FFLAGS) -c $<
-
-propMCE.o:propMCE.f90 alarrays.o vars.o derivsMCE.o
-	 $(F90) $(FFLAGS) -c $<
-
-bsetgen.o:bsetgen.f90 vars.o Ham.o alarrays.o outputs.o Chks.o redirect.o propMCE.o 
-	 $(F90) $(FFLAGS) -c $<
-
-MainMCE.o:MainMCE.f90 bsetgen.o bsetalter.o Ham.o vars.o readpars.o outputs.o alarrays.o Chks.o propMCE.o redirect.o 
-	 $(F90) $(FFLAGS) -c $<
-
-neville.o:neville.f90
-	 $(F90) -O2 -c $<
-
-interpolate.o:interpolate.f90 neville.o
-	 $(F90) -O2 -c $<
+# This entry allows you to type " make clean " to get rid of
+# all object and module files
 
 clean:
-	rm -rf f_{files,modd}* *.o *.mod *.exe *~ ../run/*.exe ../run/*~ ../src/*~
+	rm -rf f_{files,modd}* *.o *.mod *.exe *~ ../run/*.exe ../run/*~ ../src_2/*~
 

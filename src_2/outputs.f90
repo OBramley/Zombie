@@ -9,7 +9,7 @@ MODULE outputs
 
         complex(kind=8),dimension(:,:),intent(in)::out
         integer,intent(in)::size
-        character(LEN=13),intent(in)::filenm
+        character(LEN=*),intent(in)::filenm
         integer::ierr,j,k
 
         if (errorflag .ne. 0) return
@@ -75,7 +75,7 @@ MODULE outputs
 
         real(kind=8), dimension(:),intent(in)::time
         complex(kind=8), dimension(:),intent(in)::erg 
-        character(LEN=30),intent(in)::filenm
+        character(LEN=*),intent(in)::filenm
         integer,intent(in)::j
         integer::ergnum,ierr,k
 

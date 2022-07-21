@@ -17,10 +17,10 @@ program MainZombie
     ! Private variables
     type(zombiest), dimension(:), allocatable:: zstore, cstore
     type(dvector), dimension(:), allocatable:: dvecs, dvec_clean
-    type(energy):: en, en_clean
+    type(energy),allocatable:: en, en_clean
     type(elecintrgl),allocatable::elect
-    type(hamiltonian)::haml, clean_haml
-    integer:: j, k, n, m, istat, clean_ndet
+    type(hamiltonian),allocatable::haml, clean_haml
+    integer:: j, istat, clean_ndet,ierr
     complex(kind=8)::clean_norm, clean_erg
     character(LEN=2)::stateno
     character(LEN=100) :: CWD
@@ -40,6 +40,8 @@ program MainZombie
     write(6,"(a)") ""
     write(6,"(a)") ""
 
+    ierr=0
+    istat=0
     call initialise
     call readrunconds
    
@@ -48,19 +50,19 @@ program MainZombie
     open(unit=570, file="/dev/urandom", access="stream", &
     form="unformatted", action="read", status="old", iostat=istat)
     if (istat == 0) then
-        read(570) ranseed    ! This takes the random seed from the true-random bin. If
+        read(570) randseed    ! This takes the random seed from the true-random bin. If
         close(570)           ! the urandom bin does not exist the random seed is set
     else                   ! to zero which forces the date to be used
-        ranseed=0
+        randseed=0
     end if
 
-    ranseed = abs(ranseed)    ! Negative seed values seem to cause instability
+    randseed = abs(randseed)    ! Negative seed values seem to cause instability
 
-    call ZBQLINI(ranseed,0)   ! Generates the seed value using the UCL random library
+    call ZBQLINI(randseed,0)   ! Generates the seed value using the UCL random library
 
     ! generate 1 and 2 electron integrals
     call allocintgrl(elect)
-    call electronintegrals(elecs)
+    call electronintegrals(elect)
     write(6,"(a)") "1 & 2 electron integrals successfully generated"
 
     ! generate zombie states
@@ -75,9 +77,9 @@ program MainZombie
 
     call allocham(haml,ndet)
     if(hamgflg=='y')then
-        call hamgen(haml,zstore,elecs,ndet)
-        call matrixwriter(ham%hjk,ndet,"ham.csv")
-        call matrixwriter(ham%ovrlp,ndet,"ovlp.csv")
+        call hamgen(haml,zstore,elect,ndet)
+        call matrixwriter(haml%hjk,ndet,"ham.csv")
+        call matrixwriter(haml%ovrlp,ndet,"ovlp.csv")
         write(6,"(a)") "Hamiltonian successfully generated"
     else if (hamgflg=='n')then
         write(6,"(a)") " Need to write read in routine"
@@ -92,7 +94,7 @@ program MainZombie
             call allocdv(dvecs,1+gramnum,ndet)
             call allocerg(en,1+gramnum)
         else
-            write(0,) "Error in gramflg setting. This should have been caught ", ierr
+            write(0,"(a,i0)") "Error in gramflg setting. This should have been caught ", ierr
                 errorflag=1
         end if
 
@@ -100,12 +102,12 @@ program MainZombie
         call imgtime_prop(dvecs,en,haml)
         write(6,"(a)") "Imaginary time propagation finished"
 
-        if(gram.eq."n")then
-            call energywriter(en%t,en%erg,"energy.csv",0)
+        if(gramflg.eq."n")then
+            call energywriter(en%t,en%erg(1,:),"energy.csv",0)
         else if(gramflg.eq."y")then
             do j=1, 1+gramnum
                 write(stateno,"(i4.4)")j
-                call energywriter(en(j)%t,en(j)%erg,"energy_state_"//trim(stateno)//".csv",j)
+                call energywriter(en%t,en%erg(j,:),"energy_state_"//trim(stateno)//".csv",j)
             end do
         end if
 
@@ -113,16 +115,16 @@ program MainZombie
         write(6,"(a)") "Hamiltonian deallocated"
 
         if(cleanflg=="y")then
-            call clean_setup(cstore,nel,clean_haml,en,clean_ndet)
+            call clean_setup(cstore,nel,clean_haml,elect,clean_ndet)
             write(6,"(a)") "Cleaning hamiltonian generated"
             call allocdv(dvec_clean,1,clean_ndet)
-            call cleaner(zstore,cstore,dvecs,dvec_clean,clean_ndet,clean_norm)
-            clean_erg=ergcalc(clean_haml,dvec_clean)
+            call cleaner(zstore,cstore,dvecs(1),dvec_clean(1),clean_ndet,clean_norm)
+            clean_erg=ergcalc(clean_haml%hjk,dvec_clean(1)%d)
             write(6,"(a)") "Cleaning process complete"
             call allocerg(en_clean,1)
-            en_clean%t(1:timestep+1)=en%t(1:timestep+1)
-            en_clean%erg(1:timestep+1)=clean_erg/clean_norm
-            call energywriter(en_clean%t,en_clean%erg,"clean_energy.csv",99)
+            en_clean%t(1:(timesteps+1))=en%t(1:(timesteps+1))
+            en_clean%erg(1,1:(timesteps+1))=clean_erg/clean_norm
+            call energywriter(en_clean%t,en_clean%erg(1,:),"clean_energy.csv",99)
             call deallocerg(en_clean)
             call deallocdv(dvec_clean)
             call deallocham(clean_haml)

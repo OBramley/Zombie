@@ -132,6 +132,14 @@ MODULE zom
 
     end subroutine zomhf
 
+    subroutine gen_biased_zs(zstore)
+
+        implicit none
+        type(zombiest),dimension(:),intent(inout)::zstore
+
+        return
+
+    end subroutine gen_biased_zs
 
     subroutine genzf(zstore,num)
         

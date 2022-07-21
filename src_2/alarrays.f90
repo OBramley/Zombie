@@ -356,7 +356,7 @@ MODULE alarrays
 
         
         allocate(en%t(timesteps+1),stat=ierr)
-        if(ierr==0) allocate(en%erg(timesteps+1,x))
+        if(ierr==0) allocate(en%erg(x,timesteps+1))
         if (ierr/=0) then
             write(0,"(a,i0)") "Error in energy allocation. ierr had value ", ierr
             errorflag=1

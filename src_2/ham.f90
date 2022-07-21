@@ -3,10 +3,8 @@ MODULE ham
     use globvars
     use alarrays
     use operators
-    use outputs
 
-
-    
+ 
     contains
     
     ! Function to generate 1 electron hamiltonian element part

@@ -1,7 +1,6 @@
 MODULE imgtp
     use globvars
 
-
     contains
 
 
@@ -29,9 +28,9 @@ MODULE imgtp
 
         db=beta/timesteps
         do j=1,timesteps+1
+            en%t(j)=db*(j-1)
             do k=1,states
-                en%t(j)=db*(j-1)
-                en%erg(j,k)=ergcalc(ham%hjk,dvecs(k)%d)
+                en%erg(k,j)=ergcalc(ham%hjk,dvecs(k)%d)
             end do
             call timestep(ham%kinvh,dvecs,db,states)
             
@@ -56,7 +55,7 @@ MODULE imgtp
         if (errorflag .ne. 0) return
         
         temp=matmul(bham,dvec)
-        ergcalc=dot_product(dvec,temp)
+        ergcalc=dot_product(conjg(dvec),temp)
 
         return
 

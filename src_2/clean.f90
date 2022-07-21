@@ -63,7 +63,7 @@ MODULE clean
 
         call allocham(cleanham,total2)
         call hamgen(cleanham,cstore,elecs,total2)
-        call matrixwriter(ham%hjk,ndet,"cleanham.csv")
+        call matrixwriter(cleanham%hjk,ndet,"cleanham.csv")
         clean_ndet=total2
 
         return
@@ -75,7 +75,8 @@ MODULE clean
 
         implicit none
         type(zombiest),dimension(:),intent(in)::zstore,cleanzom
-        type(dvector),intent(inout)::dvec, dvec_clean
+        type(dvector),intent(in)::dvec
+        type(dvector),intent(inout):: dvec_clean
         integer,intent(in)::cleantot
         complex(kind=8),intent(out)::norm
         complex(kind=8)::ovrlp1, ovrlp2
@@ -90,7 +91,7 @@ MODULE clean
                 dvec_clean%d(j)=dvec_clean%d(j)+(dvec%d(k)*ovrlp1)
                 do l=1, ndet
                     ovrlp2=overlap(zstore(l),cleanzom(j))
-                    norm = norm + (conjg(dvec%d(l))*dvec(k)*ovrlp2*ovrlp1)
+                    norm = norm + (conjg(dvec%d(l))*dvec%d(k)*ovrlp2*ovrlp1)
                 end do
             end do
         end do
