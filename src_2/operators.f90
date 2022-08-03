@@ -39,7 +39,7 @@ MODULE operators
         integer, intent(in)::iorb
         integer:: j
 
-        if (errorflag .ne. 0) return
+        ! if (errorflag .ne. 0) return
 
         zs%alive(iorb)=zs%dead(iorb)
         zs%dead(iorb)=(0.0d0,0.0d0)
@@ -60,7 +60,7 @@ MODULE operators
         integer, intent(in)::iorb
         integer:: j
 
-        if (errorflag .ne. 0) return
+        ! if (errorflag .ne. 0) return
 
         zs%dead(iorb)=zs%alive(iorb)
         zs%alive(iorb)=(0.0d0,0.0d0)
@@ -225,6 +225,7 @@ MODULE operators
             tt=conjg(zs%dead(j))*zs%dead(j) + conjg(zs%alive(j))*zs%alive(j)
             if(tt==(0.0,0.0))then
                 iszero=.true.
+                return
             end if
         end do
 
@@ -500,11 +501,12 @@ MODULE operators
 
         call alloczf(vmult)
 
-
+       
         do j=1, norb
             vmult%alive(j)=conjg(z1%alive(j))*z2%alive(j)
             vmult%dead(j)=conjg(z1%dead(j))*z2%dead(j)
         end do
+
 
         gg(1:norb)=(0.0,0.0)
         hh(1:norb)=(0.0,0.0)
@@ -519,6 +521,7 @@ MODULE operators
             end if
         end do
         
+
         hmin=0
         hh(norb) = vmult%dead(norb)+vmult%alive(norb)
         do j=(norb-1),1,-(1)
@@ -529,28 +532,30 @@ MODULE operators
             end if
         end do
 
-        tot=(0.0,0.0)
 
+        tot=(0.0,0.0)
         if (gmax < hmin) then
             z_an_z3=tot
             return
         end if
 
         if(vec(1).ne.0) then
-            tot = tot+(conjg(z1%dead(1))*z2%alive(0)*hh(2)*vec(1))
+            tot = tot+(conjg(z1%dead(1))*z2%alive(1)*hh(2)*vec(1))
         end if
-
         do j=2,norb-1
-            if(vec(j).ne.0) then
+            if(vec(j).ne.0.0) then
                 tot = tot+ (gg(j-1)*conjg(z1%dead(j))*z2%alive(j)*hh(j+1)*vec(j))
             end if
+
         end do
 
         if(vec(norb).ne.0) then
+         
             tot = tot +(gg(norb-1)*conjg(z1%dead(norb))*z2%alive(norb)*vec(norb))
         end if
-
+        
         call dealloczf(vmult)
+    
         z_an_z3=tot
         return
 

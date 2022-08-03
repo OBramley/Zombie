@@ -18,16 +18,25 @@ MODULE zom
         if (errorflag .ne. 0) return
 
         dummy=1
-        do j=1,num
-            call random_number(rands)
-            do k=1,norb
-                dummy=(2*pirl*rands(k))
-                temp=sin(dummy)
-                zstore(j)%alive(k)=cmplx(temp,0.0d0,kind=8)
-                temp=cos(dummy)
-                zstore(j)%dead(K)=cmplx(temp,0.0d0,kind=8)
+        if(imagflg=='n') then
+            do j=1,num
+                call random_number(rands)
+                do k=1,norb
+                    dummy=(2*pirl*rands(k))
+                    temp=sin(dummy)
+                    zstore(j)%alive(k)=cmplx(temp,0.0d0,kind=8)
+                    temp=cos(dummy)
+                    zstore(j)%dead(K)=cmplx(temp,0.0d0,kind=8)
+                end do
             end do
-        end do
+            if(rhf_1=='y') then
+                zstore(1)%alive(1:nel)=(1.0d0,0.0d0)
+                zstore(1)%dead(1:nel)=(0.0d0,0.0d0)
+                zstore(1)%alive((nel+1):norb)=(0.0d0,0.0d0)
+                zstore(1)%dead((nel+1):norb)=(1.0d0,0.0d0)
+            end if
+            
+        end if
 
         return
 
@@ -164,10 +173,11 @@ MODULE zom
                 return
         end select
 
+
         do j=1,num
             call zombiewriter(zstore(j),j)
         end do
-
+        write(6,"(a)") " Zombie states generated"
         return
     
     end subroutine genzf

@@ -18,12 +18,11 @@ subroutine electronintegrals(elecs)
     if (errorflag .ne. 0) return
     ierr = 0
 
-    ! n=0
     nlines = lines(nlines)
     call spattospin1(elecs,nlines)
     call spattospin2(elecs,nlines)
 
-    open(unit=128, file='/integrals/hnuc.csv',status='old',iostat=ierr)
+    open(unit=128, file='integrals/hnuc.csv',status='old',iostat=ierr)
     if (ierr.ne.0) then
         write(0,"(a)") 'Error in opening hnuc.csv file'
         errorflag = 1
@@ -36,6 +35,8 @@ subroutine electronintegrals(elecs)
         return
       end if
     close(128)
+    
+    write(6,"(a)") "1 & 2 electron integrals successfully generated"
 
     return
 
@@ -49,16 +50,20 @@ integer function lines(nlines)
     
     ierr=0
     nlines=0
-    open(unit=129, file='/integrals/h1ea.csv',status='old',iostat=ierr)
+    open(unit=129, file='integrals/h1ea.csv',status='old',iostat=ierr)
     if (ierr.ne.0) then
-        write(0,"(a)") 'Error in opening h1ea.csv file'
+        write(0,"(a,i0)") 'Error in opening h1ea.csv file',ierr
         errorflag = 1
         return
     end if
 
     do 
         read(129,*, iostat=ierr)
-        if (ierr/=0) then
+        if(ierr<0)then
+            write(0,"(a,i0)") "nlines has value ", nlines
+            lines=nlines
+            return
+        else if (ierr/=0) then
             write(0,"(a,i0)") "Error in counting h1ea rows. ierr had value ", ierr
             errorflag=1
             return
@@ -90,16 +95,20 @@ subroutine spattospin1(elecs,nlines)
         return
     end if
 
-    open(unit=130, file='/integrals/h1ea.csv',status='old',iostat=ierr)
+
+    open(unit=130, file='integrals/h1ea.csv',status='old',iostat=ierr)
     if (ierr.ne.0) then
         write(0,"(a)") 'Error in opening h1ea.csv file'
         errorflag = 1
         return
     end if
+  
+    do j=1, nlines
+        read(130,*,iostat=ierr) (h1ea(j,k),k=1,nlines)
+    end do
 
-    
-    read(130,*) ((h1ea(j,k),k=1,nlines),j=1,nlines)
     close(130)
+
 
     nspao = int(norb/2)
 
@@ -146,16 +155,19 @@ subroutine spattospin2(elecs,nlines)
         do k=1, norb
             write(val1,'(i0)')j
             write(val2,'(i0)')k
-            open(unit=(131+j+k), file='/integrals/h2ea_'//trim(val1)//'_'//trim(val2)//'.csv', status='old',iostat=ierr)
+            open(unit=(131+j+k), file='integrals/h2ea_'//trim(val1)//'_'//trim(val2)//'.csv', status='old',iostat=ierr)
             if (ierr.ne.0) then
                 write(0,"(a)") 'Error in opening h2ea.csv file'
                 errorflag = 1
                 return
             end if
-            read((131+j+k),*) ((h2ea(j,k,l,m),m=1,nlines),l=1,nlines)
+            do l=1, nlines
+                read((131+j+k),*) (h2ea(j,k,l,m),m=1,nlines)
+            end do
             close(131+j+k)
         end do
     end do
+
 
     do j=1,nspao
         jj=(2*j)-1

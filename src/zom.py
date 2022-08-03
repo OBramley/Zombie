@@ -175,7 +175,7 @@ def zom_gen(norb,ndet,zombs,filenamer,seed,zom_bias):
     if((rhf=='y')):
         zstore[0]=zom(norb,typ='aufbau',nel=nelc)
     for i in range(ndet):
-        in_outputs.write_ham(zstore[i].zs,'zombie_'+str(i)+'.csv')
+        in_outputs.write_ham((zstore[i].zs).T,'zombie_'+str(i+1).zfill(4)+'.csv')
 
     filename=filenamer+'_zombie_states.pkl'
     in_outputs.save_object(zstore,filename)

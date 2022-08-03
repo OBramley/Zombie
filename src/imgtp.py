@@ -17,12 +17,14 @@ def hf_state(norb,hfnum,zstore,ndet,Ki):
 # Imaginar time propagation routine
 def itime_prop(Bigham, Kover, beta, steps, norb, hfflg, hfnum, zstore, ndet,filenamer):
     Ki = numpy.linalg.inv(Kover)
+    in_outputs.write_ham(Ki,filenamer+'_inverse.csv')
     if(hfflg=='y'):
         dvec=hf_state(norb, hfnum, zstore, ndet, Ki)
     elif(hfflg=='n'):
         dvec=numpy.zeros((ndet))
         dvec[0]=1
     KinvH=numpy.matmul(Ki,Bigham)
+    in_outputs.write_ham(Ki,filenamer+'_kinvh.csv')
     db=beta/steps
     eb=numpy.zeros((steps+1,2))
     for i in range(steps+1):

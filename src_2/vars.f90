@@ -37,7 +37,7 @@ MODULE globvars
     integer::norb       ! Number of spin orbitals
     integer::nel        ! Number of electrons in molecule
     real(kind=8)::spin  ! Spin of the molecule
-    integer::beta       ! Distance proagated in imaginary time
+    real::beta       ! Distance proagated in imaginary time
     integer::timesteps  ! Number of time steps
     character(LEN=2)::zst !Type of zombie state to be generated
 

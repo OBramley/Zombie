@@ -7,7 +7,6 @@ import in_outputs
         # Program to generate one and two electron integrals from PyScf
 # Some of this code has been adapted from George Booth
 def spatospin1(H1ea,norb):
-    print(norb)
     """Converting H1ea from spatial to spin"""
     if norb%2 != 0:
         raise ValueError('norb must be even')
@@ -70,6 +69,7 @@ class system:
                 ov = op.overlap(zom1,zomt)
                 # print(ii,jj,ov)
                 Ht1 += ov*self.H1ei[ii,jj]
+        print(Ht1)
         return Ht1
     def Ham2z_v5(self,zom1,zom2):
         Ht2 = 0.0
@@ -81,16 +81,20 @@ class system:
             Z2k = numpy.zeros((self.norb,self.norb,2),dtype=complex)
         else:
             Z2k = numpy.zeros((self.norb,self.norb,2),dtype=float)
+        
         for ii in range(self.norb):
             for jj in range(self.norb):
                 zomt = numpy.copy(zom1)
                 zomt = op.an(zomt,ii)
                 zomt = op.an(zomt,jj)
                 Z1ij[ii,jj,:,:] = zomt[:,:]
+
         for kk in range(self.norb):
             zomt = numpy.copy(zom2)
             zomt = op.an(zomt,kk)
             Z2k[kk,:,:] = zomt[:,:]
+     
+        
         for ii in range(self.norb):
             if zom1[ii,1] == 0.0:
                 continue
@@ -104,11 +108,14 @@ class system:
                         continue
                     Ht2 += op.z_an_z3(Z1ij[ii,jj,:,:],Z2k[kk,:,:], \
                                         self.norb,self.H2ei[ii,jj,kk,:])
+        print(0.5*Ht2)
         return 0.5*Ht2
+
     def HTot(self,zom1,zom2):
         H1et = self.Ham1z(zom1,zom2)
         H2et = self.Ham2z_v5(zom1,zom2)
         HH = H1et + H2et + self.Hnr*op.overlap_f(zom1,zom2)
+        print(HH)
         return HH
 
 
@@ -152,7 +159,6 @@ def pyscf_gen(norb,filenamer,pyscf):
     h1e=numpy.asarray(h1e)
     H1ei = spatospin1(h1e,norb)
     H2ei = spatospin2(eri_full,norb)
-    print(Hnuc)
     # in_outputs.write_integrals(Hnuc, H1ei, H2ei,norb)
     Ham=system(norb, Hnuc, H1ei, H2ei)
     filename=filenamer+'_inegrals.pkl'
@@ -223,6 +229,7 @@ def molpro_read(filename,norb,filenamer):
 def hamiltonian(ndet,Ham,zstore,filenamer):
     Kover = numpy.zeros((ndet,ndet))
     Bigham = numpy.zeros((ndet,ndet))
+
     for idet in range(ndet):
         for jdet in range(idet,ndet):
             Kover[idet,jdet] = op.overlap_f(zstore[idet].zs, zstore[jdet].zs)

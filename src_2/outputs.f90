@@ -3,6 +3,38 @@ MODULE outputs
 
     contains
 
+    subroutine matrixwriter_real(out,size,filenm)
+
+        implicit none
+
+        real(kind=8),dimension(:,:),intent(in)::out
+        integer,intent(in)::size
+        character(LEN=*),intent(in)::filenm
+        integer::ierr,j,k
+
+        if (errorflag .ne. 0) return
+        
+        ierr=0
+
+        open(unit=200,file=filenm,status="new",iostat=ierr)
+        if(ierr/=0)then
+            write(0,"(a,i0)") "Error in opening matrix file. ierr had value ", ierr
+            errorflag=1
+            return
+        end if
+
+        do j=1, size
+            write(200,'(*(e23.15e3 :", "))') (out(j,k),k=1,size)
+        end do
+
+        close(200)
+
+        return
+
+    end subroutine matrixwriter_real
+
+
+
     subroutine matrixwriter(out,size,filenm)
 
         implicit none
@@ -24,7 +56,7 @@ MODULE outputs
         end if
 
         do j=1, size
-            write(200,*) (out(j,k),k=1,size)
+            write(200,'(*(e23.15e3 :", "))') (REAL(out(j,k)),k=1,size)
         end do
 
         close(200)
@@ -49,19 +81,24 @@ MODULE outputs
 
         write(nums,"(i4.4)")num
 
-        filenm = "zombie_"//trim(nums)//".csv"
+        filenm = "zsl_"//trim(nums)//".csv"
+        ! filenm = "zombie_"//trim(nums)//".csv"
 
         zomnum=300+num
-
+        
         open(unit=zomnum,file=trim(filenm),status="new",iostat=ierr)
         if(ierr/=0)then
+            write(0,*)num
             write(0,"(a,i0)") "Error in opening zombie state file. ierr had value ", ierr
+            close(zomnum)
             errorflag=1
             return
         end if
 
-        write(zomnum,*) (zom%dead(j),j=1,norb)
-        write(zomnum,*) (zom%alive(j),j=1,norb)
+        if(imagflg=='n') then
+            write(zomnum,'(*(e23.15e3 :", "))') (REAL(zom%dead(j)),j=1,norb)
+            write(zomnum,'(*(e23.15e3 :", "))') (REAL(zom%alive(j)),j=1,norb)
+        end if
 
         close(zomnum)
 
@@ -90,8 +127,13 @@ MODULE outputs
             return
         end if
 
-        write(ergnum,*) (time(k),k=1,timesteps+1)
-        write(ergnum,*) (erg(k),k=1,timesteps+1)
+        ! write(ergnum,*) (REAL(erg(k)),k=1,timesteps+1)
+        write(ergnum,'(*(e23.15e3 :", "))') (time(k),k=1,timesteps+1)
+        write(ergnum,'(*(e23.15e3 :", "))') (REAL(erg(k)),k=1,timesteps+1)
+
+
+        ! write(ergnum,*) (time(k),k=1,timesteps+1)
+        ! write(ergnum,*) (erg(k),k=1,timesteps+1)
         close(ergnum)
 
         return

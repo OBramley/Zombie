@@ -17,69 +17,6 @@ Main:randgen.o alarrays.o readpars.o operators.o electrons.o zom.o ham.o outputs
 
 # Compile steps
 
-# ieeeck.o:ieeeck.f 
-# 	 $(F90) $(FFLAGS) -c $<
-
-# iparmq.o:iparmq.f 
-# 	 $(F90) $(FFLAGS) -c $<
-
-# ilaenv.o:ilaenv.f ieeeck.o iparmq.o
-# 	 $(F90) $(FFLAGS) -c $<
-
-# xerbla.o:xerbla.f 
-# 	 $(F90) $(FFLAGS) -c $<
-
-# lsame.o:lsame.f
-# 	 $(F90) $(FFLAGS) -c $<
-
-# dcabs1.o:dcabs1.f
-# 	 $(F90) $(FFLAGS) -c $<
-
-# zgemm.o:zgemm.f xerbla.o 
-# 	 $(F90) $(FFLAGS) -c $<
-
-# ztrsm.o:ztrsm.f xerbla.o 
-# 	 $(F90) $(FFLAGS) -c $<
-
-# dlamch.o:dlamch.f lsame.o 
-# 	 $(F90) $(FFLAGS) -c $<
-
-# izamax.o:izamax.f dcabs1.o 
-# 	 $(F90) $(FFLAGS) -c $<
-
-# zscal.o:zscal.f 
-# 	 $(F90) $(FFLAGS) -c $<
-
-# zlaswp.o:zlaswp.f 
-# 	 $(F90) $(FFLAGS) -c $<
-
-# zgetrf2.o:zgetrf2.f zgemm.o ztrsm.o dlamch.o izamax.o zscal.o zlaswp.o 
-# 	 $(F90) $(FFLAGS) -c $<
-
-# zgetrf.o:zgetrf.f ilaenv.o xerbla.o zgemm.o ztrsm.o zgetrf2.o zlaswp.o ilanev.o 
-# 	 $(F90) $(FFLAGS) -c $<
-
-# zgemv.o:zgemv.f xerbla.o 
-# 	 $(F90) $(FFLAGS) -c $<
-
-# zswap.o:zswap.f 
-# 	 $(F90) $(FFLAGS) -c $<
-
-# ztrmm.o:ztrmm.f xerbla.o 
-# 	 $(F90) $(FFLAGS) -c $<
-
-# ztrmv.o:ztrmv.f xerbla.object
-# 	 $(F90) $(FFLAGS) -c $<
-
-# ztrti2.o:ztrti2.f xerbla.o zscal.o ztrmv.o 
-# 	 $(F90) $(FFLAGS) -c $<
-
-# ztrtri.o:ztrtri.f ilaenv.o ztrsm.o xerbla.o ztrmm.o ztrti2.o 
-# 	 $(F90) $(FFLAGS) -c $<
-
-# zgetri.o:zgetri.f ilaenv.o xerbla.o zgemm.o zgemv.o zswap.o ztrsm.o ztrtri.o 
-# 	 $(F90) $(FFLAGS) -c $<
-
 randgen.o:randgen.f
 	 $(F90) $(FFLAGS) -c $<
 

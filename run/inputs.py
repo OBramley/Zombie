@@ -19,7 +19,7 @@ run={
     'language':'python',
 
     # What is the name of the run
-    'runfolder':'C_checker',
+    'runfolder':'try2',
 
     # Amount of time to request on HPC 
     'runtime': "48:00:00",

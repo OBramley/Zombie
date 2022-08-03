@@ -14,7 +14,7 @@ MODULE clean
         implicit none
 
         type(zombiest),dimension(:),allocatable,intent(out)::cstore
-        type(hamiltonian), allocatable, intent(out)::cleanham
+        type(hamiltonian), intent(out)::cleanham
         type(elecintrgl),intent(in)::elecs 
         integer, intent(in)::nume
         integer, intent(out)::clean_ndet

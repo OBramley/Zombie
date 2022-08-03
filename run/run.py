@@ -7,7 +7,6 @@
 ###################################################################################################
 import sys
 
-from sqlalchemy import values
 import inputs
 import os
 import socket
@@ -202,6 +201,10 @@ elif(inputs.run['language']=="fortran"):
         # Scalar nuclear repulsion energy
         Hnuc = myhf.energy_nuc()
 
+        with open(EXDIR1+"/integrals/hnuc.csv",'w', newline='')as csvfile:
+            spamwriter=csv.writer(csvfile)
+            spamwriter.writerow([Hnuc,0])
+
         with open(EXDIR1+"/integrals/h1ea.csv",'w', newline='')as csvfile:
             spamwriter=csv.writer(csvfile, delimiter=',')
             spamwriter.writerows(h1e)
@@ -213,14 +216,12 @@ elif(inputs.run['language']=="fortran"):
                     spamwriter=csv.writer(csvfile, delimiter=',')
                     spamwriter.writerows(obj)
 
-        with open(EXDIR1+"/integrals/hnuc.csv",'w', newline='')as csvfile:
-            spamwriter=csv.writer(csvfile, delimiter=',')
-            spamwriter.writerow(Hnuc)
+        
 
-        with open(EXDIR1+'rundata'+str(i+1)+'.csv','w',newline='')as file:
-            writer = csv.writer(file)
-            writer.writerow(inputs.run['zomgen'],inputs.run['hamgen'],inputs.run['imagprop'],inputs.run['beta'],inputs.run['timesteps'],inputs.run['clean'],inputs.run['gram'],inputs.run['gramnum'])
-            writer.writerow(inputs.zombs.values())
+    with open(EXDIR1+'/rundata.csv','w',newline='')as file:
+        writer = csv.writer(file)
+        writer.writerow([inputs.run['zomgen'],inputs.run['hamgen'],inputs.run['imagprop'],inputs.run['beta'],inputs.run['timesteps'],inputs.run['clean'],inputs.run['gram'],inputs.run['gramnum']])
+        writer.writerow(inputs.zombs.values())
 
 
     os.chdir("../build")
@@ -228,7 +229,7 @@ elif(inputs.run['language']=="fortran"):
         shutil.copy2("../build/makefile_arc","../build/Makefile")
         subprocess.run(["make"])
     else:
-        shutil.copy2("../build/makefile_chmlin","../build/Makefile")
+        shutil.copy2("../build/makefile_mac","../build/Makefile")
         subprocess.run(["make"])
     
     shutil.copy2("ZOMBIE.exe",EXDIR1)
@@ -252,8 +253,11 @@ elif(inputs.run['language']=="fortran"):
             os.environ["OMP_NUM_THREADS"]=str(inputs.run['cores'])
         subprocess.call(['qsub',file1])
     else:
+        print(os.getcwd())
         if(inputs.run['cores']!=1):
             os.environ["OMP_NUM_THREADS"]=str(inputs.run['cores'])
-        subprocess.Popen('',executable=+"/ZOMBIE.exe",cwd=EXDIR1)
+        subprocess.run(["./ZOMBIE.exe"])
+        # subprocess.Popen('',executable="ZOMBIE.exe")
         
+
     

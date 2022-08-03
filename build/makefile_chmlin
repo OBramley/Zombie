@@ -92,6 +92,9 @@ alarrays.o:alarrays.f90 vars.o
 readpars.o:readpars.f90 vars.o
 	 $(F90) $(FFLAGS) -c $<
 
+outputs.o:outputs.f90 vars.o
+	 $(F90) $(FFLAGS) -c $<
+
 operators.o:operators.f90 vars.o alarrays.o
 	 $(F90) $(FFLAGS) -c $<
 
@@ -101,10 +104,7 @@ electrons.o:electrons.f90 vars.o
 zom.o:zom.f90 vars.o outputs.o
 	 $(F90) $(FFLAGS) -c $<
 	 
-ham.o:ham.f90 vars.o alarrays.o operators.o
-	 $(F90) $(FFLAGS) -c $<
-
-outputs.o:outputs.f90 vars.o
+ham.o:ham.f90 vars.o alarrays.o operators.o zgetrf.o zgetri.o 
 	 $(F90) $(FFLAGS) -c $<
 
 imgtp.o:imgtp.f90 vars.o

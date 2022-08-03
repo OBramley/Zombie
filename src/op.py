@@ -219,7 +219,10 @@ def z_an_z3(zom1,zom2,norb,vec):
     """Finding sum_k <zom1 | b_k | zom2> vec_k for all k in norb
     Dynamically handles real vs complex input data
     Faster than the first two versions"""
+
     vmult = numpy.multiply(zom1.conjugate(),zom2)
+
+   
     if type(vmult[0,0].item()) is complex:
         gg = numpy.zeros((norb),dtype=complex)
         hh = numpy.zeros((norb),dtype=complex)
@@ -233,22 +236,33 @@ def z_an_z3(zom1,zom2,norb,vec):
         if gg[ii] == 0.0:
             gmax = ii
             break
-    hh[-1] = vmult[-1,0] + vmult[-1,1]   
+   
+    hh[-1] = vmult[-1,0] + vmult[-1,1]
+
     hmin = 0
     for ii in range(norb-2,-1,-1):
         hh[ii] = hh[ii+1]*(vmult[ii,0]+vmult[ii,1])
         if hh[ii] == 0.0:
             hmin = ii
             break
+  
     #an_out = numpy.zeros(norb)
     an = 0.0
+   
     if gmax < hmin:
         return 0.0
+
     if vec[0] != 0:
         an += zom1[0,0].conjugate()*zom2[0,1]*hh[1]*vec[0]
+
     for ii in range(1,norb-1,1):
+   
         if vec[ii]!=0.0:
+            
             an += gg[ii-1]*zom1[ii,0].conjugate()*zom2[ii,1]*hh[ii+1]*vec[ii]
-    if vec[-1] !=0: 
+      
+    if vec[-1] !=0:
+       
         an += gg[-2]*zom1[-1,0].conjugate()*zom2[-1,1]*vec[-1]
+
     return an

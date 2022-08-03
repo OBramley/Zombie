@@ -29,7 +29,7 @@ MODULE readpars
             return
         end if
 
-        
+        n=0        
         if((LINE1(1:1).eq.'y').or.(LINE1(1:1).eq.'Y')) then
             zomgflg="y"
         else if((LINE1(1:1).eq.'n').or.(LINE1(1:1).eq.'N')) then
@@ -53,7 +53,7 @@ MODULE readpars
         if((LINE3(1:1)=='y').or.(LINE3(1:1).eq.'Y')) then
             propflg="y"
         else if((LINE3(1:1)=='n').or.(LINE3(1:1).eq.'N')) then
-            propflg="y"
+            propflg="n"
         else
             write(0,"(a,a)") "Error. imaginary time flag must be YES/NO. Read ", trim(LINE3)
             errorflag=1
@@ -77,7 +77,7 @@ MODULE readpars
         if((LINE6(1:1)=='y').or.(LINE6(1:1).eq.'Y')) then
             cleanflg="y"
         else if((LINE6(1:1)=='n').or.(LINE6(1:1).eq.'N')) then
-            cleanflg="y"
+            cleanflg="n"
         else
             write(0,"(a,a)") "Error. cleaning flag must be YES/NO. Read ", trim(LINE6)
             errorflag=1
@@ -87,7 +87,7 @@ MODULE readpars
         if((LINE7(1:1)=='y').or.(LINE7(1:1).eq.'Y')) then
             gramflg="y"
         else if((LINE7(1:1)=='n').or.(LINE7(1:1).eq.'N')) then
-            gramflg="y"
+            gramflg="n"
         else
             write(0,"(a,a)") "Error. Gram Schmidt flag must be YES/NO. Read ", trim(LINE7)
             errorflag=1
@@ -181,6 +181,62 @@ MODULE readpars
         
 
     end subroutine readrunconds
+
+    subroutine read_zombie(zstore)
+
+        implicit none
+        type(zombiest),dimension(:),intent(inout)::zstore
+        real(kind=8),dimension(norb)::dead,alive
+        complex(kind=8),dimension(norb)::cdead,calive
+        character(len=4)::num
+        integer::ierr,j,k,zomnum
+        character(LEN=15)::filenm
+
+        ierr=0
+
+        if(imagflg=='n') then
+            do j=1, ndet
+                write(num,"(i4.4)")j
+                filenm="zombie_"//trim(num)//".csv"
+                zomnum=500+j
+                open(unit=zomnum,file=trim(filenm),status="old",iostat=ierr)
+                if(ierr/=0)then
+                    write(0,"(a,i0)") "Error in opening zombie state file to read in. ierr had value ", ierr
+                    errorflag=1
+                    return
+                end if
+
+                read(zomnum,*) dead
+                read(zomnum,*) alive
+                do k=1,norb
+                    zstore(j)%dead(k)=cmplx(dead(k),0.0,kind=8)
+                    zstore(j)%alive(k)=cmplx(alive(k),0.0,kind=8)
+                end do 
+                close(zomnum)
+            end do
+        else if(imagflg=='y')then
+            do j=1, ndet
+                write(num,"(i4.4)")j
+                filenm="zombie_"//trim(num)//".csv"
+                zomnum=500+j
+                open(unit=zomnum,file=trim(filenm),status="old",iostat=ierr)
+                if(ierr/=0)then
+                    write(0,"(a,i0)") "Error in opening zombie state file to read in. ierr had value ", ierr
+                    errorflag=1
+                    return
+                end if
+
+                read(zomnum,*) cdead
+                read(zomnum,*) calive
+                zstore(j)%dead(1:norb)=cdead(1:norb)
+                zstore(j)%alive(1:norb)=calive(1:norb)
+                close(zomnum)
+            end do
+        end if
+        write(6,"(a)") "Zombie states succeffuly read in"
+        return
+        
+    end subroutine read_zombie
 
 
 END MODULE readpars

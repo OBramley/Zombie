@@ -17,14 +17,14 @@ program MainZombie
     ! Private variables
     type(zombiest), dimension(:), allocatable:: zstore, cstore
     type(dvector), dimension(:), allocatable:: dvecs, dvec_clean
-    type(energy),allocatable:: en, en_clean
-    type(elecintrgl),allocatable::elect
-    type(hamiltonian),allocatable::haml, clean_haml
-    integer:: j, istat, clean_ndet,ierr
+    type(energy):: en, en_clean
+    type(elecintrgl)::elect
+    type(hamiltonian)::haml, clean_haml
+    integer:: j,k, istat, clean_ndet,ierr
     complex(kind=8)::clean_norm, clean_erg
     character(LEN=2)::stateno
     character(LEN=100) :: CWD
-
+    character(LEN=4)::nums
     ! Public variables
     real(kind=8):: starttime, stoptime, runtime
     integer(kind=8):: randseed
@@ -59,31 +59,49 @@ program MainZombie
     randseed = abs(randseed)    ! Negative seed values seem to cause instability
 
     call ZBQLINI(randseed,0)   ! Generates the seed value using the UCL random library
+    write(6,"(a)") "Random seed set"
+
 
     ! generate 1 and 2 electron integrals
     call allocintgrl(elect)
     call electronintegrals(elect)
-    write(6,"(a)") "1 & 2 electron integrals successfully generated"
+
+    ! do j=1, norb
+    !     do k=1, norb
+    !         write(nums,"(i4.4)")((j*10)+k)
+    !         call matrixwriter_real(elect%h2ei(j,k,:,:),norb,"H2ei_"//trim(nums)//".csv")
+    !     end do
+    ! end do
 
     ! generate zombie states
     call alloczs(zstore,ndet)
+
     if(zomgflg=='y')then
         call genzf(zstore,ndet)
-        write(6,"(a)") " Zombie states generated"
     else if (zomgflg=='n') then
-        write(6,"(a)") " Need to write read in routine"
+        call read_zombie(zstore)
     end if
     ! generate Hamiltonian and overlap
 
+    call flush(6)
+    call flush(0)
+
+
+
     call allocham(haml,ndet)
+
     if(hamgflg=='y')then
         call hamgen(haml,zstore,elect,ndet)
         call matrixwriter(haml%hjk,ndet,"ham.csv")
         call matrixwriter(haml%ovrlp,ndet,"ovlp.csv")
+        call matrixwriter(haml%inv,ndet,"inv.csv")
+        call matrixwriter(haml%kinvh,ndet,"kinvh.csv")
         write(6,"(a)") "Hamiltonian successfully generated"
     else if (hamgflg=='n')then
-        write(6,"(a)") " Need to write read in routine"
+        write(6,"(a)") "Need to write read in routine"
     end if
+
+    
 
     if(propflg=='y') then
         ! Imaginary time propagation
