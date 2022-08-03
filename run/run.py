@@ -216,6 +216,11 @@ elif(inputs.run['language']=="fortran"):
                     spamwriter=csv.writer(csvfile, delimiter=',')
                     spamwriter.writerows(obj)
 
+        if(inputs.run['zomgen']=='n'):
+            for i in range(inputs.zombs['ndet']):
+                shutil.copy2('zombie_'+str(i+1).zfill(4)+'.csv',EXDIR1)
+
+
         
 
     with open(EXDIR1+'/rundata.csv','w',newline='')as file:

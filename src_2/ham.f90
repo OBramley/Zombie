@@ -3,7 +3,6 @@ MODULE ham
     use globvars
     use alarrays
     use operators
-    use outputs
 
     contains
     
@@ -22,7 +21,7 @@ MODULE ham
         ierr = 0
 
         call alloczf(zomt)
-         
+        tot=(0.0,0.0)
         do j=1, norb
             do k=1, norb
                 zomt%alive(1:norb)=z2%alive(1:norb)
@@ -34,6 +33,7 @@ MODULE ham
         end do
 
         call dealloczf(zomt)
+        
         h1et=tot
         return
 
@@ -49,8 +49,6 @@ MODULE ham
         type(zombiest),allocatable, dimension(:,:)::z1jk
         type(zombiest),allocatable, dimension(:)::z2l
         type(zombiest)::zomt
-        ! complex(kind=8),dimension(norb,norb,norb,2)::z1jk
-        ! complex(kind=8),dimension(norb,norb,2)
         integer::j,k,l,jspin, ierr
         complex(kind=8)::tot
 
@@ -83,7 +81,7 @@ MODULE ham
             z2l(l)%alive(1:norb)=zomt%alive(1:norb)
             z2l(l)%dead(1:norb)=zomt%dead(1:norb)
         end do
-       
+        tot=(0.0,0.0)
         do j=1, norb
             if(z1%alive(j)==(0.0,0.0))then
                 CYCLE
@@ -128,10 +126,9 @@ MODULE ham
         complex(kind=8), intent(in)::ovrl
 
         hamval= h1et(z1,z2,elecs)+h2et(z1,z2,elecs)+((elecs%hnuc)*ovrl)
-        print*, hamval
         return
     
-        end function hamval
+    end function hamval
 
 
 
@@ -147,7 +144,7 @@ MODULE ham
         complex(kind=8),allocatable,dimension(:)::WORK1
         integer:: j,k,size,ierr
 
-    
+        
         do j=1, size
             do k=j,size
                 ham%ovrlp(j,k)=overlap(zstore(j),zstore(k))
@@ -157,7 +154,7 @@ MODULE ham
                 ham%hjk(j,k)= hamval(zstore(j),zstore(k),elecs,ham%ovrlp(j,k))
                 ham%hjk(k,j)=ham%hjk(j,k)
             end do
-            write(6,"(a,i0,a)") "Hamiltonian row",j, "completed"
+            write(6,"(a,i0,a)") "Hamiltonian row ",j, " completed"
         end do
 
         

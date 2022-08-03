@@ -94,14 +94,12 @@ program MainZombie
         call hamgen(haml,zstore,elect,ndet)
         call matrixwriter(haml%hjk,ndet,"ham.csv")
         call matrixwriter(haml%ovrlp,ndet,"ovlp.csv")
-        call matrixwriter(haml%inv,ndet,"inv.csv")
-        call matrixwriter(haml%kinvh,ndet,"kinvh.csv")
+        ! call matrixwriter(haml%inv,ndet,"inv.csv")
+        ! call matrixwriter(haml%kinvh,ndet,"kinvh.csv")
         write(6,"(a)") "Hamiltonian successfully generated"
     else if (hamgflg=='n')then
         write(6,"(a)") "Need to write read in routine"
     end if
-
-    
 
     if(propflg=='y') then
         ! Imaginary time propagation

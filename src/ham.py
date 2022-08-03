@@ -69,7 +69,7 @@ class system:
                 ov = op.overlap(zom1,zomt)
                 # print(ii,jj,ov)
                 Ht1 += ov*self.H1ei[ii,jj]
-        print(Ht1)
+        # print(Ht1)
         return Ht1
     def Ham2z_v5(self,zom1,zom2):
         Ht2 = 0.0
@@ -108,14 +108,14 @@ class system:
                         continue
                     Ht2 += op.z_an_z3(Z1ij[ii,jj,:,:],Z2k[kk,:,:], \
                                         self.norb,self.H2ei[ii,jj,kk,:])
-        print(0.5*Ht2)
+        # print(0.5*Ht2)
         return 0.5*Ht2
 
     def HTot(self,zom1,zom2):
         H1et = self.Ham1z(zom1,zom2)
         H2et = self.Ham2z_v5(zom1,zom2)
         HH = H1et + H2et + self.Hnr*op.overlap_f(zom1,zom2)
-        print(HH)
+        # print(HH)
         return HH
 
 

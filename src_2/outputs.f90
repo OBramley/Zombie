@@ -81,8 +81,8 @@ MODULE outputs
 
         write(nums,"(i4.4)")num
 
-        filenm = "zsl_"//trim(nums)//".csv"
-        ! filenm = "zombie_"//trim(nums)//".csv"
+        
+        filenm = "zombie_"//trim(nums)//".csv"
 
         zomnum=300+num
         

@@ -36,6 +36,7 @@ MODULE imgtp
             en%t(j)=db*(j-1)
             do k=1,states
                 en%erg(k,j)=ergcalc(ham%hjk,dvecs(k)%d)
+                ! print*,en%erg(k,j)
             end do
             call timestep(ham%kinvh,ham%ovrlp,dvecs,db,states)
             
@@ -79,17 +80,15 @@ MODULE imgtp
         complex(kind=8),intent(in),dimension(:,:)::kinvh,kover
         integer,intent(in)::states
         real,intent(in)::db
-        ! complex(kind=8),dimension(ndet)::ddot
-        real(kind=8),dimension(ndet)::ddot
-        real(kind=8),dimension(ndet)::temp
+        complex(kind=8),dimension(ndet)::ddot,temp
         real(kind=8)::norm
         integer::j
 
         do j=1,states
-            ddot= -matmul(REAL(kinvh),REAL(dvecs(j)%d))
-            dvecs(j)%d=dvecs(j)%d+cmplx(db*ddot,0.0,kind=8)
-            temp=matmul(REAL(kover),REAL(dvecs(j)%d))
-            norm=dabs(dot_product(REAL(dvecs(j)%d),temp))
+            ddot= -matmul((kinvh),(dvecs(j)%d))
+            dvecs(j)%d=dvecs(j)%d+db*ddot
+            temp=matmul(kover,(dvecs(j)%d))
+            norm=zabs(dot_product((dvecs(j)%d),temp))
             norm=1/sqrt(norm)
             dvecs(j)%d=norm*dvecs(j)%d
         end do

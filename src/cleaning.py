@@ -21,14 +21,18 @@ def clean_setup(norb, nel,ndet, spin, Ham, zstore, filenamer):
     magnitude=numpy.zeros((ndew))
     cstore_f=[]
     ndew2=0
+  
     for i in range(ndew):
         for j in range(ndet):
             magnitude[i]=magnitude[i]+op.overlap_f(cstore[i].zs,zstore[j].zs)
         if(magnitude[i]>0.00001):
             cstore_f.append(cstore[i])
             ndew2=ndew2+1
-
+    cstore_f=cstore
     del cstore
+
+    # in_outputs.save_object(cstore,filenamer+'_zombie_states.pkl')
+    # cleanham, cleanovrl = ham.hamiltonian(ndew,Ham,cstore,filenamer)
 
     # output zombie states
     in_outputs.save_object(cstore_f,filenamer+'_zombie_states.pkl')

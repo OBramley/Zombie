@@ -19,7 +19,7 @@ run={
     'language':'python',
 
     # What is the name of the run
-    'runfolder':'try2',
+    'runfolder':'python_comapre_clean',
 
     # Amount of time to request on HPC 
     'runtime': "48:00:00",
@@ -67,7 +67,7 @@ run={
 
     # Do you want to clean after propagation takes 'y', 'n' or 'f' to use a previosuly generated
     # cleaning hamiltonian and zombie state files
-    'clean':'n',
+    'clean':'y',
     'cleanham':'BH_clean_hamiltonian.csv',
     'cleanzom':'BH_clean_zombie_states.pkl', 
 
