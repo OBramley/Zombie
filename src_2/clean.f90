@@ -63,11 +63,10 @@ MODULE clean
 
         call allocham(cleanham,total2)
         call hamgen(cleanham,cstore,elecs,total2)
-        call matrixwriter(cleanham%hjk,ndet,"cleanham.csv")
+        call matrixwriter(cleanham%hjk,ndet,"clean_ham.csv")
         clean_ndet=total2
 
         return
-
 
     end subroutine clean_setup
 

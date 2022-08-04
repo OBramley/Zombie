@@ -5,24 +5,29 @@ MODULE zom
 
     contains
 
+    
 
     subroutine gen_ran_zs(zstore,num)
 
         implicit none
+
         type(zombiest),dimension(:),intent(inout)::zstore
         integer, intent(in)::num
         integer::j,k
-        real(kind=8)::dummy,temp
-        real(kind=8),dimension(norb)::rands
-
+        real(kind=8)::dummy,temp,phase
+        DOUBLE PRECISION, external::ZBQLU01
+        ! real(kind=8),dimension(norb)::rands
+        ! complex(kind=8)::ctemp
         if (errorflag .ne. 0) return
 
         dummy=1
         if(imagflg=='n') then
             do j=1,num
-                call random_number(rands)
+                ! call random_number(rands)
                 do k=1,norb
-                    dummy=(2*pirl*rands(k))
+                    dummy =1
+                    dummy=2*pirl*ZBQLU01(1)
+                    ! dummy=(2*pirl*rands(k))
                     temp=sin(dummy)
                     zstore(j)%alive(k)=cmplx(temp,0.0d0,kind=8)
                     temp=cos(dummy)
@@ -34,8 +39,23 @@ MODULE zom
                 zstore(1)%dead(1:nel)=(0.0d0,0.0d0)
                 zstore(1)%alive((nel+1):norb)=(0.0d0,0.0d0)
                 zstore(1)%dead((nel+1):norb)=(1.0d0,0.0d0)
-            end if
-            
+            end if 
+        else if(imagflg=='y')then
+            do j=1,num
+                do k=1,norb
+                    dummy=2*pirl*ZBQLU01(1)
+                    phase=2*pirl*ZBQLU01(1)
+                    temp=cos(dummy)
+                    zstore(j)%dead(K)=cmplx(temp,0.0d0,kind=8)
+                    zstore(j)%alive(k)=sin(dummy)*exp(i*phase)
+                end do
+            end do
+            if(rhf_1=='y') then
+                zstore(1)%alive(1:nel)=(1.0d0,0.0d0)
+                zstore(1)%dead(1:nel)=(0.0d0,0.0d0)
+                zstore(1)%alive((nel+1):norb)=(0.0d0,0.0d0)
+                zstore(1)%dead((nel+1):norb)=(1.0d0,0.0d0)
+            end if 
         end if
 
         return

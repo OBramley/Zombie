@@ -187,7 +187,7 @@ MODULE readpars
         implicit none
         type(zombiest),dimension(:),intent(inout)::zstore
         real(kind=8),dimension(norb)::dead,alive
-        complex(kind=8),dimension(norb)::cdead,calive
+        real(kind=8),dimension(norb*2)::cdead,calive
         character(len=4)::num
         integer::ierr,j,k,zomnum
         character(LEN=15)::filenm
@@ -215,6 +215,7 @@ MODULE readpars
                 close(zomnum)
             end do
         else if(imagflg=='y')then
+            ! if(ierr==0) allocate(cdead(norb*2),calive(norb*2))
             do j=1, ndet
                 write(num,"(i4.4)")j
                 filenm="zombie_"//trim(num)//".csv"
@@ -228,8 +229,10 @@ MODULE readpars
 
                 read(zomnum,*) cdead
                 read(zomnum,*) calive
-                zstore(j)%dead(1:norb)=cdead(1:norb)
-                zstore(j)%alive(1:norb)=calive(1:norb)
+                do k=1,(norb*2),2
+                    zstore(j)%dead((k+1)/2)=cmplx(cdead(k),cdead(k+1),kind=8)
+                    zstore(j)%alive((k+1)/2)=cmplx(calive(k),calive(k+1),kind=8)
+                end do
                 close(zomnum)
             end do
         end if
@@ -237,6 +240,126 @@ MODULE readpars
         return
         
     end subroutine read_zombie
+
+    subroutine read_ham(ham,size)
+
+        implicit none
+        type(hamiltonian),intent(inout)::ham
+        integer,intent(in)::size
+        integer::ierr,j,k
+        REAL(kind=8),dimension(size)::line
+        REAL(kind=8),dimension(size*2)::cline
+        integer, allocatable,dimension(:)::IPIV1
+        complex(kind=8),allocatable,dimension(:)::WORK1
+
+        if (errorflag .ne. 0) return
+        ierr=0
+
+        if(imagflg=='n') then
+            open(unit=200,file='ham.csv',status="old",iostat=ierr)
+            if(ierr/=0)then
+                write(0,"(a,i0)") "Error in opening hamiltonian file. ierr had value ", ierr
+                errorflag=1
+                return
+            end if
+
+            do j=1, size
+                read(200,*) line
+                do k=1, size
+                    ham%hjk(j,k)=cmplx(line(k),0.0,kind=8)
+                end do
+            end do
+            close(200)
+
+            open(unit=201,file='ovlp.csv',status="old",iostat=ierr)
+            if(ierr/=0)then
+                write(0,"(a,i0)") "Error in opening overlap file. ierr had value ", ierr
+                errorflag=1
+                return
+            end if
+
+            do j=1, size
+                read(201,*) line
+                do k=1, size
+                    ham%ovrlp(j,k)=cmplx(line(k),0.0,kind=8)
+                end do
+            end do
+            close(201)
+        else if (imagflg=='y')then
+            open(unit=200,file='ham.csv',status="old",iostat=ierr)
+            if(ierr/=0)then
+                write(0,"(a,i0)") "Error in opening hamiltonian file. ierr had value ", ierr
+                errorflag=1
+                return
+            end if
+
+            do j=1, size
+                read(200,*) line
+                do k=1, (size*2),2
+                    ham%hjk(j,(k+1)/2)=cmplx(cline(k),cline(k+1),kind=8)
+                end do
+            end do
+            close(200)
+
+            open(unit=201,file='ovlp.csv',status="old",iostat=ierr)
+            if(ierr/=0)then
+                write(0,"(a,i0)") "Error in opening overlap file. ierr had value ", ierr
+                errorflag=1
+                return
+            end if
+
+            do j=1, size
+                read(201,*) line
+                do k=1, (size*2),2
+                    ham%ovrlp(j,(k+1)/2)=cmplx(cline(k),cline(k+1),kind=8)
+                end do
+            end do
+            close(201)
+        end if
+
+        allocate(IPIV1(size),stat=ierr)
+        if (ierr/=0) then
+            write(0,"(a,i0)") "Error in IPIV vector allocation . ierr had value ", ierr
+            errorflag=1
+            return
+        end if 
+        
+        allocate(WORK1(size),stat=ierr)
+        if (ierr/=0) then
+            write(0,"(a,i0)") "Error in WORK vector allocation . ierr had value ", ierr
+            errorflag=1
+            return
+        end if   
+
+        call ZGETRF(size,size,ham%inv,size,IPIV1,ierr)
+        if (ierr/=0) then
+            write(0,"(a,i0)")"Error in ZGETRF",ierr
+        end if
+        call ZGETRI(size,ham%inv,size,IPIV1,WORK1,size,ierr)
+        if (ierr/=0) then
+            write(0,"(a,i0)")"Error in ZGETRF",ierr
+        end if
+
+        deallocate(IPIV1,stat=ierr)
+        if (ierr/=0) then
+            write(0,"(a,i0)") "Error in IPIV vector allocation . ierr had value ", ierr
+            errorflag=1
+            return
+        end if
+
+        deallocate(WORK1,stat=ierr)
+        if (ierr/=0) then
+            write(0,"(a,i0)") "Error in WORK vector allocation . ierr had value ", ierr
+            errorflag=1
+            return
+        end if
+        
+        ham%kinvh=matmul(ham%inv,ham%hjk)
+
+
+
+
+    end subroutine read_ham
 
 
 END MODULE readpars

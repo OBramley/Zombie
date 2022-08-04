@@ -60,7 +60,7 @@ integer function lines(nlines)
     do 
         read(129,*, iostat=ierr)
         if(ierr<0)then
-            write(0,"(a,i0)") "nlines has value ", nlines
+            ! write(0,"(a,i0)") "nlines has value ", nlines
             lines=nlines
             return
         else if (ierr/=0) then

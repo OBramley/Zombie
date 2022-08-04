@@ -16,10 +16,10 @@ run={
     # Fortran program is faster and will use OpenMP for multiple threads
     # The python program is possibly easier to understand and is still effective for 
     # small runs. Takes input python or fortran
-    'language':'python',
+    'language':'fortran',
 
     # What is the name of the run
-    'runfolder':'python_comapre_clean',
+    'runfolder':'fortran_random2',
 
     # Amount of time to request on HPC 
     'runtime': "48:00:00",
@@ -67,7 +67,7 @@ run={
 
     # Do you want to clean after propagation takes 'y', 'n' or 'f' to use a previosuly generated
     # cleaning hamiltonian and zombie state files
-    'clean':'y',
+    'clean':'n',
     'cleanham':'BH_clean_hamiltonian.csv',
     'cleanzom':'BH_clean_zombie_states.pkl', 
 

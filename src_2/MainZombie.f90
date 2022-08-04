@@ -24,10 +24,11 @@ program MainZombie
     complex(kind=8)::clean_norm, clean_erg
     character(LEN=2)::stateno
     character(LEN=100) :: CWD
-    character(LEN=4)::nums
+    ! character(LEN=4)::nums
     ! Public variables
     real(kind=8):: starttime, stoptime, runtime
     integer(kind=8):: randseed
+
 
     call CPU_TIME(starttime) !used to calculate the runtime, which is output at the end
     write(6,"(a)") " ________________________________________________________________ "
@@ -119,10 +120,12 @@ program MainZombie
         write(6,"(a)") "Imaginary time propagation finished"
 
         if(gramflg.eq."n")then
+            call dvec_writer(dvecs(1)%d,ndet,0,'dvec.csv')
             call energywriter(en%t,en%erg(1,:),"energy.csv",0)
         else if(gramflg.eq."y")then
             do j=1, 1+gramnum
                 write(stateno,"(i4.4)")j
+                call dvec_writer(dvecs(j)%d,ndet,j,"dvec_"//trim(stateno)//".csv")
                 call energywriter(en%t,en%erg(j,:),"energy_state_"//trim(stateno)//".csv",j)
             end do
         end if
@@ -140,6 +143,7 @@ program MainZombie
             call allocerg(en_clean,1)
             en_clean%t(1:(timesteps+1))=en%t(1:(timesteps+1))
             en_clean%erg(1,1:(timesteps+1))=clean_erg/clean_norm
+            call dvec_writer(dvec_clean(1)%d,clean_ndet,5,'dvec.csv')
             call energywriter(en_clean%t,en_clean%erg(1,:),"clean_energy.csv",99)
             call deallocerg(en_clean)
             call deallocdv(dvec_clean)

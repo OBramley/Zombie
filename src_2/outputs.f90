@@ -54,10 +54,15 @@ MODULE outputs
             errorflag=1
             return
         end if
-
-        do j=1, size
-            write(200,'(*(e23.15e3 :", "))') (REAL(out(j,k)),k=1,size)
-        end do
+        if(imagflg=='n')then
+            do j=1, size
+                write(200,'(*(e25.17e3 :", "))') (REAL(out(j,k)),k=1,size)
+            end do
+        else if (imagflg=='y')then
+            do j=1, size
+                write(200,'(*(e25.17e3 :", "))') ((out(j,k)),k=1,size)
+            end do
+        end if
 
         close(200)
 
@@ -88,16 +93,17 @@ MODULE outputs
         
         open(unit=zomnum,file=trim(filenm),status="new",iostat=ierr)
         if(ierr/=0)then
-            write(0,*)num
             write(0,"(a,i0)") "Error in opening zombie state file. ierr had value ", ierr
-            close(zomnum)
             errorflag=1
             return
         end if
 
         if(imagflg=='n') then
-            write(zomnum,'(*(e23.15e3 :", "))') (REAL(zom%dead(j)),j=1,norb)
-            write(zomnum,'(*(e23.15e3 :", "))') (REAL(zom%alive(j)),j=1,norb)
+            write(zomnum,'(*(e25.17e3 :", "))') (REAL(zom%dead(j)),j=1,norb)
+            write(zomnum,'(*(e25.17e3 :", "))') (REAL(zom%alive(j)),j=1,norb)
+        else if(imagflg=='y') then
+            write(zomnum,'(*(1x,es25.17e3 :", "))') ((zom%dead(j)),j=1,norb)
+            write(zomnum,'(*(1x,es25.17e3 :", "))') ((zom%alive(j)),j=1,norb)
         end if
 
         close(zomnum)
@@ -127,19 +133,43 @@ MODULE outputs
             return
         end if
 
-        ! write(ergnum,*) (REAL(erg(k)),k=1,timesteps+1)
+     
         write(ergnum,'(*(e23.15e3 :", "))') (time(k),k=1,timesteps+1)
         write(ergnum,'(*(e23.15e3 :", "))') (REAL(erg(k)),k=1,timesteps+1)
 
-
-        ! write(ergnum,*) (time(k),k=1,timesteps+1)
-        ! write(ergnum,*) (erg(k),k=1,timesteps+1)
         close(ergnum)
 
         return
 
     end subroutine energywriter
 
+    subroutine dvec_writer(d,size,p,filenm)
+
+        implicit none
+        complex(kind=8),dimension(:),intent(in)::d
+        character(LEN=*),intent(in)::filenm
+        integer,intent(in)::size,p
+        integer::ierr,j,vec
+        if (errorflag .ne. 0) return
+        
+        ierr=0
+
+        vec=900+p
+        open(unit=vec,file=trim(filenm),status="new",iostat=ierr)
+        if(ierr/=0)then
+            write(0,"(a,i0)") "Error in opening dvector file. ierr had value ", ierr
+            errorflag=1
+            return
+        end if
+        if(imagflg=='n')then
+            write(vec,'(*(e25.17e3 :", "))') (REAL(d(j)),j=1,size)
+        else if(imagflg=='n')then
+            write(vec,'(*(1x,es25.17e3 :", "))') ((d(j)),j=1,size*2)
+        end if
+        close(vec)
+        return
+
+    end subroutine dvec_writer
 
 
 END MODULE outputs
