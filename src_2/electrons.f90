@@ -112,6 +112,8 @@ subroutine spattospin1(elecs,nlines)
 
     nspao = int(norb/2)
 
+    !$omp parallel shared(elecs,h1ea) private(j,k,jj,kk)
+    !$omp do 
     do j=1,nspao
         do k=1, nspao
             jj=(j*2)-1
@@ -120,6 +122,8 @@ subroutine spattospin1(elecs,nlines)
             elecs%h1ei(jj+1,kk+1)=elecs%h1ei(jj,kk)
         end do
     end do
+    !$omp end do
+    !$omp end parallel
     
     deallocate(h1ea, stat=ierr)
     if (ierr/=0) then
@@ -168,7 +172,8 @@ subroutine spattospin2(elecs,nlines)
         end do
     end do
 
-
+    !$omp parallel shared(elecs,h2ea) private(j,k,l,m,jj,kk,ll,mm) 
+    !$omp do
     do j=1,nspao
         jj=(2*j)-1
         do k=1, nspao
@@ -185,6 +190,8 @@ subroutine spattospin2(elecs,nlines)
             end do
         end do
     end do
+    !$omp end do
+    !$omp end parallel
 
     deallocate(h2ea, stat=ierr)
     if (ierr/=0) then

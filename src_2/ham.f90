@@ -22,6 +22,8 @@ MODULE ham
 
         call alloczf(zomt)
         tot=(0.0,0.0)
+        !$omp parallel private(j,k,zomt) shared(tot,elecs,z1,z2)
+        !$omp do reduction(+:tot) 
         do j=1, norb
             do k=1, norb
                 zomt%alive(1:norb)=z2%alive(1:norb)
@@ -31,7 +33,8 @@ MODULE ham
                 tot = tot + (overlap(z1,zomt)*elecs%h1ei(j,k))
             end do
         end do
-
+        !$omp end do
+        !$omp end parallel
         call dealloczf(zomt)
         
         h1et=tot
@@ -59,7 +62,10 @@ MODULE ham
         call alloczs2d(z1jk,norb)
         call alloczs(z2l,norb)
         call alloczf(zomt)
+        tot=(0.0,0.0)
 
+        !$omp parallel shared(z1jk,z1,z2,tot) private(j,k,l,jspin,zomt)
+        !$omp do
         do j=1, norb
             do k=1, norb
                 zomt%alive(1:norb)=z1%alive(1:norb)
@@ -72,8 +78,8 @@ MODULE ham
                 end do
             end do
         end do
-        
-        
+        !$omp end do NOWAIT
+        !$omp do
         do l=1, norb
             zomt%alive(1:norb)=z2%alive(1:norb)
             zomt%dead(1:norb)=z2%dead(1:norb)
@@ -81,7 +87,9 @@ MODULE ham
             z2l(l)%alive(1:norb)=zomt%alive(1:norb)
             z2l(l)%dead(1:norb)=zomt%dead(1:norb)
         end do
-        tot=(0.0,0.0)
+        !$omp end do
+        
+        !$omp do reduction(+:tot)
         do j=1, norb
             if(z1%alive(j)==(0.0,0.0))then
                 CYCLE
@@ -105,6 +113,8 @@ MODULE ham
                 end do
             end do
         end do
+        !$omp end do
+        !$omp end parallel
 
         call dealloczs2d(z1jk)
         call dealloczs(z2l)
@@ -144,7 +154,8 @@ MODULE ham
         complex(kind=8),allocatable,dimension(:)::WORK1
         integer:: j,k,size,ierr
 
-        
+        !$omp parallel shared(ham,zstore) private(j,k)
+        !$omp do 
         do j=1, size
             do k=j,size
                 ham%ovrlp(j,k)=overlap(zstore(j),zstore(k))
@@ -156,9 +167,9 @@ MODULE ham
             end do
             write(6,"(a,i0,a)") "Hamiltonian row ",j, " completed"
         end do
-
+        !$omp end do
+        !$omp end parallel
         
-
         allocate(IPIV1(size),stat=ierr)
         if (ierr/=0) then
             write(0,"(a,i0)") "Error in IPIV vector allocation . ierr had value ", ierr
@@ -195,10 +206,12 @@ MODULE ham
             errorflag=1
             return
         end if
-        
-        ham%kinvh=matmul(ham%inv,ham%hjk)
-        
 
+        !$omp parallel
+        !$omp workshare
+        ham%kinvh=matmul(ham%inv,ham%hjk)
+        !$omp end workshare
+        !$omp end parallel
         return
         
     end subroutine hamgen

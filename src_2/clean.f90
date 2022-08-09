@@ -49,9 +49,13 @@ MODULE clean
         end do
 
         call alloczs(cstore,total2)
+        !$omp parallel private(k) shared(cstore,combs2)
+        !$omp do
         do k=1, total2
             call zomhf(cstore(k),combs2(k,:))
         end do
+        !$omp end do
+        !$omp end parallel
 
         deallocate(combs,stat=ierr)
         if(ierr==0)  deallocate(combs2,stat=ierr)

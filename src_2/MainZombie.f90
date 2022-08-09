@@ -9,7 +9,7 @@ program MainZombie
     use outputs
     use imgtp
     use clean
-
+    use omp_lib
     
     
     implicit none
@@ -45,8 +45,17 @@ program MainZombie
     istat=0
     call initialise
     call readrunconds
-   
 
+    ! !$OMP parallel private(k)
+    !     !$OMP do 
+    !         do j=1, 10
+    !         k = OMP_GET_THREAD_NUM()
+    !         print*, "Hello from process: ", k, j
+    !         end do
+
+    !     !$OMP END do
+    ! !$OMP end parallel 
+    ! stop
 
     open(unit=570, file="/dev/urandom", access="stream", &
     form="unformatted", action="read", status="old", iostat=istat)
@@ -66,6 +75,7 @@ program MainZombie
     ! generate 1 and 2 electron integrals
     call allocintgrl(elect)
     call electronintegrals(elect)
+
 
     ! do j=1, norb
     !     do k=1, norb
@@ -93,7 +103,7 @@ program MainZombie
 
     if(hamgflg=='y')then
         call hamgen(haml,zstore,elect,ndet)
-        call matrixwriter(haml%hjk,ndet,"ham.csv")
+         call matrixwriter(haml%hjk,ndet,"ham.csv")
         call matrixwriter(haml%ovrlp,ndet,"ovlp.csv")
         ! call matrixwriter(haml%inv,ndet,"inv.csv")
         ! call matrixwriter(haml%kinvh,ndet,"kinvh.csv")

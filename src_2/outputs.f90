@@ -134,8 +134,11 @@ MODULE outputs
         end if
 
      
-        write(ergnum,'(*(e23.15e3 :", "))') (time(k),k=1,timesteps+1)
-        write(ergnum,'(*(e23.15e3 :", "))') (REAL(erg(k)),k=1,timesteps+1)
+        write(ergnum,'(*(e25.17e3 :", "))') (time(k),k=1,timesteps+1)
+        write(ergnum,'(*(e25.17e3 :", "))') (REAL(erg(k)),k=1,timesteps+1)
+        if(imagflg=='y')then
+            write(ergnum,'(*(e25.17e3 :", "))') (CMPLX(erg(k)),k=1,timesteps+1)
+        end if
 
         close(ergnum)
 
@@ -163,7 +166,7 @@ MODULE outputs
         end if
         if(imagflg=='n')then
             write(vec,'(*(e25.17e3 :", "))') (REAL(d(j)),j=1,size)
-        else if(imagflg=='n')then
+        else if(imagflg=='y')then
             write(vec,'(*(1x,es25.17e3 :", "))') ((d(j)),j=1,size*2)
         end if
         close(vec)

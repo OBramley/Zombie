@@ -34,12 +34,18 @@ MODULE imgtp
     
         do j=1,timesteps+1
             en%t(j)=db*(j-1)
+            !$omp parallel shared(en,j,ham,dvecs) private(k)
+            !$omp do
             do k=1,states
                 en%erg(k,j)=ergcalc(ham%hjk,dvecs(k)%d)
-                ! print*,en%erg(k,j)
             end do
-            call timestep(ham%kinvh,ham%ovrlp,dvecs,db,states)
-            
+            !$omp end do
+            !$omp do
+            do k=1,states
+                call timestep(ham%kinvh,ham%ovrlp,dvecs(k),db)
+            end do
+            !$omp end do
+            !$omp end parallel
             if(gramflg.eq."y")then
                 call gs(dvecs,ham%ovrlp,states)
             end if
@@ -56,42 +62,42 @@ MODULE imgtp
 
         complex(kind=8),intent(in),dimension(:)::dvec
         complex(kind=8),intent(in),dimension(:,:)::bham
-        real(kind=8),dimension(ndet)::temp
-        ! complex(kind=8)::result
-        real(kind=8)::result
-        ! complex(kind=8),dimension(ndet)::temp
+        complex(kind=8),dimension(ndet)::temp
+        complex(kind=8)::result
+      
         
         if (errorflag .ne. 0) return
         
-        ! temp=matmul(REAL(dvec),REAL(bham))
-        ! result=dot_product(temp,REAL(dvec))
-        temp=matmul(REAL(bham),REAL(dvec))
-        result=dot_product(REAL(dvec),temp)
-        ergcalc=cmplx(result,0.0,kind=8)
-    
+        !$omp parallel
+        !$omp workshare
+        temp=matmul(bham,dvec)
+        result=dot_product(dvec,temp)
+        ergcalc=result
+        !$omp end workshare
+        !$omp end parallel
         return
 
     end function ergcalc
 
-    subroutine timestep(kinvh,kover,dvecs,db,states)
+    subroutine timestep(kinvh,kover,dvecs,db)
 
         implicit none
-        type(dvector),intent(inout),dimension(:)::dvecs
+        type(dvector),intent(inout)::dvecs
         complex(kind=8),intent(in),dimension(:,:)::kinvh,kover
-        integer,intent(in)::states
         real,intent(in)::db
         complex(kind=8),dimension(ndet)::ddot,temp
         real(kind=8)::norm
-        integer::j
 
-        do j=1,states
-            ddot= -matmul((kinvh),(dvecs(j)%d))
-            dvecs(j)%d=dvecs(j)%d+db*ddot
-            temp=matmul(kover,(dvecs(j)%d))
-            norm=zabs(dot_product((dvecs(j)%d),temp))
-            norm=1/sqrt(norm)
-            dvecs(j)%d=norm*dvecs(j)%d
-        end do
+        !$omp parallel 
+        !$omp workshare
+        ddot= -matmul((kinvh),(dvecs%d))
+        dvecs%d=dvecs%d+db*ddot
+        temp=matmul(kover,(dvecs%d))
+        norm=zabs(dot_product((dvecs%d),temp))
+        norm=1/sqrt(norm)
+        dvecs%d=norm*dvecs%d
+        !$omp end workshare
+        !$omp end parallel
 
         return
 

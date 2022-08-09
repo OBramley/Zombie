@@ -501,7 +501,6 @@ MODULE operators
 
         call alloczf(vmult)
 
-       
         do j=1, norb
             vmult%alive(j)=conjg(z1%alive(j))*z2%alive(j)
             vmult%dead(j)=conjg(z1%dead(j))*z2%dead(j)
@@ -550,7 +549,6 @@ MODULE operators
         end do
 
         if(vec(norb).ne.0) then
-         
             tot = tot +(gg(norb-1)*conjg(z1%dead(norb))*z2%alive(norb)*vec(norb))
         end if
         
