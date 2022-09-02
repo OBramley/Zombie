@@ -44,7 +44,7 @@ ham.o:ham.f90 vars.o alarrays.o operators.o
 outputs.o:outputs.f90 vars.o
 	 $(F90) $(FFLAGS) -c $<
 
-imgtp.o:imgtp.f90 vars.o
+imgtp.o:imgtp.f90 vars.o alarrays.o
 	 $(F90) $(FFLAGS) -c $<
 
 clean.o:clean.f90 vars.o alarrays.o zom.o ham.o operators.o outputs.o

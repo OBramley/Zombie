@@ -19,7 +19,7 @@ run={
     'language':'fortran',
 
     # What is the name of the run
-    'runfolder':'omp3',
+    'runfolder':'bb_test_bh',
 
     # Amount of time to request on HPC 
     'runtime': "48:00:00",
@@ -48,9 +48,9 @@ run={
     # Do you want to generate a new Hamiltonian? Takes input 'y' or 'n'
     'hamgen':'y',
 
-    'hamfile':'bigham.csv',
+    'hamfile':'ham1.csv',
 
-    'ovrlfile':'kover.csv',
+    'ovrlfile':'ovlp1.csv',
 
     # Do you want to perform imaginary time evolution? The program can be used to just generate
     # the Zombie state Hamiltonian. Takes input 'y' or 'n'.
@@ -73,8 +73,8 @@ run={
 
     # Do you want to find other energy states other than the ground state. If so turn on 
     # Gram Schmidt orthogonalisation and then specify the number of states. Takes input
-    # 'y' or 'n' and an integer number note gramnum=1 will not find an excited state just a 
-    # single ground state
+    # 'y' or 'n' and an integer number note in the python code gramnum=1 will not find an excited state just a 
+    # single ground state. But gramnum=1 will find a single excited state in the fortran code.
     'gram':'n',
     'gramnum':4
 }
@@ -82,7 +82,7 @@ run={
 
 zombs={
     # Number of orbitals
-    'norb':5,
+    'norb':19,
 
     # Number of electrons in the molecule
     'nel':6,
@@ -92,10 +92,10 @@ zombs={
     'spin':0,
 
     # Number of Zombie states
-    'ndet':1000, 
+    'ndet':100, 
 
     # Type of zombie states. Random (ran), Hartree Fock (HF) or biased (bb)
-    'zomtyp':'ran',
+    'zomtyp':'bb',
     
     # Biased basis improvement if 0 no loops to improve biased > 0 number of loops to improve the basis
 
@@ -130,9 +130,9 @@ zom_bias={
 
 pyscf={
      # The units the geometry of the molecule is set up in
-    'units':'Bohr',
+    'units':'Angstrom',
      # The geometry of the molecule being investigated
-    'atoms': 'Li 0 0 0; Li 0 0 6',
+    'atoms': 'B 0 0 0; H 0 0 1.2324',
     # The type of basis used to generate the 1 and 2 electron integrals
     'bs' : '6-31g**',
     # How verbose do you want the PyScf output to be in your terminal?
@@ -142,3 +142,18 @@ pyscf={
     'charge':0,
     'symmetry_subgroup' : 0 #0 is code for A1 point group
 }
+
+# pyscf={
+#      # The units the geometry of the molecule is set up in
+#     'units':'Bohr',
+#      # The geometry of the molecule being investigated
+#     'atoms': 'Li 0 0 0; Li 0 0 6',
+#     # The type of basis used to generate the 1 and 2 electron integrals
+#     'bs' : '6-31g**',
+#     # How verbose do you want the PyScf output to be in your terminal?
+#     'verbosity' : 4,
+#     'symmetry' :True,
+#     'spin':0,
+#     'charge':0,
+#     'symmetry_subgroup' : 0 #0 is code for A1 point group
+# }

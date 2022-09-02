@@ -9,23 +9,21 @@ program MainZombie
     use outputs
     use imgtp
     use clean
-    use omp_lib
+
     
     
     implicit none
     
-    ! Private variables
+  
     type(zombiest), dimension(:), allocatable:: zstore, cstore
     type(dvector), dimension(:), allocatable:: dvecs, dvec_clean
     type(energy):: en, en_clean
     type(elecintrgl)::elect
     type(hamiltonian)::haml, clean_haml
-    integer:: j,k, istat, clean_ndet,ierr
+    integer:: j, istat, clean_ndet,ierr
     complex(kind=8)::clean_norm, clean_erg
-    character(LEN=2)::stateno
+    character(LEN=4)::stateno
     character(LEN=100) :: CWD
-    ! character(LEN=4)::nums
-    ! Public variables
     real(kind=8):: starttime, stoptime, runtime
     integer(kind=8):: randseed
 
@@ -46,17 +44,6 @@ program MainZombie
     call initialise
     call readrunconds
 
-    ! !$OMP parallel private(k)
-    !     !$OMP do 
-    !         do j=1, 10
-    !         k = OMP_GET_THREAD_NUM()
-    !         print*, "Hello from process: ", k, j
-    !         end do
-
-    !     !$OMP END do
-    ! !$OMP end parallel 
-    ! stop
-
     open(unit=570, file="/dev/urandom", access="stream", &
     form="unformatted", action="read", status="old", iostat=istat)
     if (istat == 0) then
@@ -76,14 +63,6 @@ program MainZombie
     call allocintgrl(elect)
     call electronintegrals(elect)
 
-
-    ! do j=1, norb
-    !     do k=1, norb
-    !         write(nums,"(i4.4)")((j*10)+k)
-    !         call matrixwriter_real(elect%h2ei(j,k,:,:),norb,"H2ei_"//trim(nums)//".csv")
-    !     end do
-    ! end do
-
     ! generate zombie states
     call alloczs(zstore,ndet)
 
@@ -97,19 +76,22 @@ program MainZombie
     call flush(6)
     call flush(0)
 
-
-
     call allocham(haml,ndet)
 
     if(hamgflg=='y')then
         call hamgen(haml,zstore,elect,ndet)
-         call matrixwriter(haml%hjk,ndet,"ham.csv")
+        call matrixwriter(haml%hjk,ndet,"ham.csv")
         call matrixwriter(haml%ovrlp,ndet,"ovlp.csv")
         ! call matrixwriter(haml%inv,ndet,"inv.csv")
         ! call matrixwriter(haml%kinvh,ndet,"kinvh.csv")
         write(6,"(a)") "Hamiltonian successfully generated"
     else if (hamgflg=='n')then
-        write(6,"(a)") "Need to write read in routine"
+        call read_ham(haml,ndet)
+        call matrixwriter(haml%hjk,ndet,"ham2.csv")
+        call matrixwriter(haml%ovrlp,ndet,"ovlp2.csv")
+        ! call matrixwriter(haml%inv,ndet,"inv.csv")
+        ! call matrixwriter(haml%kinvh,ndet,"kinvh.csv")
+        write(6,"(a)") "Hamiltonian successfully read in"
     end if
 
     if(propflg=='y') then
@@ -118,6 +100,7 @@ program MainZombie
             call allocdv(dvecs,1,ndet)
             call allocerg(en,1)
         else if(gramflg.eq."y")then
+            ! write(0,"(a,i0)") "Gram  ", ierr
             call allocdv(dvecs,1+gramnum,ndet)
             call allocerg(en,1+gramnum)
         else
@@ -133,6 +116,7 @@ program MainZombie
             call dvec_writer(dvecs(1)%d,ndet,0,'dvec.csv')
             call energywriter(en%t,en%erg(1,:),"energy.csv",0)
         else if(gramflg.eq."y")then
+
             do j=1, 1+gramnum
                 write(stateno,"(i4.4)")j
                 call dvec_writer(dvecs(j)%d,ndet,j,"dvec_"//trim(stateno)//".csv")

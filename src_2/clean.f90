@@ -32,7 +32,7 @@ MODULE clean
                 return
             end if
 
-        call combinations(norb,nume,combs)
+        call combinations(norb,nume,combs,total)
         
         l=1
         total2=0

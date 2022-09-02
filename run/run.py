@@ -37,7 +37,7 @@ elif(inputs.zombs['norb']<1):
     sys.exit("Not enough orbitals. Must be 1 or greater")
 elif(inputs.zombs['ndet']<2):
     sys.exit("Not enough zombie states. Must be 2 or greater")
-elif(inputs.zombs['zomtyp'] not in {'ran','HF','bb'}):
+elif(inputs.zombs['zomtyp'] not in {'ran','HF','bb','hf'}):
     sys.exit("Type of zombie state must be ran, HF or bb")
 elif(inputs.run['elecs'] not in {'pyscf','mol','n'}):
     sys.exit("one and two electron integral paramter must be 'pyscf', 'mol' or 'n'")
@@ -172,6 +172,8 @@ if(inputs.run['language']=="python"):
         subprocess.run(['python', 'main.py'])
 
 elif(inputs.run['language']=="fortran"):
+    shutil.copy2("inputs.py",EXDIR1)
+    shutil.copy2("graph.py",EXDIR1)
     os.mkdir(EXDIR1+"/integrals")
     if(inputs.run['elecs']=='mol'):
         shutil.copy2('../'+ inputs.run['elecfile'],EXDIR1+"/integrals")
@@ -201,6 +203,7 @@ elif(inputs.run['language']=="fortran"):
         # Scalar nuclear repulsion energy
         Hnuc = myhf.energy_nuc()
 
+        
         with open(EXDIR1+"/integrals/hnuc.csv",'w', newline='')as csvfile:
             spamwriter=csv.writer(csvfile)
             spamwriter.writerow([Hnuc,0])
@@ -209,8 +212,8 @@ elif(inputs.run['language']=="fortran"):
             spamwriter=csv.writer(csvfile, delimiter=',')
             spamwriter.writerows(h1e)
 
-        for i in range(inputs.zombs['norb']*2):
-            for j in range(inputs.zombs['norb']*2):
+        for i in range((inputs.zombs['norb'])):
+            for j in range((inputs.zombs['norb'])):
                 obj=eri_full[i,j,:,:]
                 with open(EXDIR1+"/integrals/h2ea_"+str(i+1)+"_"+str(j+1)+".csv",'w', newline='')as csvfile:
                     spamwriter=csv.writer(csvfile, delimiter=',')
@@ -220,6 +223,11 @@ elif(inputs.run['language']=="fortran"):
             for i in range(inputs.zombs['ndet']):
                 shutil.copy2('zombie_'+str(i+1).zfill(4)+'.csv',EXDIR1)
 
+        if(inputs.run['hamgen']=='n'):
+            shutil.copy2(inputs.run['hamfile'],EXDIR1)
+            shutil.copy2(inputs.run['ovrlfile'],EXDIR1)
+
+
 
         
 
@@ -227,7 +235,7 @@ elif(inputs.run['language']=="fortran"):
         writer = csv.writer(file)
         writer.writerow([inputs.run['zomgen'],inputs.run['hamgen'],inputs.run['imagprop'],inputs.run['beta'],inputs.run['timesteps'],inputs.run['clean'],inputs.run['gram'],inputs.run['gramnum']])
         writer.writerow(inputs.zombs.values())
-
+        writer.writerow([inputs.run['hamfile'],inputs.run['ovrlfile']])
 
     os.chdir("../build")
     if(HPCFLG==1):

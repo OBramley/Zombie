@@ -22,12 +22,13 @@ MODULE readpars
 
         read(140,*,iostat=ierr)LINE1, LINE2, LINE3, LINE4, LINE5, LINE6, LINE7, LINE8
         read(140,*,iostat=ierr)LINE9, LINE10, LINE11,LINE12, LINE13, LINE14, LINE15, LINE16
-        close(140)
         if (ierr.ne.0) then
-            write(0,"(a)") "Error reading first line of input file"
+            write(0,"(a)") "Error reading rundata.csv of input file"
             errorflag = 1
             return
         end if
+        close(140)
+      
 
         n=0        
         if((LINE1(1:1).eq.'y').or.(LINE1(1:1).eq.'Y')) then
@@ -249,14 +250,34 @@ MODULE readpars
         integer::ierr,j,k
         REAL(kind=8),dimension(size)::line
         REAL(kind=8),dimension(size*2)::cline
+        character(LEN=100)::hamnm,ovrlpnm
         integer, allocatable,dimension(:)::IPIV1
         complex(kind=8),allocatable,dimension(:)::WORK1
 
         if (errorflag .ne. 0) return
         ierr=0
 
+        open(unit=140,file='rundata.csv',status='old',iostat=ierr)
+
+        if (ierr.ne.0) then
+          write(0,"(a)") 'Error in opening rundata.csv file'
+          errorflag = 1
+          return
+        end if
+
+        read(140,*)
+        read(140,*)
+        read(140,*,iostat=ierr)hamnm, ovrlpnm
+        if (ierr.ne.0) then
+            write(0,"(a)") "Error reading rundata.csv of input file"
+            errorflag = 1
+            return
+        end if
+        close(140)
+      
+
         if(imagflg=='n') then
-            open(unit=200,file='ham.csv',status="old",iostat=ierr)
+            open(unit=200,file=hamnm,status="old",iostat=ierr)
             if(ierr/=0)then
                 write(0,"(a,i0)") "Error in opening hamiltonian file. ierr had value ", ierr
                 errorflag=1
@@ -271,7 +292,7 @@ MODULE readpars
             end do
             close(200)
 
-            open(unit=201,file='ovlp.csv',status="old",iostat=ierr)
+            open(unit=201,file=ovrlpnm,status="old",iostat=ierr)
             if(ierr/=0)then
                 write(0,"(a,i0)") "Error in opening overlap file. ierr had value ", ierr
                 errorflag=1
@@ -316,6 +337,8 @@ MODULE readpars
             end do
             close(201)
         end if
+
+        ham%inv=ham%ovrlp
 
         allocate(IPIV1(size),stat=ierr)
         if (ierr/=0) then

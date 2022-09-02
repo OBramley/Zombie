@@ -1,4 +1,3 @@
-from fileinput import filename
 import _pickle as pickle
 import numpy
 import csv
@@ -47,7 +46,7 @@ def plot(eb,rnum, beta, timesteps, filename):
         ax.plot(x,eb[:,1], linewidth=2, color=colors(0),label='Converged energy = '+"{:.5f}".format(eb[timesteps-1,1]))
     else:
         for i in range(rnum):
-            ax.plot(x,eb[:,i+1], linewidth=2, color=colors(i),label='State '+str(rnum+1)+' = '+"{:.5f}".format(eb[timesteps-1,i+1]))
+            ax.plot(x,eb[:,i+1], linewidth=2, color=colors(i),label='State '+str(i)+' = '+"{:.5f}".format(eb[timesteps-1,i+1]))
     ax.set_xlim(0,beta)
     ax.legend()
     # ax.set_ylim(-14.8615,-14.8575)
