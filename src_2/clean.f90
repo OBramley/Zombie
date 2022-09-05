@@ -61,7 +61,7 @@ MODULE clean
         !$omp end do
         !$omp end parallel
        
-        write(6,"(a,i0)") 'Combinations with corect spin',total2
+        write(6,"(a,i0)") 'Combinations with corect spin ',total2
         ! A temporary set of Zombie states is created with the HF states with the correct number of electrons and spin
         call alloczs(cstoretemp,total2)
     
@@ -97,7 +97,7 @@ MODULE clean
                 return
             end if
 
-            !$omp parallel private(j,k,magnitude) shared(total3,magovrlp,cstore_temp,zstore)
+            !$omp parallel private(j,k,magnitude) shared(total3,magovrlp,cstoretemp,zstore)
             !$omp do
             do j=1, total2
                 magnitude=(0.0,0.0)
@@ -116,7 +116,7 @@ MODULE clean
 
             call alloczs(cstore,total3)
 
-            !$omp parallel private(j) shared(cstore_temp, cstore, magovrlp)
+            !$omp parallel private(j) shared(cstoretemp, cstore, magovrlp)
             !$omp do
             do j=1, total3
                 cstore(j)=cstoretemp(magovrlp(j))
@@ -130,7 +130,7 @@ MODULE clean
                 errorflag=1
                 return
             end if
-            write(6,"(a,i0)") 'Combinations with corect spin and enough contribution',total3
+            write(6,"(a,i0)") 'Combinations with corect spin and enough contribution ',total3
             clean_ndet=total3
             
         else
