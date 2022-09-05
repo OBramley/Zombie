@@ -68,7 +68,6 @@ MODULE imgtp
 
         complex(kind=8),intent(in),dimension(:)::dvec
         complex(kind=8),intent(in),dimension(:,:)::bham
-        complex(kind=8),dimension(ndet)::temp
         complex(kind=8)::result
       
         
@@ -76,8 +75,7 @@ MODULE imgtp
         
         !$omp parallel
         !$omp workshare
-        temp=matmul(bham,dvec)
-        result=dot_product(dvec,temp)
+        result=dot_product(dvec,matmul(bham,dvec))
         ergcalc=result
         !$omp end workshare
         !$omp end parallel

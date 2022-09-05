@@ -203,7 +203,12 @@ elif(inputs.run['language']=="fortran"):
         # Scalar nuclear repulsion energy
         Hnuc = myhf.energy_nuc()
 
-        
+        # print(len(eri_full))
+        # print(len(eri_full[0]))
+        # print(len(eri_full[0][0]))
+        # print(len(eri_full[0][0][0]))
+        # exit()
+
         with open(EXDIR1+"/integrals/hnuc.csv",'w', newline='')as csvfile:
             spamwriter=csv.writer(csvfile)
             spamwriter.writerow([Hnuc,0])
@@ -212,8 +217,8 @@ elif(inputs.run['language']=="fortran"):
             spamwriter=csv.writer(csvfile, delimiter=',')
             spamwriter.writerows(h1e)
 
-        for i in range((inputs.zombs['norb'])):
-            for j in range((inputs.zombs['norb'])):
+        for i in range(len(eri_full)):
+            for j in range(len(eri_full)):
                 obj=eri_full[i,j,:,:]
                 with open(EXDIR1+"/integrals/h2ea_"+str(i+1)+"_"+str(j+1)+".csv",'w', newline='')as csvfile:
                     spamwriter=csv.writer(csvfile, delimiter=',')
@@ -228,9 +233,6 @@ elif(inputs.run['language']=="fortran"):
             shutil.copy2(inputs.run['ovrlfile'],EXDIR1)
 
 
-
-        
-
     with open(EXDIR1+'/rundata.csv','w',newline='')as file:
         writer = csv.writer(file)
         writer.writerow([inputs.run['zomgen'],inputs.run['hamgen'],inputs.run['imagprop'],inputs.run['beta'],inputs.run['timesteps'],inputs.run['clean'],inputs.run['gram'],inputs.run['gramnum']])
@@ -238,13 +240,21 @@ elif(inputs.run['language']=="fortran"):
         writer.writerow([inputs.run['hamfile'],inputs.run['ovrlfile']])
 
     os.chdir("../build")
-    if(HPCFLG==1):
-        shutil.copy2("../build/makefile_arc","../build/Makefile")
-        subprocess.run(["make"])
-    else:
-        shutil.copy2("../build/makefile_mac","../build/Makefile")
-        subprocess.run(["make"])
-    
+    if(inputs.run['cores']==1):
+        if(HPCFLG==1):
+            shutil.copy2("../build/makefile_arc","../build/Makefile")
+            subprocess.run(["make"])
+        else:
+            shutil.copy2("../build/makefile_mac","../build/Makefile")
+            subprocess.run(["make"])
+    elif(inputs.run['cores']>1):
+        if(HPCFLG==1):
+            shutil.copy2("../build/makefile_arc_omp","../build/Makefile")
+            subprocess.run(["make"])
+        else:
+            shutil.copy2("../build/makefile_mac_omp","../build/Makefile")
+            subprocess.run(["make"])
+        
     shutil.copy2("ZOMBIE.exe",EXDIR1)
 
     os.chdir(EXDIR1)

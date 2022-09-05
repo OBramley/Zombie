@@ -147,7 +147,7 @@ subroutine spattospin2(elecs,nlines)
     character(len=4)::val1,val2
 
     ierr=0 
-    allocate (h2ea(norb/2,norb/2,nlines,nlines), stat=ierr)
+    allocate (h2ea(nlines,nlines,nlines,nlines), stat=ierr)
     if (ierr/=0) then
         write(0,"(a,i0)") "Error in h2ea allocation. ierr had value ", ierr
         errorflag=1
@@ -155,13 +155,13 @@ subroutine spattospin2(elecs,nlines)
     end if
 
     nspao = int(norb/2)
-    do j=1,nspao
-        do k=1, nspao
+    do j=1,nlines
+        do k=1, nlines
             write(val1,'(i0)')j
             write(val2,'(i0)')k
             open(unit=(131+j+k), file='integrals/h2ea_'//trim(val1)//'_'//trim(val2)//'.csv', status='old',iostat=ierr)
             if (ierr.ne.0) then
-                write(0,"(a)") 'Error in opening h2ea.csv file'
+                write(0,"(a)") 'Error in opening h2ea_'//trim(val1)//'_'//trim(val2)//'.csv file'
                 errorflag = 1
                 return
             end if

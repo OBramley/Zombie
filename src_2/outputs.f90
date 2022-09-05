@@ -112,6 +112,48 @@ MODULE outputs
 
     end subroutine zombiewriter
 
+    subroutine zombiewriter_c(zom,num)
+
+        implicit none
+
+        type(zombiest),intent(in)::zom 
+        integer,intent(in)::num
+        character(LEN=21)::filenm
+        integer::ierr,zomnum,j
+        character(LEN=4)::nums
+
+        if (errorflag .ne. 0) return
+
+        ierr=0
+
+        write(nums,"(i4.4)")num
+
+        
+        filenm = "clean_zombie_"//trim(nums)//".csv"
+
+        zomnum=300+num
+        
+        open(unit=zomnum,file=trim(filenm),status="new",iostat=ierr)
+        if(ierr/=0)then
+            write(0,"(a,i0)") "Error in opening zombie state file. ierr had value ", ierr
+            errorflag=1
+            return
+        end if
+
+        if(imagflg=='n') then
+            write(zomnum,'(*(e25.17e3 :", "))') (REAL(zom%dead(j)),j=1,norb)
+            write(zomnum,'(*(e25.17e3 :", "))') (REAL(zom%alive(j)),j=1,norb)
+        else if(imagflg=='y') then
+            write(zomnum,'(*(1x,es25.17e3 :", "))') ((zom%dead(j)),j=1,norb)
+            write(zomnum,'(*(1x,es25.17e3 :", "))') ((zom%alive(j)),j=1,norb)
+        end if
+
+        close(zomnum)
+
+        return
+
+    end subroutine zombiewriter_c
+
     subroutine energywriter(time,erg,filenm,j)
 
         implicit none

@@ -1,17 +1,17 @@
-# Makefile for use on chmlinxx computers.
+# Makefile for use on arcx computers.
 # Adapted from make file written by C. Symmonds for the MCE program which was inturn
 # made with the aid of the fmkmf utility (Copyright (c) The University of Edinburgh)
 
 F90=gfortran
-FFLAGS= #-fopenmp -O3
-FLINKS= -llapack -lblas
+FFLAGS= -fopenmp -O3
+FLINKS=-Wl,--start-group -lmkl_gf_lp64 -lmkl_sequential -lmkl_core -Wl,--end-group -lpthread
 VPATH=../src_2
 
 # Link step
 
 all: Main
 
-Main:randgen.o alarrays.o readpars.o operators.o electrons.o zom.o ham.o outputs.o imgtp.o clean.o  MainZombie.o
+Main:randgen.o vars.o alarrays.o readpars.o operators.o electrons.o zom.o ham.o outputs.o imgtp.o clean.o  MainZombie.o
 	 $(F90) $(FFLAGS) -o ZOMBIE.exe randgen.o vars.o alarrays.o readpars.o operators.o electrons.o zom.o ham.o outputs.o imgtp.o clean.o MainZombie.o $(FLINKS)
 
 
@@ -29,6 +29,9 @@ alarrays.o:alarrays.f90 vars.o
 readpars.o:readpars.f90 vars.o
 	 $(F90) $(FFLAGS) -c $<
 
+outputs.o:outputs.f90 vars.o
+	 $(F90) $(FFLAGS) -c $<
+
 operators.o:operators.f90 vars.o alarrays.o
 	 $(F90) $(FFLAGS) -c $<
 
@@ -39,9 +42,6 @@ zom.o:zom.f90 vars.o outputs.o
 	 $(F90) $(FFLAGS) -c $<
 	 
 ham.o:ham.f90 vars.o alarrays.o operators.o
-	 $(F90) $(FFLAGS) -c $<
-
-outputs.o:outputs.f90 vars.o
 	 $(F90) $(FFLAGS) -c $<
 
 imgtp.o:imgtp.f90 vars.o alarrays.o
@@ -58,4 +58,3 @@ MainZombie.o:MainZombie.f90 vars.o alarrays.o readpars.o operators.o electrons.o
 
 clean:
 	rm -rf f_{files,modd}* *.o *.mod *.exe *~ ../run/*.exe ../run/*~ ../src_2/*~
-

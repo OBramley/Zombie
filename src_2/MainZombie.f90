@@ -127,17 +127,21 @@ program MainZombie
         call deallocham(haml)
         write(6,"(a)") "Hamiltonian deallocated"
 
+        call flush(6)
+        call flush(0)
+
         if(cleanflg=="y")then
-            call clean_setup(cstore,nel,clean_haml,elect,clean_ndet)
+            call clean_setup(cstore,nel,clean_haml,elect,clean_ndet,zstore)
             write(6,"(a)") "Cleaning hamiltonian generated"
             call allocdv(dvec_clean,1,clean_ndet)
             call cleaner(zstore,cstore,dvecs(1),dvec_clean(1),clean_ndet,clean_norm)
+            ! clean_erg=dot_product(dvec_clean(1)%d,matmul(clean_haml%hjk,dvec_clean(1)%d))
             clean_erg=ergcalc(clean_haml%hjk,dvec_clean(1)%d)
             write(6,"(a)") "Cleaning process complete"
             call allocerg(en_clean,1)
             en_clean%t(1:(timesteps+1))=en%t(1:(timesteps+1))
             en_clean%erg(1,1:(timesteps+1))=clean_erg/clean_norm
-            call dvec_writer(dvec_clean(1)%d,clean_ndet,5,'dvec.csv')
+            call dvec_writer(dvec_clean(1)%d,clean_ndet,5,'clean_dvec.csv')
             call energywriter(en_clean%t,en_clean%erg(1,:),"clean_energy.csv",99)
             call deallocerg(en_clean)
             call deallocdv(dvec_clean)
