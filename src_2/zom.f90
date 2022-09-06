@@ -255,19 +255,22 @@ MODULE zom
         ! sig=(/0.0,0.0,0.175,0.351,0.120/)
 
         ! mu and sigma values for BH with 38 spin orbtials
-        mu=(/0.25,0.213632469,0.193380738,0.001262455,0.000505343,0.00062495,0.000530594,9.57371E-06,0.000169358,3.27753E-05, &
-            0.004644281,0.000396432,0.000387224,5.15685E-05,0.004644276,0.000396434,0.000387213,5.16551E-05,9.58165E-06/)
-        sig(1:norb/2)=0.15
-            if(imagflg=='n') then
+        ! mu=(/0.25,0.213632469,0.193380738,0.001262455,0.000505343,0.00062495,0.000530594,9.57371E-06,0.000169358,3.27753E-05, &
+        ! 0.004644281,0.000396432,0.000387224,5.15685E-05,0.004644276,0.000396434,0.000387213,5.16551E-05,9.58165E-06/)
+        ! sig(1:norb/2)=0.15
+        ! mu(1:(nel/2))=0.25
+        call musig(mu,sig)
+
+        if(imagflg=='n') then
             !$omp parallel shared(zstore) private(j,k,val)
             !$omp do
             do j=1, ndet
                 !$omp critical
                 do k=1,norb/2
-                    ! val(2*k-1)=2*pirl*ZBQLNOR(mu(k),sig(k))
-                    ! val(2*k)=2*pirl*ZBQLNOR(mu(k),sig(k))
-                    val(2*k-1)=mu(k)*exp(-ZBQLUAB(0,0.02021))
-                    val(2*k)=mu(k)*exp(-ZBQLUAB(0,0.02021))
+                    val(2*k-1)=2*pirl*ZBQLNOR(mu(k),sig(k))
+                    val(2*k)=2*pirl*ZBQLNOR(mu(k),sig(k))
+                    ! val(2*k-1)=2*pirl*mu(k)*exp(-ZBQLUAB(0,0.1))
+                    ! val(2*k)=2*pirl*mu(k)*exp(-ZBQLUAB(0,0.1))
                 end do
                 !$omp end critical
                 do k=1, norb
@@ -289,6 +292,35 @@ MODULE zom
         return
 
     end subroutine gen_biased_zs
+
+    subroutine musig(mu,sig)
+
+        implicit none
+        real(kind=8),dimension(:),intent(inout)::mu,sig
+        integer::alive,j
+        real(kind=8)::asrt,aend,dsrt,dend
+
+
+        alive=int(nel/2)
+        mu(1:alive)=0.25
+        mu(alive+1:)=0
+
+        asrt=0.0001
+        aend=0.200
+        dsrt=0.08
+        dend=0.0006
+
+        do j=0, (alive-1)
+            sig(j+1)=((aend-asrt)/(alive-1)*j)+asrt
+        end do
+
+        do j=0, (((norb/2)-alive)-1)
+            sig(j+1+alive)=((dend-dsrt)/(((norb/2)-alive)-1)*j)+dsrt
+        end do
+
+        return
+
+    end subroutine
 
     subroutine genzf(zstore,num)
         

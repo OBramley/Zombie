@@ -79,8 +79,10 @@ MODULE readpars
             cleanflg="y"
         else if((LINE6(1:1)=='n').or.(LINE6(1:1).eq.'N')) then
             cleanflg="n"
+        else if((LINE6(1:1)=='f').or.(LINE6(1:1).eq.'F')) then
+            cleanflg="f"
         else
-            write(0,"(a,a)") "Error. cleaning flag must be YES/NO. Read ", trim(LINE6)
+            write(0,"(a,a)") "Error. cleaning flag must be YES/NO/f. Read ", trim(LINE6)
             errorflag=1
             return
         end if
@@ -191,14 +193,14 @@ MODULE readpars
         real(kind=8),dimension(norb*2)::cdead,calive
         character(len=4)::num
         integer::ierr,j,k,zomnum
-        character(LEN=15)::filenm
+        character(LEN=20)::filenm
 
         ierr=0
 
         if(imagflg=='n') then
             do j=1, ndet
                 write(num,"(i4.4)")j
-                filenm="zombie_"//trim(num)//".csv"
+                filenm="data/zombie_"//trim(num)//".csv"
                 zomnum=500+j
                 open(unit=zomnum,file=trim(filenm),status="old",iostat=ierr)
                 if(ierr/=0)then
@@ -216,10 +218,9 @@ MODULE readpars
                 close(zomnum)
             end do
         else if(imagflg=='y')then
-            ! if(ierr==0) allocate(cdead(norb*2),calive(norb*2))
             do j=1, ndet
                 write(num,"(i4.4)")j
-                filenm="zombie_"//trim(num)//".csv"
+                filenm="data/zombie_"//trim(num)//".csv"
                 zomnum=500+j
                 open(unit=zomnum,file=trim(filenm),status="old",iostat=ierr)
                 if(ierr/=0)then
@@ -241,6 +242,65 @@ MODULE readpars
         return
         
     end subroutine read_zombie
+
+    subroutine read_zombie_c(zstore,clean_ndet)
+
+        implicit none
+        type(zombiest),dimension(:),intent(inout)::zstore
+        integer,intent(in)::clean_ndet
+        real(kind=8),dimension(norb)::dead,alive
+        real(kind=8),dimension(norb*2)::cdead,calive
+        character(len=6)::num
+        integer::ierr,j,k,zomnum
+        character(LEN=28)::filenm
+
+        ierr=0
+
+        if(imagflg=='n') then
+            do j=1, clean_ndet
+                write(num,"(i6.6)")j
+                filenm="data/clean_zombie_"//trim(num)//".csv"
+                zomnum=500+j
+                open(unit=zomnum,file=trim(filenm),status="old",iostat=ierr)
+                if(ierr/=0)then
+                    write(0,"(a,i0)") "Error in opening zombie state file to read in. ierr had value ", ierr
+                    errorflag=1
+                    return
+                end if
+
+                read(zomnum,*) dead
+                read(zomnum,*) alive
+                do k=1,norb
+                    zstore(j)%dead(k)=cmplx(dead(k),0.0,kind=8)
+                    zstore(j)%alive(k)=cmplx(alive(k),0.0,kind=8)
+                end do 
+                close(zomnum)
+            end do
+        else if(imagflg=='y')then
+            do j=1, clean_ndet
+                write(num,"(i6.6)")j
+                filenm="data/clean_zombie_"//trim(num)//".csv"
+                zomnum=500+j
+                open(unit=zomnum,file=trim(filenm),status="old",iostat=ierr)
+                if(ierr/=0)then
+                    write(0,"(a,i0)") "Error in opening zombie state file to read in. ierr had value ", ierr
+                    errorflag=1
+                    return
+                end if
+
+                read(zomnum,*) cdead
+                read(zomnum,*) calive
+                do k=1,(norb*2),2
+                    zstore(j)%dead((k+1)/2)=cmplx(cdead(k),cdead(k+1),kind=8)
+                    zstore(j)%alive((k+1)/2)=cmplx(calive(k),calive(k+1),kind=8)
+                end do
+                close(zomnum)
+            end do
+        end if
+        write(6,"(a)") "Zombie states succeffuly read in"
+        return
+        
+    end subroutine read_zombie_c
 
     subroutine read_ham(ham,size)
 
@@ -277,7 +337,7 @@ MODULE readpars
       
 
         if(imagflg=='n') then
-            open(unit=200,file=hamnm,status="old",iostat=ierr)
+            open(unit=200,file='data/'//trim(hamnm),status="old",iostat=ierr)
             if(ierr/=0)then
                 write(0,"(a,i0)") "Error in opening hamiltonian file. ierr had value ", ierr
                 errorflag=1
@@ -292,7 +352,7 @@ MODULE readpars
             end do
             close(200)
 
-            open(unit=201,file=ovrlpnm,status="old",iostat=ierr)
+            open(unit=201,file='data/'//trim(ovrlpnm),status="old",iostat=ierr)
             if(ierr/=0)then
                 write(0,"(a,i0)") "Error in opening overlap file. ierr had value ", ierr
                 errorflag=1
@@ -307,7 +367,7 @@ MODULE readpars
             end do
             close(201)
         else if (imagflg=='y')then
-            open(unit=200,file='ham.csv',status="old",iostat=ierr)
+            open(unit=200,file='data/'//trim(hamnm),status="old",iostat=ierr)
             if(ierr/=0)then
                 write(0,"(a,i0)") "Error in opening hamiltonian file. ierr had value ", ierr
                 errorflag=1
@@ -315,14 +375,14 @@ MODULE readpars
             end if
 
             do j=1, size
-                read(200,*) line
+                read(200,*) cline
                 do k=1, (size*2),2
                     ham%hjk(j,(k+1)/2)=cmplx(cline(k),cline(k+1),kind=8)
                 end do
             end do
             close(200)
 
-            open(unit=201,file='ovlp.csv',status="old",iostat=ierr)
+            open(unit=201,file='data/'//trim(ovrlpnm),status="old",iostat=ierr)
             if(ierr/=0)then
                 write(0,"(a,i0)") "Error in opening overlap file. ierr had value ", ierr
                 errorflag=1
@@ -380,9 +440,111 @@ MODULE readpars
         ham%kinvh=matmul(ham%inv,ham%hjk)
 
 
-
-
     end subroutine read_ham
+
+    subroutine dvec_read(d,size,p,filenm)
+
+        implicit none
+        complex(kind=8),dimension(:),intent(inout)::d
+        character(LEN=13),intent(in)::filenm
+        integer,intent(in)::size,p
+        REAL(kind=8),dimension(size)::line
+        REAL(kind=8),dimension(size*2)::cline
+        integer::ierr,j,vec
+        if (errorflag .ne. 0) return
+
+        ierr=0
+
+        vec=900+p
+        open(unit=vec,file='data/'//trim(filenm),status="old",iostat=ierr)
+        if(ierr/=0)then
+            write(0,"(a,i0)") "Error in opening dvector file. ierr had value ", ierr
+            errorflag=1
+            return
+        end if
+        if(imagflg=='n')then
+            read(vec,*) line
+            do j=1, size
+                d(j)=cmplx(line(j),0.0,kind=8)
+            end do
+        else if(imagflg=='y')then
+            read(vec,*) cline
+            do j=1, (size*2),2
+                d(j)=cmplx(cline(j),cline(j+1),kind=8)
+            end do
+        end if
+        close(vec)
+        return
+
+    end subroutine dvec_read
+
+    subroutine read_ham_c(ham,size)
+
+        implicit none
+        type(hamiltonian),intent(inout)::ham
+        integer,intent(in)::size
+        integer::ierr,j,k
+        REAL(kind=8),dimension(size)::line
+        REAL(kind=8),dimension(size*2)::cline
+        character(LEN=100)::a,b,hamnm
+       
+
+        if (errorflag .ne. 0) return
+        ierr=0
+
+        open(unit=140,file='rundata.csv',status='old',iostat=ierr)
+
+        if (ierr.ne.0) then
+          write(0,"(a)") 'Error in opening rundata.csv file'
+          errorflag = 1
+          return
+        end if
+
+        read(140,*)
+        read(140,*)
+        read(140,*,iostat=ierr)a,b,hamnm
+        if (ierr.ne.0) then
+            write(0,"(a)") "Error reading rundata.csv of input file"
+            errorflag = 1
+            return
+        end if
+        close(140)
+      
+
+        if(imagflg=='n') then
+            open(unit=204,file='data/'//trim(hamnm),status="old",iostat=ierr)
+            if(ierr/=0)then
+                write(0,"(a,i0)") "Error in opening hamiltonian file. ierr had value ", ierr
+                errorflag=1
+                return
+            end if
+
+            do j=1, size
+                read(200,*) line
+                do k=1, size
+                    ham%hjk(j,k)=cmplx(line(k),0.0,kind=8)
+                end do
+            end do
+            close(204)
+
+        else if (imagflg=='y')then
+            open(unit=204,file='data/'//trim(hamnm),status="old",iostat=ierr)
+            if(ierr/=0)then
+                write(0,"(a,i0)") "Error in opening hamiltonian file. ierr had value ", ierr
+                errorflag=1
+                return
+            end if
+
+            do j=1, size
+                read(200,*) cline
+                do k=1, (size*2),2
+                    ham%hjk(j,(k+1)/2)=cmplx(cline(k),cline(k+1),kind=8)
+                end do
+            end do
+            close(204)
+        end if
+
+    end subroutine read_ham_c
 
 
 END MODULE readpars

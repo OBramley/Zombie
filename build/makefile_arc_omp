@@ -47,7 +47,7 @@ ham.o:ham.f90 vars.o alarrays.o operators.o
 imgtp.o:imgtp.f90 vars.o alarrays.o
 	 $(F90) $(FFLAGS) -c $<
 
-clean.o:clean.f90 vars.o alarrays.o zom.o ham.o operators.o outputs.o
+clean.o:clean.f90 vars.o alarrays.o zom.o ham.o operators.o outputs.o readpars.o
 	 $(F90) $(FFLAGS) -c $<
 
 MainZombie.o:MainZombie.f90 vars.o alarrays.o readpars.o operators.o electrons.o zom.o ham.o outputs.o imgtp.o clean.o

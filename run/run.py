@@ -39,8 +39,8 @@ elif(inputs.zombs['ndet']<2):
     sys.exit("Not enough zombie states. Must be 2 or greater")
 elif(inputs.zombs['zomtyp'] not in {'ran','HF','bb','hf'}):
     sys.exit("Type of zombie state must be ran, HF or bb")
-elif(inputs.run['elecs'] not in {'pyscf','mol','n'}):
-    sys.exit("one and two electron integral paramter must be 'pyscf', 'mol' or 'n'")
+elif(inputs.run['elecs'] not in {'pyscf','mol','no'}):
+    sys.exit("one and two electron integral paramter must be 'pyscf', 'mol' or 'no'")
 elif(inputs.run['zomgen'] not in {'y','n'}):
     sys.exit("Generation of a new set of zombie states must be either 'y' or 'n'")
 elif(inputs.run['imagprop'] not in {'y','n'}):
@@ -70,22 +70,27 @@ if(inputs.zombs['zomtyp']=='HF'):
         sys.exit('A Hartree Fock Basis for',inputs.zombs['norb'], 'orbitals should have', ndetcheck, 'basis functions')
 
 if(inputs.run['elecs']=='mol'):
-    if not os.path.isfile('../'+ inputs.run['elecfile']):
+    if not os.path.isfile('integrals/'+ inputs.run['elecfile']):
         sys.exit("No Molpro input file")
 
-if(inputs.run['elecs']=='n'and inputs.run['hamgen']=='y'):
-    if not os.path.isfile('../'+ inputs.run['elecfile']):
-        sys.exit("No electron integral input file")
+if(inputs.run['elecs']=='no'and inputs.run['hamgen']=='y'):
+    if(inputs.run['language']=='python'):
+        if not os.path.isfile('integrals/'+ inputs.run['elecfile']):
+            sys.exit("No electron integral input file")
+    elif(inputs.run['language']=='fortran'):
+        if not os.path.exists("integrals"):
+            sys.exit("No electron integral input file")
 
-if(inputs.run['elecs']=='n'and inputs.run['hamgen']=='n'):
-    if not os.path.isfile('../'+ inputs.run['hamfile']):
+if(inputs.run['elecs']=='no'and inputs.run['hamgen']=='n'):
+    if not os.path.isfile('data/'+ inputs.run['hamfile']):
         sys.exit("No Hamiltonian input file")
 
 if(inputs.run['clean']=='f'):
-    if not os.path.isfile('../'+inputs.run['cleanham']):
+    if not os.path.isfile('data/'+inputs.run['cleanham']):
         sys.exit("No clean hamiltonian")
-    elif not os.path.isfile('../'+inputs.run['cleanzom']):
-        sys.exit("No clean zombie states")
+    if(inputs.run['language']=='python'):
+        if not os.path.isfile('../'+inputs.run['cleanzom']):
+            sys.exit("No clean zombie states")
 
 if(inputs.run['gram']=='y'):
     if(isinstance(inputs.run['gramnum'],int)==False):
@@ -174,10 +179,13 @@ if(inputs.run['language']=="python"):
 elif(inputs.run['language']=="fortran"):
     shutil.copy2("inputs.py",EXDIR1)
     shutil.copy2("graph.py",EXDIR1)
-    os.mkdir(EXDIR1+"/integrals")
-    if(inputs.run['elecs']=='mol'):
+    if((inputs.run['elecs']=='no')):
+        shutil.copytree('integrals',EXDIR1+"/integrals")
+    elif((inputs.run['elecs']=='mol')):
+        os.mkdir(EXDIR1+"/integrals")
         shutil.copy2('../'+ inputs.run['elecfile'],EXDIR1+"/integrals")
     if(inputs.run['elecs']=='pyscf'):
+        os.mkdir(EXDIR1+"/integrals")
         mol = gto.M(
         unit = inputs.pyscf['units'],
         atom = inputs.pyscf['atoms'],
@@ -203,12 +211,7 @@ elif(inputs.run['language']=="fortran"):
         # Scalar nuclear repulsion energy
         Hnuc = myhf.energy_nuc()
 
-        # print(len(eri_full))
-        # print(len(eri_full[0]))
-        # print(len(eri_full[0][0]))
-        # print(len(eri_full[0][0][0]))
-        # exit()
-
+        
         with open(EXDIR1+"/integrals/hnuc.csv",'w', newline='')as csvfile:
             spamwriter=csv.writer(csvfile)
             spamwriter.writerow([Hnuc,0])
@@ -224,20 +227,24 @@ elif(inputs.run['language']=="fortran"):
                     spamwriter=csv.writer(csvfile, delimiter=',')
                     spamwriter.writerows(obj)
 
-        if(inputs.run['zomgen']=='n'):
-            for i in range(inputs.zombs['ndet']):
-                shutil.copy2('zombie_'+str(i+1).zfill(4)+'.csv',EXDIR1)
+    if((inputs.run['zomgen']=='n')or(inputs.run['hamgen']=='n')or(inputs.run['imagprop']=='n')or(inputs.run['clean']=='f')):
+        shutil.copytree(inputs.run['datafile'],EXDIR1+'/data')
+    else:
+        os.mkdir(EXDIR1+'/data')
+            
+    # for i in range(inputs.zombs['ndet']):
+    #     shutil.copy2('zombie_'+str(i+1).zfill(4)+'.csv',EXDIR1)
 
-        if(inputs.run['hamgen']=='n'):
-            shutil.copy2(inputs.run['hamfile'],EXDIR1)
-            shutil.copy2(inputs.run['ovrlfile'],EXDIR1)
+    # if(inputs.run['hamgen']=='n'):
+    #     shutil.copy2(inputs.run['hamfile'],EXDIR1)
+    #     shutil.copy2(inputs.run['ovrlfile'],EXDIR1)
 
 
     with open(EXDIR1+'/rundata.csv','w',newline='')as file:
         writer = csv.writer(file)
         writer.writerow([inputs.run['zomgen'],inputs.run['hamgen'],inputs.run['imagprop'],inputs.run['beta'],inputs.run['timesteps'],inputs.run['clean'],inputs.run['gram'],inputs.run['gramnum']])
         writer.writerow(inputs.zombs.values())
-        writer.writerow([inputs.run['hamfile'],inputs.run['ovrlfile']])
+        writer.writerow([inputs.run['hamfile'],inputs.run['ovrlfile'],inputs.run['cleanham']])
 
     os.chdir("../build")
     if(inputs.run['cores']==1):

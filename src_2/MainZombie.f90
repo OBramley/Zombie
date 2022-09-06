@@ -11,7 +11,6 @@ program MainZombie
     use clean
 
     
-    
     implicit none
     
   
@@ -60,41 +59,43 @@ program MainZombie
 
 
     ! generate 1 and 2 electron integrals
-    call allocintgrl(elect)
-    call electronintegrals(elect)
+    if((cleanflg=="y").or.((hamgflg=='y')))then
+        call allocintgrl(elect)
+        call electronintegrals(elect)
+        ! generate zombie states
+        call alloczs(zstore,ndet)
 
-    ! generate zombie states
-    call alloczs(zstore,ndet)
-
-    if(zomgflg=='y')then
-        call genzf(zstore,ndet)
-    else if (zomgflg=='n') then
-        call read_zombie(zstore)
-    end if
-    ! generate Hamiltonian and overlap
-
-    call flush(6)
-    call flush(0)
-
-    call allocham(haml,ndet)
-
-    if(hamgflg=='y')then
-        call hamgen(haml,zstore,elect,ndet)
-        call matrixwriter(haml%hjk,ndet,"ham.csv")
-        call matrixwriter(haml%ovrlp,ndet,"ovlp.csv")
-        ! call matrixwriter(haml%inv,ndet,"inv.csv")
-        ! call matrixwriter(haml%kinvh,ndet,"kinvh.csv")
-        write(6,"(a)") "Hamiltonian successfully generated"
-    else if (hamgflg=='n')then
-        call read_ham(haml,ndet)
-        call matrixwriter(haml%hjk,ndet,"ham2.csv")
-        call matrixwriter(haml%ovrlp,ndet,"ovlp2.csv")
-        ! call matrixwriter(haml%inv,ndet,"inv.csv")
-        ! call matrixwriter(haml%kinvh,ndet,"kinvh.csv")
-        write(6,"(a)") "Hamiltonian successfully read in"
+        if(zomgflg=='y')then
+            call genzf(zstore,ndet)
+        else if (zomgflg=='n') then
+            call read_zombie(zstore)
+        end if
+    
+        call flush(6)
+        call flush(0)
     end if
 
-    if(propflg=='y') then
+    
+    if(propflg=="y")then
+        ! generate Hamiltonian and overlap
+        call allocham(haml,ndet)
+
+        if(hamgflg=='y')then
+            call hamgen(haml,zstore,elect,ndet)
+            call matrixwriter(haml%hjk,ndet,"data/ham.csv")
+            call matrixwriter(haml%ovrlp,ndet,"data/ovlp.csv")
+            ! call matrixwriter(haml%inv,ndet,"inv.csv")
+            ! call matrixwriter(haml%kinvh,ndet,"kinvh.csv")
+            write(6,"(a)") "Hamiltonian successfully generated"
+        else if (hamgflg=='n')then
+            call read_ham(haml,ndet)
+            call matrixwriter(haml%hjk,ndet,"data/ham2.csv")
+            call matrixwriter(haml%ovrlp,ndet,"data/ovlp2.csv")
+            ! call matrixwriter(haml%inv,ndet,"inv.csv")
+            ! call matrixwriter(haml%kinvh,ndet,"kinvh.csv")
+            write(6,"(a)") "Hamiltonian successfully read in"
+        end if
+
         ! Imaginary time propagation
         if(gramflg.eq."n")then
             call allocdv(dvecs,1,ndet)
@@ -113,52 +114,100 @@ program MainZombie
         write(6,"(a)") "Imaginary time propagation finished"
 
         if(gramflg.eq."n")then
-            call dvec_writer(dvecs(1)%d,ndet,0,'dvec.csv')
+            call dvec_writer(dvecs(1)%d,ndet,0)
             call energywriter(en%t,en%erg(1,:),"energy.csv",0)
         else if(gramflg.eq."y")then
-
             do j=1, 1+gramnum
-                write(stateno,"(i4.4)")j
-                call dvec_writer(dvecs(j)%d,ndet,j,"dvec_"//trim(stateno)//".csv")
+                call dvec_writer(dvecs(j)%d,ndet,j)
                 call energywriter(en%t,en%erg(j,:),"energy_state_"//trim(stateno)//".csv",j)
             end do
         end if
-
+        
+        call deallocerg(en)
+        write(6,"(a)") "Energy deallocated"
         call deallocham(haml)
         write(6,"(a)") "Hamiltonian deallocated"
+        
+        if(cleanflg=="n")then
+            call deallocdv(dvecs)
+            write(6,"(a)") "d-vector deallocated"
+            if(hamgflg=='y')then
+                call dealloczs(zstore)
+                write(6,"(a)") "Zombie states deallocated"
+                call deallocintgrl(elect)
+                write(6,"(a)") "Electron integrals deallocated"
+            end if
+        end if
 
         call flush(6)
         call flush(0)
 
+    else if((propflg=="n"))then
+        if((cleanflg=="y").or.(cleanflg=="f"))then
+            if(gramflg.eq."n")then
+                call allocdv(dvecs,1,ndet)
+                call dvec_read(dvecs(1)%d,ndet,0,'dvec_0000.csv')
+                write(6,"(a)") "d-vector read in"
+            else if(gramflg.eq."y")then
+                ! write(0,"(a,i0)") "Gram  ", ierr
+                call allocdv(dvecs,1+gramnum,ndet)
+                do j=1, 1+gramnum
+                    write(stateno,"(i4.4)")j
+                    call dvec_read(dvecs(j)%d,ndet,j,"dvec_"//trim(stateno)//".csv")
+                end do
+                write(6,"(a)") "d-vectors read in"
+            else
+                write(0,"(a,i0)") "Error in gramflg setting. This should have been caught ", ierr
+                    errorflag=1
+            end if
+        else if((cleanflg=="n").and.(hamgflg=='y'))then
+            call dealloczs(zstore)
+            write(6,"(a)") "Zombie states deallocated"
+            call deallocintgrl(elect)
+            write(6,"(a)") "Electron integrals deallocated"
+        end if
+    end if
+
+    if((cleanflg=="y").or.(cleanflg=="f"))then
         if(cleanflg=="y")then
             call clean_setup(cstore,nel,clean_haml,elect,clean_ndet,zstore)
             write(6,"(a)") "Cleaning hamiltonian generated"
-            call allocdv(dvec_clean,1,clean_ndet)
-            call cleaner(zstore,cstore,dvecs(1),dvec_clean(1),clean_ndet,clean_norm)
-            ! clean_erg=dot_product(dvec_clean(1)%d,matmul(clean_haml%hjk,dvec_clean(1)%d))
-            clean_erg=ergcalc(clean_haml%hjk,dvec_clean(1)%d)
-            write(6,"(a)") "Cleaning process complete"
-            call allocerg(en_clean,1)
-            en_clean%t(1:(timesteps+1))=en%t(1:(timesteps+1))
-            en_clean%erg(1,1:(timesteps+1))=clean_erg/clean_norm
-            call dvec_writer(dvec_clean(1)%d,clean_ndet,5,'clean_dvec.csv')
-            call energywriter(en_clean%t,en_clean%erg(1,:),"clean_energy.csv",99)
-            call deallocerg(en_clean)
-            call deallocdv(dvec_clean)
-            call deallocham(clean_haml)
-            call dealloczs(cstore)
-            write(6,"(a)") "Cleaning dealocated"
+        else if(cleanflg=="f")then
+            call clean_read(cstore,clean_haml,clean_ndet)
+            write(6,"(a)") "Cleaning hamiltonian and zombie states read in"
         end if
 
-        call deallocerg(en)
+        call allocdv(dvec_clean,1,clean_ndet)
+  
+        call cleaner(zstore,cstore,dvecs(1),dvec_clean(1),clean_ndet,clean_norm)
+
+        call dvec_writer_c(dvec_clean(1)%d,clean_ndet,0)
+        
+        ! clean_erg=dot_product(dvec_clean(1)%d,matmul(clean_haml%hjk,dvec_clean(1)%d))
+
+        clean_erg=ergcalc(clean_haml%hjk,dvec_clean(1)%d)
+        write(6,"(a)") "Cleaning process complete"
+        call allocerg(en_clean,1)
+        en_clean%t(1:(timesteps+1))=en%t(1:(timesteps+1))
+        en_clean%erg(1,1:(timesteps+1))=clean_erg/clean_norm
+        call dvec_writer_c(dvec_clean(1)%d,clean_ndet,0)
+        call energywriter(en_clean%t,en_clean%erg(1,:),"clean_energy.csv",99)
+        call deallocerg(en_clean)
+        write(6,"(a)") "Cleaning energy dealocated"
+        call deallocdv(dvec_clean)
+        write(6,"(a)") "Cleaning d-vector dealocated"
+        call deallocham(clean_haml)
+        write(6,"(a)") "Cleaning hamiltonian dealocated"
+        call dealloczs(cstore)
+        write(6,"(a)") "Cleaning Zombie states dealocated"
         call deallocdv(dvecs)
+        write(6,"(a)") "d-vector deallocated"
         call dealloczs(zstore)
+        write(6,"(a)") "Zombie states deallocated"
         call deallocintgrl(elect)
-    else 
-        call deallocham(haml)
-        call dealloczs(zstore)
-        call deallocintgrl(elect)
+        write(6,"(a)") "Electron integrals deallocated"
     end if
+
 
     write(6,"(a)") "All values deallocated"
 

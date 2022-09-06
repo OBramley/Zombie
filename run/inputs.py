@@ -19,7 +19,7 @@ run={
     'language':'fortran',
 
     # What is the name of the run
-    'runfolder':'bh_100_cleaning_reduce',
+    'runfolder':'bh_100_bb_clean',
 
     # Amount of time to request on HPC 
     'runtime': "48:00:00",
@@ -31,11 +31,15 @@ run={
     # Set the numpy random seed for Zombie state generation
     'seed':1,
 
+    # Name of file where any prior generated results are placed so the Fortran 
+    # program can access them and continue a run
+    'datafile':'data',
+
     # 1 and 2 electron integrals can be calcualted by PySCF by the program
     # or they can be inputed as a seperate file at the moment only from MOLPRO
     # as such the program takes 3 inputs 'pyscf', 'mol' or 'no' if the one and two
     # electron integrals have already been generated and placed in the run file
-    'elecs':'pyscf',
+    'elecs':'no',
 
     'elecfile':'integrals.pkl',
 
@@ -48,9 +52,9 @@ run={
     # Do you want to generate a new Hamiltonian? Takes input 'y' or 'n'
     'hamgen':'y',
 
-    'hamfile':'ham1.csv',
+    'hamfile':'ham.csv',
 
-    'ovrlfile':'ovlp1.csv',
+    'ovrlfile':'ovlp.csv',
 
     # Do you want to perform imaginary time evolution? The program can be used to just generate
     # the Zombie state Hamiltonian. Takes input 'y' or 'n'.
@@ -68,7 +72,7 @@ run={
     # Do you want to clean after propagation takes 'y', 'n' or 'f' to use a previosuly generated
     # cleaning hamiltonian and zombie state files
     'clean':'y',
-    'cleanham':'BH_clean_hamiltonian.csv',
+    'cleanham':'clean_ham.csv',
     'cleanzom':'BH_clean_zombie_states.pkl', 
 
     # Do you want to find other energy states other than the ground state. If so turn on 
@@ -95,7 +99,7 @@ zombs={
     'ndet':100, 
 
     # Type of zombie states. Random (ran), Hartree Fock (HF) or biased (bb)
-    'zomtyp':'ran',
+    'zomtyp':'bb',
     
     # Biased basis improvement if 0 no loops to improve biased > 0 number of loops to improve the basis
 

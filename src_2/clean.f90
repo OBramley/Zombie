@@ -6,6 +6,7 @@ MODULE clean
     use ham
     use outputs
     use operators
+    use readpars
 
     contains
 
@@ -13,12 +14,12 @@ MODULE clean
 
         implicit none
 
-        type(zombiest),dimension(:),allocatable,intent(out)::cstore
-        type(hamiltonian), intent(out)::cleanham
+        type(zombiest),dimension(:),allocatable,intent(inout)::cstore
+        type(hamiltonian), intent(inout)::cleanham
+        integer, intent(inout)::clean_ndet
         type(elecintrgl),intent(in)::elecs 
         type(zombiest),dimension(:),intent(in)::zstore
         integer, intent(in)::nume
-        integer, intent(out)::clean_ndet
         type(zombiest),dimension(:),allocatable::cstoretemp
         integer, allocatable, dimension(:,:)::combs,combs2
         integer, allocatable, dimension(:)::magovrlp
@@ -140,32 +141,36 @@ MODULE clean
         end if
 
         call dealloczs(cstoretemp)
-        call allocham(cleanham,clean_ndet)
-        call hamgen(cleanham,cstore,elecs,clean_ndet)
-        call matrixwriter(cleanham%hjk,clean_ndet,"clean_ham.csv")
-        
+
         do j=1,clean_ndet
             call zombiewriter_c(cstore(j),j)
         end do
+
+        
+        call allocham(cleanham,clean_ndet)
+        call hamgen(cleanham,cstore,elecs,clean_ndet)
+        call matrixwriter(cleanham%hjk,clean_ndet,"data/clean_ham.csv")
+        
+        
         return
 
 
     end subroutine clean_setup
 
-    subroutine zomhfc(zom,occ)
+    subroutine zomhfc(zoms,occ)
 
         implicit none
-        type(zombiest),intent(inout)::zom 
+        type(zombiest),intent(inout)::zoms 
         integer, dimension(:), intent(in)::occ
         integer::j
 
         if (errorflag .ne. 0) return
 
-        zom%dead(1:norb)=(1.0d0,0.0d0)
+        zoms%dead(1:norb)=(1.0d0,0.0d0)
 
         do j=1, size(occ)
-            zom%alive(occ(j))=(1.0d0,0.0d0)
-            zom%dead(occ(j))=(0.0d0,0.0d0)
+            zoms%alive(occ(j))=(1.0d0,0.0d0)
+            zoms%dead(occ(j))=(0.0d0,0.0d0)
         end do
 
         return
@@ -200,6 +205,55 @@ MODULE clean
         return
 
     end subroutine cleaner
+
+    subroutine clean_read(cstore,cleanham,clean_ndet)
+        
+        implicit none
+
+        type(zombiest),dimension(:),allocatable,intent(inout)::cstore
+        type(hamiltonian), intent(inout)::cleanham
+        integer, intent(inout):: clean_ndet
+        integer:: ierr,nlines
+     
+        if (errorflag .ne. 0) return
+    
+    
+        ierr=0
+        nlines=0
+        open(unit=204, file='data/clean_ham.csv',status='old',iostat=ierr)
+        if (ierr.ne.0) then
+            write(0,"(a,i0)") 'Error in opening clean_ham.csv file',ierr
+            errorflag = 1
+            return
+        end if
+
+        do 
+            read(129,*, iostat=ierr)
+            if(ierr<0)then
+                ! write(0,"(a,i0)") "nlines has value ", nlines
+                clean_ndet=nlines
+                exit
+            else if (ierr/=0) then
+                write(0,"(a,i0)") "Error in counting h1ea rows. ierr had value ", ierr
+                errorflag=1
+                return
+            end if
+            nlines=nlines+1
+        end do
+
+        close(104)
+
+        call alloczs(cstore,clean_ndet)
+        call read_zombie_c(cstore,clean_ndet)
+        call allocham(cleanham,clean_ndet)
+        call read_ham_c(cleanham,clean_ndet)
+
+    
+    return 
+
+
+
+    end subroutine clean_read
 
 END MODULE clean
 

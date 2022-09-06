@@ -76,7 +76,7 @@ MODULE outputs
 
         type(zombiest),intent(in)::zom 
         integer,intent(in)::num
-        character(LEN=15)::filenm
+        character(LEN=20)::filenm
         integer::ierr,zomnum,j
         character(LEN=4)::nums
 
@@ -87,7 +87,7 @@ MODULE outputs
         write(nums,"(i4.4)")num
 
         
-        filenm = "zombie_"//trim(nums)//".csv"
+        filenm = "data/zombie_"//trim(nums)//".csv"
 
         zomnum=300+num
         
@@ -118,18 +118,18 @@ MODULE outputs
 
         type(zombiest),intent(in)::zom 
         integer,intent(in)::num
-        character(LEN=21)::filenm
+        character(LEN=28)::filenm
         integer::ierr,zomnum,j
-        character(LEN=4)::nums
+        character(LEN=6)::nums
 
         if (errorflag .ne. 0) return
 
         ierr=0
 
-        write(nums,"(i4.4)")num
+        write(nums,"(i6.6)")num
 
         
-        filenm = "clean_zombie_"//trim(nums)//".csv"
+        filenm = "data/clean_zombie_"//trim(nums)//".csv"
 
         zomnum=300+num
         
@@ -188,19 +188,21 @@ MODULE outputs
 
     end subroutine energywriter
 
-    subroutine dvec_writer(d,size,p,filenm)
+    subroutine dvec_writer(d,size,p)
 
         implicit none
         complex(kind=8),dimension(:),intent(in)::d
-        character(LEN=*),intent(in)::filenm
+        character(LEN=4)::stateno
         integer,intent(in)::size,p
         integer::ierr,j,vec
         if (errorflag .ne. 0) return
         
         ierr=0
 
+        write(stateno,"(i4.4)")p
+
         vec=900+p
-        open(unit=vec,file=trim(filenm),status="new",iostat=ierr)
+        open(unit=vec,file="data/dvec_"//trim(stateno)//".csv",status="new",iostat=ierr)
         if(ierr/=0)then
             write(0,"(a,i0)") "Error in opening dvector file. ierr had value ", ierr
             errorflag=1
@@ -216,5 +218,34 @@ MODULE outputs
 
     end subroutine dvec_writer
 
+    subroutine dvec_writer_c(d,size,p)
+
+        implicit none
+        complex(kind=8),dimension(:),intent(in)::d
+        character(LEN=4)::stateno
+        integer,intent(in)::size,p
+        integer::ierr,j,vec
+        if (errorflag .ne. 0) return
+        
+        ierr=0
+
+        write(stateno,"(i4.4)")p
+
+        vec=900+p
+        open(unit=vec,file="data/clean_dvec_"//trim(stateno)//".csv",status="new",iostat=ierr)
+        if(ierr/=0)then
+            write(0,"(a,i0)") "Error in opening dvector file. ierr had value ", ierr
+            errorflag=1
+            return
+        end if
+        if(imagflg=='n')then
+            write(vec,'(*(e25.17e3 :", "))') (REAL(d(j)),j=1,size)
+        else if(imagflg=='y')then
+            write(vec,'(*(1x,es25.17e3 :", "))') ((d(j)),j=1,size*2)
+        end if
+        close(vec)
+        return
+
+    end subroutine dvec_writer_c
 
 END MODULE outputs
