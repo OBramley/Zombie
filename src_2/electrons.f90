@@ -62,6 +62,7 @@ integer function lines(nlines)
         if(ierr<0)then
             ! write(0,"(a,i0)") "nlines has value ", nlines
             lines=nlines
+            close(129)
             return
         else if (ierr/=0) then
             write(0,"(a,i0)") "Error in counting h1ea rows. ierr had value ", ierr

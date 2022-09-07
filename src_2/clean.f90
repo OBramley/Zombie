@@ -89,7 +89,7 @@ MODULE clean
         ! This section reduces the size of cleaning matrix further by finding the overlap between each cleaning 
         ! state and the biased basis. Only cleanign states with overlaps higher than the set threshold are accepted
         ! and placed into the final cleaning set to produce the cleaning Hamiltonian.
-        if(total2>500)then
+        if(total2>99)then
             total3=0
             allocate(magovrlp(total2),stat=ierr)
             if(ierr/=0) then
@@ -191,16 +191,20 @@ MODULE clean
         if (errorflag .ne. 0) return
         
         norm=(0.0d0,0.0d0)
+      
         do j=1,cleantot
             do k=1, ndet
                 ovrlp1=overlap(cleanzom(j),zstore(k))
                 dvec_clean%d(j)=dvec_clean%d(j)+(dvec%d(k)*ovrlp1)
+                
                 do l=1, ndet
                     ovrlp2=overlap(zstore(l),cleanzom(j))
                     norm = norm + (conjg(dvec%d(l))*dvec%d(k)*ovrlp2*ovrlp1)
                 end do
             end do
         end do
+
+     
 
         return
 
@@ -213,36 +217,12 @@ MODULE clean
         type(zombiest),dimension(:),allocatable,intent(inout)::cstore
         type(hamiltonian), intent(inout)::cleanham
         integer, intent(inout):: clean_ndet
-        integer:: ierr,nlines
+    
      
         if (errorflag .ne. 0) return
     
-    
-        ierr=0
-        nlines=0
-        open(unit=204, file='data/clean_ham.csv',status='old',iostat=ierr)
-        if (ierr.ne.0) then
-            write(0,"(a,i0)") 'Error in opening clean_ham.csv file',ierr
-            errorflag = 1
-            return
-        end if
 
-        do 
-            read(129,*, iostat=ierr)
-            if(ierr<0)then
-                ! write(0,"(a,i0)") "nlines has value ", nlines
-                clean_ndet=nlines
-                exit
-            else if (ierr/=0) then
-                write(0,"(a,i0)") "Error in counting h1ea rows. ierr had value ", ierr
-                errorflag=1
-                return
-            end if
-            nlines=nlines+1
-        end do
-
-        close(104)
-
+        clean_ndet = lines_clean(clean_ndet)        
         call alloczs(cstore,clean_ndet)
         call read_zombie_c(cstore,clean_ndet)
         call allocham(cleanham,clean_ndet)
@@ -251,9 +231,41 @@ MODULE clean
     
     return 
 
-
-
     end subroutine clean_read
+
+    integer function lines_clean(nlines)
+        implicit none
+
+        integer, intent(INOUT):: nlines
+        integer:: ierr
+        
+        ierr=0
+        nlines=0
+        open(unit=204, file='data/clean_ham.csv',status='old',iostat=ierr)
+        if (ierr.ne.0) then
+            write(0,"(a,i0)") 'Error in opening h1ea.csv file',ierr
+            errorflag = 1
+            return
+        end if
+
+        do 
+            read(204,*, iostat=ierr)
+            if(ierr<0)then
+                ! write(0,"(a,i0)") "nlines has value ", nlines
+                lines_clean=nlines
+                close(204)
+                return
+            else if (ierr/=0) then
+                write(0,"(a,i0)") "Error in counting h1ea rows. ierr had value ", ierr
+                errorflag=1
+                return
+            end if
+            nlines=nlines+1
+        end do
+
+        return 
+
+    end function lines_clean
 
 END MODULE clean
 

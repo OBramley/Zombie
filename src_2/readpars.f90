@@ -243,10 +243,10 @@ MODULE readpars
         
     end subroutine read_zombie
 
-    subroutine read_zombie_c(zstore,clean_ndet)
+    subroutine read_zombie_c(cstore,clean_ndet)
 
         implicit none
-        type(zombiest),dimension(:),intent(inout)::zstore
+        type(zombiest),dimension(:),intent(inout)::cstore
         integer,intent(in)::clean_ndet
         real(kind=8),dimension(norb)::dead,alive
         real(kind=8),dimension(norb*2)::cdead,calive
@@ -255,7 +255,6 @@ MODULE readpars
         character(LEN=28)::filenm
 
         ierr=0
-
         if(imagflg=='n') then
             do j=1, clean_ndet
                 write(num,"(i6.6)")j
@@ -271,8 +270,8 @@ MODULE readpars
                 read(zomnum,*) dead
                 read(zomnum,*) alive
                 do k=1,norb
-                    zstore(j)%dead(k)=cmplx(dead(k),0.0,kind=8)
-                    zstore(j)%alive(k)=cmplx(alive(k),0.0,kind=8)
+                    cstore(j)%dead(k)=cmplx(dead(k),0.0,kind=8)
+                    cstore(j)%alive(k)=cmplx(alive(k),0.0,kind=8)
                 end do 
                 close(zomnum)
             end do
@@ -291,13 +290,14 @@ MODULE readpars
                 read(zomnum,*) cdead
                 read(zomnum,*) calive
                 do k=1,(norb*2),2
-                    zstore(j)%dead((k+1)/2)=cmplx(cdead(k),cdead(k+1),kind=8)
-                    zstore(j)%alive((k+1)/2)=cmplx(calive(k),calive(k+1),kind=8)
+                    cstore(j)%dead((k+1)/2)=cmplx(cdead(k),cdead(k+1),kind=8)
+                    cstore(j)%alive((k+1)/2)=cmplx(calive(k),calive(k+1),kind=8)
                 end do
                 close(zomnum)
             end do
         end if
-        write(6,"(a)") "Zombie states succeffuly read in"
+
+        write(6,"(a)") "Cleaning Zombie states succeffuly read in"
         return
         
     end subroutine read_zombie_c
@@ -510,7 +510,7 @@ MODULE readpars
         end if
         close(140)
       
-
+        
         if(imagflg=='n') then
             open(unit=204,file='data/'//trim(hamnm),status="old",iostat=ierr)
             if(ierr/=0)then
@@ -520,7 +520,7 @@ MODULE readpars
             end if
 
             do j=1, size
-                read(200,*) line
+                read(204,*) line
                 do k=1, size
                     ham%hjk(j,k)=cmplx(line(k),0.0,kind=8)
                 end do

@@ -56,12 +56,14 @@ program MainZombie
 
     call ZBQLINI(randseed,0)   ! Generates the seed value using the UCL random library
     write(6,"(a)") "Random seed set"
-
-
+    
+    ! print*,cleanflg
     ! generate 1 and 2 electron integrals
-    if((cleanflg=="y").or.((hamgflg=='y')))then
-        call allocintgrl(elect)
-        call electronintegrals(elect)
+    if((cleanflg=="y").or.(cleanflg=="f").or.((hamgflg=='y')))then
+        if((cleanflg=="y").or.((hamgflg=='y')))then
+            call allocintgrl(elect)
+            call electronintegrals(elect)
+        end if
         ! generate zombie states
         call alloczs(zstore,ndet)
 
@@ -70,7 +72,7 @@ program MainZombie
         else if (zomgflg=='n') then
             call read_zombie(zstore)
         end if
-    
+
         call flush(6)
         call flush(0)
     end if
@@ -161,6 +163,7 @@ program MainZombie
                     errorflag=1
             end if
         else if((cleanflg=="n").and.(hamgflg=='y'))then
+            write(6,"(a)") "The program if here has done nothing except read in some values and then deallocate them"
             call dealloczs(zstore)
             write(6,"(a)") "Zombie states deallocated"
             call deallocintgrl(elect)
@@ -174,26 +177,16 @@ program MainZombie
             write(6,"(a)") "Cleaning hamiltonian generated"
         else if(cleanflg=="f")then
             call clean_read(cstore,clean_haml,clean_ndet)
-            write(6,"(a)") "Cleaning hamiltonian and zombie states read in"
+            write(6,"(a)") "Cleaning hamiltonian read in"
         end if
 
         call allocdv(dvec_clean,1,clean_ndet)
-  
         call cleaner(zstore,cstore,dvecs(1),dvec_clean(1),clean_ndet,clean_norm)
-
-        call dvec_writer_c(dvec_clean(1)%d,clean_ndet,0)
-        
         ! clean_erg=dot_product(dvec_clean(1)%d,matmul(clean_haml%hjk,dvec_clean(1)%d))
-
         clean_erg=ergcalc(clean_haml%hjk,dvec_clean(1)%d)
         write(6,"(a)") "Cleaning process complete"
-        call allocerg(en_clean,1)
-        en_clean%t(1:(timesteps+1))=en%t(1:(timesteps+1))
-        en_clean%erg(1,1:(timesteps+1))=clean_erg/clean_norm
+        call clean_erg_write(clean_ndet,clean_erg,clean_norm,99)
         call dvec_writer_c(dvec_clean(1)%d,clean_ndet,0)
-        call energywriter(en_clean%t,en_clean%erg(1,:),"clean_energy.csv",99)
-        call deallocerg(en_clean)
-        write(6,"(a)") "Cleaning energy dealocated"
         call deallocdv(dvec_clean)
         write(6,"(a)") "Cleaning d-vector dealocated"
         call deallocham(clean_haml)
@@ -204,8 +197,10 @@ program MainZombie
         write(6,"(a)") "d-vector deallocated"
         call dealloczs(zstore)
         write(6,"(a)") "Zombie states deallocated"
-        call deallocintgrl(elect)
-        write(6,"(a)") "Electron integrals deallocated"
+        if((cleanflg=="y").or.((hamgflg=='y')))then
+            call deallocintgrl(elect)
+            write(6,"(a)") "Electron integrals deallocated"
+        end if
     end if
 
 

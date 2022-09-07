@@ -49,10 +49,10 @@ def clean_plot(eb,rnum, beta, clean, timesteps, filename) :
 if(inputs.run['gram']=='n'):
     with open('energy.csv','rb') as file:
         energy=numpy.loadtxt(file,delimiter=',')
-    if(inputs.run['clean']=='y'):
+    if((inputs.run['clean']=='y')or(inputs.run['clean']=='f')):
         with open('clean_energy.csv','rb') as file:
-            clean=numpy.loadtxt(file,delimiter=',')
-        clean_plot(energy,1,inputs.run['beta'],clean[1,1],inputs.run['timesteps'],'result.png')
+            clean= numpy.loadtxt(file,delimiter=',')
+        clean_plot(energy,1,inputs.run['beta'],clean[2],inputs.run['timesteps'],'result.png')
     else:
         plot(energy,1,inputs.run['beta'],inputs.run['timesteps'],'result.png')
 else:

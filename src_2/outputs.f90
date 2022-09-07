@@ -248,4 +248,37 @@ MODULE outputs
 
     end subroutine dvec_writer_c
 
+    subroutine clean_erg_write(clean_ndet, clean_erg,clean_norm,j)
+
+        implicit none
+        integer, intent(in)::clean_ndet,j
+        complex(kind=8),intent(in)::clean_erg,clean_norm
+        integer::cleane,ierr
+
+        cleane=400+j
+        ierr=0
+
+        open(unit=cleane,file='clean_energy.csv',status="new",iostat=ierr)
+        if(ierr/=0)then
+            write(0,"(a,i0)") "Error in opening clean energy output file. ierr had value ", ierr
+            errorflag=1
+            return
+        end if
+
+        ! write(cleane,"(a)")"|    No. Cleaning states     |      clean energy     |     clean norm     |       energy/norm      |"
+        if(imagflg=='n')then
+            write(cleane,'(e25.17e3,",",e25.17e3,",",e25.17e3,",",i6)') &
+                REAL(clean_erg), REAL(clean_norm), (REAL(clean_erg)/REAL(clean_norm)),clean_ndet
+        end if
+
+        close(cleane)
+
+        return
+
+    end subroutine clean_erg_write
+        
+    
+
+
+
 END MODULE outputs
