@@ -105,7 +105,8 @@ MODULE clean
                 do k=1, ndet
                     magnitude=magnitude+overlap(cstoretemp(j),zstore(k))
                 end do
-                if(REAL(magnitude)>0.00001) then
+                print*, magnitude
+                if(abs(REAL(magnitude))>0.00001) then
                     !$omp critical
                     total3=total3+1
                     magovrlp(total3)=j
