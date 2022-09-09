@@ -1,3 +1,4 @@
+import subprocess
 from matplotlib import pyplot as plt
 import matplotlib as mpl
 from pylab import cm
@@ -67,4 +68,4 @@ else:
 
     plot(energy,inputs.run['gramnum']+1,inputs.run['beta'],inputs.run['timesteps'],'result.png')
 
-# subprocess.run(['rclone', 'copy', '/nobackup/cm14oab/'+inputs.run['runfolder'],'onedrive:'+inputs.run['runfolder'])
+subprocess.run(['rclone', 'copy', '/nobackup/cm14oab/'+inputs.run['runfolder'],'onedrive:'+inputs.run['runfolder']])

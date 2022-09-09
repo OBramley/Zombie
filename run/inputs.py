@@ -19,14 +19,14 @@ run={
     'language':'fortran',
 
     # What is the name of the run
-    'runfolder':'li_clean_check_2',
+    'runfolder':'Arc_check',
 
     # Amount of time to request on HPC 
-    'runtime': "48:00:00",
+    'runtime': "00:05:00",
 
     'nodes':1,
 
-    'cores':8,
+    'cores':4,
 
     # Set the numpy random seed for Zombie state generation
     'seed':1,
@@ -71,7 +71,7 @@ run={
 
     # Do you want to clean after propagation takes 'y', 'n' or 'f' to use a previosuly generated
     # cleaning hamiltonian and zombie state files
-    'clean':'y',
+    'clean':'n',
     'cleanham':'clean_ham.csv',
     'cleanzom':'BH_clean_zombie_states.pkl', 
 
