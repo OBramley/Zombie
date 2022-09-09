@@ -12,7 +12,7 @@ VPATH=../src_2
 all: ZOMBIE.exe
 
 ZOMBIE.exe:randgen.o vars.o alarrays.o readpars.o operators.o electrons.o zom.o ham.o outputs.o imgtp.o clean.o  MainZombie.o
-         $(F90) $(FFLAGS) -o $@ $^ $(FLINKS)
+	 $(F90) $(FFLAGS) -o $@ $^ $(FLINKS)
 
 
 # Compile steps

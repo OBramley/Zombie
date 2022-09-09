@@ -251,15 +251,15 @@ MODULE zom
         integer::j,k
 
         ! mu and sigma values for Li2 10 spin orbitals used in OG paper
-        mu=(/0.25,0.25,0.25,0.0,0.0/)
-        sig=(/0.0,0.0,0.175,0.351,0.120/)
+        ! mu=(/0.25,0.25,0.25,0.0,0.0/)
+        ! sig=(/0.0,0.0,0.175,0.351,0.120/)
 
         ! mu and sigma values for BH with 38 spin orbtials
         ! mu=(/0.25,0.213632469,0.193380738,0.001262455,0.000505343,0.00062495,0.000530594,9.57371E-06,0.000169358,3.27753E-05, &
         ! 0.004644281,0.000396432,0.000387224,5.15685E-05,0.004644276,0.000396434,0.000387213,5.16551E-05,9.58165E-06/)
         ! sig(1:norb/2)=0.15
         ! mu(1:(nel/2))=0.25
-        ! call musig(mu,sig)
+        call musig(mu,sig)
 
         if(imagflg=='n') then
             !$omp parallel shared(zstore) private(j,k,val)

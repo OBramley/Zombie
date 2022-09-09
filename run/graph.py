@@ -3,7 +3,7 @@ import matplotlib as mpl
 from pylab import cm
 import inputs
 import numpy 
-import csv
+import subprocess
 
 
 def plot(eb,rnum, beta, timesteps, filename):
@@ -67,4 +67,4 @@ else:
 
     plot(energy,inputs.run['gramnum']+1,inputs.run['beta'],inputs.run['timesteps'],'result.png')
 
-# subprocess.run(['rclone', 'copy', '/nobackup/cm14oab/'+inputs.run['runfolder'],'onedrive:'+inputs.run['runfolder'])
+subprocess.run(['rclone', 'copy', '/nobackup/cm14oab/'+inputs.run['runfolder'],'onedrive:'+inputs.run['runfolder']])
