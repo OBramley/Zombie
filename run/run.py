@@ -275,7 +275,6 @@ elif(inputs.run['language']=="fortran"):
             f.write("#$ -pe smp "+str(inputs.run['cores'])+" \n") #Use shared memory parallel environemnt 
         f.write("#$ -l h_rt="+inputs.run['runtime']+"\n")
         f.write("#$ -l h_vmem=2G \n")
-        f.write('module add netlib\n')
         f.write("module add mkl \n")
         f.write('time ./ZOMBIE.exe')
         f.close()

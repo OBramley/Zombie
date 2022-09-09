@@ -4,15 +4,15 @@
 
 F90=gfortran
 FFLAGS= #-fopenmp -O3
-FLINKS=-Wl,--start-group -lmkl_gf_lp64 -lmkl_sequential -lmkl_core -Wl,--end-group -lpthread
+FLINKS=$(ARC_LINALG_FFLAGS)
 VPATH=../src_2
 
 # Link step
 
-all: Main
+all: ZOMBIE.exe
 
-Main:randgen.o vars.o alarrays.o readpars.o operators.o electrons.o zom.o ham.o outputs.o imgtp.o clean.o  MainZombie.o
-	 $(F90) $(FFLAGS) -o ZOMBIE.exe randgen.o vars.o alarrays.o readpars.o operators.o electrons.o zom.o ham.o outputs.o imgtp.o clean.o MainZombie.o $(FLINKS)
+ZOMBIE.exe:randgen.o vars.o alarrays.o readpars.o operators.o electrons.o zom.o ham.o outputs.o imgtp.o clean.o  MainZombie.o
+         $(F90) $(FFLAGS) -o $@ $^ $(FLINKS)
 
 
 # Compile steps
