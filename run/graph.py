@@ -4,7 +4,7 @@ import matplotlib as mpl
 from pylab import cm
 import inputs
 import numpy 
-import csv
+import subprocess
 
 
 def plot(eb,rnum, beta, timesteps, filename):
