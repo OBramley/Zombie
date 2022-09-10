@@ -19,10 +19,10 @@ run={
     'language':'fortran',
 
     # What is the name of the run
-    'runfolder':'bh_fix_clean',
+    'runfolder':'bh_1000_clean',
 
     # Amount of time to request on HPC 
-    'runtime': "00:05:00",
+    'runtime': "24:00:00",
 
     'nodes':1,
 
@@ -39,7 +39,7 @@ run={
     # or they can be inputed as a seperate file at the moment only from MOLPRO
     # as such the program takes 3 inputs 'pyscf', 'mol' or 'no' if the one and two
     # electron integrals have already been generated and placed in the run file
-    'elecs':'no',
+    'elecs':'pyscf',
 
     'elecfile':'integrals.pkl',
 
@@ -71,7 +71,7 @@ run={
 
     # Do you want to clean after propagation takes 'y', 'n' or 'f' to use a previosuly generated
     # cleaning hamiltonian and zombie state files
-    'clean':'n',
+    'clean':'y',
     'cleanham':'clean_ham.csv',
     'cleanzom':'BH_clean_zombie_states.pkl', 
 
@@ -96,7 +96,7 @@ zombs={
     'spin':0,
 
     # Number of Zombie states
-    'ndet':20, 
+    'ndet':1000, 
 
     # Type of zombie states. Random (ran), Hartree Fock (HF) or biased (bb)
     'zomtyp':'bb',
