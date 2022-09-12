@@ -242,23 +242,23 @@ elif(inputs.run['language']=="fortran"):
 
 
     os.chdir("../build")
-    if(inputs.run['cores']==1):
-        if(HPCFLG==1):
-            shutil.copy2("../build/makefile_arc","../build/Makefile")
-            subprocess.run(["make"])
-        else:
-            shutil.copy2("../build/makefile_mac","../build/Makefile")
-            subprocess.run(["make"])
-    elif(inputs.run['cores']>1):
-        if(HPCFLG==1):
-            shutil.copy2("../build/makefile_arc_omp","../build/Makefile")
-            subprocess.run(["make"])
-        else:
-            shutil.copy2("../build/makefile_mac_omp","../build/Makefile")
-            subprocess.run(["make"])
+    # if(inputs.run['cores']==1):
+    #     if(HPCFLG==1):
+    #         shutil.copy2("../build/makefile_arc","../build/Makefile")
+    #         subprocess.run(["make"])
+    #     else:
+    #         shutil.copy2("../build/makefile_mac","../build/Makefile")
+    #         subprocess.run(["make"])
+    # elif(inputs.run['cores']>1):
+    #     if(HPCFLG==1):
+    #         shutil.copy2("../build/makefile_arc_omp","../build/Makefile")
+    #         subprocess.run(["make"])
+    #     else:
+    #         shutil.copy2("../build/makefile_mac_omp","../build/Makefile")
+    #         subprocess.run(["make"])
     
       
-    shutil.copy2("ZOMBIE.exe",EXDIR1)
+    # shutil.copy2("ZOMBIE.exe",EXDIR1)
 
     if(HPCFLG==1):
         shutil.copy2("../build/dmake_arc","../build/Makefile")
@@ -283,8 +283,8 @@ elif(inputs.run['language']=="fortran"):
         f.write("#$ -l h_rt="+inputs.run['runtime']+"\n")
         f.write("#$ -l h_vmem=12G \n")
         f.write("module add mkl \n")
-        # f.write('time ./d_check.exe')
-        f.write('time ./ZOMBIE.exe')
+        f.write('time ./d_check.exe')
+        # f.write('time ./ZOMBIE.exe')
         f.close()
         
         subprocess.call(['qsub',file1])

@@ -96,10 +96,10 @@ zombs={
     'spin':0,
 
     # Number of Zombie states
-    'ndet':1000, 
+    'ndet':100, 
 
     # Type of zombie states. Random (ran), Hartree Fock (HF) or biased (bb)
-    'zomtyp':'ran',
+    'zomtyp':'bb',
     
     # Biased basis improvement if 0 no loops to improve biased > 0 number of loops to improve the basis
 
