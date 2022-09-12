@@ -1,15 +1,15 @@
+import shlex
 import subprocess
 from matplotlib import pyplot as plt
 import matplotlib as mpl
 from pylab import cm
 import inputs
 import numpy 
-import subprocess
 
 
 def plot(eb,rnum, beta, timesteps, filename):
     x=eb[0,:]
-    mpl.rcParams['font.family']='Avenir'
+    mpl.rcParams['font.family']='DejaVu Sans'
     plt.rcParams['font.size']=18
     plt.rcParams['axes.linewidth']=2
     colors =cm.get_cmap('Set1',rnum)
@@ -30,7 +30,7 @@ def plot(eb,rnum, beta, timesteps, filename):
 
 def clean_plot(eb,rnum, beta, clean, timesteps, filename) :
     x=eb[0,:]
-    mpl.rcParams['font.family']='Avenir'
+    mpl.rcParams['font.family']='DejaVu Sans'
     plt.rcParams['font.size']=18
     plt.rcParams['axes.linewidth']=2
     colors =cm.get_cmap('Set1',rnum+1)
@@ -68,4 +68,11 @@ else:
 
     plot(energy,inputs.run['gramnum']+1,inputs.run['beta'],inputs.run['timesteps'],'result.png')
 
-subprocess.run(['rclone', 'copy', '/nobackup/cm14oab/'+inputs.run['runfolder'],'onedrive:'+inputs.run['runfolder']])
+
+command_line="rclone copy /nobackup/cm14oab/"+inputs.run['runfolder']+" onedrive:PhD/Zombie/arc_results/"+inputs.run['runfolder']
+proc=subprocess.Popen(shlex.split(command_line))
+try:
+    outs, errs = proc.communicate(timeout=7)
+except subprocess.TimeoutExpired:
+    proc.kill()
+    outs, errs = proc.communicate()

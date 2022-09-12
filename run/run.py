@@ -267,6 +267,8 @@ elif(inputs.run['language']=="fortran"):
     os.chdir(EXDIR1)
 
     if(HPCFLG==1):
+        if(inputs.run['cores']!=1):
+            os.environ["OMP_NUM_THREADS"]=str(inputs.run['cores'])
         number=random.randint(99999,1000000)
         file1="zombie"+str(number)+".sh"
         f=open(file1,"w")
@@ -274,12 +276,11 @@ elif(inputs.run['language']=="fortran"):
         if(inputs.run['cores']!=1):
             f.write("#$ -pe smp "+str(inputs.run['cores'])+" \n") #Use shared memory parallel environemnt 
         f.write("#$ -l h_rt="+inputs.run['runtime']+"\n")
-        f.write("#$ -l h_vmem=2G \n")
+        f.write("#$ -l h_vmem=12G \n")
         f.write("module add mkl \n")
         f.write('time ./ZOMBIE.exe')
         f.close()
-        if(inputs.run['cores']!=1):
-            os.environ["OMP_NUM_THREADS"]=str(inputs.run['cores'])
+        
         subprocess.call(['qsub',file1])
     else:
         print(os.getcwd())
