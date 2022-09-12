@@ -22,7 +22,7 @@ run={
     'runfolder':'d_check',
 
     # Amount of time to request on HPC 
-    'runtime': "48:00:00",
+    'runtime': "24:00:00",
 
     'nodes':1,
 
@@ -39,7 +39,7 @@ run={
     # or they can be inputed as a seperate file at the moment only from MOLPRO
     # as such the program takes 3 inputs 'pyscf', 'mol' or 'no' if the one and two
     # electron integrals have already been generated and placed in the run file
-    'elecs':'no',
+    'elecs':'pyscf',
 
     'elecfile':'integrals.pkl',
 
@@ -96,7 +96,7 @@ zombs={
     'spin':0,
 
     # Number of Zombie states
-    'ndet':20, 
+    'ndet':1000, 
 
     # Type of zombie states. Random (ran), Hartree Fock (HF) or biased (bb)
     'zomtyp':'ran',

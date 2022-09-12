@@ -69,7 +69,8 @@ else:
     plot(energy,inputs.run['gramnum']+1,inputs.run['beta'],inputs.run['timesteps'],'result.png')
 
 
-command_line="rclone copy /nobackup/cm14oab/"+inputs.run['runfolder']+" onedrive:"+inputs.run['runfolder']
+
+command_line="rclone copy /nobackup/cm14oab/"+inputs.run['runfolder']+" onedrive:PhD/Zombie/arc_results/"+inputs.run['runfolder']
 proc=subprocess.Popen(shlex.split(command_line))
 try:
     outs, errs = proc.communicate(timeout=7)
