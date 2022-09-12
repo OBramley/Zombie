@@ -1,7 +1,6 @@
 MODULE zom 
 
     use globvars
-    use outputs
 
     contains
 
@@ -25,8 +24,10 @@ MODULE zom
             do j=1,num
                 ! call random_number(rands)
                 do k=1,norb
+                    !$omp critical
                     dummy =1
                     dummy=2*pirl*ZBQLU01(1)
+                    !$omp end critical
                     ! dummy=(2*pirl*rands(k))
                     temp=sin(dummy)
                     zstore(j)%alive(k)=cmplx(temp,0.0d0,kind=8)
@@ -260,7 +261,7 @@ MODULE zom
         ! sig(1:norb/2)=0.15
         ! mu(1:(nel/2))=0.25
         call musig(mu,sig)
-
+        
         if(imagflg=='n') then
             !$omp parallel shared(zstore) private(j,k,val)
             !$omp do
@@ -280,6 +281,7 @@ MODULE zom
             end do
             !$omp end do
             !$omp end parallel
+            print*,j
             if(rhf_1=='y') then
                 zstore(1)%alive(1:nel)=(1.0d0,0.0d0)
                 zstore(1)%dead(1:nel)=(0.0d0,0.0d0)
@@ -343,13 +345,7 @@ MODULE zom
                 write(0,"(a)") "This should have been caught at the read stage!"
                 errorflag = 1
                 return
-        end select
-
-
-        do j=1,num
-            call zombiewriter(zstore(j),j)
-        end do
-        write(6,"(a)") "Zombie states generated"
+        end select 
         return
     
     end subroutine genzf

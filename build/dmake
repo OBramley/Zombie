@@ -1,20 +1,18 @@
-# Makefile for use on arcx computers.
+# Makefile for use on chmlinxx computers.
 # Adapted from make file written by C. Symmonds for the MCE program which was inturn
 # made with the aid of the fmkmf utility (Copyright (c) The University of Edinburgh)
 
 F90=gfortran
-FFLAGS= #-fopenmp -O3
-FLINKS=$(ARC_LINALG_FFLAGS)
+FFLAGS= -fopenmp -O3
+FLINKS= -llapack -lblas
 VPATH=../src_2
 
 # Link step
 
-all: ZOMBIE.exe
+all: d_check
 
-ZOMBIE.exe:randgen.o vars.o alarrays.o readpars.o operators.o electrons.o zom.o ham.o outputs.o imgtp.o clean.o  MainZombie.o
-         $(F90) $(FFLAGS) -o $@ $^ $(FLINKS)
-
-
+d_check:randgen.o vars.o alarrays.o readpars.o operators.o electrons.o zom.o ham.o imgtp.o d_check.o 
+	 $(F90) $(FFLAGS) -o d_check.exe randgen.o vars.o alarrays.o readpars.o operators.o electrons.o zom.o ham.o imgtp.o d_check.o $(FLINKS)
 # Compile steps
 
 randgen.o:randgen.f
@@ -27,9 +25,6 @@ alarrays.o:alarrays.f90 vars.o
 	 $(F90) $(FFLAGS) -c $<
 
 readpars.o:readpars.f90 vars.o
-	 $(F90) $(FFLAGS) -c $<
-
-outputs.o:outputs.f90 vars.o
 	 $(F90) $(FFLAGS) -c $<
 
 operators.o:operators.f90 vars.o alarrays.o
@@ -47,10 +42,7 @@ ham.o:ham.f90 vars.o alarrays.o operators.o
 imgtp.o:imgtp.f90 vars.o alarrays.o
 	 $(F90) $(FFLAGS) -c $<
 
-clean.o:clean.f90 vars.o alarrays.o zom.o ham.o operators.o outputs.o readpars.o
-	 $(F90) $(FFLAGS) -c $<
-
-MainZombie.o:MainZombie.f90 vars.o alarrays.o readpars.o operators.o electrons.o zom.o ham.o outputs.o imgtp.o clean.o
+d_check.o:d_check.f90 randgen.o vars.o alarrays.o readpars.o operators.o electrons.o zom.o ham.o imgtp.o
 	 $(F90) $(FFLAGS) -c $<
 
 # This entry allows you to type " make clean " to get rid of
@@ -58,3 +50,4 @@ MainZombie.o:MainZombie.f90 vars.o alarrays.o readpars.o operators.o electrons.o
 
 clean:
 	rm -rf f_{files,modd}* *.o *.mod *.exe *~ ../run/*.exe ../run/*~ ../src_2/*~
+

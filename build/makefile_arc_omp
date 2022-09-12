@@ -38,7 +38,7 @@ operators.o:operators.f90 vars.o alarrays.o
 electrons.o:electrons.f90 vars.o
 	 $(F90) $(FFLAGS) -c $<
 
-zom.o:zom.f90 vars.o outputs.o
+zom.o:zom.f90 vars.o
 	 $(F90) $(FFLAGS) -c $<
 	 
 ham.o:ham.f90 vars.o alarrays.o operators.o

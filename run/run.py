@@ -232,19 +232,14 @@ elif(inputs.run['language']=="fortran"):
     else:
         os.mkdir(EXDIR1+'/data')
             
-    # for i in range(inputs.zombs['ndet']):
-    #     shutil.copy2('zombie_'+str(i+1).zfill(4)+'.csv',EXDIR1)
-
-    # if(inputs.run['hamgen']=='n'):
-    #     shutil.copy2(inputs.run['hamfile'],EXDIR1)
-    #     shutil.copy2(inputs.run['ovrlfile'],EXDIR1)
-
 
     with open(EXDIR1+'/rundata.csv','w',newline='')as file:
         writer = csv.writer(file)
         writer.writerow([inputs.run['zomgen'],inputs.run['hamgen'],inputs.run['imagprop'],inputs.run['beta'],inputs.run['timesteps'],inputs.run['clean'],inputs.run['gram'],inputs.run['gramnum']])
         writer.writerow(inputs.zombs.values())
         writer.writerow([inputs.run['hamfile'],inputs.run['ovrlfile'],inputs.run['cleanham']])
+
+
 
     os.chdir("../build")
     if(inputs.run['cores']==1):

@@ -69,6 +69,10 @@ program MainZombie
 
         if(zomgflg=='y')then
             call genzf(zstore,ndet)
+            do j=1,ndet
+                call zombiewriter(zstore(j),j)
+            end do
+            write(6,"(a)") "Zombie states generated"
         else if (zomgflg=='n') then
             call read_zombie(zstore)
         end if
