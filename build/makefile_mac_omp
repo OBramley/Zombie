@@ -11,9 +11,8 @@ VPATH=../src_2
 
 all: Main
 
-Main:randgen.o alarrays.o readpars.o operators.o electrons.o zom.o ham.o outputs.o imgtp.o clean.o  MainZombie.o
+Main:randgen.o vars.o alarrays.o readpars.o operators.o electrons.o zom.o ham.o outputs.o imgtp.o clean.o  MainZombie.o
 	 $(F90) $(FFLAGS) -o ZOMBIE.exe randgen.o vars.o alarrays.o readpars.o operators.o electrons.o zom.o ham.o outputs.o imgtp.o clean.o MainZombie.o $(FLINKS)
-
 
 # Compile steps
 
@@ -35,7 +34,7 @@ operators.o:operators.f90 vars.o alarrays.o
 electrons.o:electrons.f90 vars.o
 	 $(F90) $(FFLAGS) -c $<
 
-zom.o:zom.f90 vars.o outputs.o
+zom.o:zom.f90 vars.o
 	 $(F90) $(FFLAGS) -c $<
 	 
 ham.o:ham.f90 vars.o alarrays.o operators.o

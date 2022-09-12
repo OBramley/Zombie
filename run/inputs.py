@@ -19,7 +19,7 @@ run={
     'language':'fortran',
 
     # What is the name of the run
-    'runfolder':'bh_1000_clean',
+    'runfolder':'d_check',
 
     # Amount of time to request on HPC 
     'runtime': "24:00:00",
@@ -71,7 +71,7 @@ run={
 
     # Do you want to clean after propagation takes 'y', 'n' or 'f' to use a previosuly generated
     # cleaning hamiltonian and zombie state files
-    'clean':'y',
+    'clean':'n',
     'cleanham':'clean_ham.csv',
     'cleanzom':'BH_clean_zombie_states.pkl', 
 
@@ -99,14 +99,14 @@ zombs={
     'ndet':1000, 
 
     # Type of zombie states. Random (ran), Hartree Fock (HF) or biased (bb)
-    'zomtyp':'bb',
+    'zomtyp':'ran',
     
     # Biased basis improvement if 0 no loops to improve biased > 0 number of loops to improve the basis
 
     'bb_imprv':0,
 
     # Make the first Zombie state the RHF det? Takes y or n
-    'rhf_1':'y',
+    'rhf_1':'n',
 
     # Make the zombie states imaginary (y) or real (n)
     'imagflg':'n'
