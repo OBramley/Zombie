@@ -256,8 +256,18 @@ elif(inputs.run['language']=="fortran"):
         else:
             shutil.copy2("../build/makefile_mac_omp","../build/Makefile")
             subprocess.run(["make"])
-        
+    
+      
     shutil.copy2("ZOMBIE.exe",EXDIR1)
+
+    if(HPCFLG==1):
+        shutil.copy2("../build/dmake_arc","../build/Makefile")
+        subprocess.run(["make"])
+    else:
+        shutil.copy2("../build/dmake","../build/Makefile")
+        subprocess.run(["make"])
+
+    shutil.copy2("d_check.exe",EXDIR1)
 
     os.chdir(EXDIR1)
 
@@ -271,6 +281,7 @@ elif(inputs.run['language']=="fortran"):
         f.write("#$ -l h_rt="+inputs.run['runtime']+"\n")
         f.write("#$ -l h_vmem=2G \n")
         f.write("module add mkl \n")
+        # f.write('time ./d_check.exe')
         f.write('time ./ZOMBIE.exe')
         f.close()
         if(inputs.run['cores']!=1):
@@ -281,7 +292,8 @@ elif(inputs.run['language']=="fortran"):
         if(inputs.run['cores']!=1):
             os.environ["OMP_NUM_THREADS"]=str(inputs.run['cores'])
         subprocess.run(["./ZOMBIE.exe"])
-        # subprocess.Popen('',executable="ZOMBIE.exe")
+        # subprocess.run(["./d_check.exe"])
+        
         
 
     
