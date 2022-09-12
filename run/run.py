@@ -232,19 +232,14 @@ elif(inputs.run['language']=="fortran"):
     else:
         os.mkdir(EXDIR1+'/data')
             
-    # for i in range(inputs.zombs['ndet']):
-    #     shutil.copy2('zombie_'+str(i+1).zfill(4)+'.csv',EXDIR1)
-
-    # if(inputs.run['hamgen']=='n'):
-    #     shutil.copy2(inputs.run['hamfile'],EXDIR1)
-    #     shutil.copy2(inputs.run['ovrlfile'],EXDIR1)
-
 
     with open(EXDIR1+'/rundata.csv','w',newline='')as file:
         writer = csv.writer(file)
         writer.writerow([inputs.run['zomgen'],inputs.run['hamgen'],inputs.run['imagprop'],inputs.run['beta'],inputs.run['timesteps'],inputs.run['clean'],inputs.run['gram'],inputs.run['gramnum']])
         writer.writerow(inputs.zombs.values())
         writer.writerow([inputs.run['hamfile'],inputs.run['ovrlfile'],inputs.run['cleanham']])
+
+
 
     os.chdir("../build")
     if(inputs.run['cores']==1):
@@ -261,8 +256,18 @@ elif(inputs.run['language']=="fortran"):
         else:
             shutil.copy2("../build/makefile_mac_omp","../build/Makefile")
             subprocess.run(["make"])
-        
+    
+      
     shutil.copy2("ZOMBIE.exe",EXDIR1)
+
+    if(HPCFLG==1):
+        shutil.copy2("../build/dmake_arc","../build/Makefile")
+        subprocess.run(["make"])
+    else:
+        shutil.copy2("../build/dmake","../build/Makefile")
+        subprocess.run(["make"])
+
+    shutil.copy2("d_check.exe",EXDIR1)
 
     os.chdir(EXDIR1)
 
@@ -278,6 +283,7 @@ elif(inputs.run['language']=="fortran"):
         f.write("#$ -l h_rt="+inputs.run['runtime']+"\n")
         f.write("#$ -l h_vmem=12G \n")
         f.write("module add mkl \n")
+        # f.write('time ./d_check.exe')
         f.write('time ./ZOMBIE.exe')
         f.close()
         
@@ -287,7 +293,8 @@ elif(inputs.run['language']=="fortran"):
         if(inputs.run['cores']!=1):
             os.environ["OMP_NUM_THREADS"]=str(inputs.run['cores'])
         subprocess.run(["./ZOMBIE.exe"])
-        # subprocess.Popen('',executable="ZOMBIE.exe")
+        # subprocess.run(["./d_check.exe"])
+        
         
 
     
