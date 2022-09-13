@@ -157,6 +157,7 @@ else:
     subprocess.run(["make"])
 
 shutil.copy2("d_check.exe",EXDIR1)
+shutil.copy2("outputs.py",EXDIR1)
 
 os.chdir(EXDIR1)
 
