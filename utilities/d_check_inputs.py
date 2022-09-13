@@ -13,7 +13,7 @@
 
 run={
     # What is the name of the run
-    'runfolder':'d_check_1',
+    'runfolder':'d_check_ran',
 
     # Amount of time to request on HPC 
     'runtime': "24:00:00",
@@ -49,10 +49,10 @@ zombs={
     'spin':0,
 
     # Number of Zombie states
-    'ndet':10, 
+    'ndet':100, 
 
     # Type of zombie states. Random (ran), Hartree Fock (HF) or biased (bb)
-    'zomtyp':'bb',
+    'zomtyp':'ran',
     
     # Biased basis improvement if 0 no loops to improve biased > 0 number of loops to improve the basis
 
