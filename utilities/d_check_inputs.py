@@ -12,14 +12,8 @@
 
 
 run={
-    # Decides if the program will run in Python or Fortran
-    # Fortran program is faster and will use OpenMP for multiple threads
-    # The python program is possibly easier to understand and is still effective for 
-    # small runs. Takes input python or fortran
-    'language':'fortran',
-
     # What is the name of the run
-    'runfolder':'d_check_2',
+    'runfolder':'d_check_1',
 
     # Amount of time to request on HPC 
     'runtime': "24:00:00",
@@ -31,56 +25,15 @@ run={
     # Set the numpy random seed for Zombie state generation
     'seed':1,
 
-    # Name of file where any prior generated results are placed so the Fortran 
-    # program can access them and continue a run
-    'datafile':'data_2',
-
     # 1 and 2 electron integrals can be calcualted by PySCF by the program
     # or they can be inputed as a seperate file at the moment only from MOLPRO
     # as such the program takes 3 inputs 'pyscf', 'mol' or 'no' if the one and two
     # electron integrals have already been generated and placed in the run file
     'elecs':'pyscf',
 
-    'elecfile':'integrals.pkl',
-
-    # Do you want to generate new zombie states. The program can work using previously gerated
-    # Zombie states. Takes input 'y' or 'n'.
-    'zomgen':'y',
-
-    'zombiefile':'zombie_states.pkl',
-
-    # Do you want to generate a new Hamiltonian? Takes input 'y' or 'n'
-    'hamgen':'y',
-
-    'hamfile':'ham.csv',
-
-    'ovrlfile':'ovlp.csv',
-
-    # Do you want to perform imaginary time evolution? The program can be used to just generate
-    # the Zombie state Hamiltonian. Takes input 'y' or 'n'.
-    'imagprop':'y',
-
     'beta':200,
 
     'timesteps':2000,
-
-    # Do you want the starting energy to be the HF energy
-    # Takes input 'y' or 'n' and then a number to defined the number of electrons
-    'zomhf':'n',
-    'hfnum': 6,
-
-    # Do you want to clean after propagation takes 'y', 'n' or 'f' to use a previosuly generated
-    # cleaning hamiltonian and zombie state files
-    'clean':'n',
-    'cleanham':'clean_ham.csv',
-    'cleanzom':'BH_clean_zombie_states.pkl', 
-
-    # Do you want to find other energy states other than the ground state. If so turn on 
-    # Gram Schmidt orthogonalisation and then specify the number of states. Takes input
-    # 'y' or 'n' and an integer number note in the python code gramnum=1 will not find an excited state just a 
-    # single ground state. But gramnum=1 will find a single excited state in the fortran code.
-    'gram':'n',
-    'gramnum':4
 }
 
 

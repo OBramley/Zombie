@@ -4,15 +4,15 @@
 
 F90=gfortran
 FFLAGS= -fopenmp -O3
-FLINKS=$(ARC_LINALG_FFLAGS)
+FLINKS= -llapack -lblas
 VPATH=../src_2
 
 # Link step
 
-all: d_check.exe
+all: d_check
 
-d_check.exe:randgen.o vars.o alarrays.o readpars.o operators.o electrons.o zom.o ham.o imgtp.o d_check.o 
-	 $(F90) $(FFLAGS) -o $@ $^ $(FLINKS)
+d_check:randgen.o vars.o alarrays.o readpars.o operators.o electrons.o zom.o ham.o imgtp.o d_check.o 
+	 $(F90) $(FFLAGS) -o d_check.exe randgen.o vars.o alarrays.o readpars.o operators.o electrons.o zom.o ham.o imgtp.o d_check.o $(FLINKS)
 # Compile steps
 
 randgen.o:randgen.f
@@ -49,5 +49,5 @@ d_check.o:d_check.f90 randgen.o vars.o alarrays.o readpars.o operators.o electro
 # all object and module files
 
 clean:
-	rm -rf f_{files,modd}* *.o *.mod *.exe *~ ../run/*.exe ../run/*~ ../src_2/*~
+	rm -rf f_{files,modd}* *.o *.mod *.exe *~ ../run/*.exe ../run/*~ ../utilities/*~
 
