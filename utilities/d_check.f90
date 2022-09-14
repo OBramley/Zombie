@@ -16,11 +16,24 @@ program d_check
     type(energy):: en
     type(elecintrgl)::elect
     type(hamiltonian)::haml
+    real(kind=8):: starttime, stoptime, runtime
+    character(LEN=100) :: CWD
     real(kind=8),dimension(:,:,:),allocatable::results
     integer:: j,k,l, istat,ierr,iters
     integer(kind=8):: randseed
     character(LEN=4)::orbital
 
+
+    call CPU_TIME(starttime) !used to calculate the runtime, which is output at the end
+    write(6,"(a)") " ________________________________________________________________ "
+    write(6,"(a)") "|                                                                |"
+    write(6,"(a)") "|                                                                |"
+    write(6,"(a)") "|               Zombie State Analysis Program v1.00              |"
+    write(6,"(a)") "|                                                                |"
+    write(6,"(a)") "|________________________________________________________________|"
+    write(6,"(a)") ""
+    write(6,"(a)") ""
+    write(6,"(a)") ""
 
     ierr=0
     istat=0
@@ -102,5 +115,28 @@ program d_check
     end do
 
     deallocate(results)
+
+    call CPU_TIME(stoptime)
+    runtime = stoptime-starttime
+    call getcwd(CWD)
+
+    if (errorflag.eq.0) write(6,"(a,a)") 'Successfully Executed Zombie states Program in ', trim(CWD)
+    if (errorflag.ne.0) write(6,"(a,a)") 'Unsuccessfully Executed Zombie states  Program in ', trim(CWD)
+  
+    if (runtime/3600.0d0 .gt. 1.0d0)then
+        runtime = runtime/3600.0d0
+        write(6,"(a,es12.5,a)") 'Time taken : ', runtime, ' hours'
+    else if (runtime/60.0d0 .gt. 1.0d0)then
+        runtime = runtime/60.0d0
+        write(6,"(a,es12.5,a)") 'Time taken : ', runtime , ' mins'
+    else
+        write(6,"(a,es12.5,a)") 'Time taken : ', runtime, ' seconds'
+    end if
+
+
+    call flush(6)
+    call flush(0)
+
+    stop
 
 end program d_check
