@@ -281,7 +281,6 @@ MODULE zom
             end do
             !$omp end do
             !$omp end parallel
-            print*,j
             if(rhf_1=='y') then
                 zstore(1)%alive(1:nel)=(1.0d0,0.0d0)
                 zstore(1)%dead(1:nel)=(0.0d0,0.0d0)
@@ -308,6 +307,7 @@ MODULE zom
         mu(alive+1:)=0
 
         asrt=0.0001
+        ! asrt=0
         aend=0.200
         dsrt=0.08
         dend=0.0006

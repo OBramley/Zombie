@@ -196,7 +196,7 @@ subroutine spattospin2(elecs,nlines)
 
     deallocate(h2ea, stat=ierr)
     if (ierr/=0) then
-        write(0,"(a,i0)") "Error in h1ea deallocation. ierr had value ", ierr
+        write(0,"(a,i0)") "Error in h2ea deallocation. ierr had value ", ierr
         errorflag=1
         return
     end if
