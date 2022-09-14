@@ -13,7 +13,7 @@
 
 run={
     # What is the name of the run
-    'runfolder':'d_check_ran',
+    'runfolder':'improve_100_iters_2',
 
     # Amount of time to request on HPC 
     'runtime': "24:00:00",
@@ -49,17 +49,17 @@ zombs={
     'spin':0,
 
     # Number of Zombie states
-    'ndet':100, 
+    'ndet':2, 
 
     # Type of zombie states. Random (ran), Hartree Fock (HF) or biased (bb)
-    'zomtyp':'ran',
+    'zomtyp':'bb',
     
     # Biased basis improvement if 0 no loops to improve biased > 0 number of loops to improve the basis
 
     'bb_imprv':0,
 
     # Make the first Zombie state the RHF det? Takes y or n
-    'rhf_1':'n',
+    'rhf_1':'y',
 
     # Make the zombie states imaginary (y) or real (n)
     'imagflg':'n'

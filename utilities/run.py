@@ -142,7 +142,8 @@ if(d_check_inputs.run['elecs']=='pyscf'):
                 spamwriter=csv.writer(csvfile, delimiter=',')
                 spamwriter.writerows(obj)
 
-        
+os.mkdir(EXDIR1+'/data')
+
 with open(EXDIR1+'/rundata.csv','w',newline='')as file:
     writer = csv.writer(file)
     writer.writerow(['y','y','y',d_check_inputs.run['beta'],d_check_inputs.run['timesteps'],'n','n',0])
@@ -153,11 +154,15 @@ if(HPCFLG==1):
     shutil.copy2("makefile_dcheck_arc","Makefile")
     subprocess.run(["make"])
 else:
-    shutil.copy2("makefile_dcheck_mac","Makefile")
+    shutil.copy2("makefile_bbi","Makefile")
+    # shutil.copy2("makefile_dcheck_mac","Makefile")
     subprocess.run(["make"])
 
-shutil.copy2("d_check.exe",EXDIR1)
-shutil.copy2("outputs.py",EXDIR1)
+# shutil.copy2("d_check.exe",EXDIR1)
+# shutil.copy2("outputs.py",EXDIR1)
+shutil.copy2("bbi_o.py",EXDIR1)
+
+shutil.copy2("bbi.exe",EXDIR1)
 
 os.chdir(EXDIR1)
 
@@ -181,7 +186,8 @@ else:
     print(os.getcwd())
     if(d_check_inputs.run['cores']!=1):
         os.environ["OMP_NUM_THREADS"]=str(d_check_inputs.run['cores'])
-    subprocess.run(["./d_check.exe"])
+    # subprocess.run(["./d_check.exe"])
+    subprocess.run(["./bbi.exe"])
         
         
 
