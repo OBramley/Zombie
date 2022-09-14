@@ -8,18 +8,35 @@ program bbi
     use ham
     use imgtp
     use outputs
+    use comparison
 
     implicit none
+
+    ! interface
+    !     subroutine compare(zstore,zstoretemp,dvecstemp,en,entemp,elect,hamltemp,ergchange,achange,orbital)
+    !         use globvars
+    !         use imgtp
+    !         use ham
+    !         type(zombiest), dimension(:),intent(inout):: zstore,zstoretemp
+    !         type(dvector), dimension(:), intent(inout):: dvecstemp
+    !         type(energy),intent(inout):: en, entemp
+    !         type(elecintrgl),intent(in)::elect
+    !         type(hamiltonian),intent(inout)::hamltemp
+    !         integer,intent(in)::orbital
+    !         real(kind=8),dimension(:,:),intent(inout)::ergchange,achange
+    !     end subroutine compare
+    ! end interface
 
     type(zombiest), dimension(:), allocatable:: zstore,zstoretemp
     type(dvector), dimension(:), allocatable:: dvecs, dvecstemp
     type(energy):: en, entemp
     type(elecintrgl)::elect
     type(hamiltonian)::haml, hamltemp
-    real(kind=8):: starttime, stoptime, runtime, dummy
+    real(kind=8):: starttime, stoptime, runtime, dummy,dummy1
     DOUBLE PRECISION, external::ZBQLUAB, ZBQLU01
     character(LEN=100) :: CWD
-    real(kind=8),dimension(:,:),allocatable::ergchange,achange
+    real(kind=8),dimension(:,:),allocatable::achange
+    real(kind=8),dimension(:),allocatable::ergchange
     integer:: j,k,l,p, istat,ierr,iters
     integer(kind=8):: randseed
 
@@ -46,14 +63,14 @@ program bbi
     
     iters=100
     
-    allocate(ergchange((iters*norb+1),2),stat=ierr)
-    if(ierr==0)allocate(achange((iters*norb)+1,norb+1),stat=ierr)
+    allocate(ergchange((iters*norb)+1),stat=ierr)
+    if(ierr==0)allocate(achange(iters+1,norb),stat=ierr)
     if (ierr/=0) then
         write(0,"(a,i0)") "Error in results allocation. ierr had value ", ierr
         errorflag=1
         return
     end if
-    ergchange(:,:)=0.0
+    ergchange(:)=0.0
     achange(:,:)=0.0
 
     open(unit=570, file="/dev/urandom", access="stream", &
@@ -77,7 +94,7 @@ program bbi
     end do
     write(6,"(a)") "Initial Zombie states generated"
     do j=1,norb
-        achange(1,j+1)=(dasin(REAL(zstore(2)%alive(j)))/(2*pirl))
+        achange(1,j)=(dasin(REAL(zstore(2)%alive(j))))!/(2*pirl))
     end do
     call allocham(haml,ndet)
     call hamgen(haml,zstore,elect,ndet)
@@ -86,7 +103,7 @@ program bbi
     call allocdv(dvecs,1,ndet)
     call allocerg(en,1)
     call imgtime_prop(dvecs,en,haml)
-    ergchange(1,2)=REAL(en%erg(1,timesteps))
+    ergchange(1)=REAL(en%erg(1,timesteps))
 
 
     call alloczs(zstoretemp,ndet)
@@ -94,41 +111,57 @@ program bbi
     call allocdv(dvecstemp,1,ndet)
     call allocerg(entemp,1)
 
-    l=0
+    ! l=0
+    ! call compare(zstore,zstoretemp,dvecstemp,en,entemp,elect,haml,ergchange,achange,j)
     do j=1, norb
-        do k=1, iters
-            l=l+1
-            zstoretemp=zstore
+        dummy=-100
+        p=0
+        do while(dummy<achange(1,j+1))
+            p=p+1
             !$omp critical
             dummy=0.5*pirl*ZBQLU01(1)
-            !$omp end critical    
-            zstoretemp(2)%alive(j)=cmplx(sin(dummy),0.0d0,kind=8)
-            zstoretemp(2)%dead(j)=cmplx(cos(dummy),0.0d0,kind=8)
-            call hamgen(hamltemp,zstoretemp,elect,ndet)
-            call imgtime_prop(dvecstemp,entemp,hamltemp)
-            achange(l+1,1)=l
-            ergchange(l+1,1)=l
-            if(REAL(entemp%erg(1,timesteps))<REAL(en%erg(1,timesteps)))then
-                do p=1, ndet
-                    zstore(p)=zstoretemp(p)
-                end do
-                en%erg(1,1:timesteps+1)=entemp%erg(1,1:timesteps+1)
-                ergchange(l+1,2)=REAL(en%erg(1,timesteps))
-                achange(l+1,2:)=achange(l,2:)
-                achange(l+1,j+1)=dummy
-            else 
-
-                achange(l+1,2:)=achange(l,2:)
-                ergchange(l+1,2)=ergchange(l,2)
-            end if
-            dvecstemp(1)%d(1:ndet)=(0.0,0.0)
-            dvecstemp(1)%d(1)=(1.0,0.0)
-            hamltemp%hjk(1:ndet,1:ndet)=(0.0d0,0.0d0)
-            hamltemp%ovrlp(1:ndet,1:ndet)=(0.0d0,0.0d0)
-            hamltemp%inv(1:ndet,1:ndet)=(0.0d0,0.0d0)
-            entemp%t(1:timesteps+1)=(0.0)
-            entemp%erg(1,1:timesteps+1)=(0.0,0.0)
+            !$omp end critical
         end do
+
+
+        print*,dummy
+        print*,p
+        call compare(zstore,zstoretemp,dvecstemp,en,entemp,elect,haml,ergchange,achange,j,iters)
+        ! do k=1, iters
+            
+        !     l=l+1
+        !     zstoretemp=zstore
+        !     !$omp critical
+        !     dummy=0.5*pirl*ZBQLU01(1)
+        !     !$omp end critical    
+        !     zstoretemp(2)%alive(j)=cmplx(sin(dummy),0.0d0,kind=8)
+        !     zstoretemp(2)%dead(j)=cmplx(cos(dummy),0.0d0,kind=8)
+        !     call hamgen(hamltemp,zstoretemp,elect,ndet)
+        !     call imgtime_prop(dvecstemp,entemp,hamltemp)
+        !     achange(l+1,1)=l
+        !     ergchange(l+1,1)=l
+        !     if(REAL(entemp%erg(1,timesteps))<REAL(en%erg(1,timesteps)))then
+        !         print*,j,"improve"
+        !         do p=1, ndet
+        !             zstore(p)=zstoretemp(p)
+        !         end do
+        !         en%erg(1,1:timesteps+1)=entemp%erg(1,1:timesteps+1)
+        !         ergchange(l+1,2)=REAL(en%erg(1,timesteps))
+        !         achange(l+1,2:)=achange(l,2:)
+        !         achange(l+1,j+1)=dummy
+        !     else 
+
+        !         achange(l+1,2:)=achange(l,2:)
+        !         ergchange(l+1,2)=ergchange(l,2)
+        !     end if
+        !     dvecstemp(1)%d(1:ndet)=(0.0,0.0)
+        !     dvecstemp(1)%d(1)=(1.0,0.0)
+        !     hamltemp%hjk(1:ndet,1:ndet)=(0.0d0,0.0d0)
+        !     hamltemp%ovrlp(1:ndet,1:ndet)=(0.0d0,0.0d0)
+        !     hamltemp%inv(1:ndet,1:ndet)=(0.0d0,0.0d0)
+        !     entemp%t(1:timesteps+1)=(0.0)
+        !     entemp%erg(1,1:timesteps+1)=(0.0,0.0)
+        ! end do
         write(6,"(a)") "Orbital completed"
     end do
     write(6,"(a)") "run finished"
@@ -144,8 +177,8 @@ program bbi
             return
         end if
         
-        do j=1, l+1
-            write(200,'(*(e25.17e3 :", "))') ((ergchange(j,k)),k=1,2)
+        do j=1, (iters*norb)+1
+            write(200,'(*(e25.17e3 :", "))') ergchange(j)
         end do
     close(200)
 
@@ -156,8 +189,8 @@ program bbi
             return
         end if
         
-        do j=1, l+1
-            write(201,'(*(e25.17e3 :", "))') ((achange(j,k)),k=1,norb+1)
+        do j=1, iters+1
+            write(201,'(*(e25.17e3 :", "))') ((achange(j,k)),k=1,norb)
         end do
     close(201)
 

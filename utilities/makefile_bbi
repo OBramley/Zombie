@@ -11,8 +11,8 @@ VPATH=../src_2
 
 all: bbi
 
-bbi:randgen.o vars.o alarrays.o readpars.o operators.o electrons.o zom.o ham.o outputs.o imgtp.o bbi.o 
-	 $(F90) $(FFLAGS) -o bbi.exe randgen.o vars.o alarrays.o readpars.o operators.o electrons.o zom.o ham.o outputs.o imgtp.o bbi.o $(FLINKS)
+bbi:randgen.o vars.o alarrays.o readpars.o operators.o electrons.o zom.o ham.o outputs.o imgtp.o comparison.o bbi.o 
+	 $(F90) $(FFLAGS) -o bbi.exe randgen.o vars.o alarrays.o readpars.o operators.o electrons.o zom.o ham.o outputs.o imgtp.o comparison.o bbi.o $(FLINKS)
 # Compile steps
 
 randgen.o:randgen.f
@@ -45,7 +45,10 @@ ham.o:ham.f90 vars.o alarrays.o operators.o
 imgtp.o:imgtp.f90 vars.o alarrays.o
 	 $(F90) $(FFLAGS) -c $<
 
-bbi.o:bbi.f90 randgen.o vars.o alarrays.o readpars.o operators.o electrons.o zom.o ham.o outputs.o imgtp.o
+comparison.o:comparison.f90 vars.o ham.o imgtp.o 
+	 $(F90) $(FFLAGS) -c $<
+
+bbi.o:bbi.f90 randgen.o vars.o alarrays.o readpars.o operators.o electrons.o zom.o ham.o outputs.o imgtp.o comparison.o
 	 $(F90) $(FFLAGS) -c $<
 
 # This entry allows you to type " make clean " to get rid of
