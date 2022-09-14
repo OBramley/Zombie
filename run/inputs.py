@@ -19,7 +19,7 @@ run={
     'language':'fortran',
 
     # What is the name of the run
-    'runfolder':'d_check_2',
+    'runfolder':'bh_2',
 
     # Amount of time to request on HPC 
     'runtime': "24:00:00",
@@ -33,7 +33,7 @@ run={
 
     # Name of file where any prior generated results are placed so the Fortran 
     # program can access them and continue a run
-    'datafile':'data_2',
+    'datafile':'fix2',
 
     # 1 and 2 electron integrals can be calcualted by PySCF by the program
     # or they can be inputed as a seperate file at the moment only from MOLPRO
@@ -96,7 +96,7 @@ zombs={
     'spin':0,
 
     # Number of Zombie states
-    'ndet':10, 
+    'ndet':2, 
 
     # Type of zombie states. Random (ran), Hartree Fock (HF) or biased (bb)
     'zomtyp':'bb',
@@ -106,7 +106,7 @@ zombs={
     'bb_imprv':0,
 
     # Make the first Zombie state the RHF det? Takes y or n
-    'rhf_1':'n',
+    'rhf_1':'y',
 
     # Make the zombie states imaginary (y) or real (n)
     'imagflg':'n'
