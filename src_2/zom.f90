@@ -270,6 +270,7 @@ MODULE zom
                 do k=1,norb/2
                     val(2*k-1)=2*pirl*ZBQLNOR(mu(k),sig(k))
                     val(2*k)=2*pirl*ZBQLNOR(mu(k),sig(k))
+                    print*,val(2*k-1),val(2*k)
                     ! val(2*k-1)=2*pirl*mu(k)*exp(-ZBQLUAB(0,0.1))
                     ! val(2*k)=2*pirl*mu(k)*exp(-ZBQLUAB(0,0.1))
                 end do

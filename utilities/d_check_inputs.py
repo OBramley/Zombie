@@ -13,7 +13,7 @@
 
 run={
     # What is the name of the run
-    'runfolder':'check',
+    'runfolder':'improve_v2_2_1',
 
     # Amount of time to request on HPC 
     'runtime': "24:00:00",

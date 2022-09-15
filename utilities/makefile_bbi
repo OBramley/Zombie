@@ -45,7 +45,7 @@ ham.o:ham.f90 vars.o alarrays.o operators.o
 imgtp.o:imgtp.f90 vars.o alarrays.o
 	 $(F90) $(FFLAGS) -c $<
 
-comparison.o:comparison.f90 vars.o ham.o imgtp.o 
+comparison.o:comparison.f90 vars.o alarrays.o outputs.o ham.o imgtp.o 
 	 $(F90) $(FFLAGS) -c $<
 
 bbi.o:bbi.f90 randgen.o vars.o alarrays.o readpars.o operators.o electrons.o zom.o ham.o outputs.o imgtp.o comparison.o

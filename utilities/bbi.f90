@@ -32,21 +32,23 @@ program bbi
     type(energy):: en, entemp
     type(elecintrgl)::elect
     type(hamiltonian)::haml, hamltemp
-    real(kind=8):: starttime, stoptime, runtime, dummy,dummy1
-    DOUBLE PRECISION, external::ZBQLUAB, ZBQLU01
+    real(kind=8):: starttime, stoptime, runtime, erg, dummy,dummy1
+    DOUBLE PRECISION, external::ZBQLUAB, ZBQLU01, ZBQLNOR
     character(LEN=100) :: CWD
     real(kind=8),dimension(:,:),allocatable::achange
     real(kind=8),dimension(:),allocatable::ergchange
     integer:: j,k,l,p, istat,ierr,iters
     integer(kind=8):: randseed
 
+    real(kind=8)::mu(19),sig(19)
+    real(kind=8),dimension(38)::val
 
 
     call CPU_TIME(starttime) !used to calculate the runtime, which is output at the end
     write(6,"(a)") " ________________________________________________________________ "
     write(6,"(a)") "|                                                                |"
     write(6,"(a)") "|                                                                |"
-    write(6,"(a)") "|             Zombie State bias improve Program v1.00            |"
+    write(6,"(a)") "|             Zombie State bias improve Program v1.10            |"
     write(6,"(a)") "|                                                                |"
     write(6,"(a)") "|________________________________________________________________|"
     write(6,"(a)") ""
@@ -61,7 +63,7 @@ program bbi
     call allocintgrl(elect)
     call electronintegrals(elect)
     
-    iters=100
+    iters=10
     
     allocate(ergchange((iters*norb)+1),stat=ierr)
     if(ierr==0)allocate(achange(iters+1,norb),stat=ierr)
@@ -88,88 +90,73 @@ program bbi
     write(6,"(a)") "Random seed set"
 
     call alloczs(zstore,ndet)
-    call genzf(zstore,ndet)
-    do j=1,ndet
-        call zombiewriter(zstore(j),j)
-    end do
+    if(zomgflg=='y') then
+        call musig(mu,sig)
+        do j=1, ndet
+            !$omp critical
+            do k=1,norb/2
+                val(2*k-1)=2*pirl*ZBQLNOR(mu(k),sig(k))
+                val(2*k)=2*pirl*ZBQLNOR(mu(k),sig(k))
+            end do
+            !$omp end critical
+            do k=1, norb
+                zstore(j)%alive(k)=cmplx(sin(val(k)),0.0d0,kind=8)
+                zstore(j)%dead(K)=cmplx(cos(val(k)),0.0d0,kind=8)
+            end do
+        end do
+        if(rhf_1=='y') then
+            zstore(1)%alive(1:nel)=(1.0d0,0.0d0)
+            zstore(1)%dead(1:nel)=(0.0d0,0.0d0)
+            zstore(1)%alive((nel+1):norb)=(0.0d0,0.0d0)
+            zstore(1)%dead((nel+1):norb)=(1.0d0,0.0d0)
+        end if 
+        ! call genzf(zstore,ndet)
+        do j=1,ndet
+            call zombiewriter(zstore(j),j)
+        end do
+    else 
+        call read_zombie(zstore)
+    end if
+
     write(6,"(a)") "Initial Zombie states generated"
     do j=1,norb
         achange(1,j)=(dasin(REAL(zstore(2)%alive(j))))!/(2*pirl))
+        ! print*,achange(1,j)
     end do
+
+    do j=1,norb
+        print*,achange(1,j)
+    end do
+   
+    
     call allocham(haml,ndet)
     call hamgen(haml,zstore,elect,ndet)
+    print*,REAL(haml%hjk(2,1))
     call matrixwriter(haml%hjk,ndet,"ham.csv")
+    call matrixwriter(haml%ovrlp,ndet,"ovrl.csv")
+    call matrixwriter(haml%inv,ndet,"inv.csv")
     write(6,"(a)") "Initial Hamiltonian generated"
     call allocdv(dvecs,1,ndet)
     call allocerg(en,1)
     call imgtime_prop(dvecs,en,haml)
-    ergchange(1)=REAL(en%erg(1,timesteps))
+
+    erg=REAL(en%erg(1,timesteps+1))
+    ergchange(1)=erg
+    print*, "Starting energy, ", erg
 
 
-    call alloczs(zstoretemp,ndet)
-    call allocham(hamltemp,ndet)
-    call allocdv(dvecstemp,1,ndet)
-    call allocerg(entemp,1)
-
-    ! l=0
-    ! call compare(zstore,zstoretemp,dvecstemp,en,entemp,elect,haml,ergchange,achange,j)
-    do j=1, norb
-        dummy=-100
-        p=0
-        do while(dummy<achange(1,j+1))
-            p=p+1
-            !$omp critical
-            dummy=0.5*pirl*ZBQLU01(1)
-            !$omp end critical
-        end do
-
-
-        print*,dummy
-        print*,p
-        call compare(zstore,zstoretemp,dvecstemp,en,entemp,elect,haml,ergchange,achange,j,iters)
-        ! do k=1, iters
-            
-        !     l=l+1
-        !     zstoretemp=zstore
-        !     !$omp critical
-        !     dummy=0.5*pirl*ZBQLU01(1)
-        !     !$omp end critical    
-        !     zstoretemp(2)%alive(j)=cmplx(sin(dummy),0.0d0,kind=8)
-        !     zstoretemp(2)%dead(j)=cmplx(cos(dummy),0.0d0,kind=8)
-        !     call hamgen(hamltemp,zstoretemp,elect,ndet)
-        !     call imgtime_prop(dvecstemp,entemp,hamltemp)
-        !     achange(l+1,1)=l
-        !     ergchange(l+1,1)=l
-        !     if(REAL(entemp%erg(1,timesteps))<REAL(en%erg(1,timesteps)))then
-        !         print*,j,"improve"
-        !         do p=1, ndet
-        !             zstore(p)=zstoretemp(p)
-        !         end do
-        !         en%erg(1,1:timesteps+1)=entemp%erg(1,1:timesteps+1)
-        !         ergchange(l+1,2)=REAL(en%erg(1,timesteps))
-        !         achange(l+1,2:)=achange(l,2:)
-        !         achange(l+1,j+1)=dummy
-        !     else 
-
-        !         achange(l+1,2:)=achange(l,2:)
-        !         ergchange(l+1,2)=ergchange(l,2)
-        !     end if
-        !     dvecstemp(1)%d(1:ndet)=(0.0,0.0)
-        !     dvecstemp(1)%d(1)=(1.0,0.0)
-        !     hamltemp%hjk(1:ndet,1:ndet)=(0.0d0,0.0d0)
-        !     hamltemp%ovrlp(1:ndet,1:ndet)=(0.0d0,0.0d0)
-        !     hamltemp%inv(1:ndet,1:ndet)=(0.0d0,0.0d0)
-        !     entemp%t(1:timesteps+1)=(0.0)
-        !     entemp%erg(1,1:timesteps+1)=(0.0,0.0)
-        ! end do
+    
+    do j=1, 1
+        call compare(zstore,erg,elect,haml,ergchange,achange,j,iters)
         write(6,"(a)") "Orbital completed"
+        ! stop
     end do
     write(6,"(a)") "run finished"
     do j=1,ndet
         call zombiewriter_c(zstore(j),j)
     end do
     call matrixwriter(haml%hjk,ndet,"finalham.csv")
-
+    call matrixwriter(haml%ovrlp,ndet,"finalovrl.csv")
     open(unit=200,file="ergchange.csv",status="new",iostat=ierr)
         if(ierr/=0)then
             write(0,"(a,i0)") "Error in opening matrix file. ierr had value ", ierr
@@ -198,10 +185,7 @@ program bbi
     call deallocham(haml)
     call dealloczs(zstore)
     call deallocdv(dvecs)
-    call deallocerg(entemp)
-    call deallocham(hamltemp)
-    call dealloczs(zstoretemp)
-    call deallocdv(dvecstemp)
+    
     deallocate(ergchange,stat=ierr)
     if(ierr==0)deallocate(achange,stat=ierr)
     if (ierr/=0) then
