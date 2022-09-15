@@ -124,9 +124,9 @@ program bbi
         ! print*,achange(1,j)
     end do
 
-    do j=1,norb
-        print*,achange(1,j)
-    end do
+    ! do j=1,norb
+    !     print*,achange(1,j)
+    ! end do
    
     
     call allocham(haml,ndet)
@@ -146,7 +146,7 @@ program bbi
 
 
     
-    do j=1, 1
+    do j=1, norb
         call compare(zstore,erg,elect,haml,ergchange,achange,j,iters)
         write(6,"(a)") "Orbital completed"
         ! stop
