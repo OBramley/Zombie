@@ -20,7 +20,7 @@ def plot(achange, iters, norb, filename):
         fig=plt.figure(figsize=(3.37,5.055))
         ax=fig.add_axes([0,0,2,1])
         # y=achange[0+(i*iters):(i*iters)+iters+1,i+1]
-        y=achange[:,0]
+        y=achange[:,i]
         ax.plot(x,y, linewidth=2, color=colors(1),label='orbital '+str(i+1)+' = '+"{:.5f}".format(y[-1]))
         # ax.legend()
         plt.tight_layout()
@@ -72,13 +72,13 @@ def plot3(ergchange,iters):
 with open("achange.csv")as file:
         achange=numpy.loadtxt(file,delimiter=',')
 
-plot(achange,10,38,"achange")
+plot(achange,20,38,"achange")
 plot2(achange,38)
 del(achange)
 
 with open("ergchange.csv")as file:
     ergchange=numpy.loadtxt(file,delimiter=',')
 
-plot3(ergchange,10)
+plot3(ergchange,20)
 
 exit()
