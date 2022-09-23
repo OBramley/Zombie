@@ -14,22 +14,22 @@ program bbi
     implicit none
 
 
-    type(zombiest), dimension(:), allocatable:: zstore
+    type(zombiest), dimension(:), allocatable:: zstore, zstore_act,zstore_temp
     type(dvector), dimension(:), allocatable:: dvecs
     type(energy):: en
     type(elecintrgl)::elect
-    type(hamiltonian)::haml
+    type(hamiltonian)::haml,haml_act
     real(kind=8):: starttime, stoptime, runtime, erg
     DOUBLE PRECISION, external::ZBQLUAB, ZBQLU01, ZBQLNOR
     character(LEN=100) :: CWD
-    real(kind=8),dimension(:,:),allocatable::achange
-    real(kind=8),dimension(:),allocatable::ergchange
+    real(kind=8),dimension(:,:),allocatable::avalchange,ergchange
+    real(kind=8),dimension(:),allocatable::eresult,aresult
     integer:: j,k,l,passes, istat,ierr,iters
     integer(kind=8):: randseed
 
     real(kind=8)::mu(19),sig(19)
     real(kind=8),dimension(38)::val
-    integer,dimension(:),allocatable::mixed
+   
 
     call CPU_TIME(starttime) !used to calculate the runtime, which is output at the end
     write(6,"(a)") " ________________________________________________________________ "
@@ -51,18 +51,18 @@ program bbi
     call allocintgrl(elect)
     call electronintegrals(elect)
     
-    passes=2
+    passes=1
     iters=20
     
-    allocate(ergchange((iters*norb*passes)+1),stat=ierr)
-    if(ierr==0)allocate(achange((iters*passes)+1,norb),stat=ierr)
+    allocate(ergchange(((iters+1)*passes)+1,norb),stat=ierr)
+    if(ierr==0)allocate(avalchange((iters*passes)+1,norb),stat=ierr)
     if (ierr/=0) then
         write(0,"(a,i0)") "Error in results allocation. ierr had value ", ierr
         errorflag=1
         return
     end if
-    ergchange(:)=0.0
-    achange(:,:)=0.0
+    ergchange(:,:)=0.0
+    avalchange(:,:)=0.0
 
     open(unit=570, file="/dev/urandom", access="stream", &
     form="unformatted", action="read", status="old", iostat=istat)
@@ -116,7 +116,7 @@ program bbi
 
     write(6,"(a)") "Initial Zombie states generated"
     do j=1,norb
-        achange(1,j)=(dasin(REAL(zstore(2)%alive(j))))!/(2*pirl))
+        avalchange(1,j)=(dasin(REAL(zstore(2)%alive(j))))!/(2*pirl))
         ! print*,achange(1,j)
     end do
 
@@ -132,20 +132,73 @@ program bbi
     call imgtime_prop(dvecs,en,haml)
 
     erg=REAL(en%erg(1,timesteps+1))
-    ergchange(1)=erg
-    print*, "Starting energy, ", erg
+    ergchange(1,1:norb)=erg
+    write(6,"(a,e25.17e3)") "Starting energy: ", erg
 
     ! call random_ord(norb,mixed)
     ! print*,mixed(1:norb)
- 
+
+    call alloczs(zstore_act,ndet)
+    call alloczs(zstore_temp,ndet)
+    call allocham(haml_act,ndet)
+    zstore_act=zstore
+    zstore_temp=zstore
+    haml_act=haml
+
+
+    allocate(eresult(iters),stat=ierr)
+    if(ierr==0) allocate(aresult(iters),stat=ierr)
+    if (ierr/=0) then
+        write(0,"(a,i0)") "Error in temporary results allocation. ierr had value ", ierr
+        errorflag=1
+        return
+    end if
+    
+
+    aresult(1:iters)=0.0
+    eresult(1:iters)=0.0
+    ! zstore(2)%alive(1)=0.5
+    ! zstore(2)%dead(1)=0.8660254038
+
+
+    
+   ! !$omp do ordered
     do l=1, passes
+        write(6,"(a,i0)") "Starting Pass ", l
+        !$omp parallel shared(zstore_temp,zstore,haml,elect,l,avalchange,ergchange,iters) &
+        !$omp private(zstore_act,haml_act,eresult,aresult)
+        !$omp do 
         do j=1, norb
-            call compare(zstore,erg,elect,haml,ergchange,achange,j,iters,l-1)
-            write(6,"(a,i0,a,i0)") "Orbital ",j, " completed on pass ",l
+            zstore_act=zstore
+            haml_act=haml
+            ! !$omp critical
+            ! write(6,"(a,i0)") "Orbital ",j
+            ! !$omp end critical
+            call compare(zstore_act,erg,elect,haml_act,eresult,aresult,j,iters)
+            !$omp critical
+            zstore_temp(2)%alive(j)=zstore_act(2)%alive(j)
+            zstore_temp(2)%dead(j)=zstore_act(2)%dead(j)
+            ergchange(2+((iters+1)*(l-1)):(1+iters)+((iters+1)*(l-1)),j)=eresult(1:iters)
+            avalchange((2+(iters*(l-1))):((1+iters)+(iters*l-1)),j)=aresult(1:iters)
+            !$omp end critical
         end do
+        !$omp end do
+        !$omp end parallel 
+      
+        aresult(1:iters)=0.0
+        eresult(1:iters)=0.0
+        zstore=zstore_temp
+        call hamgen(haml,zstore,elect,ndet)
+        call imgtime_prop(dvecs,en,haml)
+        zstore_act=zstore
+        haml_act=haml
+        erg=REAL(en%erg(1,timesteps+1))
+        ergchange(((2+iters)+((l-1)*(iters+1))),1:norb)=erg
+        write(6,"(a,e25.17e3)") "New energy: ", erg
     end do
 
-    write(6,"(a)") "run finished"
+
+    write(6,"(a)") "All passes complete"
     do j=1,ndet
         call zombiewriter_c(zstore(j),j)
     end do
@@ -158,8 +211,8 @@ program bbi
             return
         end if
         
-        do j=1, (iters*norb)+1
-            write(200,'(*(e25.17e3 :", "))') ergchange(j)
+        do j=1, ((iters+1)*passes)+1
+            write(200,'(*(e25.17e3 :", "))') ((ergchange(j,k)),k=1,norb)
         end do
     close(200)
 
@@ -170,8 +223,8 @@ program bbi
             return
         end if
         
-        do j=1, iters+1
-            write(201,'(*(e25.17e3 :", "))') ((achange(j,k)),k=1,norb)
+        do j=1, (iters*passes)+1
+            write(201,'(*(e25.17e3 :", "))') ((avalchange(j,k)),k=1,norb)
         end do
     close(201)
 
@@ -179,9 +232,14 @@ program bbi
     call deallocham(haml)
     call dealloczs(zstore)
     call deallocdv(dvecs)
-    
+    call deallocham(haml_act)
+    call dealloczs(zstore_act)
+    call dealloczs(zstore_temp)
+
     deallocate(ergchange,stat=ierr)
-    if(ierr==0)deallocate(achange,stat=ierr)
+    if(ierr==0)deallocate(avalchange,stat=ierr)
+    if(ierr==0)deallocate(aresult,stat=ierr)
+    if(ierr==0)deallocate(eresult,stat=ierr)
     if (ierr/=0) then
         write(0,"(a,i0)") "Error in results deallocation. ierr had value ", ierr
         errorflag=1

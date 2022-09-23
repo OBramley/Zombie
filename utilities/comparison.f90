@@ -7,7 +7,7 @@ module comparison
     use operators
     contains
 
-    subroutine compare(zstore,erg,elect,haml,ergchange,achange,orbital,iters,pass)
+    subroutine compare(zstore,erg,elect,haml,echange,achange,orbital,iters)
         
         implicit none
     
@@ -15,36 +15,42 @@ module comparison
         type(elecintrgl),intent(in)::elect
         type(hamiltonian),intent(inout)::haml
         real(kind=8),intent(inout)::erg
-        integer,intent(in)::orbital,iters,pass
+        integer,intent(in)::orbital,iters
+        real(kind=8),dimension(:),intent(inout)::achange,echange
         type(zombiest), dimension(:),allocatable::zstoretemp
         type(hamiltonian)::hamltemp
         type(dvector), dimension(:), allocatable:: dvecstemp
         type(energy)::entemp
-        real(kind=8),dimension(:,:),intent(inout)::achange
-        real(kind=8),dimension(:),intent(inout)::ergchange
+        
         real(kind=8):: dummy,temperg,ac,ul,ll
         DOUBLE PRECISION, external::ZBQLU01
         integer:: k,max,check,thresh,upper,lower,dummyforce,j,p,abort
         
- 
+        ! !$omp critical
+        ! write(6,"(a,i0)") "Orbital passed ",orbital
+        ! !$omp end critical
+
+    
 
         call alloczs(zstoretemp,ndet)
         call allocham(hamltemp,ndet)
         call allocdv(dvecstemp,1,ndet)
         call allocerg(entemp,1)
-        ac=achange(1,orbital)
 
-        print*,"Starting coeffcients"
-        print*,REAL(zstore(2)%alive(orbital))
-        print*,REAL(zstore(2)%dead(orbital))
-        print*,ac,erg
-        print*,"Improvement loop begun"
+        ac=dasin(REAL(zstore(2)%alive(orbital)))
+        echange(1:iters)=0.0
+        achange(1:iters)=0.0
+        ! print*,"Starting coeffcients"
+        ! print*,REAL(zstore(2)%alive(orbital))
+        ! print*,REAL(zstore(2)%dead(orbital))
+        ! print*,ac,erg
+        ! print*,"Improvement loop begun"
         
-        max=100
-        thresh=max/10
+        max=5000
+        thresh=max/100
         ul=0.5*pirl
         ll=0
-        k=0+(iters*pass)
+        k=0
         check=0
         upper=0
         lower=0
@@ -52,6 +58,9 @@ module comparison
         p=0
         abort=0
         dummy=3*pirl
+        !$omp critical
+        write(6,"(a,i0,a,i0)") "Orbital ",orbital, " Started with max changes ",iters
+        !$omp end critical
 
         do while(k.lt.iters) 
             zstoretemp=zstore
@@ -82,14 +91,16 @@ module comparison
                     !     print*,"j is",j
                     ! end if
                     if(j.eq.100000000)then
-                        print*,"maxed out"
+                        !$omp critical
+                        write(6,"(a,i0,a)") "Orbital ",orbital, " Could not find a new value forcing lower than current"
+                        !$omp end critical
                         abort=abort+1
                         p=max-1
                         exit 
                     end if
                 end do
                 p=p+1
-                ! print*,"p has value",p
+
             end if
             if(dummyforce.eq.2)then
                 ! print*,"dummyforce 2"
@@ -106,7 +117,9 @@ module comparison
                     !     print*,"j is",j
                     ! end if
                     if(j.eq.100000000)then
-                        print*,"maxed out"
+                        !$omp critical
+                        write(6,"(a,i0,a)") "Orbital ",orbital, " Could not find a new value forcing higher than current"
+                        !$omp end critical
                         abort=abort+1
                         p=max-1
                         exit 
@@ -119,22 +132,32 @@ module comparison
             if(p.eq.max)then
                 ! print*,"Still no luck"
                 if(abort.ge.2)then
-                    print*,"final abort"
-                    achange(2+k:,orbital)=achange(1+k,orbital)
-                    ergchange((orbital*iters)-iters+2+k:(orbital*iters)+1)=ergchange((orbital*iters)-iters+1+k)
+                    !$omp critical
+                    write(6,"(a,i0,a)") "Orbital ",orbital, " Exiting. Could not find values higher or lower than current"
+                    !$omp end critical
+                    achange(k+1:iters)=achange(k)
+                    echange(k+1:iters)=echange(k)
                     exit
                 end if 
 
-                if(dummyforce.eq.-1)then 
+                if(dummyforce.eq.-1)then
+                    !$omp critical
+                    write(6,"(a,i0,a)") "Orbital ",orbital, " Forcing did not work so forcing values higher than current" 
+                    !$omp end critical
                     dummyforce=2
                     check=upper
                     p=0
                     abort=abort+1
+                    cycle
                 else if (dummyforce.eq.2)then
+                    !$omp critical
+                    write(6,"(a,i0,a)") "Orbital ",orbital, " Forcing did not work so forcing values lower than current" 
+                    !$omp end critical
                     dummyforce=-1
                     abort=abort+1
                     check=lower
                     p=0
+                    cycle
                 end if  
             end if
            
@@ -157,17 +180,20 @@ module comparison
             ! call hamgen(hamltemp,zstoretemp,elect,ndet)
             call imgtime_prop(dvecstemp,entemp,hamltemp)
             temperg=REAL(entemp%erg(1,timesteps+1))
-       
+            
             if(temperg.lt.erg)then
                 erg=temperg
-                print*,"Accept new energ is",erg
                 k=k+1
+                !$omp critical
+                write(6,"(a,i0,a,i0)") "Orbital ",orbital, " new energy accepted. Total changes = ", k
+                !$omp end critical
                 check=0
                 zstore=zstoretemp
                 ac=dummy
                 haml=hamltemp
-                achange(1+k,orbital)=ac
-                ergchange((orbital*iters)-iters+1+k)=erg
+                achange(k)=ac
+                echange(k)=erg
+                ! print*, ac, erg
                 lower=0
                 upper=0
                 p=0
@@ -177,9 +203,16 @@ module comparison
                 ! print*,"reject"
                 check=check+1
                 if(check.eq.max)then
-                    ! print*,"Clocking out"
-                    achange(2+k:,orbital)=achange(1+k,orbital)
-                    ergchange((orbital*iters)-iters+2+k:(orbital*iters)+1)=ergchange((orbital*iters)-iters+1+k)
+                    !$omp critical
+                    write(6,"(a,i0,a)") "Orbital ",orbital, " Exiting. Reached maximum number of failed changes" 
+                    !$omp end critical
+                    achange(k+1:iters)=achange(k)
+                    echange(k+1:iters)=echange(k)
+                    if(k==0)then
+                        achange(1:iters)=ac
+                        echange(1:iters)=erg
+                    end if
+                
                     exit 
                 end if
                 if(dummy.gt.ac)then
@@ -191,17 +224,23 @@ module comparison
                     if((upper.ge.thresh).or.(lower.ge.thresh))then
                         ! print*,"upper lower = ",upper,lower
                         if((upper.eq.lower).and.(upper.eq.(5*thresh)))then
-                            ! print*,"Equal upper and lower = 5xthresh"
-                            achange(2+k:,orbital)=achange(1+k,orbital)
-                            ergchange((orbital*iters)-iters+2+k:(orbital*iters)+1)=ergchange((orbital*iters)-iters+1+k)
+                            !$omp critical
+                            write(6,"(a,i0,a)") "Orbital ",orbital, "Exiting. Number of failed values equal"
+                            !$omp end critical
+                            achange(k+1:)=achange(k)
+                            echange(k+1:)=echange(k)
                             exit
                         end if
                         if(upper.gt.lower)then
-                            ! print*,"forcing dummy lower"
+                            !$omp critical
+                            write(6,"(a,i0,a)") "Orbital ",orbital, " Forcing values lower than current"
+                            !$omp end critical
                             dummyforce=-1
                             check=0
                         else if(upper.lt.lower)then
-                            ! print*,"forcing dummy higher"
+                            !$omp critical
+                            write(6,"(a,i0,a)") "Orbital ",orbital, " Forcing values higher than current"
+                            !$omp end critical
                             dummyforce=2
                             check=0
                         end if
@@ -214,15 +253,20 @@ module comparison
             entemp%t(1:timesteps+1)=(0.0)
             entemp%erg(1,1:timesteps+1)=(0.0,0.0)
         end do
-        print*,"Final coeffcients"
-        print*,REAL(zstore(2)%alive(orbital))
-        print*,REAL(zstore(2)%dead(orbital))
-        print*,ac,erg
+        ! print*,"Final coeffcients"
+        ! print*,REAL(zstore(2)%alive(orbital))
+        ! print*,REAL(zstore(2)%dead(orbital))
+        ! print*,ac,erg
+        ! print*,echange(1:iters)
+        ! print*,achange(1:iters)
         
         call deallocdv(dvecstemp)
         call deallocerg(entemp)
         call deallocham(hamltemp)
         call dealloczs(zstoretemp)
+        !$omp critical
+        write(6,"(a,i0,a)") "Orbital ",orbital, " Complete"
+        !$omp end critical
         return
     
     end subroutine compare
