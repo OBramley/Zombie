@@ -33,6 +33,8 @@ MODULE zom
                     zstore(j)%alive(k)=cmplx(temp,0.0d0,kind=8)
                     temp=cos(dummy)
                     zstore(j)%dead(K)=cmplx(temp,0.0d0,kind=8)
+                    zstore(j)%diffalive(k)=cos(dummy)
+                    zstore(j)%diffdead(k)=-sin(dummy)
                 end do
             end do
             if(rhf_1=='y') then
@@ -40,6 +42,10 @@ MODULE zom
                 zstore(1)%dead(1:nel)=(0.0d0,0.0d0)
                 zstore(1)%alive((nel+1):norb)=(0.0d0,0.0d0)
                 zstore(1)%dead((nel+1):norb)=(1.0d0,0.0d0)
+                zstore(1)%diffalive(1:nel)=0.0
+                zstore(1)%diffdead(1:nel)=-1.0
+                zstore(1)%diffalive((nel+1):norb)=1.0
+                zstore(1)%diffdead((nel+1):norb)=0.0
             end if 
         else if(imagflg=='y')then
             do j=1,num
@@ -278,6 +284,8 @@ MODULE zom
                 do k=1, norb
                     zstore(j)%alive(k)=cmplx(sin(val(k)),0.0d0,kind=8)
                     zstore(j)%dead(K)=cmplx(cos(val(k)),0.0d0,kind=8)
+                    zstore(j)%diffalive(k)=cos(val(k))
+                    zstore(j)%diffdead(k)=-sin(val(k))
                 end do
             end do
             !$omp end do
@@ -287,6 +295,11 @@ MODULE zom
                 zstore(1)%dead(1:nel)=(0.0d0,0.0d0)
                 zstore(1)%alive((nel+1):norb)=(0.0d0,0.0d0)
                 zstore(1)%dead((nel+1):norb)=(1.0d0,0.0d0)
+                zstore(1)%diffalive(1:nel)=0.0
+                zstore(1)%diffdead(1:nel)=-1.0
+                zstore(1)%diffalive((nel+1):norb)=1.0
+                zstore(1)%diffdead((nel+1):norb)=0.0
+
             end if 
         else if(imagflg=='y')then
             print*,"not yet written"
@@ -330,7 +343,6 @@ MODULE zom
         implicit none
         type(zombiest), dimension(:), intent(inout)::zstore
         integer, intent(in)::num
-        integer::j
 
         if (errorflag .ne. 0) return
         

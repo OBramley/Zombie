@@ -16,10 +16,15 @@ MODULE globvars
         complex(kind=8), dimension(:,:), allocatable::ovrlp
         complex(kind=8), dimension(:,:), allocatable::inv
         complex(kind=8), dimension(:,:), allocatable::kinvh
+
+        real(kind=8), dimension(:,:), allocatable::diff_hjk
+        real(kind=8), dimension(:,:), allocatable::diff_ovrlp
+        real(kind=8), dimension(:,:), allocatable::diff_inv 
     end type hamiltonian
 
     type dvector
         complex(kind=8), dimension(:), allocatable::d
+        real(kind=8), dimension(:),allocatable::d_diff
     end type dvector
 
     type energy

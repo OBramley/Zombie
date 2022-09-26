@@ -101,6 +101,8 @@ MODULE alarrays
 
         allocate(zs%alive(norb),stat=ierr)
         if(ierr==0) allocate(zs%dead(norb), stat=ierr)
+        if(ierr==0) allocate(zs%diffdead(norb), stat=ierr)
+        if(ierr==0) allocate(zs%diffalive(norb), stat=ierr)
         if (ierr/=0) then
             write(0,"(a,i0)") "Error in Zombie state allocation. ierr had value ", ierr
             errorflag=1
@@ -109,6 +111,8 @@ MODULE alarrays
 
         zs%alive(1:norb)=(0.0d0,0.0d0)
         zs%dead(1:norb)=(0.0d0,0.0d0)
+        zs%diffalive(1:norb)=0.0d0
+        zs%diffdead(1:norb)=0.0d0
 
         return
     end subroutine alloczf

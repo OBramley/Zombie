@@ -5,9 +5,9 @@ MODULE operators
 
     contains
 
-
     ! Overlap 
-    complex(kind=8) function overlap(z1,z2)
+    complex(kind=8) function overlap2(z1,z2)
+    ! This method has a lower scaling but is not faster that the brute force method in fortran
         implicit none
 
         type(zombiest),intent(in)::z1,z2
@@ -26,10 +26,37 @@ MODULE operators
             end if
             ovrl=ovrl*tt
         end do
-        overlap=ovrl
+        overlap2=ovrl
         return
 
+    end function overlap2
+
+    complex(kind=8) function overlap(z1,z2)
+    ! This way of calcualting the overlap is faster because fortran is very efficient at matrix multiplicaiton
+    implicit none
+
+    type(zombiest),intent(in)::z1,z2
+    complex(kind=8)::ovrl
+    complex(kind=8)::tt
+    integer:: j
+
+    if (errorflag .ne. 0) return
+
+    overlap=product((conjg(z1%alive)*z2%alive)+((conjg(z1%dead))*z2%dead))
+
+    return
+
     end function overlap
+
+    ! computes the vector of values formed by the derivative of the overlap with respect to each orbital
+    function diff_overlap(z1,z2)
+        implicit none
+        type(zombiest),intent(in)::z1,z2
+        real(kind=8),dimension(norb)::diff_overlap
+
+        diff_overlap=(z1%diffalive*z2%diffalive)+(z1%diffdead*z2%diffdead)
+        return
+    end function diff_overlap
 
     ! Creation operator 
     subroutine cr(zs, iorb)
@@ -43,9 +70,12 @@ MODULE operators
 
         zs%alive(iorb)=zs%dead(iorb)
         zs%dead(iorb)=(0.0d0,0.0d0)
+        zs%diffalive(iorb)=zs%diffdead(iorb)
+        zs%diffdead(iorb)=0.0d0
         
         do j=1, iorb-1
             zs%alive(j)=zs%alive(j)*(-1.0)
+            zs%diffalive(j)=zs%diffalive(j)*(-1.0)
         end do
 
         return
@@ -64,9 +94,12 @@ MODULE operators
 
         zs%dead(iorb)=zs%alive(iorb)
         zs%alive(iorb)=(0.0d0,0.0d0)
+        zs%diffdead(iorb)=zs%diffalive(iorb)
+        zs%diffalive(iorb)=0.0d0
         
         do j=1, iorb-1
             zs%alive(j)=zs%alive(j)*(-1.0)
+            zs%diffalive(j)=zs%diffalive(j)*(-1.0)
         end do
 
         return

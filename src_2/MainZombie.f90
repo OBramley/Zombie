@@ -9,7 +9,7 @@ program MainZombie
     use outputs
     use imgtp
     use clean
-
+    use zom
     
     implicit none
     
