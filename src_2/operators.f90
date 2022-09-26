@@ -36,9 +36,6 @@ MODULE operators
     implicit none
 
     type(zombiest),intent(in)::z1,z2
-    complex(kind=8)::ovrl
-    complex(kind=8)::tt
-    integer:: j
 
     if (errorflag .ne. 0) return
 
@@ -593,7 +590,59 @@ MODULE operators
     end function z_an_z3
         
 
+    function cmplx_inv(mat,size)
 
+        implicit none
+
+        complex(kind=8),dimension(:,:),intent(in)::mat
+        integer, intent(in):: size
+        integer, allocatable,dimension(:)::IPIV1
+        complex(kind=8),allocatable,dimension(:)::WORK1
+        complex(kind=8),dimension(size,size)::cmplx_inv
+        integer:: ierr
+        allocate(IPIV1(size),stat=ierr)
+        if (ierr/=0) then
+            write(0,"(a,i0)") "Error in IPIV vector allocation . ierr had value ", ierr
+            errorflag=1
+            return
+        end if 
+
+        allocate(WORK1(size),stat=ierr)
+        if (ierr/=0) then
+            write(0,"(a,i0)") "Error in WORK vector allocation . ierr had value ", ierr
+            errorflag=1
+            return
+        end if   
+
+        call ZGETRF(size,size,mat,size,IPIV1,ierr)
+        if (ierr/=0) then
+            write(0,"(a,i0)")"Error in ZGETRF",ierr
+        end if
+        call ZGETRI(size,mat,size,IPIV1,WORK1,size,ierr)
+        if (ierr/=0) then
+            write(0,"(a,i0)")"Error in ZGETRF",ierr
+        end if
+
+        deallocate(IPIV1,stat=ierr)
+        if (ierr/=0) then
+            write(0,"(a,i0)") "Error in IPIV vector allocation . ierr had value ", ierr
+            errorflag=1
+            return
+        end if
+
+        deallocate(WORK1,stat=ierr)
+        if (ierr/=0) then
+            write(0,"(a,i0)") "Error in WORK vector allocation . ierr had value ", ierr
+            errorflag=1
+            return
+        end if
+
+        cmplx_inv=mat
+
+        return
+
+
+    end function cmplx_inv
 
 
 

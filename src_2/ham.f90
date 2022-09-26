@@ -5,6 +5,108 @@ MODULE ham
     use operators
 
     contains
+
+    subroutine he_row(ham,zstore,elecs,row,size)
+        
+        implicit none
+        type(hamiltonian), intent(inout)::ham
+        type(zombiest),dimension(:),intent(in)::zstore
+        type(elecintrgl),intent(in)::elecs
+        integer,intent(in)::row,size
+        type(zombiest),allocatable, dimension(:,:)::z1jk
+        type(zombiest),allocatable, dimension(:)::z2l
+        type(zombiest)::zomt
+        integer::j,k,l,m,jspin,ierr
+        complex(kind=8)::h1etot, h2etot,temp
+        real(kind=8),dimension(norb)::h1etot_diff,h2etot_diff,diff_temp 
+
+        if (errorflag .ne. 0) return
+        ierr = 0
+
+        call alloczf(zomt)
+        call alloczs2d(z1jk,norb)
+        call alloczs(z2l,norb)
+        h1etot=(0.0,0.0)
+        h2etot=(0.0,0.0)
+        temp=(0.0,0.0)
+        ! z1=zstore(row)
+        !$omp parallel shared(z1jk,zstore) private(j,k,l,jspin,zomt,z2l,h1etot,h2etot,h1etot_diff,h2etot_diff)
+        !$omp do
+        do j=1, norb
+            do k=1, norb
+                zomt=zstore(row)
+                call an(zomt,j)
+                call an(zomt,k)
+                z1jk(j,k)=zomt
+            end do
+        end do
+        !$omp end do
+        !$omp do
+        do m=row,size
+            h1etot=(0.0,0.0)
+            h2etot=(0.0,0.0)
+            temp=(0.0,0.0)
+            
+            do l=1, norb
+                zomt=zstore(m)
+                call an(zomt,l)
+                z2l(l)=zomt
+            end do
+            
+            do j=1, norb
+                do k=1, norb
+                    temp=(0.0,0.0)
+                    zomt=z2l(j)
+                    call cr(zomt,k)
+                    temp = (overlap(zstore(row),zomt)*elecs%h1ei(j,k))
+                    h1etot=h1etot+temp
+                end do
+            end do
+  
+            do j=1, norb
+                if(zstore(row)%alive(j)==(0.0,0.0))then
+                    CYCLE
+                end if
+
+                if(modulo(j,2)==0)then
+                    jspin=2
+                else
+                    jspin=1
+                end if
+
+                do k=1, norb
+                    if(iszero(z1jk(j,k)).eqv..true.)then
+                        CYCLE
+                    end if
+                    do l=jspin, norb, 2
+                        if(zstore(m)%alive(l)==(0.0,0.0))then
+                            CYCLE
+                        end if
+                        h2etot = h2etot + z_an_z3(z1jk(j,k),z2l(l),elecs%h2ei(j,k,l,:))
+                    end do
+                end do
+            end do
+            h2etot=h2etot*0.5
+            
+
+            ham%ovrlp(row,m)=overlap(zstore(row),zstore(m))
+            ham%ovrlp(m,row)= ham%ovrlp(row,m)
+            ham%hjk(row,m)=h1etot+h2etot+(elecs%hnuc*ham%ovrlp(row,m))
+            ham%hjk(m,row)=ham%hjk(row,m)
+        end do
+        !$omp end do
+        !$omp end parallel
+
+        call dealloczs2d(z1jk)
+        call dealloczs(z2l)
+        call dealloczf(zomt)
+
+        return
+
+    end subroutine he_row
+
+
+        
     
     ! Function to generate 1 electron hamiltonian element part
     complex(kind=8) function h1et(z1,z2,elecs)
@@ -26,8 +128,9 @@ MODULE ham
         !$omp do reduction(+:tot) 
         do j=1, norb
             do k=1, norb
-                zomt%alive(1:norb)=z2%alive(1:norb)
-                zomt%dead(1:norb)=z2%dead(1:norb)
+                zomt=z2
+                ! zomt%alive(1:norb)=z2%alive(1:norb)
+                ! zomt%dead(1:norb)=z2%dead(1:norb)
                 call an(zomt,j)
                 call cr(zomt,k)
                 tot = tot + (overlap(z1,zomt)*elecs%h1ei(j,k))
@@ -38,6 +141,7 @@ MODULE ham
         call dealloczf(zomt)
         
         h1et=tot
+        ! print*,h1et
         return
 
     end function h1et
@@ -68,24 +172,28 @@ MODULE ham
         !$omp do
         do j=1, norb
             do k=1, norb
-                zomt%alive(1:norb)=z1%alive(1:norb)
-                zomt%dead(1:norb)=z1%dead(1:norb)
+                zomt=z1
+                ! zomt%alive(1:norb)=z1%alive(1:norb)
+                ! zomt%dead(1:norb)=z1%dead(1:norb)
                 call an(zomt,j)
                 call an(zomt,k)
-                do l=1, norb
-                    z1jk(j,k)%alive(l)=zomt%alive(l)
-                    z1jk(j,k)%dead(l)=zomt%dead(l)
-                end do
+                z1jk(j,k)=zomt
+                ! do l=1, norb
+                !     z1jk(j,k)%alive(l)=zomt%alive(l)
+                !     z1jk(j,k)%dead(l)=zomt%dead(l)
+                ! end do
             end do
         end do
         !$omp end do NOWAIT
         !$omp do
         do l=1, norb
-            zomt%alive(1:norb)=z2%alive(1:norb)
-            zomt%dead(1:norb)=z2%dead(1:norb)
+            zomt=z2
+            ! zomt%alive(1:norb)=z2%alive(1:norb)
+            ! zomt%dead(1:norb)=z2%dead(1:norb)
             call an(zomt,l)
-            z2l(l)%alive(1:norb)=zomt%alive(1:norb)
-            z2l(l)%dead(1:norb)=zomt%dead(1:norb)
+            z2l(l)=zomt
+            ! z2l(l)%alive(1:norb)=zomt%alive(1:norb)
+            ! z2l(l)%dead(1:norb)=zomt%dead(1:norb)
         end do
         !$omp end do
         
@@ -121,6 +229,7 @@ MODULE ham
         call dealloczf(zomt)
 
         h2et=tot*0.5
+        ! print*,h2et
         return
 
     end function h2et
@@ -152,24 +261,15 @@ MODULE ham
         type(elecintrgl),intent(in)::elecs
         integer, allocatable,dimension(:)::IPIV1
         complex(kind=8),allocatable,dimension(:)::WORK1
-        integer:: j,k,size,ierr
+        integer:: j,size,ierr
 
-        !$omp parallel shared(ham,zstore) private(j,k)
-        !$omp do 
+
         do j=1, size
-            do k=j,size
-                ham%ovrlp(j,k)=overlap(zstore(j),zstore(k))
-                ham%ovrlp(k,j)= ham%ovrlp(j,k)
-                ham%inv(j,k)=ham%ovrlp(j,k)
-                ham%inv(k,j)=ham%ovrlp(j,k)
-                ham%hjk(j,k)= hamval(zstore(j),zstore(k),elecs,ham%ovrlp(j,k))
-                ham%hjk(k,j)=ham%hjk(j,k)
-            end do
+                call he_row(ham,zstore,elecs,j,size)
             write(6,"(a,i0,a)") "Hamiltonian row ",j, " completed"
         end do
-        !$omp end do
-        !$omp end parallel
-        
+
+        ham%inv=ham%ovrlp
         allocate(IPIV1(size),stat=ierr)
         if (ierr/=0) then
             write(0,"(a,i0)") "Error in IPIV vector allocation . ierr had value ", ierr
