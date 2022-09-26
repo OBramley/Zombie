@@ -6,6 +6,8 @@ MODULE globvars
     type zombiest
         complex(kind=8), dimension(:), allocatable::alive
         complex(kind=8), dimension(:), allocatable::dead
+        real(kind=8),dimension(:),allocatable::diffalive
+        real(kind=8),dimension(:),allocatable::diffdead
     end type zombiest
 
     ! Type defining the Hamiltonian matrix and the overlap matrix
