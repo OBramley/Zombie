@@ -19,6 +19,7 @@ program MainZombie
     type(energy):: en, en_clean
     type(elecintrgl)::elect
     type(hamiltonian)::haml, clean_haml
+    type(grad)::gradients
     integer:: j, istat, clean_ndet,ierr
     complex(kind=8)::clean_norm, clean_erg
     character(LEN=4)::stateno
@@ -57,6 +58,10 @@ program MainZombie
     call ZBQLINI(randseed,0)   ! Generates the seed value using the UCL random library
     write(6,"(a)") "Random seed set"
     
+    GDflg='y'
+    if(GDflg=="y")then
+        call allocgrad(gradients,ndet,norb)
+    end if
     ! print*,cleanflg
     ! generate 1 and 2 electron integrals
     if((cleanflg=="y").or.(cleanflg=="f").or.((hamgflg=='y')))then
@@ -84,7 +89,7 @@ program MainZombie
     
     if(propflg=="y")then
         ! generate Hamiltonian and overlap
-        call allocham(haml,ndet)
+        call allocham(haml,ndet,norb)
 
         if(hamgflg=='y')then
             call hamgen(haml,zstore,elect,ndet)
@@ -104,11 +109,11 @@ program MainZombie
 
         ! Imaginary time propagation
         if(gramflg.eq."n")then
-            call allocdv(dvecs,1,ndet)
+            call allocdv(dvecs,1,ndet,norb)
             call allocerg(en,1)
         else if(gramflg.eq."y")then
             ! write(0,"(a,i0)") "Gram  ", ierr
-            call allocdv(dvecs,1+gramnum,ndet)
+            call allocdv(dvecs,1+gramnum,ndet,norb)
             call allocerg(en,1+gramnum)
         else
             write(0,"(a,i0)") "Error in gramflg setting. This should have been caught ", ierr
@@ -151,12 +156,12 @@ program MainZombie
     else if((propflg=="n"))then
         if((cleanflg=="y").or.(cleanflg=="f"))then
             if(gramflg.eq."n")then
-                call allocdv(dvecs,1,ndet)
+                call allocdv(dvecs,1,ndet,norb)
                 call dvec_read(dvecs(1)%d,ndet,0,'dvec_0000.csv')
                 write(6,"(a)") "d-vector read in"
             else if(gramflg.eq."y")then
                 ! write(0,"(a,i0)") "Gram  ", ierr
-                call allocdv(dvecs,1+gramnum,ndet)
+                call allocdv(dvecs,1+gramnum,ndet,norb)
                 do j=1, 1+gramnum
                     write(stateno,"(i4.4)")j
                     call dvec_read(dvecs(j)%d,ndet,j,"dvec_"//trim(stateno)//".csv")
@@ -184,7 +189,7 @@ program MainZombie
             write(6,"(a)") "Cleaning hamiltonian read in"
         end if
 
-        call allocdv(dvec_clean,1,clean_ndet)
+        call allocdv(dvec_clean,1,clean_ndet,1)
         call cleaner(zstore,cstore,dvecs(1),dvec_clean(1),clean_ndet,clean_norm)
         ! clean_erg=dot_product(dvec_clean(1)%d,matmul(clean_haml%hjk,dvec_clean(1)%d))
         clean_erg=ergcalc(clean_haml%hjk,dvec_clean(1)%d)
@@ -207,6 +212,9 @@ program MainZombie
         end if
     end if
 
+    if(GDflg=="y")then
+        call deallocgrad(gradients)
+    end if
 
     write(6,"(a)") "All values deallocated"
 

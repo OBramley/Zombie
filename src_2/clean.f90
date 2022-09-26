@@ -176,7 +176,7 @@ MODULE clean
         end do
        
         
-        call allocham(cleanham,clean_ndet)
+        call allocham(cleanham,clean_ndet,1)
         call hamgen(cleanham,cstore,elecs,clean_ndet)
         call matrixwriter(cleanham%hjk,clean_ndet,"data/clean_ham.csv")
         
@@ -254,7 +254,7 @@ MODULE clean
         clean_ndet = lines_clean(clean_ndet)        
         call alloczs(cstore,clean_ndet)
         call read_zombie_c(cstore,clean_ndet)
-        call allocham(cleanham,clean_ndet)
+        call allocham(cleanham,clean_ndet,1)
         call read_ham_c(cleanham,clean_ndet)
 
     

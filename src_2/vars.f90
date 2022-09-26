@@ -17,14 +17,14 @@ MODULE globvars
         complex(kind=8), dimension(:,:), allocatable::inv
         complex(kind=8), dimension(:,:), allocatable::kinvh
 
-        real(kind=8), dimension(:,:), allocatable::diff_hjk
-        real(kind=8), dimension(:,:), allocatable::diff_ovrlp
-        real(kind=8), dimension(:,:), allocatable::diff_inv 
+        real(kind=8), dimension(:,:,:), allocatable::diff_hjk
+        real(kind=8), dimension(:,:,:), allocatable::diff_ovrlp
+        real(kind=8), dimension(:,:,:), allocatable::diff_inv 
     end type hamiltonian
 
     type dvector
         complex(kind=8), dimension(:), allocatable::d
-        real(kind=8), dimension(:),allocatable::d_diff
+        real(kind=8), dimension(:,:),allocatable::d_diff
     end type dvector
 
     type energy
@@ -39,6 +39,9 @@ MODULE globvars
         real(kind=8) :: hnuc
     end type elecintrgl
 
+    type grad 
+        real(kind=8),dimension(:,:), allocatable::vars
+    end type grad
 
     integer::ndet       ! Number of Zombie states
     integer::norb       ! Number of spin orbitals
@@ -48,6 +51,7 @@ MODULE globvars
     integer::timesteps  ! Number of time steps
     character(LEN=2)::zst !Type of zombie state to be generated
 
+    character(LEN=1)::GDflg      ! Flag to decide if to use Gradient descent 
     character(LEN=1)::zomgflg    ! Flag to generate zombie states or not
     character(LEN=1)::hamgflg    ! Flag to generate Hamiltonian or not
     character(LEN=1)::propflg    ! Flag to propagate in imaginary time or not

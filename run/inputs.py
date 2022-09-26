@@ -19,7 +19,7 @@ run={
     'language':'fortran',
 
     # What is the name of the run
-    'runfolder':'normalisation_d',
+    'runfolder':'nobreak',
 
     # Amount of time to request on HPC 
     'runtime': "24:00:00",

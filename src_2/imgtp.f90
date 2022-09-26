@@ -127,7 +127,7 @@ MODULE imgtp
         if (errorflag .ne. 0) return
     
         states = gramnum+1
-        call allocdv(dvecs_copy,states,ndet)
+        call allocdv(dvecs_copy,states,ndet,norb)
         
         do j=1, states
             dvecs_copy(j)%d(:)=dvecs(j)%d(:)

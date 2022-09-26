@@ -140,8 +140,6 @@ MODULE alarrays
         end if
 
 
-        
-
         return 
 
     end subroutine dealloczs
@@ -222,21 +220,19 @@ MODULE alarrays
             errorflag=1
             return
         end if
-  
 
-        
 
         return 
 
     end subroutine dealloczs2d
 
-    subroutine allocham(ham,size)
+    subroutine allocham(ham,size,diff_size)
 
         implicit none
 
         type(hamiltonian),intent(inout)::ham 
-
-        integer::ierr,size
+        integer,intent(in)::size,diff_size
+        integer::ierr
 
         if (errorflag .ne. 0) return
 
@@ -251,13 +247,27 @@ MODULE alarrays
             errorflag=1
             return
         end if
-
         ham%hjk(1:size,1:size)=(0.0d0,0.0d0)
         ham%ovrlp(1:size,1:size)=(0.0d0,0.0d0)
         ham%inv(1:size,1:size)=(0.0d0,0.0d0)
+        if(GDflg.eq.'y')then  
+            if(ierr==0) allocate(ham%diff_hjk(size,size,diff_size), stat=ierr)
+            if(ierr==0) allocate(ham%diff_ovrlp(size,size,diff_size), stat=ierr)
+            if(ierr==0) allocate(ham%diff_inv(size,size,diff_size), stat=ierr)
+            if (ierr/=0) then
+                write(0,"(a,i0)") "Error in GD Hamiltonian allocation. ierr had value ", ierr
+                errorflag=1
+                return
+            end if
+            ham%diff_hjk(1:size,1:size,1:diff_size)=0.0
+            ham%diff_ovrlp(1:size,1:size,1:diff_size)=0.0
+            ham%diff_inv(1:size,1:size,1:diff_size)=0.0
+        end if
 
-
+        return
     end subroutine allocham
+
+
 
     subroutine deallocham(ham)
 
@@ -281,14 +291,27 @@ MODULE alarrays
             return
         end if
 
+        if(GDflg.eq.'y')then  
+            if(ierr==0) deallocate(ham%diff_hjk, stat=ierr)
+            if(ierr==0) deallocate(ham%diff_ovrlp, stat=ierr)
+            if(ierr==0) deallocate(ham%diff_inv, stat=ierr)
+            if (ierr/=0) then
+                write(0,"(a,i0)") "Error in GD Hamiltonian deallocation. ierr had value ", ierr
+                errorflag=1
+                return
+            end if
+        end if
+
+        return
+
     end subroutine deallocham
 
-    subroutine allocdv(dvecs,x,length)
+    subroutine allocdv(dvecs,x,length,diff_length)
 
         implicit none
 
         type(dvector),intent(inout),allocatable,dimension(:)::dvecs
-        integer, intent(in)::x,length
+        integer, intent(in)::x,length,diff_length
         integer::j,ierr
 
         if (errorflag .ne. 0) return
@@ -312,6 +335,19 @@ MODULE alarrays
             end if
             dvecs(j)%d(1:length)=(0.0,0.0)
         end do
+
+        if(GDflg.eq.'y')then
+            allocate(dvecs(1)%d_diff(length,diff_length))
+            if (ierr/=0) then
+                write(0,"(a,i0)") "Error in d_diff allocation. ierr had value ", ierr
+                errorflag=1
+                return
+            end if
+            dvecs(1)%d_diff(1:length,1:diff_length)=0.0
+        end if
+     
+        return
+
     end subroutine allocdv
 
     subroutine deallocdv(dvecs)
@@ -333,6 +369,14 @@ MODULE alarrays
             end if
         end do
 
+        if(GDflg.eq.'y')then
+            deallocate(dvecs(1)%d_diff)
+            if (ierr/=0) then
+                write(0,"(a,i0)") "Error in d_diff deallocation. ierr had value ", ierr
+                errorflag=1
+                return
+            end if
+        end if
     
         deallocate(dvecs,stat=ierr)
         if (ierr/=0) then
@@ -340,8 +384,10 @@ MODULE alarrays
             errorflag=1
             return
         end if
-  
 
+        
+        
+        return
        
     end subroutine deallocdv
 
@@ -393,6 +439,54 @@ MODULE alarrays
         return
      
     end subroutine deallocerg
+
+    subroutine allocgrad(gradients,num,length)
+
+        implicit none
+
+        type(grad),intent(inout)::gradients
+        integer, intent(in)::num,length
+        integer::ierr
+
+        if (errorflag .ne. 0) return
+
+        ierr=0
+
+        
+        allocate(gradients%vars(num,length),stat=ierr)
+        if (ierr/=0) then
+            write(0,"(a,i0)") "Error in gradient matrix allocation. ierr had value ", ierr
+            errorflag=1
+            return
+        end if
+
+        return
+     
+    end subroutine allocgrad
+   
+    subroutine deallocgrad(gradients)
+
+        implicit none
+
+        type(grad),intent(inout)::gradients
+        integer::ierr
+
+        if (errorflag .ne. 0) return
+
+        ierr=0
+
+        
+        deallocate(gradients%vars,stat=ierr)
+        if (ierr/=0) then
+            write(0,"(a,i0)") "Error in gradient matrix deallocation. ierr had value ", ierr
+            errorflag=1
+            return
+        end if
+
+        return
+     
+    end subroutine deallocgrad
+   
 
 
 
