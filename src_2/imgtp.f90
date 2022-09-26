@@ -41,6 +41,8 @@ MODULE imgtp
         end if
 
         db=beta/timesteps
+
+        dvecs(1)%d=(dvecs(1)%d)/sqrt(zabs(dot_product((dvecs(1)%d),matmul(ham%ovrlp,(dvecs(1)%d)))))
     
         do j=1,timesteps+1
             en%t(j)=db*(j-1)
