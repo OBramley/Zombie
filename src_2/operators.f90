@@ -46,12 +46,12 @@ MODULE operators
     end function overlap
 
     ! computes the vector of values formed by the derivative of the overlap with respect to each orbital
-    function diff_overlap(z1,z2)
+    function diff_overlap(z1_alive,z1_dead,z2_alive,z2_dead)
         implicit none
-        type(zombiest),intent(in)::z1,z2
+        real(kind=8),dimension(:)::z1_alive,z1_dead,z2_alive,z2_dead
         real(kind=8),dimension(norb)::diff_overlap
 
-        diff_overlap=(z1%diffalive*z2%diffalive)+(z1%diffdead*z2%diffdead)
+        diff_overlap=(z1_alive*z2_alive)+(z1_dead*z2_dead)
         return
     end function diff_overlap
 
@@ -640,7 +640,6 @@ MODULE operators
         cmplx_inv=mat
 
         return
-
 
     end function cmplx_inv
 

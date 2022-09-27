@@ -6,6 +6,8 @@ MODULE ham
 
     contains
 
+    ! Subroutine to calcualte Hamiltonian elements combines 1st and 2nd electron integral calcualations so remove double 
+    ! calcualiton of certain results. This minimises the (slow) applicaiton of the creation and annihilaiton operators
     subroutine he_row(ham,zstore,elecs,row,size)
         
         implicit none
@@ -16,9 +18,9 @@ MODULE ham
         type(zombiest),allocatable, dimension(:,:)::z1jk
         type(zombiest),allocatable, dimension(:)::z2l
         type(zombiest)::zomt
-        integer::j,k,l,m,jspin,ierr
+        integer::j,k,l,m,p,jspin,ierr
         complex(kind=8)::h1etot, h2etot,temp
-        real(kind=8),dimension(norb)::h1etot_diff,h2etot_diff,diff_temp 
+        real(kind=8),dimension(norb)::h1etot_diff,h2etot_diff,diff_temp, diff_temp2 
 
         if (errorflag .ne. 0) return
         ierr = 0
@@ -29,7 +31,7 @@ MODULE ham
         h1etot=(0.0,0.0)
         h2etot=(0.0,0.0)
         temp=(0.0,0.0)
-        ! z1=zstore(row)
+        h1etot_diff(1:norb)=0.0
         !$omp parallel shared(z1jk,zstore) private(j,k,l,jspin,zomt,z2l,h1etot,h2etot,h1etot_diff,h2etot_diff)
         !$omp do
         do j=1, norb
@@ -60,9 +62,18 @@ MODULE ham
                     call cr(zomt,k)
                     temp = (overlap(zstore(row),zomt)*elecs%h1ei(j,k))
                     h1etot=h1etot+temp
+                    if(GDflg.eq.'y')then
+                        if(m.eq.row)then
+                            diff_temp = diff_overlap(zstore(row)%diffalive,zstore(row)%diffdead,zomt%diffalive,zomt%diffdead)
+                            h1etot_diff= h1etot_diff + (diff_temp*elecs%h1ei(j,k))
+                        else 
+                            diff_temp = diff_overlap(zstore(row)%diffalive,zstore(row)%diffdead,REAL(zomt%alive),REAL(zomt%dead))
+                            h1etot_diff= h1etot_diff + (diff_temp*elecs%h1ei(j,k))
+                        end if
+                    end if
                 end do
             end do
-  
+            
             do j=1, norb
                 if(zstore(row)%alive(j)==(0.0,0.0))then
                     CYCLE
@@ -87,12 +98,50 @@ MODULE ham
                 end do
             end do
             h2etot=h2etot*0.5
+            if(GDflg.eq.'y')then
+                do j=1, norb
+                    do k=1, norb
+                        do l=1, norb 
+                            zomt=z2l(l)
+                            if(m.eq.row)then
+                                diff_temp = diff_overlap(z1jk(j,k)%diffalive,&
+                                    z1jk(j,k)%diffdead,zomt%diffalive,zomt%diffdead)
+                            else 
+                                diff_temp = diff_overlap(z1jk(j,k)%diffalive,&
+                                    z1jk(j,k)%diffdead,REAL(zomt%alive),REAL(zomt%dead))
+                            end if
+                            do p=1, norb
+                                diff_temp2=diff_temp
+                                if(m.eq.row)then
+                                    diff_temp2(p)=z1jk(j,k)%diffdead(p)*zomt%diffalive(p)
+                                    h2etot_diff= h2etot_diff + (diff_temp2*elecs%h2ei(j,k,l,p))
+                                else 
+                                    diff_temp2(p) = z1jk(j,k)%diffdead(p)*REAL(zomt%alive(p))
+                                    h2etot_diff= h2etot_diff + (diff_temp2*elecs%h2ei(j,k,l,p))
+                                end if
+                            end do
+                        end do
+                    end do
+                end do
+            end if
             
-
             ham%ovrlp(row,m)=overlap(zstore(row),zstore(m))
             ham%ovrlp(m,row)= ham%ovrlp(row,m)
             ham%hjk(row,m)=h1etot+h2etot+(elecs%hnuc*ham%ovrlp(row,m))
             ham%hjk(m,row)=ham%hjk(row,m)
+            if(GDflg.eq.'y') then
+            if(m.eq.row)then
+                ham%diff_ovrlp(row,m,:) = diff_overlap(zstore(row)%diffalive,zstore(row)%diffdead,&
+                                        zstore(m)%diffalive,zstore(m)%diffdead)
+            else 
+                ham%diff_ovrlp(row,m,:) = diff_overlap(zstore(row)%diffalive,zstore(row)%diffdead,&
+                                        REAL(zstore(m)%alive),REAL(zstore(m)%dead))    
+            end if
+            ham%diff_ovrlp(m,row,:)=ham%diff_ovrlp(row,m,:)
+         
+            ham%diff_hjk(row,m,:)=h1etot_diff+h2etot_diff
+            ham%diff_hjk(m,row,:)=ham%diff_hjk(row,m,:)
+            end if
         end do
         !$omp end do
         !$omp end parallel
@@ -129,8 +178,7 @@ MODULE ham
         do j=1, norb
             do k=1, norb
                 zomt=z2
-                ! zomt%alive(1:norb)=z2%alive(1:norb)
-                ! zomt%dead(1:norb)=z2%dead(1:norb)
+        
                 call an(zomt,j)
                 call cr(zomt,k)
                 tot = tot + (overlap(z1,zomt)*elecs%h1ei(j,k))
@@ -173,27 +221,20 @@ MODULE ham
         do j=1, norb
             do k=1, norb
                 zomt=z1
-                ! zomt%alive(1:norb)=z1%alive(1:norb)
-                ! zomt%dead(1:norb)=z1%dead(1:norb)
                 call an(zomt,j)
                 call an(zomt,k)
                 z1jk(j,k)=zomt
-                ! do l=1, norb
-                !     z1jk(j,k)%alive(l)=zomt%alive(l)
-                !     z1jk(j,k)%dead(l)=zomt%dead(l)
-                ! end do
+        
             end do
         end do
         !$omp end do NOWAIT
         !$omp do
         do l=1, norb
             zomt=z2
-            ! zomt%alive(1:norb)=z2%alive(1:norb)
-            ! zomt%dead(1:norb)=z2%dead(1:norb)
+    
             call an(zomt,l)
             z2l(l)=zomt
-            ! z2l(l)%alive(1:norb)=zomt%alive(1:norb)
-            ! z2l(l)%dead(1:norb)=zomt%dead(1:norb)
+            
         end do
         !$omp end do
         
@@ -236,6 +277,7 @@ MODULE ham
 
     
     ! Function to generate indivdual hamiltonian elements
+    ! Old version not currently used but useful to keep
     complex(kind=8) function hamval(z1,z2,elecs,ovrl)
 
         implicit none
