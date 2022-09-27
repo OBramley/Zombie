@@ -29,6 +29,7 @@ MODULE imgtp
                         dvecs(j)%d(k)=cmplx(p,0.0,kind=8)
                     end do
                 end if
+                
             else if(imagflg=='y') then
                 dvecs(j)%d(j)=(1.0,1.0)
              end if
@@ -38,11 +39,13 @@ MODULE imgtp
         if(gramflg.eq."y")then
             states=gramnum+1
             call gs(dvecs,ham%ovrlp)
-        end if
+        else
+            call d_norm(dvecs(1),ham%ovrlp)
+        end if 
 
         db=beta/timesteps
-
-        dvecs(1)%d=(dvecs(1)%d)/sqrt(zabs(dot_product((dvecs(1)%d),matmul(ham%ovrlp,(dvecs(1)%d)))))
+       
+        ! dvecs(1)%d=(dvecs(1)%d)/sqrt(zabs(dot_product((dvecs(1)%d),matmul(ham%ovrlp,(dvecs(1)%d)))))
     
         do j=1,timesteps+1
             en%t(j)=db*(j-1)
@@ -50,12 +53,14 @@ MODULE imgtp
             !$omp do
             do k=1,states
                 en%erg(k,j)=ergcalc(ham%hjk,dvecs(k)%d)
-                call timestep(ham%kinvh,ham%ovrlp,dvecs(k),db)
+                call timestep(ham%kinvh,dvecs(k),db)
             end do
             !$omp end do
             !$omp end parallel
             if(gramflg.eq."y")then
                 call gs(dvecs,ham%ovrlp)
+            else
+                call d_norm(dvecs(1),ham%ovrlp)
             end if
         end do
 
@@ -85,16 +90,35 @@ MODULE imgtp
 
     end function ergcalc
 
+    subroutine d_norm(dvec,kover)
+
+        implicit none
+        type(dvector),intent(inout)::dvec
+        complex(kind=8),intent(in),dimension(:,:)::kover
+        real(kind=8)::norm
+
+        !$omp parallel 
+        !$omp workshare
+        norm=zabs(dot_product((dvec%d),matmul(kover,(dvec%d))))
+        norm=1/sqrt(norm)
+        dvec%d=norm*dvec%d
+        !$omp end workshare
+        !$omp end parallel
+    
+    
+    end subroutine d_norm
+
+
     ! Takes one timestep
-    subroutine timestep(kinvh,kover,dvecs,db)
+    subroutine timestep(kinvh,dvecs,db) 
 
         implicit none
 
         type(dvector),intent(inout)::dvecs
-        complex(kind=8),intent(in),dimension(:,:)::kinvh,kover
+        complex(kind=8),intent(in),dimension(:,:)::kinvh!,kover
         real,intent(in)::db
-        complex(kind=8),dimension(ndet)::ddot,temp
-        real(kind=8)::norm
+        complex(kind=8),dimension(ndet)::ddot
+   
 
         if (errorflag .ne. 0) return
 
@@ -102,10 +126,6 @@ MODULE imgtp
         !$omp workshare
         ddot= -matmul((kinvh),(dvecs%d))
         dvecs%d=dvecs%d+(db*ddot)
-        temp=matmul(kover,(dvecs%d))
-        norm=zabs(dot_product((dvecs%d),temp))
-        norm=1/sqrt(norm)
-        dvecs%d=norm*dvecs%d
         !$omp end workshare
         !$omp end parallel
 
@@ -120,7 +140,7 @@ MODULE imgtp
         type(dvector), intent(inout),dimension(:)::dvecs
         complex(kind=8),intent(in),dimension(:,:)::kover
         type(dvector), allocatable,dimension(:)::dvecs_copy
-        complex(kind=8)::numer,den,norm
+        complex(kind=8)::numer,den
         complex(kind=8),dimension(ndet)::temp
         integer::states,j,k
 
@@ -143,11 +163,12 @@ MODULE imgtp
         end do
 
         do j=1,states
-            temp=matmul(kover,dvecs_copy(j)%d)
-            norm = dot_product(dvecs_copy(j)%d,temp)
-            norm = 1/sqrt(norm)
-            dvecs_copy(j)%d = dvecs_copy(j)%d*norm
-            dvecs(j)%d(:)=dvecs_copy(j)%d(:)
+            call d_norm(dvecs_copy(j),kover)
+            ! temp=matmul(kover,dvecs_copy(j)%d)
+            ! norm = dot_product(dvecs_copy(j)%d,temp)
+            ! norm = 1/sqrt(norm)
+            ! dvecs_copy(j)%d = dvecs_copy(j)%d*norm
+            dvecs(j)%d=dvecs_copy(j)%d
         end do
 
         call deallocdv(dvecs_copy)
