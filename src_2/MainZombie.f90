@@ -10,7 +10,8 @@ program MainZombie
     use imgtp
     use clean
     use zom
-    
+    use grad_d
+
     implicit none
     
   
@@ -134,6 +135,8 @@ program MainZombie
             end do
         end if
         
+        call final_grad(dvecs(1),haml,gradients)
+        
         call deallocerg(en)
         write(6,"(a)") "Energy deallocated"
         call deallocham(haml)
@@ -188,7 +191,7 @@ program MainZombie
             call clean_read(cstore,clean_haml,clean_ndet)
             write(6,"(a)") "Cleaning hamiltonian read in"
         end if
-
+        
         call allocdv(dvec_clean,1,clean_ndet,1)
         call cleaner(zstore,cstore,dvecs(1),dvec_clean(1),clean_ndet,clean_norm)
         ! clean_erg=dot_product(dvec_clean(1)%d,matmul(clean_haml%hjk,dvec_clean(1)%d))

@@ -5,6 +5,7 @@ Module grad_d
 
     contains
 
+    ! Calcualtes the derivative when the d vector is normalised
     subroutine d_normalise_diff(dvec,ham,step)
 
         implicit none
@@ -40,12 +41,13 @@ Module grad_d
 
     end subroutine d_normalise_diff
 
+    ! Level 2 subroutine calcualting the compondent of the derivaive found at normalisation 
+    ! caused by differentiating the overlap matrix for each j norm^2 *sum_{m} d(overlap_{jm})/(overlap_jm)
     subroutine  diff_of_norm(dvec,ham,diff_norm)
 
         implicit none
         type(dvector),intent(inout)::dvec
         type(hamiltonian),intent(in)::ham
-        ! integer, intent(in)::step
         real(kind=8),dimension(ndet,norb),intent(inout)::diff_norm
         real(kind=8),dimension(norb)::temp
         integer::j,k
@@ -67,6 +69,67 @@ Module grad_d
         return
         
     end subroutine
+
+    subroutine timestep_diff(dvec,ham,db)
+
+        implicit none
+
+        type(dvector),intent(inout)::dvec
+        type(hamiltonian),intent(in)::ham
+        real, intent(in):: db
+        real(kind=8),dimension(norb)::temp1,temp2,temp3
+        real(kind=8),dimension(ndet)::invd, hamd
+        integer::j,k
+
+        if (errorflag .ne. 0) return
+
+        invd=REAL(matmul(ham%inv,dvec%d))
+        hamd=REAL(matmul(ham%hjk,dvec%d))
+
+        do j=1, ndet
+            temp1=0.0
+            temp2=0.0
+            temp3=0.0
+            do k=1, ndet
+                temp1=temp1 + (real(dvec%d(k))*ham%diff_inv(j,k,:))
+                temp2=temp2 + (invd(k)*ham%diff_hjk(j,k,:))
+                temp3=temp3 + REAL(ham%kinvh(k,j))*dvec%d_diff(j,:)
+            end do
+            dvec%d_diff(j,:)=dvec%d_diff(j,:)-(temp1+temp2+temp3)*db
+        end do
+
+
+        return
+
+
+    end subroutine timestep_diff
+
+    subroutine final_grad(dvec,ham,grad_fin)
+
+        implicit none
+
+        type(dvector),intent(in)::dvec
+        type(hamiltonian),intent(in)::ham
+        type(grad),intent(inout)::grad_fin
+        integer::j,k
+        real(kind=8),dimension(norb)::temp1,temp2,temp3
+        
+
+        do j=1, ndet
+            temp1(:)=0
+            temp2(:)=0
+            temp3(:)=0
+            do k=1, ndet
+                temp1=temp1+(REAL(dvec%d(j))*REAL(dvec%d(k))*ham%diff_hjk(j,k,:))
+                temp2=temp2+(REAL(dvec%d(j))*REAL(ham%hjk(j,k))*dvec%d_diff(k,:))
+                temp3=temp3+(REAL(dvec%d(k))*REAL(ham%hjk(j,k))*dvec%d_diff(j,:))
+            end do
+            grad_fin%vars(j,:)=temp1+temp2+temp3
+        end do
+        print*,"here"
+        print*,grad_fin%vars(1,1:norb)
+
+    end subroutine final_grad
 
 
 END MODUle grad_d

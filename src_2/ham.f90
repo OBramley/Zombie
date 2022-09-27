@@ -123,6 +123,7 @@ MODULE ham
                         end do
                     end do
                 end do
+                h2etot_diff=h2etot_diff*0.5
             end if
             
             ham%ovrlp(row,m)=overlap(zstore(row),zstore(m))
@@ -130,17 +131,18 @@ MODULE ham
             ham%hjk(row,m)=h1etot+h2etot+(elecs%hnuc*ham%ovrlp(row,m))
             ham%hjk(m,row)=ham%hjk(row,m)
             if(GDflg.eq.'y') then
-            if(m.eq.row)then
-                ham%diff_ovrlp(row,m,:) = diff_overlap(zstore(row)%diffalive,zstore(row)%diffdead,&
-                                        zstore(m)%diffalive,zstore(m)%diffdead)
-            else 
-                ham%diff_ovrlp(row,m,:) = diff_overlap(zstore(row)%diffalive,zstore(row)%diffdead,&
-                                        REAL(zstore(m)%alive),REAL(zstore(m)%dead))    
-            end if
-            ham%diff_ovrlp(m,row,:)=ham%diff_ovrlp(row,m,:)
-         
-            ham%diff_hjk(row,m,:)=h1etot_diff+h2etot_diff
-            ham%diff_hjk(m,row,:)=ham%diff_hjk(row,m,:)
+                if(m.eq.row)then
+                    ham%diff_ovrlp(row,m,:) = diff_overlap(zstore(row)%diffalive,zstore(row)%diffdead,&
+                                            zstore(m)%diffalive,zstore(m)%diffdead)
+                else 
+                    ham%diff_ovrlp(row,m,:) = diff_overlap(zstore(row)%diffalive,zstore(row)%diffdead,&
+                                            REAL(zstore(m)%alive),REAL(zstore(m)%dead))    
+                end if
+                ham%diff_ovrlp(m,row,:)=ham%diff_ovrlp(row,m,:)
+            
+                ham%diff_hjk(row,m,:)=h1etot_diff+h2etot_diff
+                ham%diff_hjk(m,row,:)=ham%diff_hjk(row,m,:)
+
             end if
         end do
         !$omp end do
@@ -303,7 +305,11 @@ MODULE ham
         type(elecintrgl),intent(in)::elecs
         integer, allocatable,dimension(:)::IPIV1
         complex(kind=8),allocatable,dimension(:)::WORK1
-        integer:: j,size,ierr
+        real(kind=8),dimension(norb)::temp
+        real(kind=8),dimension(ndet,ndet,norb)::temp2
+        real(kind=8),dimension(ndet)::vector
+        real(kind=8),dimension(ndet,norb)::matrix
+        integer:: j,k,l,size,ierr
 
 
         do j=1, size
@@ -354,6 +360,32 @@ MODULE ham
         ham%kinvh=matmul(ham%inv,ham%hjk)
         !$omp end workshare
         !$omp end parallel
+
+        if(GDflg.eq.'y')then 
+            do j=1, ndet
+                ! do l=1, ndet
+                    do k=1, ndet
+                        if(j.eq.k)then
+                            vector=REAL(ham%ovrlp(k,1:ndet))
+                            matrix=ham%diff_ovrlp(1:ndet,j,1:norb)
+                            temp2(k,j,:)=matmul(vector,matrix)
+                        else
+                            do l=1, ndet
+                                temp2(l,k,:)=REAL(ham%ovrlp(l,j))*ham%diff_ovrlp(j,k,:)
+                            end do   
+                        end if
+                    end do
+                do k=1, ndet
+                    temp(1:norb)=0
+                    matrix=temp2(k,:,:)
+                    do l=1, ndet
+                        vector=REAL(ham%kinvh(1:ndet,l))
+                        temp=temp+matmul(vector,matrix)
+                    end do
+                    ham%diff_inv(j,k,:)=temp
+                end do
+            end do
+        end if
         return
         
     end subroutine hamgen

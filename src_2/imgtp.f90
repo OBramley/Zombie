@@ -53,7 +53,7 @@ MODULE imgtp
             !$omp do
             do k=1,states
                 en%erg(k,j)=ergcalc(ham%hjk,dvecs(k)%d)
-                call timestep(ham%kinvh,dvecs(k),db)
+                call timestep(ham,dvecs(k),db)
             end do
             !$omp end do
             !$omp end parallel
@@ -117,22 +117,24 @@ MODULE imgtp
 
 
     ! Takes one timestep
-    subroutine timestep(kinvh,dvecs,db) 
+    subroutine timestep(ham,dvec,db) 
 
         implicit none
 
-        type(dvector),intent(inout)::dvecs
-        complex(kind=8),intent(in),dimension(:,:)::kinvh
+        type(dvector),intent(inout)::dvec
+        type(hamiltonian),intent(in)::ham
         real,intent(in)::db
         complex(kind=8),dimension(ndet)::ddot
    
 
         if (errorflag .ne. 0) return
-
+        if(GDflg.eq.'y')then
+            call timestep_diff(dvec,ham,db)
+        end if
         !$omp parallel 
         !$omp workshare
-        ddot= -matmul((kinvh),(dvecs%d))
-        dvecs%d=dvecs%d+(db*ddot)
+        ddot= -matmul((ham%kinvh),(dvec%d))
+        dvec%d=dvec%d+(db*ddot)
         !$omp end workshare
         !$omp end parallel
 
