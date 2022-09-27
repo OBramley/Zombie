@@ -25,6 +25,7 @@ MODULE globvars
     type dvector
         complex(kind=8), dimension(:), allocatable::d
         real(kind=8), dimension(:,:),allocatable::d_diff
+        real(kind=8):: norm
     end type dvector
 
     type energy

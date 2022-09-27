@@ -1,7 +1,7 @@
 MODULE imgtp
     use globvars
     use alarrays
-
+    use grad_d
     contains
 
     ! Routine for imaginary time propagation
@@ -38,9 +38,9 @@ MODULE imgtp
         states=1
         if(gramflg.eq."y")then
             states=gramnum+1
-            call gs(dvecs,ham%ovrlp)
+            call gs(dvecs,ham)
         else
-            call d_norm(dvecs(1),ham%ovrlp)
+            call d_norm(dvecs(1),ham,0)
         end if 
 
         db=beta/timesteps
@@ -58,9 +58,9 @@ MODULE imgtp
             !$omp end do
             !$omp end parallel
             if(gramflg.eq."y")then
-                call gs(dvecs,ham%ovrlp)
+                call gs(dvecs,ham)
             else
-                call d_norm(dvecs(1),ham%ovrlp)
+                call d_norm(dvecs(1),ham,1)
             end if
         end do
 
@@ -90,21 +90,28 @@ MODULE imgtp
 
     end function ergcalc
 
-    subroutine d_norm(dvec,kover)
+    subroutine d_norm(dvec,ham,step)
 
         implicit none
         type(dvector),intent(inout)::dvec
-        complex(kind=8),intent(in),dimension(:,:)::kover
+        type(hamiltonian),intent(in)::ham
+        integer,intent(in)::step
         real(kind=8)::norm
 
         !$omp parallel 
         !$omp workshare
-        norm=zabs(dot_product((dvec%d),matmul(kover,(dvec%d))))
-        norm=1/sqrt(norm)
-        dvec%d=norm*dvec%d
+        norm=zabs(dot_product((dvec%d),matmul(ham%ovrlp,(dvec%d))))
+        norm=sqrt(norm)
         !$omp end workshare
         !$omp end parallel
-    
+
+        dvec%norm=norm
+        if(GDflg.eq.'y')then
+            call d_normalise_diff(dvec,ham,step)
+        end if
+        
+        dvec%d=dvec%d/norm
+        return
     
     end subroutine d_norm
 
@@ -115,7 +122,7 @@ MODULE imgtp
         implicit none
 
         type(dvector),intent(inout)::dvecs
-        complex(kind=8),intent(in),dimension(:,:)::kinvh!,kover
+        complex(kind=8),intent(in),dimension(:,:)::kinvh
         real,intent(in)::db
         complex(kind=8),dimension(ndet)::ddot
    
@@ -134,11 +141,11 @@ MODULE imgtp
     end subroutine timestep
 
     !Gram-Schmidt orthogonalisation 
-    subroutine gs(dvecs,kover)
+    subroutine gs(dvecs,ham)
 
         implicit none
         type(dvector), intent(inout),dimension(:)::dvecs
-        complex(kind=8),intent(in),dimension(:,:)::kover
+        type(hamiltonian),intent(in)::ham
         type(dvector), allocatable,dimension(:)::dvecs_copy
         complex(kind=8)::numer,den
         complex(kind=8),dimension(ndet)::temp
@@ -155,7 +162,7 @@ MODULE imgtp
 
         do j=2,states
             do k=1, j-1
-                temp=matmul(kover,dvecs_copy(k)%d)
+                temp=matmul(ham%ovrlp,dvecs_copy(k)%d)
                 numer = dot_product(dvecs_copy(j)%d,temp)
                 den  = dot_product(dvecs_copy(k)%d,temp)
                 dvecs_copy(j)%d = dvecs_copy(j)%d - (dvecs_copy(k)%d*(numer/den))
@@ -163,7 +170,7 @@ MODULE imgtp
         end do
 
         do j=1,states
-            call d_norm(dvecs_copy(j),kover)
+            call d_norm(dvecs_copy(j),ham,1)
             ! temp=matmul(kover,dvecs_copy(j)%d)
             ! norm = dot_product(dvecs_copy(j)%d,temp)
             ! norm = 1/sqrt(norm)

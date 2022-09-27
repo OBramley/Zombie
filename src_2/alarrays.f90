@@ -334,6 +334,7 @@ MODULE alarrays
                 return
             end if
             dvecs(j)%d(1:length)=(0.0,0.0)
+            dvecs(j)%norm = 0.0d0
         end do
 
         if(GDflg.eq.'y')then
@@ -345,6 +346,8 @@ MODULE alarrays
             end if
             dvecs(1)%d_diff(1:length,1:diff_length)=0.0
         end if
+
+        
      
         return
 
