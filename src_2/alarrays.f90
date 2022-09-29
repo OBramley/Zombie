@@ -338,13 +338,13 @@ MODULE alarrays
         end do
 
         if(GDflg.eq.'y')then
-            allocate(dvecs(1)%d_diff(length,diff_length))
+            allocate(dvecs(1)%d_diff(length,length,diff_length))
             if (ierr/=0) then
                 write(0,"(a,i0)") "Error in d_diff allocation. ierr had value ", ierr
                 errorflag=1
                 return
             end if
-            dvecs(1)%d_diff(1:length,1:diff_length)=0.0
+            dvecs(1)%d_diff(1:length,1:length,1:diff_length)=0.0
         end if
 
         
