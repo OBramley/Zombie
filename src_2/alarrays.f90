@@ -251,16 +251,20 @@ MODULE alarrays
         ham%ovrlp(1:size,1:size)=(0.0d0,0.0d0)
         ham%inv(1:size,1:size)=(0.0d0,0.0d0)
         if(GDflg.eq.'y')then  
-            if(ierr==0) allocate(ham%diff_hjk(size,size,diff_size), stat=ierr)
-            if(ierr==0) allocate(ham%diff_ovrlp(size,size,diff_size), stat=ierr)
+            if(ierr==0) allocate(ham%diff_hjk_bra(size,size,diff_size), stat=ierr)
+            if(ierr==0) allocate(ham%diff_hjk_ket(size,size,diff_size), stat=ierr)
+            if(ierr==0) allocate(ham%diff_ovrlp_bra(size,size,diff_size), stat=ierr)
+            if(ierr==0) allocate(ham%diff_ovrlp_ket(size,size,diff_size), stat=ierr)
             if(ierr==0) allocate(ham%diff_inv(size,size,diff_size), stat=ierr)
             if (ierr/=0) then
                 write(0,"(a,i0)") "Error in GD Hamiltonian allocation. ierr had value ", ierr
                 errorflag=1
                 return
             end if
-            ham%diff_hjk(1:size,1:size,1:diff_size)=0.0
-            ham%diff_ovrlp(1:size,1:size,1:diff_size)=0.0
+            ham%diff_hjk_bra(1:size,1:size,1:diff_size)=0.0
+            ham%diff_hjk_ket(1:size,1:size,1:diff_size)=0.0
+            ham%diff_ovrlp_bra(1:size,1:size,1:diff_size)=0.0
+            ham%diff_ovrlp_ket(1:size,1:size,1:diff_size)=0.0
             ham%diff_inv(1:size,1:size,1:diff_size)=0.0
         end if
 
@@ -292,8 +296,10 @@ MODULE alarrays
         end if
 
         if(GDflg.eq.'y')then  
-            if(ierr==0) deallocate(ham%diff_hjk, stat=ierr)
-            if(ierr==0) deallocate(ham%diff_ovrlp, stat=ierr)
+            if(ierr==0) deallocate(ham%diff_hjk_bra, stat=ierr)
+            if(ierr==0) deallocate(ham%diff_hjk_ket, stat=ierr)
+            if(ierr==0) deallocate(ham%diff_ovrlp_bra, stat=ierr)
+            if(ierr==0) deallocate(ham%diff_ovrlp_ket, stat=ierr)
             if(ierr==0) deallocate(ham%diff_inv, stat=ierr)
             if (ierr/=0) then
                 write(0,"(a,i0)") "Error in GD Hamiltonian deallocation. ierr had value ", ierr

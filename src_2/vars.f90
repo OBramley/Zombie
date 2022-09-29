@@ -17,8 +17,10 @@ MODULE globvars
         complex(kind=8), dimension(:,:), allocatable::inv
         complex(kind=8), dimension(:,:), allocatable::kinvh
 
-        real(kind=8), dimension(:,:,:), allocatable::diff_hjk
-        real(kind=8), dimension(:,:,:), allocatable::diff_ovrlp
+        real(kind=8), dimension(:,:,:), allocatable::diff_hjk_bra
+        real(kind=8), dimension(:,:,:), allocatable::diff_hjk_ket
+        real(kind=8), dimension(:,:,:), allocatable::diff_ovrlp_bra
+        real(kind=8), dimension(:,:,:), allocatable::diff_ovrlp_ket
         real(kind=8), dimension(:,:,:), allocatable::diff_inv 
     end type hamiltonian
 

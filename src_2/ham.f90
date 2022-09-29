@@ -20,7 +20,8 @@ MODULE ham
         type(zombiest)::zomt
         integer::j,k,l,m,p,jspin,ierr
         complex(kind=8)::h1etot, h2etot,temp
-        real(kind=8),dimension(norb)::h1etot_diff,h2etot_diff,diff_temp, diff_temp2 
+        real(kind=8),dimension(norb)::h1etot_diff_bra,h2etot_diff_bra,diff_temp_bra, diff_temp2_bra
+        real(kind=8),dimension(norb)::h1etot_diff_ket,h2etot_diff_ket,diff_temp_ket, diff_temp2_ket  
 
         if (errorflag .ne. 0) return
         ierr = 0
@@ -31,7 +32,12 @@ MODULE ham
         h1etot=(0.0,0.0)
         h2etot=(0.0,0.0)
         temp=(0.0,0.0)
-        h1etot_diff(1:norb)=0.0
+        h1etot_diff_bra(1:norb)=0.0
+        h1etot_diff_ket(1:norb)=0.0
+        diff_temp_bra(1:norb)=0.0
+        diff_temp_ket(1:norb)=0.0
+        diff_temp2_bra(1:norb)=0.0
+        diff_temp2_ket(1:norb)=0.0
         !$omp parallel shared(z1jk,zstore) private(j,k,l,jspin,zomt,z2l,h1etot,h2etot,h1etot_diff,h2etot_diff)
         !$omp do
         do j=1, norb
@@ -48,6 +54,12 @@ MODULE ham
             h1etot=(0.0,0.0)
             h2etot=(0.0,0.0)
             temp=(0.0,0.0)
+            h1etot_diff_bra(1:norb)=0.0
+            h1etot_diff_ket(1:norb)=0.0
+            diff_temp_bra(1:norb)=0.0
+            diff_temp_ket(1:norb)=0.0
+            diff_temp2_bra(1:norb)=0.0
+            diff_temp2_ket(1:norb)=0.0
             
             do l=1, norb
                 zomt=zstore(m)
@@ -64,11 +76,17 @@ MODULE ham
                     h1etot=h1etot+temp
                     if(GDflg.eq.'y')then
                         if(m.eq.row)then
-                            diff_temp = diff_overlap(zstore(row)%diffalive,zstore(row)%diffdead,zomt%diffalive,zomt%diffdead)
-                            h1etot_diff= h1etot_diff + (diff_temp*elecs%h1ei(j,k))
+                            diff_temp_bra = diff_overlap(zstore(row)%diffalive,zstore(row)%diffdead,zomt%diffalive,zomt%diffdead)
+                            diff_temp_ket = diff_temp_bra
+                            h1etot_diff_bra= h1etot_diff_bra + (diff_temp_bra*elecs%h1ei(j,k))
+                            h1etot_diff_ket= h1etot_diff_ket + (diff_temp_ket*elecs%h1ei(j,k))
                         else 
-                            diff_temp = diff_overlap(zstore(row)%diffalive,zstore(row)%diffdead,REAL(zomt%alive),REAL(zomt%dead))
-                            h1etot_diff= h1etot_diff + (diff_temp*elecs%h1ei(j,k))
+                            diff_temp_bra = diff_overlap(zstore(row)%diffalive,zstore(row)%diffdead,&
+                                                            REAL(zomt%alive),REAL(zomt%dead))
+                            diff_temp_ket = diff_overlap(REAL(zstore(row)%alive),REAL(zstore(row)%dead),&
+                                                                zomt%diffalive,zomt%diffdead)
+                            h1etot_diff_bra= h1etot_diff_bra + (diff_temp_bra*elecs%h1ei(j,k))
+                            h1etot_diff_ket= h1etot_diff_ket + (diff_temp_ket*elecs%h1ei(j,k))
                         end if
                     end if
                 end do
@@ -104,26 +122,35 @@ MODULE ham
                         do l=1, norb 
                             zomt=z2l(l)
                             if(m.eq.row)then
-                                diff_temp = diff_overlap(z1jk(j,k)%diffalive,&
+                                diff_temp_bra = diff_overlap(z1jk(j,k)%diffalive,&
                                     z1jk(j,k)%diffdead,zomt%diffalive,zomt%diffdead)
+                                diff_temp_ket=diff_temp_bra
                             else 
-                                diff_temp = diff_overlap(z1jk(j,k)%diffalive,&
+                                diff_temp_bra = diff_overlap(z1jk(j,k)%diffalive,&
                                     z1jk(j,k)%diffdead,REAL(zomt%alive),REAL(zomt%dead))
+                                diff_temp_ket = diff_overlap(REAL(z1jk(j,k)%alive),&
+                                    REAL(z1jk(j,k)%dead),zomt%diffalive,zomt%diffdead)
                             end if
                             do p=1, norb
-                                diff_temp2=diff_temp
+                                diff_temp2_bra=diff_temp_bra
+                                diff_temp2_ket=diff_temp_ket
                                 if(m.eq.row)then
-                                    diff_temp2(p)=z1jk(j,k)%diffdead(p)*zomt%diffalive(p)
-                                    h2etot_diff= h2etot_diff + (diff_temp2*elecs%h2ei(j,k,l,p))
+                                    diff_temp2_bra(p)=z1jk(j,k)%diffdead(p)*zomt%diffalive(p)
+                                    diff_temp2_ket(p)=z1jk(j,k)%diffdead(p)*zomt%diffalive(p)
+                                    h2etot_diff_bra= h2etot_diff_bra + (diff_temp2_bra*elecs%h2ei(j,k,l,p))
+                                    h2etot_diff_ket= h2etot_diff_ket + (diff_temp2_bra*elecs%h2ei(j,k,l,p))
                                 else 
-                                    diff_temp2(p) = z1jk(j,k)%diffdead(p)*REAL(zomt%alive(p))
-                                    h2etot_diff= h2etot_diff + (diff_temp2*elecs%h2ei(j,k,l,p))
+                                    diff_temp2_bra(p) = z1jk(j,k)%diffdead(p)*REAL(zomt%alive(p))
+                                    h2etot_diff_bra= h2etot_diff_bra + (diff_temp2_bra*elecs%h2ei(j,k,l,p))
+                                    diff_temp2_ket(p) = REAL(z1jk(j,k)%dead(p))*zomt%diffalive(p)
+                                    h2etot_diff_ket= h2etot_diff_ket + (diff_temp2_ket*elecs%h2ei(j,k,l,p))
                                 end if
                             end do
                         end do
                     end do
                 end do
-                h2etot_diff=h2etot_diff*0.5
+                h2etot_diff_bra=h2etot_diff_bra*0.5
+                h2etot_diff_ket=h2etot_diff_ket*0.5
             end if
             
             ham%ovrlp(row,m)=overlap(zstore(row),zstore(m))
@@ -132,16 +159,22 @@ MODULE ham
             ham%hjk(m,row)=ham%hjk(row,m)
             if(GDflg.eq.'y') then
                 if(m.eq.row)then
-                    ham%diff_ovrlp(row,m,:) = diff_overlap(zstore(row)%diffalive,zstore(row)%diffdead,&
+                    ham%diff_ovrlp_bra(row,m,:) = diff_overlap(zstore(row)%diffalive,zstore(row)%diffdead,&
                                             zstore(m)%diffalive,zstore(m)%diffdead)
+                    ham%diff_ovrlp_ket(row,m,:) =ham%diff_ovrlp_bra(row,m,:)
                 else 
-                    ham%diff_ovrlp(row,m,:) = diff_overlap(zstore(row)%diffalive,zstore(row)%diffdead,&
-                                            REAL(zstore(m)%alive),REAL(zstore(m)%dead))    
+                    ham%diff_ovrlp_bra(row,m,:) = diff_overlap(zstore(row)%diffalive,zstore(row)%diffdead,&
+                                            REAL(zstore(m)%alive),REAL(zstore(m)%dead))
+                    ham%diff_ovrlp_ket(row,m,:) = diff_overlap(REAL(zstore(row)%alive),REAL(zstore(row)%dead),&
+                                            zstore(m)%diffalive,zstore(m)%diffdead)     
                 end if
-                ham%diff_ovrlp(m,row,:)=ham%diff_ovrlp(row,m,:)
+                ham%diff_ovrlp_bra(m,row,:)=ham%diff_ovrlp_bra(row,m,:)
+                ham%diff_ovrlp_ket(m,row,:)=ham%diff_ovrlp_ket(row,m,:)
             
-                ham%diff_hjk(row,m,:)=h1etot_diff+h2etot_diff
-                ham%diff_hjk(m,row,:)=ham%diff_hjk(row,m,:)
+                ham%diff_hjk_bra(row,m,:)=h1etot_diff_bra+h2etot_diff_bra
+                ham%diff_hjk_bra(m,row,:)=ham%diff_hjk_bra(row,m,:)
+                ham%diff_hjk_ket(row,m,:)=h1etot_diff_ket+h2etot_diff_ket
+                ham%diff_hjk_ket(m,row,:)=ham%diff_hjk_ket(row,m,:)
 
             end if
         end do
