@@ -18,15 +18,24 @@ MODULE globvars
         complex(kind=8), dimension(:,:), allocatable::kinvh
 
         real(kind=8), dimension(:,:,:), allocatable::diff_hjk_bra
+        !diff_hjk_bra(j,k,m) d/dj <zs_j|H|zs_k>, m specifies the coefficent with in Zs_j
         real(kind=8), dimension(:,:,:), allocatable::diff_hjk_ket
+        !diff_hjk_ket(j,k,m) d/dk <zs_j|H|zs_k>, m specifies the coefficent with in Zs_k
         real(kind=8), dimension(:,:,:), allocatable::diff_ovrlp_bra
+        !diff_ovrlp_bra(j,k,m) d/dj <zs_j|zs_k>, m specifies the coefficent with in Zs_j
         real(kind=8), dimension(:,:,:), allocatable::diff_ovrlp_ket
-        real(kind=8), dimension(:,:,:), allocatable::diff_inv 
+        !diff_ovrlp_ket(j,k,m) d/dk <zs_j|zs_k>, m specifies the coefficent with in Zs_k
+        real(kind=8), dimension(:,:,:,:), allocatable::diff_invh
+        !The inverse of the overlap matrix multiplied by the hamiltonian
+        !diff_invh(j,l,k,m) j specifies the dependnce on zs_j, l,k give the 
     end type hamiltonian
 
     type dvector
         complex(kind=8), dimension(:), allocatable::d
         real(kind=8), dimension(:,:,:),allocatable::d_diff
+        ! d_diff(k,j,m) strucutred k specifies the position in the vector d
+        ! j specifies the dependence on ZS j. m corresponds to the coeffcient m within 
+        ! zombie stae j
         real(kind=8):: norm
     end type dvector
 

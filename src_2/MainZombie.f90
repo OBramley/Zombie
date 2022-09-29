@@ -21,7 +21,7 @@ program MainZombie
     type(elecintrgl)::elect
     type(hamiltonian)::haml, clean_haml
     type(grad)::gradients
-    integer:: j, istat, clean_ndet,ierr
+    integer:: j,k, istat, clean_ndet,ierr,gd_loop
     complex(kind=8)::clean_norm, clean_erg
     character(LEN=4)::stateno
     character(LEN=100) :: CWD
@@ -62,6 +62,7 @@ program MainZombie
     GDflg='y'
     if(GDflg=="y")then
         call allocgrad(gradients,ndet,norb)
+        gd_loop=2
     end if
     ! print*,cleanflg
     ! generate 1 and 2 electron integrals
@@ -92,10 +93,11 @@ program MainZombie
         ! generate Hamiltonian and overlap
         call allocham(haml,ndet,norb)
 
+        do k=1, gd_loop
         if(hamgflg=='y')then
             call hamgen(haml,zstore,elect,ndet)
-            call matrixwriter(haml%hjk,ndet,"data/ham.csv")
-            call matrixwriter(haml%ovrlp,ndet,"data/ovlp.csv")
+            ! call matrixwriter(haml%hjk,ndet,"data/ham.csv")
+            ! call matrixwriter(haml%ovrlp,ndet,"data/ovlp.csv")
             ! call matrixwriter(haml%inv,ndet,"inv.csv")
             ! call matrixwriter(haml%kinvh,ndet,"kinvh.csv")
             write(6,"(a)") "Hamiltonian successfully generated"
@@ -124,24 +126,28 @@ program MainZombie
         write(6,"(a)") "Imaginary time propagation started"
         call imgtime_prop(dvecs,en,haml)
         write(6,"(a)") "Imaginary time propagation finished"
-
+        print*,en%erg(1,timesteps+1)
         if(gramflg.eq."n")then
-            call dvec_writer(dvecs(1)%d,ndet,0)
-            call energywriter(en%t,en%erg(1,:),"energy.csv",0)
+            write(stateno,"(i4.4)")k
+            ! call dvec_writer(dvecs(1)%d,ndet,0)
+            call energywriter(en%t,en%erg(1,:),"energy_"//trim(stateno)//".csv",0)
         else if(gramflg.eq."y")then
             do j=1, 1+gramnum
                 call dvec_writer(dvecs(j)%d,ndet,j)
                 call energywriter(en%t,en%erg(j,:),"energy_state_"//trim(stateno)//".csv",j)
             end do
         end if
-        
+       
         call final_grad(dvecs(1),haml,gradients)
-        
+        call zombie_alter(zstore,gradients,0.2d0)
+        call deallocdv(dvecs)
         call deallocerg(en)
+        end do
+        ! call deallocerg(en)
         write(6,"(a)") "Energy deallocated"
         call deallocham(haml)
         write(6,"(a)") "Hamiltonian deallocated"
-        
+        stop
         if(cleanflg=="n")then
             call deallocdv(dvecs)
             write(6,"(a)") "d-vector deallocated"

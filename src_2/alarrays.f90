@@ -255,7 +255,7 @@ MODULE alarrays
             if(ierr==0) allocate(ham%diff_hjk_ket(size,size,diff_size), stat=ierr)
             if(ierr==0) allocate(ham%diff_ovrlp_bra(size,size,diff_size), stat=ierr)
             if(ierr==0) allocate(ham%diff_ovrlp_ket(size,size,diff_size), stat=ierr)
-            if(ierr==0) allocate(ham%diff_inv(size,size,diff_size), stat=ierr)
+            if(ierr==0) allocate(ham%diff_invh(size,size,size,diff_size), stat=ierr)
             if (ierr/=0) then
                 write(0,"(a,i0)") "Error in GD Hamiltonian allocation. ierr had value ", ierr
                 errorflag=1
@@ -265,7 +265,7 @@ MODULE alarrays
             ham%diff_hjk_ket(1:size,1:size,1:diff_size)=0.0
             ham%diff_ovrlp_bra(1:size,1:size,1:diff_size)=0.0
             ham%diff_ovrlp_ket(1:size,1:size,1:diff_size)=0.0
-            ham%diff_inv(1:size,1:size,1:diff_size)=0.0
+            ham%diff_invh(1:size,1:size,1:size,1:diff_size)=0.0
         end if
 
         return
@@ -300,7 +300,7 @@ MODULE alarrays
             if(ierr==0) deallocate(ham%diff_hjk_ket, stat=ierr)
             if(ierr==0) deallocate(ham%diff_ovrlp_bra, stat=ierr)
             if(ierr==0) deallocate(ham%diff_ovrlp_ket, stat=ierr)
-            if(ierr==0) deallocate(ham%diff_inv, stat=ierr)
+            if(ierr==0) deallocate(ham%diff_invh, stat=ierr)
             if (ierr/=0) then
                 write(0,"(a,i0)") "Error in GD Hamiltonian deallocation. ierr had value ", ierr
                 errorflag=1

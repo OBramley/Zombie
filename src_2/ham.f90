@@ -38,7 +38,9 @@ MODULE ham
         diff_temp_ket(1:norb)=0.0
         diff_temp2_bra(1:norb)=0.0
         diff_temp2_ket(1:norb)=0.0
-        !$omp parallel shared(z1jk,zstore) private(j,k,l,jspin,zomt,z2l,h1etot,h2etot,h1etot_diff,h2etot_diff)
+        !$omp parallel private(j,k,l,jspin,zomt,z2l,h1etot,h2etot,temp, &
+        !$omp   h1etot_diff_bra,h2etot_diff_bra, diff_temp_bra, diff_temp2_bra, &
+        !$omp   h1etot_diff_ket,h2etot_diff_ket,diff_temp_ket, diff_temp2_ket) shared(z1jk,zstore,row,size)
         !$omp do
         do j=1, norb
             do k=1, norb
@@ -49,6 +51,7 @@ MODULE ham
             end do
         end do
         !$omp end do
+        !$omp flush(z1jk)
         !$omp do
         do m=row,size
             h1etot=(0.0,0.0)
@@ -338,9 +341,9 @@ MODULE ham
         type(elecintrgl),intent(in)::elecs
         integer, allocatable,dimension(:)::IPIV1
         complex(kind=8),allocatable,dimension(:)::WORK1
-        real(kind=8),dimension(norb)::temp
+        ! real(kind=8),dimension(norb)::temp
         real(kind=8),dimension(ndet,ndet,norb)::temp2
-        real(kind=8),dimension(ndet)::vector
+        ! real(kind=8),dimension(ndet)::vector
         real(kind=8),dimension(ndet,norb)::matrix
         integer:: j,k,l,size,ierr
 
@@ -394,28 +397,33 @@ MODULE ham
         !$omp end workshare
         !$omp end parallel
 
-        if(GDflg.eq.'y')then 
+        ! To find the derrivative of the inverse of a matrix we use the identity
+        ! d(omega^-1)= omega^-1d(omega)omega^-1. Since this result is only used when being multiplied with the hamiltonian 
+        ! we will actually calculate omega^-1d(omega)omega^-1*H 
+        ! j decides which zombie state we differentiate by
+        ! omega^-1d(omega) is first calcualted. creating an ndet*ndet*norb array 
+        ! this tensor is then 
+        if(GDflg.eq.'y')then
+            print*,ham%diff_hjk_bra(1,2,:) 
             do j=1, ndet
                 ! do l=1, ndet
                     do k=1, ndet
                         if(j.eq.k)then
-                            vector=REAL(ham%ovrlp(k,1:ndet))
-                            matrix=ham%diff_ovrlp(1:ndet,j,1:norb)
-                            temp2(k,j,:)=matmul(vector,matrix)
+                            ! vector=REAL(ham%ovrlp(k,:))
+                            ! matrix=ham%diff_ovrlp_ket(:,j,:)
+                            temp2(k,j,:)=matmul(REAL(ham%ovrlp(k,:)),ham%diff_ovrlp_ket(:,j,:))   !matmul(vector,matrix)
                         else
                             do l=1, ndet
-                                temp2(l,k,:)=REAL(ham%ovrlp(l,j))*ham%diff_ovrlp(j,k,:)
+                                temp2(l,k,:)=REAL(ham%ovrlp(l,j))*ham%diff_ovrlp_bra(j,k,:)
                             end do   
                         end if
                     end do
                 do k=1, ndet
-                    temp(1:norb)=0
+                    ! temp(1:norb)=0
                     matrix=temp2(k,:,:)
                     do l=1, ndet
-                        vector=REAL(ham%kinvh(1:ndet,l))
-                        temp=temp+matmul(vector,matrix)
+                        ham%diff_invh(j,k,l,:)=matmul(matrix,REAL(ham%kinvh(1:ndet,l)))
                     end do
-                    ham%diff_inv(j,k,:)=temp
                 end do
             end do
         end if
