@@ -140,6 +140,7 @@ program MainZombie
        
         call final_grad(dvecs(1),haml,gradients)
         call zombie_alter(zstore,gradients,0.2d0)
+        call zombiewriter_c(zstore(2),2)
         call deallocdv(dvecs)
         call deallocerg(en)
         end do

@@ -46,12 +46,63 @@ MODULE operators
     end function overlap
 
     ! computes the vector of values formed by the derivative of the overlap with respect to each orbital
-    function diff_overlap(z1_alive,z1_dead,z2_alive,z2_dead)
+    function diff_overlap(z1,z2,dtype)
+    
         implicit none
-        real(kind=8),dimension(:)::z1_alive,z1_dead,z2_alive,z2_dead
-        real(kind=8),dimension(norb)::diff_overlap
 
-        diff_overlap=(z1_alive*z2_alive)+(z1_dead*z2_dead)
+        type(zombiest),intent(in)::z1,z2
+        real(kind=8),dimension(2,norb)::diff_overlap
+        integer,intent(in)::dtype
+        type(zombiest)::z1_bra,z2_ket
+        integer::j
+        real(kind=8),dimension(norb)::temp
+        
+        !$omp parallel private(z1_bra,z2_ket,temp) shared(z1,z2,dtype,diff_overlap)
+        if(dtype.eq.0)then !a=b so both zombie states are differentiate
+            !$omp do 
+            do j=1,norb
+                z1_bra=z1
+                z2_ket=z2
+                z1_bra%alive(j)=cmplx((2*REAL(z1%alive(j))*z1%diffalive(j)),0.0d0,kind=8)
+                z1_bra%dead(j)=cmplx((2*REAL(z1%dead(j))*z1%diffdead(j)),0.0d0,kind=8)
+                z2_ket%alive(j)=cmplx((2*REAL(z1%dead(j))*z1%diffdead(j)),0.0d0,kind=8)
+                z2_ket%dead(j)=cmplx((2*REAL(z2%dead(j))*z2%diffdead(j)),0.0d0,kind=8)
+                print*,"start"
+                print*,REAL(z1_bra%alive(j))
+                print*,REAL(z1_bra%dead(j))
+                print*,REAL(z2_ket%alive(j))
+                print*,REAL(z2_ket%dead(j))
+                print*,"finish"
+                ! print*,(REAL(z1_bra%dead)*REAL(z2_ket%dead))
+                ! print*,(REAL(z1_bra%alive)*REAL(z2_ket%alive))
+                temp(j)=(product(REAL(z1_bra%alive)*REAL(z2_ket%alive)+(REAL(z1_bra%dead)*REAL(z2_ket%dead))))
+            end do
+            !$omp end do
+            diff_overlap(1,:)=temp(:)
+            diff_overlap(2,:)=temp(:)
+        else !Just the bra state is differentiated
+            !$omp do
+            do j=1,norb
+                z1_bra=z1
+                z1_bra%alive(j)=cmplx(z1%diffalive(j),0.0d0,kind=8)
+                z1_bra%dead(j)=cmplx(z1%diffdead(j),0.0d0,kind=8)
+                temp(j)=REAL(product((conjg(z1_bra%alive)*z2%alive)+((conjg(z1_bra%dead))*z2%dead)))
+            end do
+            !$omp end do
+            diff_overlap(1,:)=temp(:)
+            temp(:)=0.0
+        !Just the ket state is differentiated
+            !$omp do
+            do j=1,norb
+                z2_ket=z2
+                z2_ket%alive(j)=cmplx(z2%diffalive(j),0.0d0,kind=8)
+                z2_ket%dead(j)=cmplx(z2%diffdead(j),0.0d0,kind=8)
+                temp(j)=REAL(product((conjg(z1%alive)*z2_ket%alive)+((conjg(z1%dead))*z2_ket%dead))) 
+            end do
+            !$omp end do
+            diff_overlap(2,:)=temp(:)
+        end if
+        !$omp end parallel
         return
     end function diff_overlap
 
@@ -240,8 +291,8 @@ MODULE operators
         return
     end function isdet
 
-        ! Determines if a given zombie state vanishes. Returns True if state vanishes
-        ! False otherwise
+    ! Determines if a given zombie state vanishes. Returns True if state vanishes
+    ! False otherwise
     logical function iszero(zs)
         implicit none
 
@@ -588,7 +639,222 @@ MODULE operators
         return
 
     end function z_an_z3
+
+    function z_an_z3_diff(z1,z2,vec,dtype)
+
+        implicit none
+        type(zombiest),intent(in)::z1,z2
+        type(zombiest)::vmult_dd,vmult_1d, vmult_2d,vmult
+        real(kind=8),dimension(norb),intent(in)::vec
+        integer, intent(in)::dtype
+        real(kind=8),dimension(2,norb)::z_an_z3_diff
+        real(kind=8),dimension(norb)::temp,temp2
+        real(kind=8),dimension(norb)::gg_1,hh_1,gg_2,hh_2
+        real(kind=8)::tot1, tot2
+        integer::j,k,gmax1,hmin1,gmax2,hmin2,ierr
+
+        if (errorflag .ne. 0) return
+        ierr=0
+        call alloczf(vmult)
+        do j=1, norb
+            vmult%alive(j)=conjg(z1%alive(j))*z2%alive(j)
+            vmult%dead(j)=conjg(z1%dead(j))*z2%dead(j)
+        end do
+
+        if(dtype.eq.0) then
+            call alloczf(vmult_dd)
+       
+            do j=1, norb
+                vmult_dd=vmult
+                vmult_dd%dead(j)=cmplx((z1%diffdead(j))*z2%diffdead(j),0.0d0,kind=8)
+                vmult_dd%alive(j)=cmplx((z1%diffalive(j))*z2%diffalive(j),0.0d0,kind=8)
+
+                gg_1(1:norb)=(0.0,0.0)
+                hh_1(1:norb)=(0.0,0.0)
+                gmax1=norb
+                gg_1(1)=REAL(vmult_dd%dead(1))-REAL(vmult_dd%alive(1))
+
+                do k=2, norb
+                    gg_1(k)=gg_1(k-1)*REAL((vmult_dd%dead(k)-vmult_dd%alive(k)))
+                    if(gg_1(k)==(0.0,0.0))then
+                        gmax1=k
+                        EXIT 
+                    end if
+                end do
+                
+                hmin1=0
+                hh_1(norb) = REAL(vmult_dd%dead(norb)+vmult_dd%alive(norb))
+                do k=(norb-1),1,-(1)
+                    hh_1(k)=hh_1(k+1)*REAL(vmult_dd%dead(k)+vmult_dd%alive(k))
+                    if(hh_1(k)==(0.0,0.0))then
+                        hmin1=k
+                        EXIT 
+                    end if
+                end do
+
+
+                tot1=(0.0)
+                if (gmax1 < hmin1) then
+                    temp(j)=tot1
+                    cycle
+                end if
+
+                if(vec(1).ne.0) then
+                    if(j.eq.1)then
+                        tot1 = tot1+(z1%diffdead(1)*z2%diffalive(1)*hh_1(2)*vec(1))
+                    else
+                        tot1 = tot1+(REAL(conjg(z1%dead(1))*z2%alive(1))*hh_1(2)*vec(1))
+                    end if
+                end if
+                do k=2,norb-1
+                    if(vec(k).ne.0.0) then
+                        if(k.eq.j)then
+                            tot1 = tot1+ (gg_1(k-1)*z1%diffdead(k)*z2%diffalive(k)*hh_1(k+1)*vec(k))
+                        else
+                            tot1 = tot1+ (gg_1(k-1)*REAL(conjg(z1%dead(k))*z2%alive(k))*hh_1(k+1)*vec(k))
+                        end if
+                    end if
+                end do
+
+                if(vec(norb).ne.0) then
+                    if(norb.eq.j)then
+                        tot1 = tot1 +(gg_1(norb-1)*z1%diffdead(norb)*z2%diffalive(norb)*vec(norb))
+                    else
+                        tot1 = tot1 +(gg_1(norb-1)*REAL(conjg(z1%dead(norb))*z2%alive(norb))*vec(norb))
+                    end if
+                end if
+
+                temp(j)=tot1
+            end do
+            z_an_z3_diff(1,:)=temp(:)
+            z_an_z3_diff(2,:)=temp(:)
+            call dealloczf(vmult)
         
+        else 
+            call alloczf(vmult_1d)
+            call alloczf(vmult_2d)
+
+            do j=1, norb
+                vmult_1d=vmult
+                vmult_2d=vmult
+                vmult_1d%dead(j)=(z1%diffdead(j)*z2%dead(j))
+                vmult_2d%alive(j)=((z1%alive(j))*z2%diffalive(j))
+
+                gg_1(1:norb)=(0.0,0.0)
+                hh_1(1:norb)=(0.0,0.0)
+                gg_2(1:norb)=(0.0,0.0)
+                hh_2(1:norb)=(0.0,0.0)
+                gmax1=norb
+                gmax2=norb
+                gg_1(1)=REAL(vmult_1d%dead(1))-REAL(vmult_1d%alive(1))
+                gg_2(1)=REAL(vmult_2d%dead(1))-REAL(vmult_2d%alive(1))
+
+                do k=2, norb
+                    gg_1(k)=gg_1(k-1)*REAL((vmult_1d%dead(k)-vmult_1d%alive(k)))
+                    if(gg_1(k)==(0.0,0.0))then
+                        gmax1=k
+                        EXIT 
+                    end if
+                end do
+
+                do k=2, norb
+                    gg_2(k)=gg_2(k-1)*REAL((vmult_1d%dead(k)-vmult_1d%alive(k)))
+                    if(gg_1(k)==(0.0,0.0))then
+                        gmax1=k
+                        EXIT 
+                    end if
+                end do
+                
+                hmin1=0
+                hmin2=0
+                hh_1(norb) = REAL(vmult%dead(norb)+vmult%alive(norb))
+                hh_2(norb) = REAL(vmult%dead(norb)+vmult%alive(norb))
+                do k=(norb-1),1,-(1)
+                    hh_1(k)=hh_1(k+1)*REAL(vmult%dead(k)+vmult%alive(k))
+                    if(hh_1(k)==(0.0,0.0))then
+                        hmin1=k
+                        EXIT 
+                    end if
+                end do
+
+                do k=(norb-1),1,-(1)
+                    hh_1(k)=hh_1(k+1)*REAL(vmult%dead(k)+vmult%alive(k))
+                    if(hh_1(k)==(0.0,0.0))then
+                        hmin1=k
+                        EXIT 
+                    end if
+                end do
+
+
+                tot1=(0.0)
+                tot2=(0.0)
+                if((gmax1 < hmin1).and.(gmax2 < hmin2))then
+                    temp(j)=tot1
+                    temp2(j)=tot2
+                    cycle
+                end if
+
+                if(vec(1).ne.0) then
+                    if(j.eq.1)then
+                        tot1 = tot1+(REAL(z1%diffdead(1)*z2%alive(1))*hh_1(2)*vec(1))
+                        tot2 = tot2 +(REAL(z1%dead(1)*z2%diffalive(1))*hh_2(2)*vec(1))
+                    else
+                        tot1 = tot1+(REAL(conjg(z1%dead(1))*z2%alive(1))*hh_1(2)*vec(1))
+                    end if
+                end if
+                do k=2,norb-1
+                    if(vec(k).ne.0.0) then
+                        if(k.eq.j)then
+                            tot1 = tot1+ (gg_1(k-1)*REAL(z1%diffdead(k)*z2%alive(k))*hh_1(k+1)*vec(k))
+                            tot2 = tot2 +(gg_2(k-1)*REAL(z1%dead(k)*z2%diffalive(k))*hh_1(k+1)*vec(k))
+                        else
+                            tot1 = tot1+ (gg_1(k-1)*REAL(conjg(z1%dead(k))*z2%alive(k))*hh_1(k+1)*vec(k))
+                            tot2 = tot2+ (gg_2(k-1)*REAL(conjg(z1%dead(k))*z2%alive(k))*hh_2(k+1)*vec(k))
+                        end if
+                    end if
+                end do
+
+                if(vec(norb).ne.0) then
+                    if(norb.eq.j)then
+                        tot1 = tot1 +(gg_1(norb-1)*REAL(z1%diffdead(norb)*z2%alive(norb))*vec(norb))
+                        tot2 = tot2 +(gg_2(norb-1)*REAL(z1%dead(norb)*z2%diffalive(norb))*vec(norb))
+                    else
+                        tot1 = tot1 +(gg_1(norb-1)*REAL(conjg(z1%dead(norb))*z2%alive(norb))*vec(norb))
+                        tot2 = tot2 +(gg_2(norb-1)*REAL(conjg(z1%dead(norb))*z2%alive(norb))*vec(norb))
+                    end if
+                end if
+
+                temp(j)=tot1
+                temp2(j)=tot2
+                if((gmax1 < hmin1))then
+                    temp(j)=0.0
+                end if
+                if((gmax2 < hmin2))then
+                    temp2(j)=0.0
+                end if
+            end do
+            z_an_z3_diff(1,:)=temp(:)
+            z_an_z3_diff(2,:)=temp2(:)
+            call dealloczf(vmult)
+            call dealloczf(vmult_1d)
+            call dealloczf(vmult_2d)
+
+        end if
+
+        return
+
+    end function z_an_z3_diff
+        
+
+
+
+
+
+
+
+
+
+
 
     function cmplx_inv(mat,size)
 

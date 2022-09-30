@@ -34,7 +34,7 @@ MODULE zom
                     temp=cos(dummy)
                     zstore(j)%dead(K)=cmplx(temp,0.0d0,kind=8)
                     zstore(j)%diffalive(k)=cos(dummy)
-                    zstore(j)%diffdead(k)=-sin(dummy)
+                    zstore(j)%diffdead(k)=-1*sin(dummy)
                 end do
             end do
             if(rhf_1=='y') then
@@ -285,7 +285,7 @@ MODULE zom
                     zstore(j)%alive(k)=cmplx(sin(val(k)),0.0d0,kind=8)
                     zstore(j)%dead(K)=cmplx(cos(val(k)),0.0d0,kind=8)
                     zstore(j)%diffalive(k)=cos(val(k))
-                    zstore(j)%diffdead(k)=-sin(val(k))
+                    zstore(j)%diffdead(k)=-1*sin(val(k))
                 end do
             end do
             !$omp end do
