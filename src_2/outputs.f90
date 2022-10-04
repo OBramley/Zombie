@@ -70,14 +70,14 @@ MODULE outputs
 
     end subroutine matrixwriter
 
-    subroutine zombiewriter(zom,num)
+    subroutine zombiewriter(zom,num,loop)
 
         implicit none
 
         type(zombiest),intent(in)::zom 
-        integer,intent(in)::num
+        integer,intent(in)::num,loop
         character(LEN=20)::filenm
-        integer::ierr,zomnum,j
+        integer::ierr,zomnum,j,l
         character(LEN=4)::nums
 
         if (errorflag .ne. 0) return
@@ -91,19 +91,31 @@ MODULE outputs
 
         zomnum=300+num
         
-        open(unit=zomnum,file=trim(filenm),status="new",iostat=ierr)
+        open(unit=zomnum,file=trim(filenm),status="unknown",iostat=ierr)
         if(ierr/=0)then
             write(0,"(a,i0)") "Error in opening zombie state file. ierr had value ", ierr
             errorflag=1
             return
         end if
-
+        if(loop.ge.1)then
+            if(imagflg=='y')then
+                l=4
+            else 
+                l=3
+            end if
+            do j=1, l*(loop-1)
+                read(zomnum,*)
+            end do
+        end if
         if(imagflg=='n') then
-            write(zomnum,'(*(e25.17e3 :", "))') (REAL(zom%dead(j)),j=1,norb)
-            write(zomnum,'(*(e25.17e3 :", "))') (REAL(zom%alive(j)),j=1,norb)
+            write(zomnum,'(*(e25.17e3 :", "))') ((zom%phi(j)),j=1,norb)
+            write(zomnum,'(*(e25.17e3 :", "))') (REAL(zom%cos(j)),j=1,norb)
+            write(zomnum,'(*(e25.17e3 :", "))') (REAL(zom%sin(j)),j=1,norb)
         else if(imagflg=='y') then
-            write(zomnum,'(*(1x,es25.17e3 :", "))') ((zom%dead(j)),j=1,norb)
-            write(zomnum,'(*(1x,es25.17e3 :", "))') ((zom%alive(j)),j=1,norb)
+            write(zomnum,'(*(e25.17e3 :", ": ))') ((zom%phi(j)),j=1,norb)
+            write(zomnum,'(*(e25.17e3 :", ": ))') ((zom%img(j)),j=1,norb)
+            write(zomnum,'(*(1x,es25.17e3 :", "))') ((zom%cos(j)),j=1,norb)
+            write(zomnum,'(*(1x,es25.17e3 :", "))') ((zom%sin(j)),j=1,norb)
         end if
 
         close(zomnum)
@@ -133,7 +145,7 @@ MODULE outputs
 
         zomnum=300+num
         
-        open(unit=zomnum,file=trim(filenm),status="new",iostat=ierr)
+        open(unit=zomnum,file=trim(filenm),status="unknown",iostat=ierr)
         if(ierr/=0)then
             write(0,"(a,i0)") "Error in opening zombie state file. ierr had value ", ierr
             errorflag=1
@@ -154,15 +166,15 @@ MODULE outputs
 
     end subroutine zombiewriter_c
 
-    subroutine energywriter(time,erg,filenm,j)
+    subroutine energywriter(time,erg,filenm,j,loop)
 
         implicit none
 
         real(kind=8), dimension(:),intent(in)::time
         complex(kind=8), dimension(:),intent(in)::erg 
         character(LEN=*),intent(in)::filenm
-        integer,intent(in)::j
-        integer::ergnum,ierr,k
+        integer,intent(in)::j,loop
+        integer::ergnum,ierr,k,l
 
         if (errorflag .ne. 0) return
 
@@ -174,7 +186,16 @@ MODULE outputs
             errorflag=1
             return
         end if
-
+        if(loop.gt.1)then
+            if(imagflg=='y')then
+                l=3
+            else 
+                l=2
+            end if
+            do k=1, l*(loop-1)
+                read(ergnum,*)
+            end do
+        end if
      
         write(ergnum,'(*(e25.17e3 :", "))') (time(k),k=1,timesteps+1)
         write(ergnum,'(*(e25.17e3 :", "))') (REAL(erg(k)),k=1,timesteps+1)
@@ -188,12 +209,12 @@ MODULE outputs
 
     end subroutine energywriter
 
-    subroutine dvec_writer(d,size,p)
+    subroutine dvec_writer(d,size,p,loop)
 
         implicit none
         complex(kind=8),dimension(:),intent(in)::d
         character(LEN=4)::stateno
-        integer,intent(in)::size,p
+        integer,intent(in)::size,p,loop
         integer::ierr,j,vec
         if (errorflag .ne. 0) return
         
@@ -208,6 +229,12 @@ MODULE outputs
             errorflag=1
             return
         end if
+        if(loop.gt.1)then
+            do j=1, (loop-1)
+                read(vec,*)
+            end do
+        end if
+
         if(imagflg=='n')then
             write(vec,'(*(e25.17e3 :", "))') (REAL(d(j)),j=1,size)
         else if(imagflg=='y')then

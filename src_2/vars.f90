@@ -4,10 +4,13 @@ MODULE globvars
 
     ! Type defining the zombie state
     type zombiest
-        complex(kind=8), dimension(:), allocatable::alive
-        complex(kind=8), dimension(:), allocatable::dead
-        real(kind=8),dimension(:),allocatable::diffalive
-        real(kind=8),dimension(:),allocatable::diffdead
+        complex(kind=8), dimension(:), allocatable::sin
+        complex(kind=8), dimension(:), allocatable::cos
+        real(kind=8),dimension(:),allocatable::phi
+        real(kind=8),dimension(:),allocatable::img
+        integer,dimension(:),allocatable::dead
+        integer,dimension(:),allocatable::alive
+    
     end type zombiest
 
     ! Type defining the Hamiltonian matrix and the overlap matrix
@@ -55,6 +58,10 @@ MODULE globvars
         real(kind=8),dimension(:,:), allocatable::vars
     end type grad
 
+    type zs2 
+    
+    end type
+    
     integer::ndet       ! Number of Zombie states
     integer::norb       ! Number of spin orbitals
     integer::nel        ! Number of electrons in molecule
@@ -78,6 +85,7 @@ MODULE globvars
     complex(kind=8)::i      ! The imagianry unit
 
     integer:: errorflag      ! Error flag
+
 
     contains
 

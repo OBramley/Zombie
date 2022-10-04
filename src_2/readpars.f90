@@ -189,8 +189,8 @@ MODULE readpars
 
         implicit none
         type(zombiest),dimension(:),intent(inout)::zstore
-        real(kind=8),dimension(norb)::dead,alive
-        real(kind=8),dimension(norb*2)::cdead,calive
+        real(kind=8),dimension(norb)::cos,sin,phi,img
+        real(kind=8),dimension(norb*2)::ccos,csin
         character(len=4)::num
         integer::ierr,j,k,zomnum
         character(LEN=20)::filenm
@@ -209,11 +209,13 @@ MODULE readpars
                     return
                 end if
 
-                read(zomnum,*) dead
-                read(zomnum,*) alive
+                read(zomnum,*) phi
+                read(zomnum,*) cos
+                read(zomnum,*) sin
                 do k=1,norb
-                    zstore(j)%dead(k)=cmplx(dead(k),0.0,kind=8)
-                    zstore(j)%alive(k)=cmplx(alive(k),0.0,kind=8)
+                    zstore(j)%phi(k)=phi(k)
+                    zstore(j)%cos(k)=cmplx(cos(k),0.0,kind=8)
+                    zstore(j)%sin(k)=cmplx(sin(k),0.0,kind=8)
                 end do 
                 close(zomnum)
             end do
@@ -229,11 +231,17 @@ MODULE readpars
                     return
                 end if
 
-                read(zomnum,*) cdead
-                read(zomnum,*) calive
+                read(zomnum,*) phi
+                read(zomnum,*) img
+                read(zomnum,*) ccos
+                read(zomnum,*) csin
+                do k=1,norb
+                    zstore(j)%phi(k)=phi(k)
+                    zstore(j)%img(k)=img(k)
+                end do
                 do k=1,(norb*2),2
-                    zstore(j)%dead((k+1)/2)=cmplx(cdead(k),cdead(k+1),kind=8)
-                    zstore(j)%alive((k+1)/2)=cmplx(calive(k),calive(k+1),kind=8)
+                    zstore(j)%cos((k+1)/2)=cmplx(ccos(k),ccos(k+1),kind=8)
+                    zstore(j)%sin((k+1)/2)=cmplx(csin(k),csin(k+1),kind=8)
                 end do
                 close(zomnum)
             end do
@@ -248,14 +256,14 @@ MODULE readpars
         implicit none
         type(zombiest),dimension(:),intent(inout)::cstore
         integer,intent(in)::clean_ndet
-        real(kind=8),dimension(norb)::dead,alive
-        real(kind=8),dimension(norb*2)::cdead,calive
+        integer,dimension(norb)::dead,alive
+        ! real(kind=8),dimension(norb*2)::cdead,calive
         character(len=6)::num
         integer::ierr,j,k,zomnum
         character(LEN=28)::filenm
 
         ierr=0
-        if(imagflg=='n') then
+        ! if(imagflg=='n') then
             do j=1, clean_ndet
                 write(num,"(i6.6)")j
                 filenm="data/clean_zombie_"//trim(num)//".csv"
@@ -266,36 +274,45 @@ MODULE readpars
                     errorflag=1
                     return
                 end if
-
                 read(zomnum,*) dead
                 read(zomnum,*) alive
                 do k=1,norb
-                    cstore(j)%dead(k)=cmplx(dead(k),0.0,kind=8)
-                    cstore(j)%alive(k)=cmplx(alive(k),0.0,kind=8)
+                    cstore(j)%dead(k)=dead(k)
+                    cstore(j)%alive(k)=alive(k)
                 end do 
                 close(zomnum)
-            end do
-        else if(imagflg=='y')then
-            do j=1, clean_ndet
-                write(num,"(i6.6)")j
-                filenm="data/clean_zombie_"//trim(num)//".csv"
-                zomnum=500+j
-                open(unit=zomnum,file=trim(filenm),status="old",iostat=ierr)
-                if(ierr/=0)then
-                    write(0,"(a,i0)") "Error in opening zombie state file to read in. ierr had value ", ierr
-                    errorflag=1
-                    return
-                end if
-
-                read(zomnum,*) cdead
-                read(zomnum,*) calive
-                do k=1,(norb*2),2
-                    cstore(j)%dead((k+1)/2)=cmplx(cdead(k),cdead(k+1),kind=8)
-                    cstore(j)%alive((k+1)/2)=cmplx(calive(k),calive(k+1),kind=8)
+                cstore(j)%cos=cstore(j)%dead
+                cstore(j)%sin=cstore(j)%alive
+                do k=1, norb
+                    if(cstore(j)%alive(k).eq.1)then
+                        cstore(j)%phi(k)=0.5*pirl
+                    else
+                        cstore(j)%phi(k)=0
+                    end if 
                 end do
-                close(zomnum)
             end do
-        end if
+        ! else if(imagflg=='y')then
+            ! do j=1, clean_ndet
+            !     write(num,"(i6.6)")j
+            !     filenm="data/clean_zombie_"//trim(num)//".csv"
+            !     zomnum=500+j
+            !     open(unit=zomnum,file=trim(filenm),status="old",iostat=ierr)
+            !     if(ierr/=0)then
+            !         write(0,"(a,i0)") "Error in opening zombie state file to read in. ierr had value ", ierr
+            !         errorflag=1
+            !         return
+            !     end if
+
+            !     read(zomnum,*) cdead
+            !     read(zomnum,*) calive
+            !     do k=1,(norb*2),2
+
+            !         cstore(j)%dead((k+1)/2)=cmplx(cdead(k),cdead(k+1),kind=8)
+            !         cstore(j)%alive((k+1)/2)=cmplx(calive(k),calive(k+1),kind=8)
+            !     end do
+            !     close(zomnum)
+            ! end do
+        ! end if
 
         write(6,"(a)") "Cleaning Zombie states succeffuly read in"
         return

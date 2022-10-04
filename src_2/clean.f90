@@ -196,10 +196,15 @@ MODULE clean
         if (errorflag .ne. 0) return
 
         zoms%dead(1:norb)=(1.0d0,0.0d0)
+        zoms%cos(1:norb)=(1.0d0,0.0d0)
+        zoms%phi(1:norb)=0.0
 
         do j=1, size(occ)
             zoms%alive(occ(j))=(1.0d0,0.0d0)
             zoms%dead(occ(j))=(0.0d0,0.0d0)
+            zoms%sin(occ(j))=(1.0d0,0.0d0)
+            zoms%cos(occ(j))=(0.0d0,0.0d0)
+            zoms%phi(1:norb)=0.5*pirl
         end do
 
         return

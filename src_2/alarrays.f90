@@ -5,6 +5,7 @@ MODULE alarrays
 
     contains
 
+
     ! Routine to allcoate 1&2 electron electron integral matrices
     subroutine allocintgrl(elecs)
 
@@ -101,19 +102,25 @@ MODULE alarrays
 
         allocate(zs%alive(norb),stat=ierr)
         if(ierr==0) allocate(zs%dead(norb), stat=ierr)
-        if(ierr==0) allocate(zs%diffdead(norb), stat=ierr)
-        if(ierr==0) allocate(zs%diffalive(norb), stat=ierr)
+        if(ierr==0) allocate(zs%sin(norb), stat=ierr)
+        if(ierr==0) allocate(zs%cos(norb), stat=ierr)
+        if(ierr==0) allocate(zs%phi(norb), stat=ierr)
+        if(imagflg=='y')then 
+            if(ierr==0) allocate(zs%img(norb), stat=ierr)
+            zs%img(1:norb)=0.0
+        end if
         if (ierr/=0) then
             write(0,"(a,i0)") "Error in Zombie state allocation. ierr had value ", ierr
             errorflag=1
             return
         end if
 
-        zs%alive(1:norb)=(0.0d0,0.0d0)
-        zs%dead(1:norb)=(0.0d0,0.0d0)
-        zs%diffalive(1:norb)=0.0d0
-        zs%diffdead(1:norb)=0.0d0
-
+        zs%alive(1:norb)=1
+        zs%dead(1:norb)=1
+        zs%phi(1:norb)=0.0d0
+        zs%cos(1:norb)=(0.0d0,0.0d0)
+        zs%sin(1:norb)=(0.0d0,0.0d0)
+       
         return
     end subroutine alloczf
 
@@ -155,6 +162,14 @@ MODULE alarrays
 
         deallocate(zs%alive,stat=ierr)
         if(ierr==0) deallocate(zs%dead, stat=ierr)
+        if(ierr==0) deallocate(zs%sin, stat=ierr)
+        if(ierr==0) deallocate(zs%cos, stat=ierr)
+        if(ierr==0) deallocate(zs%phi, stat=ierr)
+        if(imagflg=='y')then 
+            if(ierr==0) deallocate(zs%img, stat=ierr)
+            zs%img(1:norb)=0.0
+        end if
+
         if (ierr/=0) then
             write(0,"(a,i0)") "Error in Zombie state deallocation. ierr had value ", ierr
             errorflag=1

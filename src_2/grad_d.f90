@@ -296,16 +296,12 @@ Module grad_d
         type(zombiest),dimension(:),intent(inout)::zstore
         type(grad),intent(in)::grad_fin
         real(kind=8),intent(in)::gamma
-        real(kind=8),dimension(norb)::temp
         integer::j
 
         do j=1, ndet
-            temp=asin(REAL(zstore(j)%alive))
-            temp=temp-(gamma*(grad_fin%vars(j,:)))
-            zstore(j)%alive(:)=cmplx(sin(temp(:)),0.0d0,kind=8)
-            zstore(j)%dead(:)=cmplx(cos(temp(:)),0.0d0,kind=8)
-            zstore(j)%diffalive(:)=cos(temp(:))
-            zstore(j)%diffdead(:)=-sin(temp(:))
+            zstore(j)%phi=zstore(j)%phi-(gamma*(grad_fin%vars(j,:)))
+            zstore(j)%sin=sin(cmplx(zstore(j)%phi,0.0d0,kind=8))
+            zstore(j)%cos=cos(cmplx(zstore(j)%phi,0.0d0,kind=8))
         end do
 
 

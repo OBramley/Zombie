@@ -59,7 +59,8 @@ program MainZombie
     call ZBQLINI(randseed,0)   ! Generates the seed value using the UCL random library
     write(6,"(a)") "Random seed set"
     
-    GDflg='y'
+    GDflg='n'
+    gd_loop=1
     if(GDflg=="y")then
         call allocgrad(gradients,ndet,norb)
         gd_loop=2
@@ -77,7 +78,7 @@ program MainZombie
         if(zomgflg=='y')then
             call genzf(zstore,ndet)
             do j=1,ndet
-                call zombiewriter(zstore(j),j)
+                call zombiewriter(zstore(j),j,0)
             end do
             write(6,"(a)") "Zombie states generated"
         else if (zomgflg=='n') then
@@ -96,15 +97,17 @@ program MainZombie
         do k=1, gd_loop
         if(hamgflg=='y')then
             call hamgen(haml,zstore,elect,ndet)
-            ! call matrixwriter(haml%hjk,ndet,"data/ham.csv")
-            ! call matrixwriter(haml%ovrlp,ndet,"data/ovlp.csv")
+            if(k.eq.1)then
+                call matrixwriter(haml%hjk,ndet,"data/ham.csv")
+                call matrixwriter(haml%ovrlp,ndet,"data/ovlp.csv")
+            end if
             ! call matrixwriter(haml%inv,ndet,"inv.csv")
             ! call matrixwriter(haml%kinvh,ndet,"kinvh.csv")
             write(6,"(a)") "Hamiltonian successfully generated"
         else if (hamgflg=='n')then
             call read_ham(haml,ndet)
-            call matrixwriter(haml%hjk,ndet,"data/ham2.csv")
-            call matrixwriter(haml%ovrlp,ndet,"data/ovlp2.csv")
+            ! call matrixwriter(haml%hjk,ndet,"data/ham2.csv")
+            ! call matrixwriter(haml%ovrlp,ndet,"data/ovlp2.csv")
             ! call matrixwriter(haml%inv,ndet,"inv.csv")
             ! call matrixwriter(haml%kinvh,ndet,"kinvh.csv")
             write(6,"(a)") "Hamiltonian successfully read in"
@@ -128,23 +131,26 @@ program MainZombie
         write(6,"(a)") "Imaginary time propagation finished"
         print*,en%erg(1,timesteps+1)
         if(gramflg.eq."n")then
-            write(stateno,"(i4.4)")k
-            ! call dvec_writer(dvecs(1)%d,ndet,0)
-            call energywriter(en%t,en%erg(1,:),"energy_"//trim(stateno)//".csv",0)
+            ! write(stateno,"(i4.4)")k
+            call dvec_writer(dvecs(1)%d,ndet,0,k)
+            call energywriter(en%t,en%erg(1,:),"energy_.csv",0,k)
         else if(gramflg.eq."y")then
             do j=1, 1+gramnum
-                call dvec_writer(dvecs(j)%d,ndet,j)
-                call energywriter(en%t,en%erg(j,:),"energy_state_"//trim(stateno)//".csv",j)
+                write(stateno,"(i4.4)")j
+                call dvec_writer(dvecs(j)%d,ndet,j,k)
+                call energywriter(en%t,en%erg(j,:),"energy_state_"//trim(stateno)//".csv",j,k)
             end do
         end if
-       
-        call final_grad(dvecs(1),haml,gradients)
-        call zombie_alter(zstore,gradients,0.2d0)
-        call zombiewriter_c(zstore(2),2)
-        call deallocdv(dvecs)
-        call deallocerg(en)
+        
+        if(GDflg.eq.'y')then
+            call final_grad(dvecs(1),haml,gradients)
+            call zombie_alter(zstore,gradients,0.2d0)
+            do j=1,ndet
+                call zombiewriter(zstore(j),j,k)
+            end do
+        end if
         end do
-        ! call deallocerg(en)
+        call deallocerg(en)
         write(6,"(a)") "Energy deallocated"
         call deallocham(haml)
         write(6,"(a)") "Hamiltonian deallocated"

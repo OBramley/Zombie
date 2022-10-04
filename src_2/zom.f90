@@ -4,7 +4,7 @@ MODULE zom
 
     contains
 
-    
+
 
     subroutine gen_ran_zs(zstore,num)
 
@@ -13,49 +13,40 @@ MODULE zom
         type(zombiest),dimension(:),intent(inout)::zstore
         integer, intent(in)::num
         integer::j,k
-        real(kind=8)::dummy,temp,phase
         DOUBLE PRECISION, external::ZBQLU01
         ! real(kind=8),dimension(norb)::rands
         ! complex(kind=8)::ctemp
         if (errorflag .ne. 0) return
 
-        dummy=1
+   
         if(imagflg=='n') then
             do j=1,num
                 ! call random_number(rands)
                 do k=1,norb
                     !$omp critical
-                    dummy =1
-                    dummy=2*pirl*ZBQLU01(1)
+                    zstore(j)%phi(k)=2*pirl*ZBQLU01(1)
                     !$omp end critical
-                    ! dummy=(2*pirl*rands(k))
-                    temp=sin(dummy)
-                    zstore(j)%alive(k)=cmplx(temp,0.0d0,kind=8)
-                    temp=cos(dummy)
-                    zstore(j)%dead(K)=cmplx(temp,0.0d0,kind=8)
-                    zstore(j)%diffalive(k)=cos(dummy)
-                    zstore(j)%diffdead(k)=-1*sin(dummy)
+                    
                 end do
+                zstore(j)%sin=sin(cmplx(zstore(j)%phi,0.0d0,kind=8))
+                zstore(j)%cos=cos(cmplx(zstore(j)%phi,0.0d0,kind=8))
             end do
             if(rhf_1=='y') then
-                zstore(1)%alive(1:nel)=(1.0d0,0.0d0)
-                zstore(1)%dead(1:nel)=(0.0d0,0.0d0)
-                zstore(1)%alive((nel+1):norb)=(0.0d0,0.0d0)
-                zstore(1)%dead((nel+1):norb)=(1.0d0,0.0d0)
-                zstore(1)%diffalive(1:nel)=0.0
-                zstore(1)%diffdead(1:nel)=-1.0
-                zstore(1)%diffalive((nel+1):norb)=1.0
-                zstore(1)%diffdead((nel+1):norb)=0.0
+                zstore(1)%phi(1:nel)=0.5*pirl
+                zstore(1)%phi(nel+1:)=0
+                zstore(1)%sin=0
+                zstore(1)%cos=1
+                zstore(1)%sin(1:nel)=cmplx(1,0.0d0,kind=8)
+                zstore(1)%cos(1:nel)=cmplx(0,0.0d0,kind=8)
             end if 
         else if(imagflg=='y')then
             do j=1,num
                 do k=1,norb
-                    dummy=2*pirl*ZBQLU01(1)
-                    phase=2*pirl*ZBQLU01(1)
-                    temp=cos(dummy)
-                    zstore(j)%dead(K)=cmplx(temp,0.0d0,kind=8)
-                    zstore(j)%alive(k)=sin(dummy)*exp(i*phase)
+                    zstore(j)%phi(k)=2*pirl*ZBQLU01(1)
+                    zstore(j)%img=2*pirl*ZBQLU01(1)
                 end do
+                zstore(j)%sin=sin(zstore(j)%phi*exp(i*zstore(j)%img))
+                zstore(j)%cos=cos(cmplx(zstore(j)%phi,0.0d0,kind=8))
             end do
             if(rhf_1=='y') then
                 zstore(1)%alive(1:nel)=(1.0d0,0.0d0)
@@ -234,14 +225,16 @@ MODULE zom
 
         if (errorflag .ne. 0) return
 
-        zom%dead(1:norb)=(1.0d0,0.0d0)
+        zom%cos(1:norb)=(1.0d0,0.0d0)
+        zom%phi(1:norb)=0.0
 
         do j=1, norb
             if(occ(j)==0)then
                 return
             end if
-            zom%alive(occ(j))=(1.0d0,0.0d0)
-            zom%dead(occ(j))=(0.0d0,0.0d0)
+            zom%sin(occ(j))=(1.0d0,0.0d0)
+            zom%cos(occ(j))=(0.0d0,0.0d0)
+            zom%phi(1:norb)=0.5*pirl
         end do
 
         return
@@ -254,7 +247,7 @@ MODULE zom
         type(zombiest),dimension(:),intent(inout)::zstore
         DOUBLE PRECISION, external::ZBQLNOR,ZBQLUAB
         real(kind=8)::mu((norb/2)),sig(norb/2)
-        real(kind=8),dimension(norb)::val
+        ! real(kind=8),dimension(norb)::val
         integer::j,k
 
         ! mu and sigma values for Li2 10 spin orbitals used in OG paper
@@ -269,37 +262,30 @@ MODULE zom
         call musig(mu,sig)
         
         if(imagflg=='n') then
-            !$omp parallel shared(zstore) private(j,k,val)
+            !$omp parallel shared(zstore) private(j,k)
             !$omp do
             do j=1, ndet
                 !$omp critical
                 do k=1,norb/2
-                    val(2*k-1)=2*pirl*ZBQLNOR(mu(k),sig(k))
-                    val(2*k)=2*pirl*ZBQLNOR(mu(k),sig(k))
+                    zstore(j)%phi(2*k-1)=2*pirl*ZBQLNOR(mu(k),sig(k))
+                    zstore(j)%phi(2*k)=2*pirl*ZBQLNOR(mu(k),sig(k))
                     ! print*,val(2*k-1),val(2*k)
                     ! val(2*k-1)=2*pirl*mu(k)*exp(-ZBQLUAB(0,0.1))
                     ! val(2*k)=2*pirl*mu(k)*exp(-ZBQLUAB(0,0.1))
                 end do
                 !$omp end critical
-                do k=1, norb
-                    zstore(j)%alive(k)=cmplx(sin(val(k)),0.0d0,kind=8)
-                    zstore(j)%dead(K)=cmplx(cos(val(k)),0.0d0,kind=8)
-                    zstore(j)%diffalive(k)=cos(val(k))
-                    zstore(j)%diffdead(k)=-1*sin(val(k))
-                end do
+                zstore(j)%sin=sin(cmplx(zstore(j)%phi,0.0d0,kind=8))
+                zstore(j)%cos=cos(cmplx(zstore(j)%phi,0.0d0,kind=8))
             end do
             !$omp end do
             !$omp end parallel
             if(rhf_1=='y') then
-                zstore(1)%alive(1:nel)=(1.0d0,0.0d0)
-                zstore(1)%dead(1:nel)=(0.0d0,0.0d0)
-                zstore(1)%alive((nel+1):norb)=(0.0d0,0.0d0)
-                zstore(1)%dead((nel+1):norb)=(1.0d0,0.0d0)
-                zstore(1)%diffalive(1:nel)=0.0
-                zstore(1)%diffdead(1:nel)=-1.0
-                zstore(1)%diffalive((nel+1):norb)=1.0
-                zstore(1)%diffdead((nel+1):norb)=0.0
-
+                zstore(1)%phi(1:nel)=0.5*pirl
+                zstore(1)%phi(nel+1:)=0
+                zstore(1)%sin=0
+                zstore(1)%cos=1
+                zstore(1)%sin(1:nel)=cmplx(1,0.0d0,kind=8)
+                zstore(1)%cos(1:nel)=cmplx(0,0.0d0,kind=8)
             end if 
         else if(imagflg=='y')then
             print*,"not yet written"
