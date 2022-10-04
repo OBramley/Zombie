@@ -180,7 +180,7 @@ MODULE outputs
 
         ergnum=400+j
         ierr=0
-        open(unit=ergnum,file=trim(filenm),status="new",iostat=ierr)
+        open(unit=ergnum,file=trim(filenm),status="unknown",iostat=ierr)
         if(ierr/=0)then
             write(0,"(a,i0)") "Error in opening energy output file. ierr had value ", ierr
             errorflag=1
@@ -223,7 +223,7 @@ MODULE outputs
         write(stateno,"(i4.4)")p
 
         vec=900+p
-        open(unit=vec,file="data/dvec_"//trim(stateno)//".csv",status="new",iostat=ierr)
+        open(unit=vec,file="data/dvec_"//trim(stateno)//".csv",status="unknown",iostat=ierr)
         if(ierr/=0)then
             write(0,"(a,i0)") "Error in opening dvector file. ierr had value ", ierr
             errorflag=1

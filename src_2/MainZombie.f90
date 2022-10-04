@@ -59,11 +59,11 @@ program MainZombie
     call ZBQLINI(randseed,0)   ! Generates the seed value using the UCL random library
     write(6,"(a)") "Random seed set"
     
-    GDflg='n'
+    GDflg='y'
     gd_loop=1
     if(GDflg=="y")then
         call allocgrad(gradients,ndet,norb)
-        gd_loop=2
+        gd_loop=10
     end if
     ! print*,cleanflg
     ! generate 1 and 2 electron integrals
@@ -93,27 +93,6 @@ program MainZombie
     if(propflg=="y")then
         ! generate Hamiltonian and overlap
         call allocham(haml,ndet,norb)
-
-        do k=1, gd_loop
-        if(hamgflg=='y')then
-            call hamgen(haml,zstore,elect,ndet)
-            if(k.eq.1)then
-                call matrixwriter(haml%hjk,ndet,"data/ham.csv")
-                call matrixwriter(haml%ovrlp,ndet,"data/ovlp.csv")
-            end if
-            ! call matrixwriter(haml%inv,ndet,"inv.csv")
-            ! call matrixwriter(haml%kinvh,ndet,"kinvh.csv")
-            write(6,"(a)") "Hamiltonian successfully generated"
-        else if (hamgflg=='n')then
-            call read_ham(haml,ndet)
-            ! call matrixwriter(haml%hjk,ndet,"data/ham2.csv")
-            ! call matrixwriter(haml%ovrlp,ndet,"data/ovlp2.csv")
-            ! call matrixwriter(haml%inv,ndet,"inv.csv")
-            ! call matrixwriter(haml%kinvh,ndet,"kinvh.csv")
-            write(6,"(a)") "Hamiltonian successfully read in"
-        end if
-
-        ! Imaginary time propagation
         if(gramflg.eq."n")then
             call allocdv(dvecs,1,ndet,norb)
             call allocerg(en,1)
@@ -126,6 +105,26 @@ program MainZombie
                 errorflag=1
         end if
 
+        do k=1, gd_loop
+        if(hamgflg=='y')then
+            call hamgen(haml,zstore,elect,ndet)
+            if(k.eq.1)then
+                call matrixwriter(haml%hjk,ndet,"data/ham.csv")
+                call matrixwriter(haml%ovrlp,ndet,"data/ovlp.csv")
+                ! call matrixwriter(haml%inv,ndet,"inv.csv")
+                ! call matrixwriter(haml%kinvh,ndet,"kinvh.csv")
+            end if
+            write(6,"(a)") "Hamiltonian successfully generated"
+        else if (hamgflg=='n')then
+            call read_ham(haml,ndet)
+            ! call matrixwriter(haml%hjk,ndet,"data/ham2.csv")
+            ! call matrixwriter(haml%ovrlp,ndet,"data/ovlp2.csv")
+            ! call matrixwriter(haml%inv,ndet,"inv.csv")
+            ! call matrixwriter(haml%kinvh,ndet,"kinvh.csv")
+            write(6,"(a)") "Hamiltonian successfully read in"
+        end if
+
+        ! Imaginary time propagation
         write(6,"(a)") "Imaginary time propagation started"
         call imgtime_prop(dvecs,en,haml)
         write(6,"(a)") "Imaginary time propagation finished"
@@ -148,6 +147,7 @@ program MainZombie
             do j=1,ndet
                 call zombiewriter(zstore(j),j,k)
             end do
+            call value_reset(haml,dvecs,en,ndet,gradients)
         end if
         end do
         call deallocerg(en)

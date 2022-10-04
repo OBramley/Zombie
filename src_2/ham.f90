@@ -32,9 +32,7 @@ MODULE ham
         if (errorflag .ne. 0) return
         ierr = 0
 
-        ! call alloczf(zomt)
-        ! call alloczs2d(z1jk,norb)
-        ! call alloczs(z2l,norb)
+    
         allocate(z1jk(norb,norb,2,norb),stat=ierr)
         if(ierr==0) allocate(z2l(norb,2,norb),stat=ierr)
         if(ierr==0) allocate(zomt(2,norb),stat=ierr)
@@ -53,10 +51,10 @@ MODULE ham
         h2etot_diff_ket=0.0
         h1etot_diff=0.0
         h2etot_diff=0.0
-        !!$omp parallel private(j,k,l,jspin,zomt,z2l,h1etot,h2etot,temp, &
-        !!$omp h1etot_diff_bra,h2etot_diff_bra, h1etot_diff_ket,h2etot_diff_ket,&
-        !!$omp  h1etot_diff,h2etot_diff,m) shared(z1jk,zstore,row,size,occupancy_2an,occupancy_an_cr,occupancy_an)
-        !!$omp do
+        !$omp parallel private(j,k,l,jspin,zomt,z2l,h1etot,h2etot,temp, &
+        !$omp h1etot_diff_bra,h2etot_diff_bra, h1etot_diff_ket,h2etot_diff_ket,&
+        !$omp  h1etot_diff,h2etot_diff,m) shared(z1jk,zstore,row,size,occupancy_2an,occupancy_an_cr,occupancy_an)
+        !$omp do
         do j=1, norb
             do k=1, norb
                 z1jk(j,k,1,:)=zstore(row)%sin(:)
@@ -65,17 +63,15 @@ MODULE ham
                 z1jk(j,k,1,j)=(0.0,0.0)
                 z1jk(j,k,2,k)=z1jk(j,k,1,k)
                 z1jk(j,k,1,k)=(0.0,0.0)
-                ! zomt=zstore(row)
-                ! call an(zomt,j)
-                ! call an(zomt,k)
-                ! z1jk(j,k)=zomt
             end do
         end do
+        !$omp end do
+        !$omp flush(z1jk)
+        !$omp barrier
         z1jk=z1jk*occupancy_2an
-        !!$omp end do
-        !!$omp flush(z1jk)
-        !!$omp barrier
-        !!$omp do
+       
+        
+        !$omp do
         do m=row,size
             h1etot=(0.0,0.0)
             h2etot=(0.0,0.0)
@@ -93,24 +89,18 @@ MODULE ham
                 z2l(l,2,:)=zstore(m)%cos(:)
                 z2l(l,2,l)=z2l(l,1,l)
                 z2l(l,1,l)=(0.0,0.0)
-                ! zomt=zstore(m)
-                ! call an(zomt,l)
-                ! z2l(l)=zomt
             end do
-            z2l=z2l*occupancy_an
+            !!$omp end do
+            !!$omp barrier
             
+            !!$omp do reduction(+:h1etot)
             do j=1, norb
                 do k=1, norb
-                    l=l+1
-                    temp=(0.0,0.0)
                     zomt(:,:)=z2l(j,:,:)
                     zomt(1,k)=zomt(2,k)
                     zomt(2,k)=(0.0,0.0)
                     zomt=zomt*occupancy_an_cr(j,k,:,:)
                     temp=product((conjg(zstore(row)%sin)*zomt(1,:))+(conjg(zstore(row)%cos)*zomt(2,:)))*elecs%h1ei(j,k)
-                    print*,temp
-                    ! call cr(zomt,k)
-                    ! temp = (overlap(zstore(row),zomt)*elecs%h1ei(j,k))
                     h1etot=h1etot+temp
                     if(GDflg.eq.'y')then
                         if(m.eq.row)then
@@ -125,10 +115,11 @@ MODULE ham
                     end if
                 end do
             end do
-
-            print*, row, m
-            print*, h1etot
-            stop
+            !!$omp end do
+           
+           
+            z2l=z2l*occupancy_an
+            !!$omp do reduction(+:h2etot)
             do j=1, norb
                 if(zstore(row)%sin(j)==(0.0,0.0))then
                     CYCLE
@@ -141,7 +132,7 @@ MODULE ham
                 end if
 
                 do k=1, norb
-                    if(occ_iszero(occupancy_2an(j,k,:,:)).eqv..true.)then
+                    if(occ_iszero(z1jk(j,k,:,:)).eqv..true.)then
                         CYCLE
                     end if
                     do l=jspin, norb, 2
@@ -163,11 +154,10 @@ MODULE ham
                     end do
                 end do
             end do
+            !!$omp end do
             h2etot=h2etot*0.5
             h2etot_diff_bra=h2etot_diff_bra*0.5
             h2etot_diff_ket=h2etot_diff_ket*0.5
-            
-            print*, row,m
             ham%ovrlp(row,m)=overlap(zstore(row),zstore(m))
             ham%ovrlp(m,row)= ham%ovrlp(row,m)
             ham%hjk(row,m)=h1etot+h2etot+(elecs%hnuc*ham%ovrlp(row,m))
@@ -185,16 +175,10 @@ MODULE ham
                     ham%diff_ovrlp_bra(row,m,:) =h1etot_diff(1,:)
                     ham%diff_ovrlp_ket(m,row,:) = h1etot_diff(2,:)
                 end if
-                ! ham%diff_ovrlp_bra(m,row,:)=ham%diff_ovrlp_bra(row,m,:)
-                ! ham%diff_ovrlp_ket(m,row,:)=ham%diff_ovrlp_ket(row,m,:)
-                ! ham%diff_hjk_bra(m,row,:)=ham%diff_hjk_bra(row,m,:)
-                ! ham%diff_hjk_ket(row,m,:)=
-                ! ham%diff_hjk_ket(row,m,:)
-
             end if
         end do
-        ! !$omp end do
-       !! $omp end parallel
+        !$omp end do
+        !$omp end parallel
 
         deallocate(z1jk,stat=ierr)
         if(ierr==0) deallocate(z2l,stat=ierr)
@@ -204,10 +188,6 @@ MODULE ham
             errorflag=1
             return
         end if 
-
-        ! call dealloczs2d(z1jk)
-        ! call dealloczs(z2l)
-        ! call dealloczf(zomt)
 
         return
 
@@ -362,13 +342,9 @@ MODULE ham
         type(elecintrgl),intent(in)::elecs
         integer,allocatable,dimension(:,:,:)::occupancy_an
         integer,allocatable,dimension(:,:,:,:)::occupancy_an_cr,occupancy_2an
-        ! real(kind=8),dimension(:)::shift_an
-        ! real(kind=8)(:,:)::shift_2an, shift_an_cr
         integer, allocatable,dimension(:)::IPIV1
         complex(kind=8),allocatable,dimension(:)::WORK1
-        ! real(kind=8),dimension(norb)::temp
         real(kind=8),dimension(ndet,ndet,norb)::temp2
-        ! real(kind=8),dimension(ndet)::vector
         real(kind=8),dimension(ndet,norb)::matrix
         integer:: j,k,l,size,ierr
 
@@ -384,32 +360,34 @@ MODULE ham
         occupancy_an=1
         occupancy_2an=1
         occupancy_an_cr=1
-      
         !$omp parallel private(j) shared(occupancy_an,occupancy_2an,occupancy_an_cr,ham,zstore,elecs)
-        !$omp do 
+        !$omp do
         do j=1,norb
-            occupancy_an(j,2,j)=occupancy_an(j,1,j)
             occupancy_an(j,1,j)=0
-            occupancy_an(j,1,1:(j-1))=occupancy_an(j,1,1:(j-1))*(-1)
+            do l=j-1, 1, -1
+                occupancy_an(j,1,l)=-1
+            end do
         end do
         !$omp end do
         !$omp barrier
         !$omp do
         do j=1,norb
-            do k=1,norb
+            do k=1, norb
                 occupancy_2an(j,k,:,:)=occupancy_an(j,:,:)
                 occupancy_2an(j,k,2,k)=occupancy_2an(j,k,1,k)
                 occupancy_2an(j,k,1,k)=0
-                occupancy_2an(j,k,1,1:(k-1))=occupancy_2an(j,k,1,1:(k-1))*(-1)
                 occupancy_an_cr(j,k,:,:)=occupancy_an(j,:,:)
                 occupancy_an_cr(j,k,1,k)=occupancy_an_cr(j,k,2,k)
                 occupancy_an_cr(j,k,2,k)=0
-                occupancy_an_cr(j,k,1,1:(k-1))=occupancy_an_cr(j,k,1,1:(k-1))*(-1)
+                do l=k-1,1,-1
+                    occupancy_2an(j,k,1,l)=occupancy_2an(j,k,1,l)*(-1)
+                    occupancy_an_cr(j,k,1,l)=occupancy_an_cr(j,k,1,l)*(-1)
+                end do
             end do
         end do
         !$omp end do
         !$omp do
-        do j=1, 1
+        do j=1, size
             call he_row(ham,zstore,elecs,j,size,occupancy_2an,occupancy_an_cr,occupancy_an)  
             write(6,"(a,i0,a)") "Hamiltonian row ",j, " completed"
         end do
@@ -466,8 +444,6 @@ MODULE ham
         ! omega^-1d(omega) is first calcualted. creating an ndet*ndet*norb array 
         ! this tensor is then 
         if(GDflg.eq.'y')then
-            print*,ham%diff_ovrlp_bra(2,2,:)
-            print*,ham%diff_ovrlp_bra(2,4,:) 
             do j=1, ndet
                 ! do l=1, ndet
                     do k=1, ndet

@@ -285,8 +285,7 @@ Module grad_d
             grad_fin%vars(j,:)=grad_fin%vars(j,:)+temp2
         end do
 
-        print*,"here"
-        print*,grad_fin%vars(1,1:norb)
+        ! print*,grad_fin%vars(1,1:norb)
 
     end subroutine final_grad
 
@@ -298,12 +297,15 @@ Module grad_d
         real(kind=8),intent(in)::gamma
         integer::j
 
+       
         do j=1, ndet
+            print*,grad_fin%vars(j,:)
             zstore(j)%phi=zstore(j)%phi-(gamma*(grad_fin%vars(j,:)))
             zstore(j)%sin=sin(cmplx(zstore(j)%phi,0.0d0,kind=8))
             zstore(j)%cos=cos(cmplx(zstore(j)%phi,0.0d0,kind=8))
         end do
 
+        ! stop
 
     end subroutine zombie_alter
 

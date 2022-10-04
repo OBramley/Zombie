@@ -349,13 +349,15 @@ MODULE operators
     logical function occ_iszero(mat)
 
         implicit none
-        integer,dimension(:,:),intent(in)::mat
-        integer::j,tt
+        complex(kind=8),dimension(:,:),intent(in)::mat
+        integer::j
+        complex(kind=8)::tt 
 
+        ! print*,size(mat(1,:))
     
         do j=1, size(mat(1,:))
-            tt=mat(1,j) + mat(2,j)
-            if(tt==0)then
+            tt=conjg(mat(1,j))*mat(1,j) + conjg(mat(2,j))*mat(2,j)
+            if(tt==(0.0,0.0))then
                 occ_iszero=.true.
                 return
             end if
@@ -641,11 +643,9 @@ MODULE operators
             errorflag=1
             return
         end if 
+        
         vmult=conjg(z1)*(z2)
-        ! do j=1, norb
-        !     vmult%alive(j)=conjg(z1%sin(j))*z2%alive(j)
-        !     vmult%dead(j)=conjg(z1%dead(j))*z2%dead(j)
-        ! end do
+        
 
 
         gg(1:norb)=(0.0,0.0)
@@ -661,7 +661,6 @@ MODULE operators
             end if
         end do
         
-
         hmin=0
         hh(norb) = vmult(2,norb)+vmult(1,norb)
         do j=(norb-1),1,-(1)
@@ -682,18 +681,18 @@ MODULE operators
         if(vec(1).ne.0) then
             tot = tot+(conjg(z1(2,1))*z2(1,1)*hh(2)*vec(1))
         end if
+
         do j=2,norb-1
             if(vec(j).ne.0.0) then
                 tot = tot+ (gg(j-1)*conjg(z1(2,j))*z2(1,j)*hh(j+1)*vec(j))
             end if
-
         end do
 
         if(vec(norb).ne.0) then
             tot = tot +(gg(norb-1)*conjg(z1(2,norb))*z2(1,norb)*vec(norb))
         end if
-        
-       deallocate(vmult)
+
+        deallocate(vmult)
     
         z_an_z3=tot
         return

@@ -436,7 +436,8 @@ MODULE alarrays
             errorflag=1
             return
         end if
-
+        en%erg=(0.0,0.0)
+        en%t=0.0
         return
      
     end subroutine allocerg
@@ -483,7 +484,7 @@ MODULE alarrays
             errorflag=1
             return
         end if
-
+        gradients%vars=0
         return
      
     end subroutine allocgrad
@@ -510,6 +511,42 @@ MODULE alarrays
         return
      
     end subroutine deallocgrad
+
+
+    subroutine value_reset(ham,dvecs,en,size,gradients)
+
+        implicit none
+        type(hamiltonian),intent(inout)::ham
+        type(dvector), dimension(:),intent(inout):: dvecs
+        type(energy),intent(inout):: en
+        type(grad),intent(inout)::gradients
+        integer,intent(in)::size
+        integer::j
+
+        ham%hjk(1:size,1:size)=(0.0d0,0.0d0)
+        ham%ovrlp(1:size,1:size)=(0.0d0,0.0d0)
+        ham%inv(1:size,1:size)=(0.0d0,0.0d0)
+        en%erg=(0.0,0.0)
+        if(gramflg.eq."n")then
+            dvecs(1)%d(1:size)=(0.0,0.0)
+            dvecs(1)%norm = 0.0d0
+        else
+            do j=1, 1+gramnum
+                dvecs(j)%d(1:size)=(0.0,0.0)
+                dvecs(j)%norm = 0.0d0
+            end do
+        end if
+        if(GDflg.eq.'y')then 
+            ham%diff_hjk_bra(1:size,1:size,1:norb)=0.0
+            ham%diff_hjk_ket(1:size,1:size,1:norb)=0.0
+            ham%diff_ovrlp_bra(1:size,1:size,1:norb)=0.0
+            ham%diff_ovrlp_ket(1:size,1:size,1:norb)=0.0
+            ham%diff_invh(1:size,1:size,1:size,1:norb)=0.0
+            dvecs(1)%d_diff(1:size,1:size,1:norb)=0.0
+            gradients%vars=0
+        end if 
+
+    end subroutine value_reset
    
 
 
