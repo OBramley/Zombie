@@ -81,7 +81,7 @@ MODULE ham
             h2etot_diff_ket=0.0
             h1etot_diff=0.0
             h2etot_diff=0.0
-            print*,row,m, h1etot, h2etot
+        
             !$omp parallel shared(z2l)
             !$omp do
             do l=1, norb
@@ -93,8 +93,7 @@ MODULE ham
             !$omp end do
             !$omp end parallel
 
-            !!$omp parallel private(z2l) shared(row,m,z1jk,zstore,size,occupancy_2an,occupancy_an_cr,&
-            !!$omp       occupancy_an,h1etot_diff_bra,h2etot_diff_bra,h1etot_diff_ket,h2etot_diff_ket)
+            
             h1etot=(0.0,0.0)
             h2etot=(0.0,0.0)
             h1etot_diff_bra=0.0
@@ -103,38 +102,30 @@ MODULE ham
             h2etot_diff_ket=0.0
             h1etot_diff=0.0
             h2etot_diff=0.0
-            !!$omp sections
-            !!$omp section 
+     
             if(m.eq.row)then
-                print*,"one elec call", row,m
                 call one_elec_part(zstore(row),z2l,h1etot,occupancy_an_cr,&
                                     elecs%h1ei,h1etot_diff_bra,h1etot_diff_ket,zstore(m),1)
             else 
-                print*,"one elec call", row,m
                 call one_elec_part(zstore(row),z2l,h1etot,occupancy_an_cr,&
                                     elecs%h1ei,h1etot_diff_bra,h1etot_diff_ket,zstore(m),9)
             end if
-            print*,row,m, h1etot, h2etot
-            !!$omp section
+           
             z2l=z2l*occupancy_an
             !$omp flush(z2l)
             if(m.eq.row)then
-                print*,"two elec call", row,m
                 call two_elec_part(zstore(row),z1jk,z2l,h2etot,occupancy_2an,occupancy_an,&
                                             elecs%h2ei,h2etot_diff_bra,h2etot_diff_ket,zstore(m),1)
             else 
-                print*,"two elec call", row,m
                 call two_elec_part(zstore(row),z1jk,z2l,h2etot,occupancy_2an,occupancy_an,&
                                             elecs%h2ei,h2etot_diff_bra,h2etot_diff_ket,zstore(m),9)
             end if
-            !!$omp end sections
-            !!$omp end parallel
-
+           
             ham%ovrlp(row,m)=overlap(zstore(row),zstore(m))
             ham%ovrlp(m,row)= ham%ovrlp(row,m)
             ham%hjk(row,m)=h1etot+h2etot+(elecs%hnuc*ham%ovrlp(row,m))
             ham%hjk(m,row)=ham%hjk(row,m)
-            print*,row,m, h1etot, h2etot
+            
             if(GDflg.eq.'y') then
                 ham%diff_hjk_bra(row,m,:)=h1etot_diff_bra+h2etot_diff_bra
                 ham%diff_hjk_ket(m,row,:)=h1etot_diff_ket+h2etot_diff_ket
@@ -151,7 +142,7 @@ MODULE ham
         end do
         !$omp end do
         !$omp end parallel
-        !!$omp end parallel
+     
 
         deallocate(z1jk,stat=ierr)
         if(ierr==0) deallocate(z2l,stat=ierr)
