@@ -237,15 +237,15 @@ MODULE ham
         complex(kind=8)::tot
 
         if (errorflag .ne. 0) return
-        print*,'h2etotstart',equal, h2etot
-        !$omp parallel private(j,k,l,h2etot_diff,tot,occupancy,jspin) shared(h2ei,occupancy_2an,occupancy_an,&
-        !$omp   z2l,h2etot_diff_bra,h2etot_diff_ket,zs1,zs2,equal,h2etot,z1jk) 
+        ! print*,'h2etotstart',equal, h2etot
+        ! !$omp parallel private(j,k,l,h2etot_diff,tot,occupancy,jspin) shared(h2ei,occupancy_2an,occupancy_an,&
+        ! !$omp   z2l,h2etot_diff_bra,h2etot_diff_ket,zs1,zs2,equal,h2etot,z1jk) 
         h2etot=(0.0,0.0)
         h2etot_diff_bra=0.0
         h2etot_diff_ket=0.0
         h2etot_diff=0.0
-        !!$omp flush
-        !!$omp do ordered
+        ! !$omp flush
+        ! $omp do reduction(+:h2etot)
         do j=1, norb
             if(zs1%sin(j)==(0.0,0.0))then
                 CYCLE
@@ -261,15 +261,15 @@ MODULE ham
                 if(occ_iszero(z1jk(j,k,:,:)).eqv..true.)then
                     CYCLE
                 end if
-                !$omp do ordered
+                !!$omp do ordered
                 do l=jspin, norb, 2
                     if(zs2%sin(l)==(0.0,0.0))then
                         CYCLE
                     end if
                     tot = z_an_z3(z1jk(j,k,:,:),z2l(l,:,:),h2ei(j,k,l,:))
-                    !$omp critical
+                    !!$omp critical
                     h2etot=h2etot+tot
-                    !$omp end critical
+                    !!$omp end critical
                     if(GDflg.eq.'y')then
                         occupancy=occupancy_2an(j,k,:,:)*occupancy_an(l,:,:)
                         if(equal.eq.1)then
@@ -279,21 +279,21 @@ MODULE ham
                             h2etot_diff = z_an_z3_diff(z1jk(j,k,:,:),z2l(l,:,:),h2ei(j,k,l,:),1,&
                             occupancy,j,k,l,zs1,zs2) 
                         end if
-                        !$omp critical
+                        !!$omp critical
                         h2etot_diff_bra = h2etot_diff_bra+h2etot_diff(1,:)
                         h2etot_diff_ket = h2etot_diff_ket+ h2etot_diff(2,:)
-                        !$omp end critical
+                        !!$omp end critical
                     end if
                 end do
-                !$omp end do 
+                !!$omp end do
             end do
         end do
-        !!$omp end do 
-        !$omp end parallel
+        ! !$omp end do 
+        ! !$omp end parallel
         h2etot=h2etot*0.5
         h2etot_diff_bra=h2etot_diff_bra*0.5
         h2etot_diff_ket=h2etot_diff_ket*0.5
-        print*,'h2etotfinish',equal, h2etot
+        !print*,'h2etotfinish',equal, h2etot
 
     end subroutine two_elec_part
     

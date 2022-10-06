@@ -110,8 +110,8 @@ program MainZombie
         if(hamgflg=='y')then
             call hamgen(haml,zstore,elect,ndet)
             if(k.eq.1)then
-                !call matrixwriter(haml%hjk,ndet,"data/ham.csv")
-                !call matrixwriter(haml%ovrlp,ndet,"data/ovlp.csv")
+                call matrixwriter(haml%hjk,ndet,"data/ham.csv")
+                call matrixwriter(haml%ovrlp,ndet,"data/ovlp.csv")
                 ! call matrixwriter(haml%inv,ndet,"inv.csv")
                 ! call matrixwriter(haml%kinvh,ndet,"kinvh.csv")
             end if
@@ -130,11 +130,10 @@ program MainZombie
         call imgtime_prop(dvecs,en,haml)
         write(6,"(a)") "Imaginary time propagation finished"
         print*,en%erg(1,timesteps+1)
-        stop
         if(gramflg.eq."n")then
             ! write(stateno,"(i4.4)")k
             call dvec_writer(dvecs(1)%d,ndet,0,k)
-            call energywriter(en%t,en%erg(1,:),"energy_.csv",0,k)
+            call energywriter(en%t,en%erg(1,:),"energy.csv",0,k)
         else if(gramflg.eq."y")then
             do j=1, 1+gramnum
                 write(stateno,"(i4.4)")j
