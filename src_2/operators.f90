@@ -109,7 +109,8 @@ MODULE operators
     end function diff_overlap_cran
 
 
-    ! computes the vector of values formed by the derivative of the overlap with respect to each orbital
+    ! computes the vector of values formed by the derivative of the overlap with respect to each orbital. 
+    ! Does not have capability to deal with states where creation and annihilation operators have acted
     function diff_overlap(z1,z2,dtype)
     
         implicit none

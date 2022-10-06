@@ -58,9 +58,6 @@ MODULE globvars
         real(kind=8),dimension(:,:), allocatable::vars
     end type grad
 
-    type zs2 
-    
-    end type
     
     integer::ndet       ! Number of Zombie states
     integer::norb       ! Number of spin orbitals
