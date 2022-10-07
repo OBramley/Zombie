@@ -21,10 +21,12 @@ MODULE globvars
         complex(kind=8), dimension(:,:), allocatable::kinvh
 
         real(kind=8), dimension(:,:,:), allocatable::diff_hjk_bra
+        real(kind=8), dimension(:,:,:), allocatable::diff_hjk
         !diff_hjk_bra(j,k,m) d/dj <zs_j|H|zs_k>, m specifies the coefficent with in Zs_j
         real(kind=8), dimension(:,:,:), allocatable::diff_hjk_ket
         !diff_hjk_ket(j,k,m) d/dk <zs_j|H|zs_k>, m specifies the coefficent with in Zs_k
         real(kind=8), dimension(:,:,:), allocatable::diff_ovrlp_bra
+        real(kind=8), dimension(:,:,:), allocatable::diff_ovrlp
         !diff_ovrlp_bra(j,k,m) d/dj <zs_j|zs_k>, m specifies the coefficent with in Zs_j
         real(kind=8), dimension(:,:,:), allocatable::diff_ovrlp_ket
         !diff_ovrlp_ket(j,k,m) d/dk <zs_j|zs_k>, m specifies the coefficent with in Zs_k

@@ -96,7 +96,7 @@ zombs={
     'spin':0,
 
     # Number of Zombie states
-    'ndet':10, 
+    'ndet':3, 
 
     # Type of zombie states. Random (ran), Hartree Fock (HF) or biased (bb)
     'zomtyp':'bb',

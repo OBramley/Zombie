@@ -27,7 +27,7 @@ program MainZombie
     character(LEN=100) :: CWD
     real(kind=8):: starttime, stoptime, runtime
     integer(kind=8):: randseed
-
+    DOUBLE PRECISION, external::ZBQLU01
 
     call CPU_TIME(starttime) !used to calculate the runtime, which is output at the end
     write(6,"(a)") " ________________________________________________________________ "
@@ -124,7 +124,7 @@ program MainZombie
             ! call matrixwriter(haml%kinvh,ndet,"kinvh.csv")
             write(6,"(a)") "Hamiltonian successfully read in"
         end if
-
+        
         ! Imaginary time propagation
         write(6,"(a)") "Imaginary time propagation started"
         call imgtime_prop(dvecs,en,haml)
