@@ -65,20 +65,35 @@ MODULE operators
         if (errorflag .ne. 0) return
 
         prod=real(((conjg(z1%sin)*zomt(1,:)))+((conjg(z1%cos)*zomt(2,:))))
-
         diff_overlap_cran=0
         ! Differntial of overlap of the same ZS 0 unless an operator has acted on ZS
         if(dtype.eq.0)then
             if(annihilate2.eq.create2)then
-                bra_prod=prod           !dead amplitude is zero
-                bra_prod(annihilate2)=sin(2*z1%phi(annihilate2))*occupancy(1,annihilate2)
-                diff_overlap_cran(1,annihilate2)=product(bra_prod)    
+                if((real(z2%cos(annihilate2)).eq.0).and.(real(z2%sin(annihilate2)).eq.1).or.(real(z2%sin(annihilate2)).eq.0))then
+                    diff_overlap_cran(1,annihilate2)=0
+                else
+                    bra_prod=prod           !dead amplitude is zero
+                    bra_prod(annihilate2)=sin(2*z1%phi(annihilate2))*occupancy(1,annihilate2)
+                    diff_overlap_cran(1,annihilate2)=product(bra_prod)   
+                end if 
             else if(annihilate2.ne.create2)then
-                bra_prod=prod               !alive amplitude is zero
-                bra_prod(annihilate2)=cos(2*z1%phi(annihilate2))*occupancy(2,annihilate2)
+                bra_prod=prod
+                if((real(z2%cos(annihilate2)).eq.0).and.(real(z2%sin(annihilate2)).eq.1)) then
+                    bra_prod(annihilate2)=-1*occupancy(2,annihilate2)
+                else if((real(z2%sin(annihilate2)).eq.0).and.(real(z2%cos(annihilate2)).eq.1)) then
+                    bra_prod(annihilate2)=occupancy(2,annihilate2)
+                else
+                    bra_prod(annihilate2)=cos(2*z1%phi(annihilate2))*occupancy(2,annihilate2)
+                end if
                 diff_overlap_cran(1,annihilate2)=product(bra_prod)   
-                bra_prod=prod               !dead amplitude is zero
-                bra_prod(create2)=cos(2*z1%phi(create2))*occupancy(1,create2)
+                bra_prod=prod
+                if((real(z2%cos(create2)).eq.0).and.(real(z2%sin(create2)).eq.1)) then
+                    bra_prod(create2)=-1*occupancy(1,create2)
+                else if((real(z2%sin(create2)).eq.0).and.(real(z2%cos(create2)).eq.1)) then
+                    bra_prod(create2)=occupancy(1,create2)
+                else
+                    bra_prod(create2)=cos(2*z1%phi(create2))*occupancy(1,create2)
+                end if               !dead amplitude is zero
                 diff_overlap_cran(1,create2)=product(bra_prod)  
             end if
             diff_overlap_cran(2,:)=diff_overlap_cran(1,:) 
@@ -349,8 +364,6 @@ MODULE operators
         complex(kind=8),dimension(:,:),intent(in)::mat
         integer::j
         complex(kind=8)::tt 
-
-        ! print*,size(mat(1,:))
     
         do j=1, size(mat(1,:))
             tt=conjg(mat(1,j))*mat(1,j) + conjg(mat(2,j))*mat(2,j)
@@ -714,8 +727,6 @@ MODULE operators
         if (errorflag .ne. 0) return
         ierr=0
 
-        
-
         allocate(vmult(2,norb),stat=ierr)
         if (ierr/=0) then
             write(0,"(a,i0)") "Error in vmult allocation . ierr had value ", ierr
@@ -723,7 +734,7 @@ MODULE operators
             return
         end if 
         vmult=real(conjg(z1)*z2)
-     
+       
         if(dtype.eq.0) then !Differentiation when zombie states are the same
             allocate(vmult_dd(2,norb),stat=ierr)
             if (ierr/=0) then
@@ -731,7 +742,7 @@ MODULE operators
                 errorflag=1
                 return
             end if 
-       
+            temp=0
             do j=1, norb    !Differentiating w.r.t to orbital j
                 breakflag=0
                 vmult_dd=vmult
@@ -740,21 +751,21 @@ MODULE operators
                     cycle
                 else if((annihilate1.eq.j).or.(annihilate1_2.eq.j))then
                     if(annihilate2.eq.j)then    !before diff alive:0 dead:a^(a)_(1j)*a^(a)_(1j)
-                        vmult(1,j)=0
-                        vmult(2,j)=sin(2*zom1%phi(j))*occupancy(2,j)
+                        vmult_dd(1,j)=0
+                        vmult_dd(2,j)=2*real(zom1%sin(j)*zom1%cos(j))*occupancy(2,j) !(sin2x=2sinxcosx)
                     else
-                        vmult(1,j)=0        !before diff alive:0 dead:a^(a)_(1j)*a^(a)_(0j)
-                        vmult(2,j)=cos(2*zom1%phi(j))*occupancy(2,j)
+                        vmult_dd(1,j)=0        !before diff alive:0 dead:a^(a)_(1j)*a^(a)_(0j)
+                        vmult_dd(2,j)=(1.0-2*((real(zom1%sin(j)))**2))*occupancy(2,j)    !(cos2x = cos^x -sin^2x)
                     end if
                 else if((annihilate1.ne.j).or.(annihilate1_2.ne.j))then
                     if(annihilate2.eq.j)then !before diff alive:0 dead:a^(a)_(0j)*a^(a)_(1j)
-                        vmult(1,j)=0
-                        vmult(2,j)=cos(2*zom1%phi(j))*occupancy(2,j)
+                        vmult_dd(1,j)=0
+                        vmult_dd(2,j)=(1.0-2*((real(zom1%sin(j)))**2))*occupancy(2,j)
                     else
                         breakflag=j !before diff alive:a^(a)_(1j)*a^(a)_(1j) dead:a^(a)_(0j)*a^(a)_(0j)
                     end if          !Unless an opeator acts at position j this evaluates to 0
                 end if
-                
+            
                 gg_1(1:norb)=(0.0,0.0)
                 hh_1(1:norb)=(0.0,0.0)
                 gmax1=norb
@@ -784,64 +795,67 @@ MODULE operators
                     cycle
                 end if
 
-                if(vec(1).ne.0) then
-                    if(j.eq.1)then
-                        if((annihilate1.eq.1).or.(annihilate1_2.eq.1))then
-                            if(annihilate2.ne.1)then
-                                tot1 = tot1+(sin(2*zom1%phi(1)*occupancy(2,1))*hh_1(2)*vec(1))
-                            end if
-                        else
-                            if(annihilate2.ne.1)then
-                                tot1 = tot1+(cos(2*zom1%phi(1)*occupancy(2,1))*hh_1(2)*vec(1))
-                            end if 
-                            if(breakflag.eq.1)then
-                                temp(j)=cos(2*zom1%phi(1)*occupancy(2,1))*hh_1(2)*vec(1)
-                                cycle
-                            end if
+                if((breakflag.eq.0).or.(breakflag.eq.1))then
+                    if(vec(1).ne.0) then
+                        if(breakflag.eq.1)then
+                            temp(j)=(1.0-2*((real(zom1%sin(1)))**2))*occupancy(2,1)*hh_1(2)*vec(1)
+                            cycle
                         end if
-                    else
-                        tot1 = tot1+(REAL(conjg(z1(2,1))*z2(1,1))*hh_1(2)*vec(1))
-                    end if
-                end if
-                do k=2,norb-1
-                    if(vec(k).ne.0.0) then
-                        if(k.eq.j)then
-                            if((annihilate1.eq.k).or.(annihilate1_2.eq.k))then
-                                if(annihilate2.ne.k)then
-                                    tot1 = tot1+(gg_1(k-1)*(sin(2*zom1%phi(k))*occupancy(2,k))*hh_1(k+1)*vec(k))
+                        if(j.eq.1)then
+                            if((annihilate1.eq.1).or.(annihilate1_2.eq.1))then
+                                if(annihilate2.ne.1)then
+                                    tot1 = tot1+(2*real(zom1%sin(1)*zom1%cos(1))*occupancy(2,1)*hh_1(2)*vec(1))
                                 end if
                             else
-                                if(annihilate2.ne.k)then
-                                    tot1 = tot1+(gg_1(k-1)*(cos(2*zom1%phi(k))*occupancy(2,k))*hh_1(k+1)*vec(k))
+                                if(annihilate2.ne.1)then
+                                    tot1 = tot1+((1.0-2*((real(zom1%sin(1)))**2))*occupancy(2,1)*hh_1(2)*vec(1))
                                 end if 
-                                if(breakflag.eq.k)then
-                                    temp(j)=(gg_1(k-1)*(cos(2*zom1%phi(k))*occupancy(2,k))*hh_1(k+1)*vec(k))
-                                    cycle
-                                end if
                             end if
                         else
-                            tot1 = tot1+ (gg_1(k-1)*REAL(conjg(z1(2,k))*z2(1,k))*hh_1(k+1)*vec(k))
+                            tot1 = tot1+(REAL(conjg(z1(2,1))*z2(1,1))*hh_1(2)*vec(1))
                         end if
                     end if
-                end do
-
-                if(vec(norb).ne.0) then
-                    if(norb.eq.j)then
-                        if((annihilate1.eq.norb).or.(annihilate1_2.eq.norb))then
-                            if(annihilate2.ne.norb)then
-                                tot1 = tot1 +(gg_1(norb-1)*(sin(2*zom1%phi(norb))*occupancy(2,norb))*vec(norb))
-                            end if
-                        else
-                            if(annihilate2.ne.norb)then
-                                tot1 = tot1+ (gg_1(norb-1)*(cos(2*zom1%phi(norb))*occupancy(2,norb))*vec(norb))
-                            end if 
-                            if(breakflag.eq.norb)then
-                                temp(j)=(gg_1(norb-1)*(cos(2*zom1%phi(norb))*occupancy(2,norb))*vec(norb))
-                                cycle
+                else if((breakflag.lt.norb))then
+                    if(breakflag.ne.0)then
+                        temp(j)=(gg_1(j-1)*((1.0-2*((real(zom1%sin(j)))**2))*occupancy(2,j))*hh_1(j+1)*vec(j))
+                        cycle
+                    end if
+                    do k=2,norb-1
+                        if(vec(k).ne.0.0) then
+                            if(k.eq.j)then
+                                if((annihilate1.eq.k).or.(annihilate1_2.eq.k))then
+                                    if(annihilate2.ne.k)then
+                                        tot1 = tot1+(gg_1(k-1)*(2*real(zom1%sin(k)*zom1%cos(k))*occupancy(2,k))*hh_1(k+1)*vec(k))
+                                    end if
+                                else
+                                    if(annihilate2.ne.k)then
+                                        tot1 = tot1+(gg_1(k-1)*((1.0-2*((real(zom1%sin(k)))**2))*occupancy(2,k))*hh_1(k+1)*vec(k))
+                                    end if 
+                                end if
+                            else
+                                tot1 = tot1+ (gg_1(k-1)*REAL(conjg(z1(2,k))*z2(1,k))*hh_1(k+1)*vec(k))
                             end if
                         end if
-                    else
-                        tot1 = tot1 +(gg_1(norb-1)*REAL(conjg(z1(2,norb))*z2(1,norb))*vec(norb))
+                    end do
+                else
+                    if(breakflag.eq.norb)then
+                        temp(j)=(gg_1(norb-1)*((1.0-2*((real(zom1%sin(norb)))**2))*occupancy(2,norb))*vec(norb))
+                        cycle
+                    end if
+                    if(vec(norb).ne.0) then
+                        if(norb.eq.j)then
+                            if((annihilate1.eq.norb).or.(annihilate1_2.eq.norb))then
+                                if(annihilate2.ne.norb)then
+                                    tot1 = tot1 +(gg_1(norb-1)*(2*real(zom1%sin(norb)*zom1%cos(norb))*occupancy(2,norb))*vec(norb))
+                                end if
+                            else
+                                if(annihilate2.ne.norb)then
+                                    tot1 = tot1+ (gg_1(norb-1)*((1.0-2*((real(zom1%sin(norb)))**2))*occupancy(2,norb))*vec(norb))
+                                end if    
+                            end if
+                        else
+                            tot1 = tot1 +(gg_1(norb-1)*REAL(conjg(z1(2,norb))*z2(1,norb))*vec(norb))
+                        end if
                     end if
                 end if
 
@@ -865,7 +879,8 @@ MODULE operators
                 errorflag=1
                 return
             end if 
-            
+            temp=0
+            temp2=0
             do j=1, norb
                 vmult_1d=vmult
                 vmult_2d=vmult

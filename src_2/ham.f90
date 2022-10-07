@@ -8,7 +8,7 @@ MODULE ham
 
     ! Subroutine to calcualte Hamiltonian elements combines 1st and 2nd electron integral calcualations so remove double 
     ! calcualiton of certain results. This minimises the (slow) applicaiton of the creation and annihilaiton operators
-    subroutine he_row(ham,zstore,elecs,row,size,occupancy_2an,occupancy_an_cr,occupancy_an)
+    subroutine he_row(ham,zstore,elecs,row,size,occupancy_2an,occupancy_an_cr,occupancy_an,passback)
         
         implicit none
         type(hamiltonian), intent(inout)::ham
@@ -17,6 +17,7 @@ MODULE ham
         integer,intent(in)::row,size
         integer,dimension(:,:,:,:),intent(in)::occupancy_2an,occupancy_an_cr
         integer,dimension(:,:,:),intent(in)::occupancy_an
+        complex(kind=8),dimension(:,:,:),intent(inout)::passback
         complex(kind=8),allocatable, dimension(:,:,:,:)::z1jk
         complex(kind=8),allocatable, dimension(:,:,:)::z2l
         integer::j,k,l,m,ierr
@@ -28,7 +29,6 @@ MODULE ham
         if (errorflag .ne. 0) return
         ierr = 0
 
-        !$ print*,omp_get_num_threads()
         allocate(z1jk(norb,norb,2,norb),stat=ierr)
         if(ierr==0) allocate(z2l(norb,2,norb),stat=ierr)
         if (ierr/=0) then
@@ -50,19 +50,40 @@ MODULE ham
         !!$omp parallel private(j,k,l,z2l,h1etot,h2etot, &
         !!$omp h1etot_diff_bra,h2etot_diff_bra, h1etot_diff_ket,h2etot_diff_ket,&
         !!$omp  h1etot_diff,h2etot_diff,m) shared(z1jk,zstore,row,size,occupancy_2an,occupancy_an_cr,occupancy_an)
-        !$omp parallel
+        !$omp parallel shared(passback,zstore,z1jk, z2l) private(j,k,l)
+        if(row.eq.1)then 
+            !$omp do
+            do l=1, norb
+                z2l(l,1,:)=zstore(1)%sin(:)
+                z2l(l,2,:)=zstore(1)%cos(:)
+                z2l(l,2,l)=z2l(l,1,l)
+                z2l(l,1,l)=cmplx(0.0,0.0)
+            end do
+            !$omp end do
+        else
+            z2l=passback
+        end if
         !$omp do
         do j=1, norb
             do k=1, norb
-                z1jk(j,k,1,:)=zstore(row)%sin(:)
-                z1jk(j,k,2,:)=zstore(row)%cos(:)
-                z1jk(j,k,2,j)=z1jk(j,k,1,j)
-                z1jk(j,k,1,j)=(0.0,0.0)
+                z1jk(j,k,:,:)=z2l(j,:,:)
                 z1jk(j,k,2,k)=z1jk(j,k,1,k)
-                z1jk(j,k,1,k)=(0.0,0.0)
+                z1jk(j,k,1,k)=cmplx(0.0,0.0)
             end do
         end do
         !$omp end do
+        ! !$omp do
+        ! do j=1, norb
+        !     do k=1, norb
+        !         z1jk(j,k,1,:)=zstore(row)%sin(:)
+        !         z1jk(j,k,2,:)=zstore(row)%cos(:)
+        !         z1jk(j,k,2,j)=z1jk(j,k,1,j)
+        !         z1jk(j,k,1,j)=(0.0,0.0)
+        !         z1jk(j,k,2,k)=z1jk(j,k,1,k)
+        !         z1jk(j,k,1,k)=(0.0,0.0)
+        !     end do
+        ! end do
+        ! !$omp end do
         !$omp end parallel
         z1jk=z1jk*occupancy_2an
         !!$omp flush(z1jk)
@@ -79,18 +100,23 @@ MODULE ham
             h2etot_diff_bra=0.0
             h2etot_diff_ket=0.0
           
-        
-            !$omp parallel shared(z2l)
-            !$omp do
-            do l=1, norb
-                z2l(l,1,:)=zstore(m)%sin(:)
-                z2l(l,2,:)=zstore(m)%cos(:)
-                z2l(l,2,l)=z2l(l,1,l)
-                z2l(l,1,l)=(0.0,0.0)
-            end do
-            !$omp end do
-            !$omp end parallel
             
+            if(m.gt.row)then
+                !$omp parallel shared(z2l)
+                !$omp do
+                do l=1, norb
+                    z2l(l,1,:)=zstore(m)%sin(:)
+                    z2l(l,2,:)=zstore(m)%cos(:)
+                    z2l(l,2,l)=z2l(l,1,l)
+                    z2l(l,1,l)=cmplx(0.0,0.0)
+                end do
+                !$omp end do
+                !$omp end parallel
+                if(m.eq.row+1)then 
+                    passback=z2l
+                end if
+            end if
+
             h1etot=(0.0,0.0)
             h2etot=(0.0,0.0)
             h1etot_diff_bra=0.0
@@ -107,6 +133,7 @@ MODULE ham
                 call one_elec_part(zstore(row),z2l,h1etot,occupancy_an_cr,&
                                     elecs%h1ei,h1etot_diff_bra,h1etot_diff_ket,zstore(m),9)
             end if
+            
             z2l=z2l*occupancy_an
             !$omp flush(z2l)
             if(m.eq.row)then
@@ -116,7 +143,11 @@ MODULE ham
                 call two_elec_part(zstore(row),z1jk,z2l,h2etot,occupancy_2an,occupancy_an,&
                                             elecs%h2ei,h2etot_diff_bra,h2etot_diff_ket,zstore(m),9)
             end if
-        
+            
+            ! print*,row, m
+            ! print*,real(h2etot)
+            ! print*,h2etot_diff_bra
+            ! print*,h1etot_diff_ket
 
             ham%ovrlp(row,m)=overlap(zstore(row),zstore(m))
             ham%ovrlp(m,row)= ham%ovrlp(row,m)
@@ -133,6 +164,10 @@ MODULE ham
                     ham%diff_ovrlp(row,m,:) = overlap_diff(1,:)
                     ham%diff_ovrlp(m,row,:) = overlap_diff(2,:)
                 end if
+                !
+                ! print*, real(ham%hjk(row,m))
+                ! print*,ham%diff_hjk(row,m,:)
+                !print*,ham%diff_hjk(m,row,:)
             end if
         end do
         !!$omp end do
@@ -179,21 +214,15 @@ MODULE ham
             do k=1, norb
                 zomt(:,:)=z2l(j,:,:)
                 zomt(1,k)=zomt(2,k)
-                zomt(2,k)=(0.0,0.0)
+                zomt(2,k)=cmplx(0.0,0.0)
                 zomt=zomt*occupancy(j,k,:,:)
-                !!$omp critical
                 temp=temp+product((conjg(zs1%sin)*zomt(1,:))+(conjg(zs1%cos)*zomt(2,:)))*h1ei(j,k)
-                !!$omp end critical
                 if(GDflg.eq.'y')then
                     if(equal.eq.1)then
                         h1etot_diff = h1etot_diff+ diff_overlap_cran(zs1,zs2,0,zomt,j,k,occupancy(j,k,:,:))*h1ei(j,k) 
                     else 
                         h1etot_diff = h1etot_diff+ diff_overlap_cran(zs1,zs2,1,zomt,j,k,occupancy(j,k,:,:))*h1ei(j,k) 
                     end if
-                    !!$omp critical
-                    ! h1etot_diff_bra= h1etot_diff_bra + h1etot_diff(1,:)
-                    ! h1etot_diff_ket= h1etot_diff_ket + h1etot_diff(2,:)
-                    !!$omp end critical
                 end if
             end do
         end do
@@ -231,32 +260,46 @@ MODULE ham
         h2etot_diff_ket=0.0
         h2etot_diff=0.0
    
-        !$omp parallel shared(z1jk,z2l,zs1,zs2,tot,occupancy_2an,occupancy_an,h2ei,equal,h2etot_diff) private(j,k,l,jspin,occupancy)
-        !$omp do schedule(dynamic) reduction(+:tot,h2etot_diff)
+        !$omp parallel shared(z1jk,z2l,zs1,zs2,tot,occupancy_2an,&
+        !$omp           occupancy_an,h2ei,equal,h2etot_diff) private(j,k,l,jspin,occupancy)
+        !$omp do schedule(dynamic) reduction(+:tot)
         do j=1, norb
             if(zs1%sin(j)==(0.0,0.0))then
                 CYCLE
             end if
-
             if(modulo(j,2)==0)then
                 jspin=2
             else
                 jspin=1
             end if
-            
             do k=1, norb
                 if(occ_iszero(z1jk(j,k,:,:)).eqv..true.)then
                     CYCLE
                 end if
-                
                 do l=jspin, norb, 2
                     if(zs2%sin(l)==(0.0,0.0))then
                         CYCLE
                     end if
-                    ! print*,real(z1jk(j,k,1,1))! tot = tot +
-                    ! print*,real(z2l(l,1,1))
                     tot = tot+z_an_z3(z1jk(j,k,:,:),z2l(l,:,:),h2ei(j,k,l,:))
-                    if(GDflg.eq.'y')then
+                end do
+            end do
+        end do
+        !$omp end do
+       
+        if(GDflg.eq.'y')then
+            !$omp do schedule(dynamic) reduction(+:h2etot_diff)
+            do j=1, norb
+                if(modulo(j,2)==0)then
+                    jspin=2
+                else
+                    jspin=1
+                end if
+                do k=1, norb
+                    if(j.eq.k)then
+                        cycle
+                    end if
+                    do l=jspin, norb, 2
+                        ! print*,j,k,l
                         occupancy=occupancy_2an(j,k,:,:)*occupancy_an(l,:,:)
                         if(equal.eq.1)then
                             h2etot_diff = h2etot_diff + z_an_z3_diff(z1jk(j,k,:,:),z2l(l,:,:),h2ei(j,k,l,:),0,&
@@ -265,11 +308,11 @@ MODULE ham
                             h2etot_diff = h2etot_diff + z_an_z3_diff(z1jk(j,k,:,:),z2l(l,:,:),h2ei(j,k,l,:),1,&
                             occupancy,j,k,l,zs1,zs2) 
                         end if
-                    end if
+                    end do
                 end do
             end do
-        end do
-        !$omp end do 
+            !$omp end do
+        end if
         !$omp end parallel
         h2etot=tot*0.5
         h2etot_diff_bra = h2etot_diff(1,:)*0.5
@@ -289,6 +332,7 @@ MODULE ham
         type(elecintrgl),intent(in)::elecs
         integer,allocatable,dimension(:,:,:)::occupancy_an
         integer,allocatable,dimension(:,:,:,:)::occupancy_an_cr,occupancy_2an
+        complex(kind=8),allocatable, dimension(:,:,:)::passback
         integer, allocatable,dimension(:)::IPIV1
         complex(kind=8),allocatable,dimension(:)::WORK1
         real(kind=8),dimension(ndet,ndet,norb)::temp2
@@ -298,6 +342,7 @@ MODULE ham
         allocate(occupancy_an(norb,2,norb),stat=ierr)
         if(ierr==0) allocate(occupancy_2an(norb,norb,2,norb),stat=ierr)
         if(ierr==0) allocate(occupancy_an_cr(norb,norb,2,norb),stat=ierr)
+        if(ierr==0) allocate(passback(norb,2,norb),stat=ierr)
         if (ierr/=0) then
             write(0,"(a,i0)") "Error in occupancy vector allocation . ierr had value ", ierr
             errorflag=1
@@ -342,13 +387,19 @@ MODULE ham
         !!$omp parallel private(j) shared(occupancy_an,occupancy_2an,occupancy_an_cr,ham,zstore,elecs)
         !!$omp do ordered 
         do j=1, size
-            call he_row(ham,zstore,elecs,j,size,occupancy_2an,occupancy_an_cr,occupancy_an)  
+            call he_row(ham,zstore,elecs,j,size,occupancy_2an,occupancy_an_cr,occupancy_an,passback)  
         end do
         !!$omp end do
         !!$omp end parallel
         ! !$omp end parallel
         !$ call omp_set_nested(.FALSE.)
-       ! stop
+  
+       if(ierr==0) deallocate(passback,stat=ierr)
+        if (ierr/=0) then
+            write(0,"(a,i0)") "Error in passback vector deallocation . ierr had value ", ierr
+            errorflag=1
+        end if
+
         ham%inv=ham%ovrlp
         allocate(IPIV1(size),stat=ierr)
         if (ierr/=0) then
@@ -373,15 +424,16 @@ MODULE ham
 
         if (ierr==0) deallocate(IPIV1,stat=ierr)
         if (ierr/=0) then
-            write(0,"(a,i0)") "Error in IPIV vector allocation . ierr had value ", ierr
+            write(0,"(a,i0)") "Error in IPIV vector deallocation . ierr had value ", ierr
             errorflag=1
         end if
 
         if (ierr==0) deallocate(WORK1,stat=ierr)
         if (ierr/=0) then
-            write(0,"(a,i0)") "Error in WORK vector allocation . ierr had value ", ierr
+            write(0,"(a,i0)") "Error in WORK vector deallocation . ierr had value ", ierr
             errorflag=1
         end if
+        
         !$omp parallel
         !$omp workshare
         ham%kinvh=matmul(ham%inv,ham%hjk)

@@ -34,7 +34,7 @@ MODULE imgtp
                 dvecs(j)%d(j)=(1.0,1.0)
              end if
         end do
-
+       
         states=1
         if(gramflg.eq."y")then
             states=gramnum+1
@@ -45,7 +45,6 @@ MODULE imgtp
 
         db=beta/timesteps
        
-        ! dvecs(1)%d=(dvecs(1)%d)/sqrt(zabs(dot_product((dvecs(1)%d),matmul(ham%ovrlp,(dvecs(1)%d)))))
     
         do j=1,timesteps+1
             en%t(j)=db*(j-1)
@@ -79,7 +78,6 @@ MODULE imgtp
       
         
         if (errorflag .ne. 0) return
-        
         !$omp parallel
         !$omp workshare
         result=dot_product(dvec,matmul(bham,dvec))
@@ -87,7 +85,7 @@ MODULE imgtp
         !$omp end workshare
         !$omp end parallel
         return
-
+       
     end function ergcalc
 
     subroutine d_norm(dvec,ham,step)
