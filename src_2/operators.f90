@@ -656,7 +656,7 @@ MODULE operators
         
         vmult=conjg(z1)*(z2)
         
-
+    
         gg(1:norb)=(0.0,0.0)
         hh(1:norb)=(0.0,0.0)
         gmax=norb
@@ -734,6 +734,7 @@ MODULE operators
             return
         end if 
         vmult=real(conjg(z1)*z2)
+        
        
         if(dtype.eq.0) then !Differentiation when zombie states are the same
             allocate(vmult_dd(2,norb),stat=ierr)
@@ -743,6 +744,9 @@ MODULE operators
                 return
             end if 
             temp=0
+            !$omp parallel private(vmult_dd,gmax1,hmin1,breakflag,tot1) shared(annihilate1,annihilate1_2,&
+            !$omp annihilate2,temp,zom1,zom2,vmult,occupancy,vec,z1,z2)
+            !$omp do
             do j=1, norb    !Differentiating w.r.t to orbital j
                 breakflag=0
                 vmult_dd=vmult
@@ -861,6 +865,8 @@ MODULE operators
 
                 temp(j)=tot1
             end do
+            !$omp end do
+            !$omp end parallel
             z_an_z3_diff(1,:)=temp(:)
             z_an_z3_diff(2,:)=temp(:)
             deallocate(vmult,stat=ierr)
@@ -881,6 +887,9 @@ MODULE operators
             end if 
             temp=0
             temp2=0
+            !$omp parallel private(vmult_1d,vmult_2d,gmax1,gmax2,hmin1,hmin2,tot1,tot2) shared(annihilate1,&
+            !$omp annihilate1_2,annihilate2,temp,temp2,zom1,zom2,vmult,occupancy,vec,z1,z2)
+            !$omp do
             do j=1, norb
                 vmult_1d=vmult
                 vmult_2d=vmult
@@ -906,7 +915,6 @@ MODULE operators
                         vmult_2d(1,j)=0
                         vmult_2d(2,j)=real(zom1%cos(j)*zom2%cos(j))*occupancy(2,j)
                     else    !before diff alive:a^(a)_(1j)*a^(b)_(1j) dead:a^(a)_(0j)*a^(b)_(0j)
-                        ! breakflag=j
                         vmult_1d(1,j)=real(zom1%cos(j)*zom2%sin(j))*occupancy(1,j)
                         vmult_1d(2,j)=-real(zom1%sin(j)*zom2%cos(j))*occupancy(2,j)
                         vmult_2d(1,j)=real(zom1%sin(j)*zom2%cos(j))*occupancy(1,j)
@@ -1034,6 +1042,8 @@ MODULE operators
                     temp2(j)=0.0
                 end if
             end do
+            !$omp end do
+            !$omp end parallel
             z_an_z3_diff(1,:)=temp(:)
             z_an_z3_diff(2,:)=temp2(:)
             deallocate(vmult,stat=ierr)

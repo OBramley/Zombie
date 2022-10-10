@@ -177,7 +177,7 @@ MODULE clean
        
         
         call allocham(cleanham,clean_ndet,1)
-        call hamgen(cleanham,cstore,elecs,clean_ndet)
+        call hamgen(cleanham,cstore,elecs,clean_ndet,1)
         call matrixwriter(cleanham%hjk,clean_ndet,"data/clean_ham.csv")
         
         

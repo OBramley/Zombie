@@ -21,7 +21,7 @@ MODULE ham
         complex(kind=8),allocatable, dimension(:,:,:,:)::z1jk
         complex(kind=8),allocatable, dimension(:,:,:)::z2l
         integer::j,k,l,m,ierr
-        complex(kind=8)::h1etot, h2etot,temp
+        complex(kind=8)::h1etot, h2etot
         real(kind=8),dimension(norb)::h1etot_diff_bra,h2etot_diff_bra
         real(kind=8),dimension(norb)::h1etot_diff_ket,h2etot_diff_ket
         real(kind=8),dimension(2,norb)::overlap_diff
@@ -37,9 +37,8 @@ MODULE ham
             return
         end if 
 
-        h1etot=(0.0,0.0)
-        h2etot=(0.0,0.0)
-        temp=(0.0,0.0)
+        h1etot=cmplx(0.0,0.0)
+        h2etot=cmplx(0.0,0.0)
         h1etot_diff_bra=0.0
         h1etot_diff_ket=0.0
         h2etot_diff_bra=0.0
@@ -51,7 +50,8 @@ MODULE ham
         !!$omp h1etot_diff_bra,h2etot_diff_bra, h1etot_diff_ket,h2etot_diff_ket,&
         !!$omp  h1etot_diff,h2etot_diff,m) shared(z1jk,zstore,row,size,occupancy_2an,occupancy_an_cr,occupancy_an)
         !$omp parallel shared(passback,zstore,z1jk, z2l) private(j,k,l)
-        if(row.eq.1)then 
+        if(row.eq.1)then
+           
             !$omp do
             do l=1, norb
                 z2l(l,1,:)=zstore(1)%sin(:)
@@ -60,8 +60,10 @@ MODULE ham
                 z2l(l,1,l)=cmplx(0.0,0.0)
             end do
             !$omp end do
+           
         else
             z2l=passback
+          
         end if
         !$omp do
         do j=1, norb
@@ -92,9 +94,8 @@ MODULE ham
         !!$omp  h1etot_diff,h2etot_diff,m) shared(z1jk,zstore,row,size,occupancy_2an,occupancy_an_cr,occupancy_an)
         !!$omp do schedule(dynamic)
         do m=row,size
-            h1etot=(0.0,0.0)
-            h2etot=(0.0,0.0)
-            temp=(0.0,0.0)
+            h1etot=cmplx(0.0,0.0)
+            h2etot=cmplx(0.0,0.0)
             h1etot_diff_bra=0.0
             h1etot_diff_ket=0.0
             h2etot_diff_bra=0.0
@@ -102,6 +103,7 @@ MODULE ham
           
             
             if(m.gt.row)then
+               
                 !$omp parallel shared(z2l)
                 !$omp do
                 do l=1, norb
@@ -113,6 +115,7 @@ MODULE ham
                 !$omp end do
                 !$omp end parallel
                 if(m.eq.row+1)then 
+                  
                     passback=z2l
                 end if
             end if
@@ -133,7 +136,7 @@ MODULE ham
                 call one_elec_part(zstore(row),z2l,h1etot,occupancy_an_cr,&
                                     elecs%h1ei,h1etot_diff_bra,h1etot_diff_ket,zstore(m),9)
             end if
-            
+           
             z2l=z2l*occupancy_an
             !$omp flush(z2l)
             if(m.eq.row)then
@@ -143,31 +146,23 @@ MODULE ham
                 call two_elec_part(zstore(row),z1jk,z2l,h2etot,occupancy_2an,occupancy_an,&
                                             elecs%h2ei,h2etot_diff_bra,h2etot_diff_ket,zstore(m),9)
             end if
-            
-            ! print*,row, m
-            ! print*,real(h2etot)
-            ! print*,h2etot_diff_bra
-            ! print*,h1etot_diff_ket
-
             ham%ovrlp(row,m)=overlap(zstore(row),zstore(m))
             ham%ovrlp(m,row)= ham%ovrlp(row,m)
             ham%hjk(row,m)=h1etot+h2etot+(elecs%hnuc*ham%ovrlp(row,m))
             ham%hjk(m,row)=ham%hjk(row,m)
-            
+           
+
             if(GDflg.eq.'y') then
-                ham%diff_hjk(row,m,:)=h1etot_diff_bra+h2etot_diff_bra
-                ham%diff_hjk(m,row,:)=h1etot_diff_ket+h2etot_diff_ket
                 if(m.eq.row)then
                     ham%diff_ovrlp(row,m,:) = 0
-                else 
+                    ham%diff_hjk(row,m,:)=h1etot_diff_bra+h2etot_diff_bra
+                else
+                    ham%diff_hjk(row,m,:)=h1etot_diff_bra+h2etot_diff_bra
+                    ham%diff_hjk(m,row,:)=h1etot_diff_ket+h2etot_diff_ket
                     overlap_diff = diff_overlap(zstore(row),zstore(m))
                     ham%diff_ovrlp(row,m,:) = overlap_diff(1,:)
                     ham%diff_ovrlp(m,row,:) = overlap_diff(2,:)
                 end if
-                !
-                ! print*, real(ham%hjk(row,m))
-                ! print*,ham%diff_hjk(row,m,:)
-                !print*,ham%diff_hjk(m,row,:)
             end if
         end do
         !!$omp end do
@@ -182,7 +177,7 @@ MODULE ham
             return
         end if 
 
-        write(6,"(a,i0,a)") "Hamiltonian row ",row, " completed"
+        
         return
 
     end subroutine he_row
@@ -208,6 +203,7 @@ MODULE ham
         h1etot_diff_bra=0.0
         h1etot_diff_ket=0.0
         h1etot_diff=0.0
+        temp=cmplx(0.0,0.0)
         !$omp parallel private(j,k,zomt) shared(h1ei,occupancy,z2l,zs1,zs2,equal,temp,h1etot_diff)
         !$omp do schedule(dynamic) reduction(+:temp,h1etot_diff)
         do j=1, norb
@@ -228,6 +224,7 @@ MODULE ham
         end do
         !$omp end do
         !$omp end parallel
+        ! print*,'h1ei complete'
         h1etot=temp
         h1etot_diff_bra=  h1etot_diff(1,:)
         h1etot_diff_ket=  h1etot_diff(2,:)
@@ -259,7 +256,7 @@ MODULE ham
         h2etot_diff_bra=0.0
         h2etot_diff_ket=0.0
         h2etot_diff=0.0
-   
+        tot=cmplx(0.0,0.0)
         !$omp parallel shared(z1jk,z2l,zs1,zs2,tot,occupancy_2an,&
         !$omp           occupancy_an,h2ei,equal,h2etot_diff) private(j,k,l,jspin,occupancy)
         !$omp do schedule(dynamic) reduction(+:tot)
@@ -273,6 +270,7 @@ MODULE ham
                 jspin=1
             end if
             do k=1, norb
+                if(j.eq.k) cycle
                 if(occ_iszero(z1jk(j,k,:,:)).eqv..true.)then
                     CYCLE
                 end if
@@ -299,7 +297,6 @@ MODULE ham
                         cycle
                     end if
                     do l=jspin, norb, 2
-                        ! print*,j,k,l
                         occupancy=occupancy_2an(j,k,:,:)*occupancy_an(l,:,:)
                         if(equal.eq.1)then
                             h2etot_diff = h2etot_diff + z_an_z3_diff(z1jk(j,k,:,:),z2l(l,:,:),h2ei(j,k,l,:),0,&
@@ -310,20 +307,22 @@ MODULE ham
                         end if
                     end do
                 end do
+                ! print*,j
             end do
             !$omp end do
         end if
         !$omp end parallel
+      
         h2etot=tot*0.5
         h2etot_diff_bra = h2etot_diff(1,:)*0.5
         h2etot_diff_ket = h2etot_diff(2,:)*0.5
-       
+        ! print*,'h2ei complete'
         return
 
     end subroutine two_elec_part
     
     ! Top level routine to allocate hamiltonian and overlap matrices 
-    subroutine hamgen(ham,zstore,elecs,size)
+    subroutine hamgen(ham,zstore,elecs,size,verb)
 
         implicit none
 
@@ -334,11 +333,14 @@ MODULE ham
         integer,allocatable,dimension(:,:,:,:)::occupancy_an_cr,occupancy_2an
         complex(kind=8),allocatable, dimension(:,:,:)::passback
         integer, allocatable,dimension(:)::IPIV1
+        integer,intent(in)::size,verb
         complex(kind=8),allocatable,dimension(:)::WORK1
         real(kind=8),dimension(ndet,ndet,norb)::temp2
         real(kind=8),dimension(ndet,norb)::matrix
-        integer:: j,k,l,size,ierr
+        integer:: j,k,l,ierr
 
+        if (errorflag .ne. 0) return
+        
         allocate(occupancy_an(norb,2,norb),stat=ierr)
         if(ierr==0) allocate(occupancy_2an(norb,norb,2,norb),stat=ierr)
         if(ierr==0) allocate(occupancy_an_cr(norb,norb,2,norb),stat=ierr)
@@ -383,17 +385,19 @@ MODULE ham
         !$omp end do
         !$omp end parallel
 
-        ! print*,thread_1,thread_2
         !!$omp parallel private(j) shared(occupancy_an,occupancy_2an,occupancy_an_cr,ham,zstore,elecs)
         !!$omp do ordered 
         do j=1, size
-            call he_row(ham,zstore,elecs,j,size,occupancy_2an,occupancy_an_cr,occupancy_an,passback)  
+            call he_row(ham,zstore,elecs,j,size,occupancy_2an,occupancy_an_cr,occupancy_an,passback)
+            if(verb.eq.1)then
+                write(6,"(a,i0,a)") "Hamiltonian row ",j, " completed"
+            end if  
         end do
         !!$omp end do
         !!$omp end parallel
         ! !$omp end parallel
         !$ call omp_set_nested(.FALSE.)
-  
+        ! stop
        if(ierr==0) deallocate(passback,stat=ierr)
         if (ierr/=0) then
             write(0,"(a,i0)") "Error in passback vector deallocation . ierr had value ", ierr
@@ -441,34 +445,30 @@ MODULE ham
         !$omp end parallel
 
         ! To find the derrivative of the inverse of a matrix we use the identity
-        ! d(omega^-1)= omega^-1d(omega)omega^-1. Since this result is only used when being multiplied with the hamiltonian 
+        ! d(omega^-1)= -omega^-1d(omega)omega^-1. Since this result is only used when being multiplied with the hamiltonian 
         ! we will actually calculate omega^-1d(omega)omega^-1*H 
         ! j decides which zombie state we differentiate by
         ! omega^-1d(omega) is first calcualted. creating an ndet*ndet*norb array 
         ! this tensor is then 
         if(GDflg.eq.'y')then
-            do j=1, ndet
-                ! do l=1, ndet
-                    do k=1, ndet
-                        if(j.eq.k)then
-                            ! vector=REAL(ham%ovrlp(k,:))
-                            ! matrix=ham%diff_ovrlp_ket(:,j,:)
-                            temp2(k,j,:)=matmul(REAL(ham%ovrlp(k,:)),ham%diff_ovrlp_ket(:,j,:))   !matmul(vector,matrix)
+            do j=1, ndet !differentiation by each ZS
+                do k=1, ndet
+                    do l=1, ndet
+                        if(l.eq.j)then
+                            temp2(k,j,:)=matmul(REAL(ham%inv(k,:)),ham%diff_ovrlp(j,:,:))
                         else
-                            do l=1, ndet
-                                temp2(l,k,:)=REAL(ham%ovrlp(l,j))*ham%diff_ovrlp_bra(j,k,:)
-                            end do   
+                            temp2(k,l,:)=real(ham%inv(k,l))*ham%diff_ovrlp(j,l,:)
                         end if
                     end do
+                end do
                 do k=1, ndet
-                    ! temp(1:norb)=0
-                    matrix=temp2(k,:,:)
                     do l=1, ndet
-                        ham%diff_invh(j,k,l,:)=matmul(matrix,REAL(ham%kinvh(1:ndet,l)))
+                        ham%diff_invh(j,k,l,:)=matmul(transpose(temp2(k,:,:)),real(ham%kinvh(:,l)))*(-1)
                     end do
                 end do
             end do
         end if
+        
         return
         
     end subroutine hamgen

@@ -247,9 +247,10 @@ MODULE zom
         type(zombiest),dimension(:),intent(inout)::zstore
         DOUBLE PRECISION, external::ZBQLNOR,ZBQLUAB
         real(kind=8)::mu((norb/2)),sig(norb/2)
-        ! real(kind=8),dimension(norb)::val
+        real(kind=8)::val
         integer::j,k
 
+        if (errorflag .ne. 0) return
         ! mu and sigma values for Li2 10 spin orbitals used in OG paper
         ! mu=(/0.25,0.25,0.25,0.0,0.0/)
         ! sig=(/0.0,0.0,0.175,0.351,0.120/)
@@ -267,8 +268,16 @@ MODULE zom
             do j=1, ndet
                 !$omp critical
                 do k=1,norb/2
-                    zstore(j)%phi(2*k-1)=2*pirl*ZBQLNOR(mu(k),sig(k))
-                    zstore(j)%phi(2*k)=2*pirl*ZBQLNOR(mu(k),sig(k))
+                    val=-1
+                    do while(val.lt.0)
+                        val=2*pirl*ZBQLNOR(mu(k),sig(k))
+                    end do
+                    zstore(j)%phi(2*k-1)=val
+                    val=-1
+                    do while(val.lt.0)
+                        val=2*pirl*ZBQLNOR(mu(k),sig(k))
+                    end do
+                    zstore(j)%phi(2*k)=val
                     ! print*,val(2*k-1),val(2*k)
                     ! val(2*k-1)=2*pirl*mu(k)*exp(-ZBQLUAB(0,0.1))
                     ! val(2*k)=2*pirl*mu(k)*exp(-ZBQLUAB(0,0.1))

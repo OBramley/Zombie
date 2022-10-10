@@ -11,6 +11,7 @@ program MainZombie
     use clean
     use zom
     use grad_d
+    use gradient_descent
 
     implicit none
     
@@ -25,6 +26,7 @@ program MainZombie
     complex(kind=8)::clean_norm, clean_erg
     character(LEN=4)::stateno
     character(LEN=100) :: CWD
+    character(LEN=25)::temp
     real(kind=8):: starttime, stoptime, runtime
     integer(kind=8):: randseed
     DOUBLE PRECISION, external::ZBQLU01
@@ -60,11 +62,13 @@ program MainZombie
     write(6,"(a)") "Random seed set"
 
 
-    GDflg='n'
+    GDflg='y'
     gd_loop=1
     if(GDflg=="y")then
         call allocgrad(gradients,ndet,norb)
-        gd_loop=10
+        gd_loop=50
+        beta=20
+        timesteps=2
     end if
     ! print*,cleanflg
     ! generate 1 and 2 electron integrals
@@ -108,7 +112,7 @@ program MainZombie
 
         do k=1, gd_loop
         if(hamgflg=='y')then
-            call hamgen(haml,zstore,elect,ndet)
+            call hamgen(haml,zstore,elect,ndet,1)
             if(k.eq.1)then
                 call matrixwriter(haml%hjk,ndet,"data/ham.csv")
                 call matrixwriter(haml%ovrlp,ndet,"data/ovlp.csv")
@@ -124,12 +128,23 @@ program MainZombie
             ! call matrixwriter(haml%kinvh,ndet,"kinvh.csv")
             write(6,"(a)") "Hamiltonian successfully read in"
         end if
-        
         ! Imaginary time propagation
         write(6,"(a)") "Imaginary time propagation started"
         call imgtime_prop(dvecs,en,haml)
         write(6,"(a)") "Imaginary time propagation finished"
-        print*,en%erg(1,timesteps+1)
+        print*,real(en%erg(1,timesteps+1))
+
+        
+       
+        if(GDflg.eq.'y')then
+            gradients%prev_erg=real(en%erg(1,timesteps+1))
+            ! gradients%prev_erg=ergcalc(haml%hjk,dvecs(1)%d)
+            print*,gradients%prev_erg
+            ! write(temp,"(e25.17e3)")real(en%erg(1,timesteps+1))
+            ! read(temp,"(f15.12)") gradients%prev_erg
+            ! gradients%prev_erg=gradients%prev_erg*100
+        end if
+    
         if(gramflg.eq."n")then
             ! write(stateno,"(i4.4)")k
             call dvec_writer(dvecs(1)%d,ndet,0,k)
@@ -144,14 +159,25 @@ program MainZombie
         
         if(GDflg.eq.'y')then
             call final_grad(dvecs(1),haml,gradients)
-            call zombie_alter(zstore,gradients,0.2d0)
+            call zombie_alter(zstore,gradients,haml,elect,en,dvecs)
             do j=1,ndet
                 call zombiewriter(zstore(j),j,k)
             end do
             call value_reset(haml,dvecs,en,ndet,gradients)
+            write(6,"(a)") "One Gradient Descent step taken"
         end if
         end do
         call deallocerg(en)
+        if(GDflg.eq.'y')then 
+            beta=200
+            timesteps=2000
+            call allocerg(en,1)
+            call imgtime_prop(dvecs,en,haml)
+            call energywriter(en%t,en%erg(1,:),"energy.csv",0,gd_loop)
+            call deallocerg(en)
+            call matrixwriter(haml%hjk,ndet,"data/ham_final.csv")
+            call matrixwriter(haml%ovrlp,ndet,"data/ovlp_final.csv")
+        end if
         write(6,"(a)") "Energy deallocated"
         call deallocham(haml)
         write(6,"(a)") "Hamiltonian deallocated"

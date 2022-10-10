@@ -5,13 +5,13 @@ MODULE imgtp
     contains
 
     ! Routine for imaginary time propagation
-    subroutine imgtime_prop(dvecs,en,ham)
+    subroutine imgtime_prop(dvecs,en,haml)
 
         implicit none
 
         type(dvector),dimension(:),intent(inout)::dvecs
         type(energy),intent(inout)::en
-        type(hamiltonian),intent(in)::ham
+        type(hamiltonian),intent(in)::haml
         integer::j,k,states
         real(kind=8)::p
         real::db
@@ -38,9 +38,9 @@ MODULE imgtp
         states=1
         if(gramflg.eq."y")then
             states=gramnum+1
-            call gs(dvecs,ham)
+            call gs(dvecs,haml)
         else
-            call d_norm(dvecs(1),ham,0)
+            call d_norm(dvecs(1),haml,0)
         end if 
 
         db=beta/timesteps
@@ -48,18 +48,18 @@ MODULE imgtp
     
         do j=1,timesteps+1
             en%t(j)=db*(j-1)
-            !$omp parallel shared(en,j,ham,dvecs) private(k)
+            !$omp parallel shared(en,j,haml,dvecs) private(k)
             !$omp do
             do k=1,states
-                en%erg(k,j)=ergcalc(ham%hjk,dvecs(k)%d)
-                call timestep(ham,dvecs(k),db)
+                en%erg(k,j)=ergcalc(haml%hjk,dvecs(k)%d)
+                call timestep(haml,dvecs(k),db)
             end do
             !$omp end do
             !$omp end parallel
             if(gramflg.eq."y")then
-                call gs(dvecs,ham)
+                call gs(dvecs,haml)
             else
-                call d_norm(dvecs(1),ham,1)
+                call d_norm(dvecs(1),haml,1)
             end if
         end do
 
@@ -88,24 +88,24 @@ MODULE imgtp
        
     end function ergcalc
 
-    subroutine d_norm(dvec,ham,step)
+    subroutine d_norm(dvec,haml,step)
 
         implicit none
         type(dvector),intent(inout)::dvec
-        type(hamiltonian),intent(in)::ham
+        type(hamiltonian),intent(in)::haml
         integer,intent(in)::step
         real(kind=8)::norm
 
         !$omp parallel 
         !$omp workshare
-        norm=zabs(dot_product((dvec%d),matmul(ham%ovrlp,(dvec%d))))
+        norm=zabs(dot_product((dvec%d),matmul(haml%ovrlp,(dvec%d))))
         norm=sqrt(norm)
         !$omp end workshare
         !$omp end parallel
 
         dvec%norm=norm
         if(GDflg.eq.'y')then
-            call d_normalise_diff(dvec,ham,step)
+            call d_normalise_diff(dvec,haml,step)
         end if
         
         dvec%d=dvec%d/norm
@@ -115,23 +115,23 @@ MODULE imgtp
 
 
     ! Takes one timestep
-    subroutine timestep(ham,dvec,db) 
+    subroutine timestep(haml,dvec,db) 
 
         implicit none
 
         type(dvector),intent(inout)::dvec
-        type(hamiltonian),intent(in)::ham
+        type(hamiltonian),intent(in)::haml
         real,intent(in)::db
         complex(kind=8),dimension(ndet)::ddot
    
 
         if (errorflag .ne. 0) return
         if(GDflg.eq.'y')then
-            call timestep_diff(dvec,ham,db)
+            call timestep_diff(dvec,haml,db)
         end if
         !$omp parallel 
         !$omp workshare
-        ddot= -matmul((ham%kinvh),(dvec%d))
+        ddot= -matmul((haml%kinvh),(dvec%d))
         dvec%d=dvec%d+(db*ddot)
         !$omp end workshare
         !$omp end parallel
@@ -141,11 +141,11 @@ MODULE imgtp
     end subroutine timestep
 
     !Gram-Schmidt orthogonalisation 
-    subroutine gs(dvecs,ham)
+    subroutine gs(dvecs,haml)
 
         implicit none
         type(dvector), intent(inout),dimension(:)::dvecs
-        type(hamiltonian),intent(in)::ham
+        type(hamiltonian),intent(in)::haml
         type(dvector), allocatable,dimension(:)::dvecs_copy
         complex(kind=8)::numer,den
         complex(kind=8),dimension(ndet)::temp
@@ -162,7 +162,7 @@ MODULE imgtp
 
         do j=2,states
             do k=1, j-1
-                temp=matmul(ham%ovrlp,dvecs_copy(k)%d)
+                temp=matmul(haml%ovrlp,dvecs_copy(k)%d)
                 numer = dot_product(dvecs_copy(j)%d,temp)
                 den  = dot_product(dvecs_copy(k)%d,temp)
                 dvecs_copy(j)%d = dvecs_copy(j)%d - (dvecs_copy(k)%d*(numer/den))
@@ -170,7 +170,7 @@ MODULE imgtp
         end do
 
         do j=1,states
-            call d_norm(dvecs_copy(j),ham,1)
+            call d_norm(dvecs_copy(j),haml,1)
             ! temp=matmul(kover,dvecs_copy(j)%d)
             ! norm = dot_product(dvecs_copy(j)%d,temp)
             ! norm = 1/sqrt(norm)

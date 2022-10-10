@@ -194,6 +194,7 @@ subroutine spattospin2(elecs,nlines)
     !$omp end do
     !$omp end parallel
 
+    
     deallocate(h2ea, stat=ierr)
     if (ierr/=0) then
         write(0,"(a,i0)") "Error in h2ea deallocation. ierr had value ", ierr
