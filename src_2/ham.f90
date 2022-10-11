@@ -44,14 +44,14 @@ MODULE ham
         h2etot_diff_bra=0.0
         h2etot_diff_ket=0.0
     
-        
+   
         !!$ call omp_set_nested(.TRUE.)
         !!$omp parallel private(j,k,l,z2l,h1etot,h2etot, &
         !!$omp h1etot_diff_bra,h2etot_diff_bra, h1etot_diff_ket,h2etot_diff_ket,&
         !!$omp  h1etot_diff,h2etot_diff,m) shared(z1jk,zstore,row,size,occupancy_2an,occupancy_an_cr,occupancy_an)
         !$omp parallel shared(passback,zstore,z1jk, z2l) private(j,k,l)
         if(row.eq.1)then
-           
+            
             !$omp do
             do l=1, norb
                 z2l(l,1,:)=zstore(1)%sin(:)
@@ -94,6 +94,7 @@ MODULE ham
         !!$omp  h1etot_diff,h2etot_diff,m) shared(z1jk,zstore,row,size,occupancy_2an,occupancy_an_cr,occupancy_an)
         !!$omp do schedule(dynamic)
         do m=row,size
+      
             h1etot=cmplx(0.0,0.0)
             h2etot=cmplx(0.0,0.0)
             h1etot_diff_bra=0.0
@@ -115,11 +116,10 @@ MODULE ham
                 !$omp end do
                 !$omp end parallel
                 if(m.eq.row+1)then 
-                  
                     passback=z2l
                 end if
             end if
-
+          
             h1etot=(0.0,0.0)
             h2etot=(0.0,0.0)
             h1etot_diff_bra=0.0
@@ -136,7 +136,7 @@ MODULE ham
                 call one_elec_part(zstore(row),z2l,h1etot,occupancy_an_cr,&
                                     elecs%h1ei,h1etot_diff_bra,h1etot_diff_ket,zstore(m),9)
             end if
-           
+            
             z2l=z2l*occupancy_an
             !$omp flush(z2l)
             if(m.eq.row)then
@@ -164,6 +164,7 @@ MODULE ham
                     ham%diff_ovrlp(m,row,:) = overlap_diff(2,:)
                 end if
             end if
+            write(6,"(a,i0,a,i0,a)") "Hamiltonian row/comun ",row,'/', m, " completed"
         end do
         !!$omp end do
         !!$omp end parallel
@@ -283,9 +284,9 @@ MODULE ham
             end do
         end do
         !$omp end do
-       
+       !$omp end parallel
         if(GDflg.eq.'y')then
-            !$omp do schedule(dynamic) reduction(+:h2etot_diff)
+            !!$omp do schedule(dynamic) reduction(+:h2etot_diff)
             do j=1, norb
                 if(modulo(j,2)==0)then
                     jspin=2
@@ -309,9 +310,9 @@ MODULE ham
                 end do
                 ! print*,j
             end do
-            !$omp end do
+            !!$omp end do
         end if
-        !$omp end parallel
+        !!$omp end parallel
       
         h2etot=tot*0.5
         h2etot_diff_bra = h2etot_diff(1,:)*0.5
@@ -355,7 +356,7 @@ MODULE ham
         occupancy_2an=1
         occupancy_an_cr=1
        
-        
+       
         !$ call omp_set_nested(.TRUE.)
         !$omp parallel private(j,k,l) shared(occupancy_an,occupancy_2an,occupancy_an_cr)
         !$omp do
@@ -384,9 +385,10 @@ MODULE ham
         end do
         !$omp end do
         !$omp end parallel
-
+       
         !!$omp parallel private(j) shared(occupancy_an,occupancy_2an,occupancy_an_cr,ham,zstore,elecs)
         !!$omp do ordered 
+    
         do j=1, size
             call he_row(ham,zstore,elecs,j,size,occupancy_2an,occupancy_an_cr,occupancy_an,passback)
             if(verb.eq.1)then

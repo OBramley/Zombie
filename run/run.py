@@ -179,6 +179,8 @@ if(inputs.run['language']=="python"):
 elif(inputs.run['language']=="fortran"):
     shutil.copy2("inputs.py",EXDIR1)
     shutil.copy2("graph.py",EXDIR1)
+    # if(inputs.run['clean']=='f'):
+    #     shutil.copy2('data/'+ inputs.run['cleanham'],EXDIR1)
     if((inputs.run['elecs']=='no')):
         shutil.copytree('integrals',EXDIR1+"/integrals")
     elif((inputs.run['elecs']=='mol')):

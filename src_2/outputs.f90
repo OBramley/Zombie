@@ -188,16 +188,18 @@ MODULE outputs
         end if
         if(loop.gt.1)then
             if(imagflg=='y')then
-                l=3
-            else 
                 l=2
+            else 
+                l=1
             end if
+          
             do k=1, l*(loop-1)
                 read(ergnum,*)
             end do
         end if
-     
-        write(ergnum,'(*(e25.17e3 :", "))') (time(k),k=1,timesteps+1)
+        if(loop.eq.1)then
+            write(ergnum,'(*(e25.17e3 :", "))') (time(k),k=1,timesteps+1)
+        end if
         write(ergnum,'(*(e25.17e3 :", "))') (REAL(erg(k)),k=1,timesteps+1)
         if(imagflg=='y')then
             write(ergnum,'(*(e25.17e3 :", "))') (CMPLX(erg(k)),k=1,timesteps+1)

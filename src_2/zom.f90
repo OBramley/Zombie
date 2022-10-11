@@ -14,20 +14,27 @@ MODULE zom
         integer, intent(in)::num
         integer::j,k
         DOUBLE PRECISION, external::ZBQLU01
+        real(kind=8)::dummy
         ! real(kind=8),dimension(norb)::rands
         ! complex(kind=8)::ctemp
         if (errorflag .ne. 0) return
 
-   
+        
         if(imagflg=='n') then
             do j=1,num
                 ! call random_number(rands)
                 do k=1,norb
+                    dummy=-1
                     !$omp critical
-                    zstore(j)%phi(k)=2*pirl*ZBQLU01(1)
+                    do while((dummy.lt.0))
+                       dummy=2*pirl*ZBQLU01(1)
+                    !    if((dummy.gt.0.5*pirl))then
+                    !         dummy=-1
+                    !    end if
+                    end do
                     !$omp end critical
-                    
-                end do
+                    zstore(j)%phi(k)=dummy
+                end do 
                 zstore(j)%sin=sin(cmplx(zstore(j)%phi,0.0d0,kind=8))
                 zstore(j)%cos=cos(cmplx(zstore(j)%phi,0.0d0,kind=8))
             end do
@@ -225,7 +232,10 @@ MODULE zom
 
         if (errorflag .ne. 0) return
 
+        zom%dead(1:norb)=(1.0d0,0.0d0)
+        zom%alive(1:norb)=(0.0d0,0.0d0)
         zom%cos(1:norb)=(1.0d0,0.0d0)
+        zom%sin(1:norb)=(0.0d0,0.0d0)
         zom%phi(1:norb)=0.0
 
         do j=1, norb
@@ -234,7 +244,9 @@ MODULE zom
             end if
             zom%sin(occ(j))=(1.0d0,0.0d0)
             zom%cos(occ(j))=(0.0d0,0.0d0)
-            zom%phi(1:norb)=0.5*pirl
+            zom%phi(occ(j))=0.5*pirl
+            zom%alive(occ(j))=(1.0d0,0.0d0)
+            zom%dead(occ(j))=(0.0d0,0.0d0)
         end do
 
         return
@@ -245,7 +257,7 @@ MODULE zom
 
         implicit none
         type(zombiest),dimension(:),intent(inout)::zstore
-        DOUBLE PRECISION, external::ZBQLNOR,ZBQLUAB
+        DOUBLE PRECISION, external::ZBQLNOR,ZBQLUAB,ZBQLU01
         real(kind=8)::mu((norb/2)),sig(norb/2)
         real(kind=8)::val
         integer::j,k
@@ -270,12 +282,19 @@ MODULE zom
                 do k=1,norb/2
                     val=-1
                     do while(val.lt.0)
-                        val=2*pirl*ZBQLNOR(mu(k),sig(k))
+                        val=2*pirl*sig(k)*ZBQLU01(1)    !  ZBQLNOR(mu(k),sig(k))
+                        ! if((val.gt.0.5*pirl))then
+                        !     val=-1
+                        ! end if
                     end do
                     zstore(j)%phi(2*k-1)=val
                     val=-1
                     do while(val.lt.0)
-                        val=2*pirl*ZBQLNOR(mu(k),sig(k))
+                        val=2*pirl*sig(k)*ZBQLU01(1)
+                        !val=2*pirl*ZBQLNOR(mu(k),sig(k))
+                        ! if((val.gt.0.5*pirl))then
+                        !     val=-1
+                        ! end if
                     end do
                     zstore(j)%phi(2*k)=val
                     
@@ -297,6 +316,10 @@ MODULE zom
                 zstore(1)%sin(1:nel)=cmplx(1,0.0d0,kind=8)
                 zstore(1)%cos(1:nel)=cmplx(0,0.0d0,kind=8)
             end if 
+            ! do j=1, ndet
+            !     zstore(j)%sin(:)=zstore(j)%sin(:)*100
+            !     ! zstore(j)%cos(:)=zstore(j)%cos(:)*100
+            ! end do
         else if(imagflg=='y')then
             print*,"not yet written"
         end if
@@ -316,19 +339,24 @@ MODULE zom
         mu(1:alive)=0.25
         mu(alive+1:)=0
 
-        asrt=0.0001
+        asrt=0.0   !0.0001
         ! asrt=0
-        aend=0.200
-        dsrt=0.08
-        dend=0.0006
+        aend=0.90     !  0.200
+        dsrt=0.90/((norb/2)-1)     !      0.08
+        !dend= 0.0006
 
-        do j=0, (alive-1)
-            sig(j+1)=((aend-asrt)/(alive-1)*j)+asrt
+        do j=1,(norb/2)
+            sig(j)=exp(-0.7*asrt)-0.5
+            asrt=asrt+dsrt
         end do
+        
+        ! do j=0, (alive-1)
+        !     sig(j+1)=((aend-asrt)/(alive-1)*j)+asrt
+        ! end do
 
-        do j=0, (((norb/2)-alive)-1)
-            sig(j+1+alive)=((dend-dsrt)/(((norb/2)-alive)-1)*j)+dsrt
-        end do
+        ! do j=0, (((norb/2)-alive)-1)
+        !     sig(j+1+alive)=((dend-dsrt)/(((norb/2)-alive)-1)*j)+dsrt
+        ! end do
 
         return
 

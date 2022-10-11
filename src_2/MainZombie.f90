@@ -26,7 +26,7 @@ program MainZombie
     complex(kind=8)::clean_norm, clean_erg
     character(LEN=4)::stateno
     character(LEN=100) :: CWD
-    integer(kind=8)::temp
+    integer::temp
     real(kind=8):: starttime, stoptime, runtime
     integer(kind=8):: randseed
     DOUBLE PRECISION, external::ZBQLU01
@@ -66,11 +66,12 @@ program MainZombie
     gd_loop=1
     if(GDflg=="y")then
         call allocgrad(gradients,ndet,norb)
-        gd_loop=20
-        beta=20
-        timesteps=2
+        gradients%prev_erg=0
+        gd_loop=200
+        !beta=20
+        !timesteps=20
     end if
-    ! print*,cleanflg
+
     ! generate 1 and 2 electron integrals
     if((cleanflg=="y").or.(cleanflg=="f").or.((hamgflg=='y')))then
         if((cleanflg=="y").or.((hamgflg=='y')))then
@@ -109,63 +110,74 @@ program MainZombie
             write(0,"(a,i0)") "Error in gramflg setting. This should have been caught ", ierr
                 errorflag=1
         end if
-
+        temp=1
+       print*,zstore(2)%sin(1)
+       
         do k=1, gd_loop
-        if(hamgflg=='y')then
-            call hamgen(haml,zstore,elect,ndet,1)
-            if(k.eq.1)then
-                call matrixwriter(haml%hjk,ndet,"data/ham.csv")
-                call matrixwriter(haml%ovrlp,ndet,"data/ovlp.csv")
+            if(hamgflg=='y')then
+                call hamgen(haml,zstore,elect,ndet,1)
+                if(k.eq.1)then
+                    ! call hamgen(haml,zstore,elect,ndet,1)
+                    call matrixwriter(haml%hjk,ndet,"data/ham.csv")
+                    call matrixwriter(haml%ovrlp,ndet,"data/ovlp.csv")
+                    ! call matrixwriter(haml%inv,ndet,"inv.csv")
+                    ! call matrixwriter(haml%kinvh,ndet,"kinvh.csv")
+                end if
+                write(6,"(a)") "Hamiltonian successfully generated"
+            else if (hamgflg=='n')then
+                call read_ham(haml,ndet)
+                ! call matrixwriter(haml%hjk,ndet,"data/ham2.csv")
+                ! call matrixwriter(haml%ovrlp,ndet,"data/ovlp2.csv")
                 ! call matrixwriter(haml%inv,ndet,"inv.csv")
                 ! call matrixwriter(haml%kinvh,ndet,"kinvh.csv")
+                write(6,"(a)") "Hamiltonian successfully read in"
             end if
-            write(6,"(a)") "Hamiltonian successfully generated"
-        else if (hamgflg=='n')then
-            call read_ham(haml,ndet)
-            ! call matrixwriter(haml%hjk,ndet,"data/ham2.csv")
-            ! call matrixwriter(haml%ovrlp,ndet,"data/ovlp2.csv")
-            ! call matrixwriter(haml%inv,ndet,"inv.csv")
-            ! call matrixwriter(haml%kinvh,ndet,"kinvh.csv")
-            write(6,"(a)") "Hamiltonian successfully read in"
-        end if
-        ! Imaginary time propagation
-        write(6,"(a)") "Imaginary time propagation started"
-        call imgtime_prop(dvecs,en,haml)
-        write(6,"(a)") "Imaginary time propagation finished"
-        print*,real(en%erg(1,timesteps+1))
+            ! Imaginary time propagation
+            write(6,"(a)") "Imaginary time propagation started"
+            call imgtime_prop(dvecs,en,haml)
+            write(6,"(a)") "Imaginary time propagation finished"
+            ! print*,real(en%erg(1,timesteps+1))
 
         
-       
-        if(GDflg.eq.'y')then
-            temp=anint(real(en%erg(1,timesteps+1))*10d12)
-            gradients%prev_erg=temp/10d12
-            print*,gradients%prev_erg
-        end if
-        
-        if(gramflg.eq."n")then
-            ! write(stateno,"(i4.4)")k
-            call dvec_writer(dvecs(1)%d,ndet,0,k)
-            call energywriter(en%t,en%erg(1,:),"energy.csv",0,k)
-        else if(gramflg.eq."y")then
-            do j=1, 1+gramnum
-                write(stateno,"(i4.4)")j
-                call dvec_writer(dvecs(j)%d,ndet,j,k)
-                call energywriter(en%t,en%erg(j,:),"energy_state_"//trim(stateno)//".csv",j,k)
-            end do
-        end if
-        ! call value_reset(haml,dvecs,en,ndet,gradients)
-        ! print*,zstore(2)%phi
-        if(GDflg.eq.'y')then
-            call final_grad(dvecs(1),haml,gradients)
-            stop
-            call zombie_alter(zstore,gradients,haml,elect,en,dvecs)
-            do j=1,ndet
-                call zombiewriter(zstore(j),j,k)
-            end do
-            call value_reset(haml,dvecs,en,ndet,gradients)
-            write(6,"(a)") "One Gradient Descent step taken"
-        end if
-        ! print*,zstore(2)%phi
+            
+            if(GDflg.eq.'y')then
+                print*,real(en%erg(1,timesteps+1))
+                if(k.gt.1)then
+                    if((real(en%erg(1,timesteps+1))).gt.gradients%prev_erg)then
+                        temp=temp+1
+                        print*,'reducing learning rate'
+                    end if
+                end if
+                gradients%prev_erg=real(en%erg(1,timesteps+1))
+                print*,gradients%prev_erg 
+                ! temp=anint(real(en%erg(1,timesteps+1))*10d12)
+                ! gradients%prev_erg=temp/10d12
+                ! print*,gradients%prev_erg
+            end if
+            
+            if(gramflg.eq."n")then
+                ! write(stateno,"(i4.4)")k
+                call dvec_writer(dvecs(1)%d,ndet,0,k)
+                call energywriter(en%t,en%erg(1,:),"energy.csv",0,k)
+            else if(gramflg.eq."y")then
+                do j=1, 1+gramnum
+                    write(stateno,"(i4.4)")j
+                    call dvec_writer(dvecs(j)%d,ndet,j,k)
+                    call energywriter(en%t,en%erg(j,:),"energy_state_"//trim(stateno)//".csv",j,k)
+                end do
+            end if
+            ! call value_reset(haml,dvecs,en,ndet,gradients)
+            ! print*,zstore(2)%phi
+            if(GDflg.eq.'y')then
+                call final_grad(dvecs(1),haml,gradients)
+                call zombie_alter(zstore,gradients,haml,elect,en,dvecs,temp)
+                do j=1,ndet
+                    call zombiewriter(zstore(j),j,k)
+                end do
+                call value_reset(haml,dvecs,en,ndet,gradients)
+                write(6,"(a)") "One Gradient Descent step taken"
+            end if
+            ! print*,zstore(2)%phi
         end do
         call deallocerg(en)
         if(GDflg.eq.'y')then 
@@ -221,13 +233,13 @@ program MainZombie
             write(6,"(a)") "Electron integrals deallocated"
         end if
     end if
-
+    
     if((cleanflg=="y").or.(cleanflg=="f"))then
         if(cleanflg=="y")then
             call clean_setup(cstore,nel,clean_haml,elect,clean_ndet,zstore)
             write(6,"(a)") "Cleaning hamiltonian generated"
         else if(cleanflg=="f")then
-            call clean_read(cstore,clean_haml,clean_ndet)
+            call clean_read(cstore,clean_haml,clean_ndet,elect)
             write(6,"(a)") "Cleaning hamiltonian read in"
         end if
         
