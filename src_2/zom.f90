@@ -278,6 +278,7 @@ MODULE zom
                         val=2*pirl*ZBQLNOR(mu(k),sig(k))
                     end do
                     zstore(j)%phi(2*k)=val
+                    
                     ! print*,val(2*k-1),val(2*k)
                     ! val(2*k-1)=2*pirl*mu(k)*exp(-ZBQLUAB(0,0.1))
                     ! val(2*k)=2*pirl*mu(k)*exp(-ZBQLUAB(0,0.1))

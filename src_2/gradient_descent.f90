@@ -17,9 +17,10 @@ subroutine zombie_alter(zstore,grad_fin,haml,elect,en,dvecs)
     type(energy),intent(inout)::en
     type(hamiltonian),intent(inout)::haml
     type(zombiest),dimension(:),allocatable::temp_zom
-    real(kind=8)::gamma,alpha,b,t,fxtdk,gradtd 
-    integer::j,break
-
+    real(kind=8)::gamma,alpha,b,t,fxtdk,gradtd,picker 
+    integer::j,break,pick
+    integer(kind=8)::temp
+    
     if (errorflag .ne. 0) return
 
     break=0
@@ -30,42 +31,64 @@ subroutine zombie_alter(zstore,grad_fin,haml,elect,en,dvecs)
 
     GDflg='n'
     call alloczs(temp_zom,ndet)
+    call random_number(picker)
+    pick = anint(picker*ndet)
+    temp_zom=zstore
+    temp_zom(pick)%phi=zstore(pick)%phi(:)-(t*(grad_fin%vars(pick,:)))
+    temp_zom(pick)%sin=sin(cmplx(temp_zom(pick)%phi,0.0d0,kind=8))
+    temp_zom(pick)%cos=cos(cmplx(temp_zom(pick)%phi,0.0d0,kind=8))
     do j=1, ndet
-        temp_zom(j)%phi=zstore(j)%phi(:)-(t*(grad_fin%vars(j,:)))
-        temp_zom(j)%sin=sin(cmplx(temp_zom(j)%phi,0.0d0,kind=8))
-        temp_zom(j)%cos=cos(cmplx(temp_zom(j)%phi,0.0d0,kind=8))
+        ! temp_zom(j)%phi=zstore(j)%phi(:)-(t*(grad_fin%vars(j,:)))
+        ! temp_zom(j)%sin=sin(cmplx(temp_zom(j)%phi,0.0d0,kind=8))
+        ! temp_zom(j)%cos=cos(cmplx(temp_zom(j)%phi,0.0d0,kind=8))
         gradtd=gradtd+dot_product(grad_fin%vars(j,:),((-1)*grad_fin%vars(j,:)))
     end do
+    print*,gradtd
     call hamgen(haml,temp_zom,elect,ndet,0)
     dvecs(1)%d=cmplx(0.0,0.0)
     dvecs(1)%d(1)=cmplx(1.0,0.0)
     en%erg=0
     en%t=0
     call imgtime_prop(dvecs,en,haml)
-    fxtdk=real(en%erg(1,timesteps+1)) !ergcalc(haml%hjk,dvecs(1)%d)
-    if(fxtdk.lt.(grad_fin%prev_erg+(alpha*t*gradtd)))then 
+    temp=anint(real(en%erg(1,timesteps+1))*10d12)
+    fxtdk=temp/10d12
+    ! fxtdk=real(en%erg(1,timesteps+1)) !ergcalc(haml%hjk,dvecs(1)%d)
+    if(fxtdk.lt.(grad_fin%prev_erg+(alpha*t*gradtd)))then !+(alpha*t*gradtd)
         zstore=temp_zom
     else 
         do while(break.eq.0)
             t=b*t
-            ! dvecs(1)%d=0
-            ! en%erg=(0.0,0.0)
-            ! en%t=0
-            do j=1, ndet
-                temp_zom(j)%phi=zstore(j)%phi(:)-(t*(grad_fin%vars(j,:)))
-                temp_zom(j)%sin=sin(cmplx(temp_zom(j)%phi,0.0d0,kind=8))
-                temp_zom(j)%cos=cos(cmplx(temp_zom(j)%phi,0.0d0,kind=8))
-            end do
+            dvecs(1)%d=cmplx(0.0,0.0)
+            dvecs(1)%d(1)=cmplx(1.0,0.0)
+            en%erg=0
+            en%t=0
+            
+            temp_zom=zstore
+            temp_zom(pick)%phi=zstore(pick)%phi(:)-(t*(grad_fin%vars(pick,:)))
+            temp_zom(pick)%sin=sin(cmplx(temp_zom(pick)%phi,0.0d0,kind=8))
+            temp_zom(pick)%cos=cos(cmplx(temp_zom(pick)%phi,0.0d0,kind=8))
+            ! do j=1, ndet
+            !     temp_zom(j)%phi=zstore(j)%phi(:)-(t*(grad_fin%vars(j,:)))
+            !     temp_zom(j)%sin=sin(cmplx(temp_zom(j)%phi,0.0d0,kind=8))
+            !     temp_zom(j)%cos=cos(cmplx(temp_zom(j)%phi,0.0d0,kind=8))
+            ! end do
             call hamgen(haml,temp_zom,elect,ndet,0)
             call imgtime_prop(dvecs,en,haml)
-            fxtdk= real(en%erg(1,timesteps+1)) !ergcalc(haml%hjk,dvecs(1)%d)
+            ! temp=anint(real(en%erg(1,timesteps+1))*10d12)
+            ! fxtdk=temp/10d12
+            fxtdk=real(en%erg(1,timesteps+1))
+            ! fxtdk= real(en%erg(1,timesteps+1)) !ergcalc(haml%hjk,dvecs(1)%d)
             ! print*,fxtdk
             if(fxtdk.lt.(grad_fin%prev_erg+(alpha*t*gradtd)))then
+                print*,fxtdk
                 break=5
             end if
         end do
     end if
+
+    ! print*,temp_zom(2)%phi
     zstore=temp_zom
+    
     ! print*,t
     call dealloczs(temp_zom) 
     GDflg='y'

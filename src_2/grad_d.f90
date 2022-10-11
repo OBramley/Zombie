@@ -266,7 +266,7 @@ Module grad_d
                 end if
             end do
             grad_fin%vars(j,:)=(2*temp1)+temp2
-            ! print*,grad_fin%vars(j,:)
+            print*,grad_fin%vars(j,:)
         end do
 
         return
