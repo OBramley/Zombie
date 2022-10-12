@@ -51,6 +51,10 @@ MODULE globvars
     type grad 
         real(kind=8),dimension(:,:), allocatable::vars
         real(kind=8):: prev_erg
+        real(kind=8):: current_erg
+        real(kind=8),dimension(:,:),allocatable::momentum
+        real(kind=8),dimension(:,:),allocatable::rprop
+        real(kind=8),dimension(:,:),allocatable::rpropaevious
     end type grad
 
     

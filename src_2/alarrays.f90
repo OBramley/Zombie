@@ -473,6 +473,9 @@ MODULE alarrays
 
         
         allocate(gradients%vars(num,length),stat=ierr)
+        if (ierr==0)allocate(gradients%momentum(num,length),stat=ierr)
+        if (ierr==0)allocate(gradients%rprop(num,length),stat=ierr)
+        if (ierr==0)allocate(gradients%rpropaevious(num,length),stat=ierr)
         if (ierr/=0) then
             write(0,"(a,i0)") "Error in gradient matrix allocation. ierr had value ", ierr
             errorflag=1

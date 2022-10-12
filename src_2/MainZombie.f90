@@ -26,7 +26,7 @@ program MainZombie
     complex(kind=8)::clean_norm, clean_erg
     character(LEN=4)::stateno
     character(LEN=100) :: CWD
-    integer::temp
+    integer::temp,temp2
     real(kind=8):: starttime, stoptime, runtime
     integer(kind=8):: randseed
     DOUBLE PRECISION, external::ZBQLU01
@@ -62,7 +62,7 @@ program MainZombie
     write(6,"(a)") "Random seed set"
 
 
-    GDflg='n'
+    GDflg='y'
     gd_loop=1
     if(GDflg=="y")then
         call allocgrad(gradients,ndet,norb)
@@ -111,8 +111,7 @@ program MainZombie
                 errorflag=1
         end if
         temp=1
-       print*,zstore(2)%sin(1)
-       
+        temp2=1
         do k=1, gd_loop
             if(hamgflg=='y')then
                 call hamgen(haml,zstore,elect,ndet,1)
@@ -141,15 +140,8 @@ program MainZombie
         
             
             if(GDflg.eq.'y')then
-                print*,real(en%erg(1,timesteps+1))
-                if(k.gt.1)then
-                    if((real(en%erg(1,timesteps+1))).gt.gradients%prev_erg)then
-                        temp=temp+1
-                        print*,'reducing learning rate'
-                    end if
-                end if
-                gradients%prev_erg=real(en%erg(1,timesteps+1))
-                print*,gradients%prev_erg 
+                gradients%current_erg=real(en%erg(1,timesteps+1))!*(1.0d6)
+                print*,gradients%current_erg 
                 ! temp=anint(real(en%erg(1,timesteps+1))*10d12)
                 ! gradients%prev_erg=temp/10d12
                 ! print*,gradients%prev_erg
@@ -170,12 +162,12 @@ program MainZombie
             ! print*,zstore(2)%phi
             if(GDflg.eq.'y')then
                 call final_grad(dvecs(1),haml,gradients)
-                call zombie_alter(zstore,gradients,haml,elect,en,dvecs,temp)
+                call zombie_alter(zstore,gradients,haml,elect,en,dvecs,temp,temp2,k)
                 do j=1,ndet
                     call zombiewriter(zstore(j),j,k)
                 end do
                 call value_reset(haml,dvecs,en,ndet,gradients)
-                write(6,"(a)") "One Gradient Descent step taken"
+                write(6,"(a,i0,a)") "One Gradient Descent step ",k, " taken"
             end if
             ! print*,zstore(2)%phi
         end do

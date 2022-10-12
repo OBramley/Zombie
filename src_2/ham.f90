@@ -164,7 +164,7 @@ MODULE ham
                     ham%diff_ovrlp(m,row,:) = overlap_diff(2,:)
                 end if
             end if
-            write(6,"(a,i0,a,i0,a)") "Hamiltonian row/comun ",row,'/', m, " completed"
+            ! write(6,"(a,i0,a,i0,a)") "Hamiltonian row/comun ",row,'/', m, " completed"
         end do
         !!$omp end do
         !!$omp end parallel

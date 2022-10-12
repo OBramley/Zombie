@@ -19,7 +19,7 @@ run={
     'language':'fortran',
 
     # What is the name of the run
-    'runfolder':'BH_GD_1d-7_bb_keeprate_10bf_negative_hfx100',
+    'runfolder':'Li_GD_1d-3_ran_keeprate_20bf_momentum1_0.6_hf_backtrack',
 
     # Amount of time to request on HPC 
     'runtime': "24:00:00",
@@ -60,9 +60,9 @@ run={
     # the Zombie state Hamiltonian. Takes input 'y' or 'n'.
     'imagprop':'y',
 
-    'beta':200,
+    'beta':2,
 
-    'timesteps':2000,
+    'timesteps':20,
 
     # Do you want the starting energy to be the HF energy
     # Takes input 'y' or 'n' and then a number to defined the number of electrons
@@ -86,7 +86,7 @@ run={
 
 zombs={
     # Number of orbitals
-    'norb':19,
+    'norb':5,
 
     # Number of electrons in the molecule
     'nel':6,
@@ -96,10 +96,10 @@ zombs={
     'spin':0,
 
     # Number of Zombie states
-    'ndet':10, 
+    'ndet':20, 
 
     # Type of zombie states. Random (ran), Hartree Fock (HF) or biased (bb)
-    'zomtyp':'bb',
+    'zomtyp':'ran',
     
     # Biased basis improvement if 0 no loops to improve biased > 0 number of loops to improve the basis
 
@@ -132,26 +132,11 @@ zom_bias={
 
 }
 
-pyscf={
-     # The units the geometry of the molecule is set up in
-    'units':'Angstrom',
-     # The geometry of the molecule being investigated
-    'atoms': 'B 0 0 0; H 0 0 1.2324',
-    # The type of basis used to generate the 1 and 2 electron integrals
-    'bs' : '6-31g**',
-    # How verbose do you want the PyScf output to be in your terminal?
-    'verbosity' : 4,
-    'symmetry' :True,
-    'spin':0,
-    'charge':0,
-    'symmetry_subgroup' : 0 #0 is code for A1 point group
-}
-
 # pyscf={
 #      # The units the geometry of the molecule is set up in
-#     'units':'Bohr',
+#     'units':'Angstrom',
 #      # The geometry of the molecule being investigated
-#     'atoms': 'Li 0 0 0; Li 0 0 6',
+#     'atoms': 'B 0 0 0; H 0 0 1.2324',
 #     # The type of basis used to generate the 1 and 2 electron integrals
 #     'bs' : '6-31g**',
 #     # How verbose do you want the PyScf output to be in your terminal?
@@ -161,3 +146,18 @@ pyscf={
 #     'charge':0,
 #     'symmetry_subgroup' : 0 #0 is code for A1 point group
 # }
+
+pyscf={
+     # The units the geometry of the molecule is set up in
+    'units':'Bohr',
+     # The geometry of the molecule being investigated
+    'atoms': 'Li 0 0 0; Li 0 0 6',
+    # The type of basis used to generate the 1 and 2 electron integrals
+    'bs' : '6-31g**',
+    # How verbose do you want the PyScf output to be in your terminal?
+    'verbosity' : 4,
+    'symmetry' :True,
+    'spin':0,
+    'charge':0,
+    'symmetry_subgroup' : 0 #0 is code for A1 point group
+}
