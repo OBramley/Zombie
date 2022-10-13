@@ -19,7 +19,7 @@ run={
     'language':'fortran',
 
     # What is the name of the run
-    'runfolder':'Li_GD_1d-3_ran_keeprate_20bf_momentum1_0.6_hf_backtrack',
+    'runfolder':'Li2_GD_1d_20bf_hf_momentum0.9+1x10-4_nolrr',
 
     # Amount of time to request on HPC 
     'runtime': "24:00:00",

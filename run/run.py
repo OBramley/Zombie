@@ -35,8 +35,8 @@ elif(inputs.run['cores']<1):
     sys.exit("Not enough cores selected. Must be 1 or greater")
 elif(inputs.zombs['norb']<1):
     sys.exit("Not enough orbitals. Must be 1 or greater")
-elif(inputs.zombs['ndet']<2):
-    sys.exit("Not enough zombie states. Must be 2 or greater")
+# elif(inputs.zombs['ndet']<2):
+    # sys.exit("Not enough zombie states. Must be 2 or greater")
 elif(inputs.zombs['zomtyp'] not in {'ran','HF','bb','hf'}):
     sys.exit("Type of zombie state must be ran, HF or bb")
 elif(inputs.run['elecs'] not in {'pyscf','mol','no'}):

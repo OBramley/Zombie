@@ -67,7 +67,7 @@ program MainZombie
     if(GDflg=="y")then
         call allocgrad(gradients,ndet,norb)
         gradients%prev_erg=0
-        gd_loop=200
+        gd_loop=2000
         !beta=20
         !timesteps=20
     end if
@@ -169,7 +169,7 @@ program MainZombie
                 call value_reset(haml,dvecs,en,ndet,gradients)
                 write(6,"(a,i0,a)") "One Gradient Descent step ",k, " taken"
             end if
-            ! print*,zstore(2)%phi
+           
         end do
         call deallocerg(en)
         if(GDflg.eq.'y')then 

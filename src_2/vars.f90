@@ -6,7 +6,7 @@ MODULE globvars
     type zombiest
         complex(kind=8), dimension(:), allocatable::sin
         complex(kind=8), dimension(:), allocatable::cos
-        real(kind=8),dimension(:),allocatable::phi
+        real(kind=16),dimension(:),allocatable::phi
         real(kind=8),dimension(:),allocatable::img
         integer,dimension(:),allocatable::dead
         integer,dimension(:),allocatable::alive
@@ -52,9 +52,9 @@ MODULE globvars
         real(kind=8),dimension(:,:), allocatable::vars
         real(kind=8):: prev_erg
         real(kind=8):: current_erg
-        real(kind=8),dimension(:,:),allocatable::momentum
+        real(kind=8),dimension(:,:),allocatable::prev_phi
         real(kind=8),dimension(:,:),allocatable::rprop
-        real(kind=8),dimension(:,:),allocatable::rpropaevious
+        integer(kind=8),dimension(:,:),allocatable::rpropaevious
     end type grad
 
     

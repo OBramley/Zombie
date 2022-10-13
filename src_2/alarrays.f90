@@ -473,7 +473,7 @@ MODULE alarrays
 
         
         allocate(gradients%vars(num,length),stat=ierr)
-        if (ierr==0)allocate(gradients%momentum(num,length),stat=ierr)
+        if (ierr==0)allocate(gradients%prev_phi(num,length),stat=ierr)
         if (ierr==0)allocate(gradients%rprop(num,length),stat=ierr)
         if (ierr==0)allocate(gradients%rpropaevious(num,length),stat=ierr)
         if (ierr/=0) then

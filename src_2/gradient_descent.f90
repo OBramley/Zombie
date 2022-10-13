@@ -19,7 +19,8 @@ subroutine zombie_alter(zstore,grad_fin,haml,elect,en,dvecs,lralt,lralt2,step)
     type(zombiest),dimension(:),allocatable::temp_zom
     integer,intent(in)::step
     integer,intent(inout)::lralt,lralt2
-    real(kind=8)::gamma,alpha,b,t,fxtdk,gradtd,picker,mmntm,rpropa,c 
+    real(kind=8)::gamma,alpha,b,t,fxtdk,gradtd,picker,mmntm,rpropa,c
+    real(kind=16)::delmax,delmin,del0,nablaplus,nablaminu
     real(kind=8),dimension(ndet,norb)::mmntmmx
     integer::j,break,pick,k,sign
     integer(kind=8)::temp, temp2
@@ -27,146 +28,171 @@ subroutine zombie_alter(zstore,grad_fin,haml,elect,en,dvecs,lralt,lralt2,step)
     if (errorflag .ne. 0) return
 
     ! break=0
-    alpha=0.0001
-    b=1.0D-2
+    alpha=0.5
+    b=1.0D-5
     c=1.1
-    mmntm=0.6
+    mmntm=0.9
+    ! delmax=
+    ! delmin=
+    del0=0.09999999999
+    nablaplus=1.09999999999
+    nablaminu=0.49999999999
+
     !gradtd=0
     if(step.eq.1)then 
-        ! do j=1,ndet
-        !     grad_fin%momentum(j,:)=zstore(j)%phi(:) !for momentum
-        ! end do
+        do j=2,ndet
+            grad_fin%prev_phi(j,:)=zstore(j)%phi(:) !for momentum
+        end do
         mmntmmx=0
         grad_fin%rpropaevious=0
-        ! grad_fin%rprop=b
+        grad_fin%rprop=del0
     else
+        ! if(modulo(step,100).eq.0)then
+        !     lralt=lralt+1
+        ! end if
         if(grad_fin%current_erg.gt.grad_fin%prev_erg)then 
-            ! print*,'reducing learning rate'
+            print*,'reducing learning rate if on'
             ! lralt=lralt+1
         else
             ! print*,'increasing learning rate'
             ! lralt2=lralt2+1
         end if
-        do j=1,ndet
-            mmntmmx(j,:)=zstore(j)%phi(:)-grad_fin%momentum(j,:)
-        end do
-        do j=1,ndet
-            grad_fin%momentum(j,:)=zstore(j)%phi(:)
+        !heavy ball
+        ! do j=2,ndet
+        !     mmntmmx(j,:)=zstore(j)%phi(:)-grad_fin%prev_phi(j,:)
+        !     grad_fin%prev_phi(j,:)=zstore(j)%phi(:)
+        ! end do
+        !Momentum
+        do j=2,ndet
+            mmntmmx(j,:)=mmntm*grad_fin%prev_phi(j,:)
         end do
     end if
     
+    !decay by 0.5 when energy increases
     t=b*(alpha**(lralt-1))*(c**(lralt2-1))
+    ! t=b*exp(-0.01*(step-1))
     call alloczs(temp_zom,ndet)
+    temp_zom(1)=zstore(1)
 
-    !irprop+ with momentum
-    ! do j=1,ndet
-    !     do k=1, norb
-    !         rpropa=grad_fin%rpropaevious(j,k)*grad_fin%vars(j,k)
-    !         if(rpropa.gt.0)then
-    !             ! if(grad_fin%vars(j,k).gt.0) sign=1
-    !             ! if(grad_fin%vars(j,k).lt.0) sign=-1
-    !             grad_fin%rprop(j,k)=1.2*grad_fin%rprop(j,k)
-    !             temp_zom(j)%phi(k)=zstore(j)%phi(k)-(grad_fin%rprop(j,k)*(grad_fin%vars(j,k)))+b*mmntmmx(j,k)
-    !         else if (rpropa.lt.0)then
-    !             ! if(grad_fin%vars(j,k).gt.0) sign=1
-    !             ! if(grad_fin%vars(j,k).lt.0) sign=-1 
-    !             if(grad_fin%current_erg.gt.grad_fin%prev_erg)then 
-    !                 grad_fin%vars(j,k)= grad_fin%rpropaevious(j,k)*(-1)
-    !                 temp_zom(j)%phi(k)=grad_fin%momentum(j,k)
-    !                 grad_fin%vars(j,k)=0
-    !             else 
-    !                 grad_fin%rprop(j,k)=0.5*grad_fin%rprop(j,k)
-    !                 grad_fin%vars(j,k)=0
-    !                 temp_zom(j)%phi(k)=zstore(j)%phi(k)
-    !             end if
-    !         else if(rpropa.eq.0)then 
-    !             temp_zom(j)%phi(k)=zstore(j)%phi(k)-(grad_fin%rprop(j,k)*(grad_fin%vars(j,k)))+b*mmntmmx(j,k)
-    !         end if
-    !         grad_fin%rpropaevious(j,k)=grad_fin%vars(j,k)
-    !     end do
-    !     temp_zom(j)%sin=sin(cmplx(temp_zom(j)%phi,0.0d0,kind=8))
-    !     temp_zom(j)%cos=cos(cmplx(temp_zom(j)%phi,0.0d0,kind=8))
-    !     grad_fin%momentum(j,:)=zstore(j)%phi(:)
-    ! end do
-
-
+    
     !irprop+
-    ! do j=1,ndet
+    ! temp_zom=zstore
+    ! do j=2,ndet
     !     do k=1, norb
+    !         !To compare if gradients were the same sign
     !         rpropa=grad_fin%rpropaevious(j,k)*grad_fin%vars(j,k)
-    !         if(rpropa.gt.0)then
-    !             ! if(grad_fin%vars(j,k).gt.0) sign=1
-    !             ! if(grad_fin%vars(j,k).lt.0) sign=-1
-    !             grad_fin%rprop(j,k)=1.2*grad_fin%rprop(j,k)
-    !             temp_zom(j)%phi(k)=zstore(j)%phi(k)-(grad_fin%rprop(j,k)*(grad_fin%vars(j,k)))
-    !         else if (rpropa.lt.0)then
-    !             ! if(grad_fin%vars(j,k).gt.0) sign=1
-    !             ! if(grad_fin%vars(j,k).lt.0) sign=-1 
-    !             if(grad_fin%current_erg.gt.grad_fin%prev_erg)then 
-    !                 grad_fin%vars(j,k)= grad_fin%rpropaevious(j,k)*(-1)
-    !                 temp_zom(j)%phi(k)=zstore(j)%phi(k)-(grad_fin%rprop(j,k)*(grad_fin%vars(j,k)))
-    !                 grad_fin%vars(j,k)=0
-    !             else 
-    !                 grad_fin%rprop(j,k)=0.5*grad_fin%rprop(j,k)
-    !                 grad_fin%vars(j,k)=0
-    !                 temp_zom(j)%phi(k)=zstore(j)%phi(k)-(grad_fin%rprop(j,k)*(grad_fin%vars(j,k)))
+    !         if(grad_fin%vars(j,k).gt.0)then !positive current gradient
+    !             if(rpropa.gt.0)then !Same adjacent gradients
+    !                 grad_fin%rprop(j,k)=(-1)*nablaplus*grad_fin%rprop(j,k)
+    !                 temp_zom(j)%phi(k)=zstore(j)%phi(k)+grad_fin%rprop(j,k)
+    !                 grad_fin%rpropaevious(j,k)=1
+    !             else if (rpropa.lt.0)then !different adjacent gradients
+    !                 if(grad_fin%prev_erg.lt.grad_fin%current_erg)then
+    !                     temp_zom(j)%phi(k)=zstore(j)%phi(k)-grad_fin%rprop(j,k)
+    !                 end if
+    !                 grad_fin%rprop(j,k)=nablaminu*grad_fin%rprop(j,k)
+    !                 ! temp_zom(j)%phi(k)=zstore(j)%phi(k)-grad_fin%rprop(j,k)
+    !                 grad_fin%rpropaevious(j,k)=0
+    !             else
+    !                 grad_fin%rprop(j,k)=(-1)*nablaplus*grad_fin%rprop(j,k)
+    !                 temp_zom(j)%phi(k)=zstore(j)%phi(k)+grad_fin%rprop(j,k)
     !             end if
-    !         else if(rpropa.eq.0)then 
-    !             temp_zom(j)%phi(k)=zstore(j)%phi(k)-(grad_fin%rprop(j,k)*(grad_fin%vars(j,k)))
+    !         else if(grad_fin%vars(j,k).lt.0)then !negative current gradient
+    !             if(rpropa.gt.0)then !Same adjacent gradients
+    !                 grad_fin%rprop(j,k)=nablaplus*grad_fin%rprop(j,k)
+    !                 temp_zom(j)%phi(k)=zstore(j)%phi(k)+grad_fin%rprop(j,k)
+    !                 grad_fin%rpropaevious(j,k)=-1
+    !             else if (rpropa.lt.0)then !different adjacent gradients
+    !                 if(grad_fin%prev_erg.lt.grad_fin%current_erg)then
+    !                     temp_zom(j)%phi(k)=zstore(j)%phi(k)-grad_fin%rprop(j,k)
+    !                 end if
+    !                 grad_fin%rprop(j,k)= nablaminu*grad_fin%rprop(j,k)
+    !                 ! temp_zom(j)%phi(k)=zstore(j)%phi(k)+grad_fin%rprop(j,k)
+    !                 grad_fin%rpropaevious(j,k)=0
+    !             else
+    !                 grad_fin%rprop(j,k)=nablaplus*grad_fin%rprop(j,k)
+    !                 temp_zom(j)%phi(k)=zstore(j)%phi(k)+grad_fin%rprop(j,k)
+    !             end if
     !         end if
-    !         grad_fin%rpropaevious(j,k)=grad_fin%vars(j,k)
     !     end do
     !     temp_zom(j)%sin=sin(cmplx(temp_zom(j)%phi,0.0d0,kind=8))
     !     temp_zom(j)%cos=cos(cmplx(temp_zom(j)%phi,0.0d0,kind=8))
     ! end do
 
     !irprop-
-    ! do j=1,ndet
+ 
+    ! temp_zom=zstore
+    ! do j=2,ndet
     !     do k=1, norb
+    !         !To compare if gradients were the same sign
     !         rpropa=grad_fin%rpropaevious(j,k)*grad_fin%vars(j,k)
-    !         if(rpropa.gt.0)then
-    !             grad_fin%rprop(j,k)=1.2*grad_fin%rprop(j,k)
-    !             temp_zom(j)%phi(k)=zstore(j)%phi(k)-(grad_fin%rprop(j,k)*(grad_fin%vars(j,k)))
-    !         else if (rpropa.lt.0)then
-    !             grad_fin%rprop(j,k)=0.5*grad_fin%rprop(j,k)
-    !             grad_fin%vars(j,k)=0
-    !             temp_zom(j)%phi(k)=zstore(j)%phi(k)-(grad_fin%rprop(j,k)*(grad_fin%vars(j,k)))
+    !         if(grad_fin%vars(j,k).gt.0)then !positive current gradient
+    !             if(rpropa.gt.0)then !Same adjacent gradients
+    !                 grad_fin%rprop(j,k)=nablaplus*grad_fin%rprop(j,k)
+    !                 temp_zom(j)%phi(k)=zstore(j)%phi(k)-grad_fin%rprop(j,k)
+    !                 grad_fin%rpropaevious(j,k)=1
+    !             else if (rpropa.lt.0)then !different adjacent gradients
+    !                 grad_fin%rprop(j,k)=nablaminu*grad_fin%rprop(j,k)
+    !                 temp_zom(j)%phi(k)=zstore(j)%phi(k)-grad_fin%rprop(j,k)
+    !                 grad_fin%rpropaevious(j,k)=0
+    !             end if
+    !         else if(grad_fin%vars(j,k).lt.0)then !negative current gradient
+    !             if(rpropa.gt.0)then !Same adjacent gradients
+    !                 grad_fin%rprop(j,k)=nablaplus*grad_fin%rprop(j,k)
+    !                 temp_zom(j)%phi(k)=zstore(j)%phi(k)+grad_fin%rprop(j,k)
+    !                 grad_fin%rpropaevious(j,k)=-1
+    !             else if (rpropa.lt.0)then !different adjacent gradients
+    !                 grad_fin%rprop(j,k)= nablaminu*grad_fin%rprop(j,k)
+    !                 temp_zom(j)%phi(k)=zstore(j)%phi(k)+grad_fin%rprop(j,k)
+    !                 grad_fin%rpropaevious(j,k)=0
+    !             end if
     !         end if
-    !         grad_fin%rpropaevious(j,k)=grad_fin%vars(j,k)
     !     end do
     !     temp_zom(j)%sin=sin(cmplx(temp_zom(j)%phi,0.0d0,kind=8))
     !     temp_zom(j)%cos=cos(cmplx(temp_zom(j)%phi,0.0d0,kind=8))
     ! end do
+    ! if(step.eq.1)then 
+    !     do j=2,ndet
+    !         do k=1, norb
+    !             if(grad_fin%vars(j,k).gt.0)then
+    !                 grad_fin%rpropaevious=1
+    !             else if(grad_fin%vars(j,k).lt.0)then
+    !                 grad_fin%rpropaevious=-1
+    !             end if 
+    !         end do
+    !     end do
+    ! end if
+   
+    !momentum Heavy ball
+    ! do j=2, ndet
+    !     temp_zom(j)%phi=zstore(j)%phi(:)-(t*(grad_fin%vars(j,:)))+mmntm*mmntmmx(j,:)
+    !     temp_zom(j)%sin=sin(cmplx(temp_zom(j)%phi,0.0d0,kind=8))
+    !     temp_zom(j)%cos=cos(cmplx(temp_zom(j)%phi,0.0d0,kind=8))
+    !    ! gradtd=gradtd+dot_product(grad_fin%vars(j,:),((-1)*grad_fin%vars(j,:)))
+    ! end do
 
-    !momentum type 1
-    do j=1, ndet
-        temp_zom(j)%phi=zstore(j)%phi(:)-(t*(grad_fin%vars(j,:)))+mmntm*mmntmmx(j,:)
+    !momentum type 2
+
+    do j=2, ndet
+        ! print*, maxval(abs(grad_fin%vars(j,:))),minval(abs(grad_fin%vars(j,:))),sum(abs(grad_fin%vars(j,:)))/norb
+        grad_fin%prev_phi(j,:)=mmntmmx(j,:)+((1-mmntm)*grad_fin%vars(j,:))
+        temp_zom(j)%phi=zstore(j)%phi(:)-t*(grad_fin%prev_phi(j,:))
         temp_zom(j)%sin=sin(cmplx(temp_zom(j)%phi,0.0d0,kind=8))
         temp_zom(j)%cos=cos(cmplx(temp_zom(j)%phi,0.0d0,kind=8))
        ! gradtd=gradtd+dot_product(grad_fin%vars(j,:),((-1)*grad_fin%vars(j,:)))
     end do
 
-    !momentum type 2
-    ! do j=1, ndet
-    !     grad_fin%momentum(j,:)=(mmntm*grad_fin%rpropaevious(j,:))+grad_fin%vars(j,:)
-    !     temp_zom(j)%phi=zstore(j)%phi(:)-t*(grad_fin%momentum(j,:))
-    !     temp_zom(j)%sin=sin(cmplx(temp_zom(j)%phi,0.0d0,kind=8))
-    !     temp_zom(j)%cos=cos(cmplx(temp_zom(j)%phi,0.0d0,kind=8))
-    !     grad_fin%rpropaevious(j,:)=grad_fin%momentum(j,:)
-    !    ! gradtd=gradtd+dot_product(grad_fin%vars(j,:),((-1)*grad_fin%vars(j,:)))
-    ! end do
-
 
 
    ! Normal GD
-    ! do j=1, ndet
-    !     temp_zom(j)%phi(:)=zstore(j)%phi(:)-(grad_fin%rprop(j,:)*(grad_fin%vars(j,:)))
+    ! do j=2, ndet
+    !     temp_zom(j)%phi(:)=zstore(j)%phi(:)-(t*(grad_fin%vars(j,:)))
     !     temp_zom(j)%sin=sin(cmplx(temp_zom(j)%phi,0.0d0,kind=8))
     !     temp_zom(j)%cos=cos(cmplx(temp_zom(j)%phi,0.0d0,kind=8))
     ! end do
 
 
-    GDflg='y'
+    ! GDflg='y'
     
     ! call random_number(picker)
     ! pick = anint(picker*ndet)
@@ -244,7 +270,7 @@ subroutine zombie_alter(zstore,grad_fin,haml,elect,en,dvecs,lralt,lralt2,step)
     ! grad_fin%momentum=grad_fin%vars
     ! print*,t
     call dealloczs(temp_zom) 
-    GDflg='y'
+    ! GDflg='y'
     ! stop
 
 end subroutine zombie_alter
