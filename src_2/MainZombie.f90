@@ -26,7 +26,7 @@ program MainZombie
     complex(kind=8)::clean_norm, clean_erg
     character(LEN=4)::stateno
     character(LEN=100) :: CWD
-    integer::temp,temp2
+    real::temp,temp2
     real(kind=8):: starttime, stoptime, runtime
     integer(kind=8):: randseed
     DOUBLE PRECISION, external::ZBQLU01
@@ -67,7 +67,7 @@ program MainZombie
     if(GDflg=="y")then
         call allocgrad(gradients,ndet,norb)
         gradients%prev_erg=0
-        gd_loop=2000
+        gd_loop=1000
         !beta=20
         !timesteps=20
     end if
@@ -110,9 +110,13 @@ program MainZombie
             write(0,"(a,i0)") "Error in gramflg setting. This should have been caught ", ierr
                 errorflag=1
         end if
-        temp=1
-        temp2=1
+        temp=0
+        temp2=0
         do k=1, gd_loop
+            dvecs(1)%d(1)=(1.0,0.0)
+            do j=2,ndet
+                dvecs(1)%d(j)=cmplx((9.9d-5+(((9.9d-2)-9.9d-5)*ZBQLU01(0.0D0))),0.0)
+            end do
             if(hamgflg=='y')then
                 call hamgen(haml,zstore,elect,ndet,1)
                 if(k.eq.1)then
@@ -131,26 +135,29 @@ program MainZombie
                 ! call matrixwriter(haml%kinvh,ndet,"kinvh.csv")
                 write(6,"(a)") "Hamiltonian successfully read in"
             end if
+             
             ! Imaginary time propagation
             write(6,"(a)") "Imaginary time propagation started"
             call imgtime_prop(dvecs,en,haml)
             write(6,"(a)") "Imaginary time propagation finished"
             ! print*,real(en%erg(1,timesteps+1))
 
-        
-            
             if(GDflg.eq.'y')then
-                gradients%current_erg=real(en%erg(1,timesteps+1))!*(1.0d6)
-                print*,gradients%current_erg 
-                ! temp=anint(real(en%erg(1,timesteps+1))*10d12)
-                ! gradients%prev_erg=temp/10d12
-                ! print*,gradients%prev_erg
+                gradients%current_erg=real(ergcalc(haml%hjk,dvecs(1)%d))
+                ! gradients%current_erg=real(en%erg(1,timesteps+1))!*(1.0d6)
+                print*,gradients%current_erg
+                if(k.eq.gd_loop)then
+                    do j=1,ndet
+                        call zombiewriter(zstore(j),j,k)
+                    end do
+                    exit 
+                end if
             end if
             
             if(gramflg.eq."n")then
                 ! write(stateno,"(i4.4)")k
                 call dvec_writer(dvecs(1)%d,ndet,0,k)
-                call energywriter(en%t,en%erg(1,:),"energy.csv",0,k)
+                ! call energywriter(en%t,en%erg(1,:),"energy.csv",0,k)
             else if(gramflg.eq."y")then
                 do j=1, 1+gramnum
                     write(stateno,"(i4.4)")j
@@ -166,7 +173,7 @@ program MainZombie
                 do j=1,ndet
                     call zombiewriter(zstore(j),j,k)
                 end do
-                call value_reset(haml,dvecs,en,ndet,gradients)
+                ! call value_reset(haml,dvecs,en,ndet,gradients)
                 write(6,"(a,i0,a)") "One Gradient Descent step ",k, " taken"
             end if
            
@@ -175,8 +182,10 @@ program MainZombie
         if(GDflg.eq.'y')then 
             beta=200
             timesteps=2000
+            dvecs(1)%d=(0.0,0.0)
             call allocerg(en,1)
             call imgtime_prop(dvecs,en,haml)
+            print*,'final erg', real(en%erg(1,timesteps+1))
             call energywriter(en%t,en%erg(1,:),"energy_final.csv",0,1)
             call deallocerg(en)
             call matrixwriter(haml%hjk,ndet,"data/ham_final.csv")

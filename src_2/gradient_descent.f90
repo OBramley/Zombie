@@ -18,58 +18,59 @@ subroutine zombie_alter(zstore,grad_fin,haml,elect,en,dvecs,lralt,lralt2,step)
     type(hamiltonian),intent(inout)::haml
     type(zombiest),dimension(:),allocatable::temp_zom
     integer,intent(in)::step
-    integer,intent(inout)::lralt,lralt2
+    real,intent(inout)::lralt,lralt2
     real(kind=8)::gamma,alpha,b,t,fxtdk,gradtd,picker,mmntm,rpropa,c
     real(kind=16)::delmax,delmin,del0,nablaplus,nablaminu
     real(kind=8),dimension(ndet,norb)::mmntmmx
-    integer::j,break,pick,k,sign
+    integer::j,break,pick,k,sign,power
     integer(kind=8)::temp, temp2
     
     if (errorflag .ne. 0) return
 
     ! break=0
-    alpha=0.5
-    b=1.0D-5
-    c=1.1
-    mmntm=0.9
+    alpha=0.1
+    b=1D-1
+    c=1.001
+    ! mmntm=0.1
     ! delmax=
     ! delmin=
-    del0=0.09999999999
-    nablaplus=1.09999999999
-    nablaminu=0.49999999999
+    ! del0=0.00000999999999
+    ! nablaplus=1.009999999999 !old1.09999999999
+    ! nablaminu=0.249999999999 !old0.49999999999
 
     !gradtd=0
+    power=1+int(lralt)
     if(step.eq.1)then 
-        do j=2,ndet
-            grad_fin%prev_phi(j,:)=zstore(j)%phi(:) !for momentum
-        end do
-        mmntmmx=0
-        grad_fin%rpropaevious=0
-        grad_fin%rprop=del0
+        ! do j=2,ndet
+        !     grad_fin%prev_phi(j,:)=zstore(j)%phi(:) !for momentum
+        ! end do
+        ! mmntmmx=0
+        ! grad_fin%rpropaevious=0
+        ! grad_fin%rprop=del0
     else
         ! if(modulo(step,100).eq.0)then
         !     lralt=lralt+1
         ! end if
         if(grad_fin%current_erg.gt.grad_fin%prev_erg)then 
-            print*,'reducing learning rate if on'
-            ! lralt=lralt+1
+            print*,'Bad move'
+            lralt=lralt+0.1
         else
             ! print*,'increasing learning rate'
             ! lralt2=lralt2+1
         end if
-        !heavy ball
+        ! heavy ball
         ! do j=2,ndet
         !     mmntmmx(j,:)=zstore(j)%phi(:)-grad_fin%prev_phi(j,:)
         !     grad_fin%prev_phi(j,:)=zstore(j)%phi(:)
         ! end do
         !Momentum
-        do j=2,ndet
-            mmntmmx(j,:)=mmntm*grad_fin%prev_phi(j,:)
-        end do
+        ! do j=2,ndet
+        !     mmntmmx(j,:)=mmntm*grad_fin%prev_phi(j,:)
+        ! end do
     end if
     
     !decay by 0.5 when energy increases
-    t=b*(alpha**(lralt-1))*(c**(lralt2-1))
+    t=b*(alpha**(power-1))*(c**(lralt2-1))
     ! t=b*exp(-0.01*(step-1))
     call alloczs(temp_zom,ndet)
     temp_zom(1)=zstore(1)
@@ -91,7 +92,6 @@ subroutine zombie_alter(zstore,grad_fin,haml,elect,en,dvecs,lralt,lralt2,step)
     !                     temp_zom(j)%phi(k)=zstore(j)%phi(k)-grad_fin%rprop(j,k)
     !                 end if
     !                 grad_fin%rprop(j,k)=nablaminu*grad_fin%rprop(j,k)
-    !                 ! temp_zom(j)%phi(k)=zstore(j)%phi(k)-grad_fin%rprop(j,k)
     !                 grad_fin%rpropaevious(j,k)=0
     !             else
     !                 grad_fin%rprop(j,k)=(-1)*nablaplus*grad_fin%rprop(j,k)
@@ -107,7 +107,6 @@ subroutine zombie_alter(zstore,grad_fin,haml,elect,en,dvecs,lralt,lralt2,step)
     !                     temp_zom(j)%phi(k)=zstore(j)%phi(k)-grad_fin%rprop(j,k)
     !                 end if
     !                 grad_fin%rprop(j,k)= nablaminu*grad_fin%rprop(j,k)
-    !                 ! temp_zom(j)%phi(k)=zstore(j)%phi(k)+grad_fin%rprop(j,k)
     !                 grad_fin%rpropaevious(j,k)=0
     !             else
     !                 grad_fin%rprop(j,k)=nablaplus*grad_fin%rprop(j,k)
@@ -173,23 +172,23 @@ subroutine zombie_alter(zstore,grad_fin,haml,elect,en,dvecs,lralt,lralt2,step)
 
     !momentum type 2
 
-    do j=2, ndet
-        ! print*, maxval(abs(grad_fin%vars(j,:))),minval(abs(grad_fin%vars(j,:))),sum(abs(grad_fin%vars(j,:)))/norb
-        grad_fin%prev_phi(j,:)=mmntmmx(j,:)+((1-mmntm)*grad_fin%vars(j,:))
-        temp_zom(j)%phi=zstore(j)%phi(:)-t*(grad_fin%prev_phi(j,:))
-        temp_zom(j)%sin=sin(cmplx(temp_zom(j)%phi,0.0d0,kind=8))
-        temp_zom(j)%cos=cos(cmplx(temp_zom(j)%phi,0.0d0,kind=8))
-       ! gradtd=gradtd+dot_product(grad_fin%vars(j,:),((-1)*grad_fin%vars(j,:)))
-    end do
+    ! do j=2, ndet
+    !     ! print*, maxval(abs(grad_fin%vars(j,:))),minval(abs(grad_fin%vars(j,:))),sum(abs(grad_fin%vars(j,:)))/norb
+    !     grad_fin%prev_phi(j,:)=mmntmmx(j,:)+((1-mmntm)*grad_fin%vars(j,:))
+    !     temp_zom(j)%phi=zstore(j)%phi(:)-t*(grad_fin%prev_phi(j,:))
+    !     temp_zom(j)%sin=sin(cmplx(temp_zom(j)%phi,0.0d0,kind=8))
+    !     temp_zom(j)%cos=cos(cmplx(temp_zom(j)%phi,0.0d0,kind=8))
+    !    ! gradtd=gradtd+dot_product(grad_fin%vars(j,:),((-1)*grad_fin%vars(j,:)))
+    ! end do
 
 
 
    ! Normal GD
-    ! do j=2, ndet
-    !     temp_zom(j)%phi(:)=zstore(j)%phi(:)-(t*(grad_fin%vars(j,:)))
-    !     temp_zom(j)%sin=sin(cmplx(temp_zom(j)%phi,0.0d0,kind=8))
-    !     temp_zom(j)%cos=cos(cmplx(temp_zom(j)%phi,0.0d0,kind=8))
-    ! end do
+    do j=2, ndet
+        temp_zom(j)%phi(:)=zstore(j)%phi(:)-(t*(grad_fin%vars(j,:)))
+        temp_zom(j)%sin=sin(cmplx(temp_zom(j)%phi,0.0d0,kind=8))
+        temp_zom(j)%cos=cos(cmplx(temp_zom(j)%phi,0.0d0,kind=8))
+    end do
 
 
     ! GDflg='y'
@@ -205,9 +204,7 @@ subroutine zombie_alter(zstore,grad_fin,haml,elect,en,dvecs,lralt,lralt2,step)
 
     
 
-    
 
-   
 
     ! print*,gradtd
     ! call hamgen(haml,temp_zom,elect,ndet,0)
