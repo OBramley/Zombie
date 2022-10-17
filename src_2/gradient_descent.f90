@@ -7,7 +7,7 @@ MODULE gradient_descent
 
     contains
 
-subroutine zombie_alter(zstore,grad_fin,haml,elect,en,dvecs,lralt,lralt2,nochange,nochange2,step)
+subroutine zombie_alter(zstore,grad_fin,haml,elect,en,dvecs,lralt,lralt2,nochange,step)
 
     implicit none
     type(zombiest),dimension(:),intent(inout)::zstore
@@ -18,13 +18,13 @@ subroutine zombie_alter(zstore,grad_fin,haml,elect,en,dvecs,lralt,lralt2,nochang
     type(hamiltonian),intent(inout)::haml
     type(zombiest),dimension(:),allocatable::temp_zom
     integer,intent(in)::step
-    real,intent(inout)::lralt,lralt2,nochange,nochange2
-    real(kind=8)::gamma,alpha,b,t,fxtdk,gradtd,picker,mmntm,rpropa,c
+    real,intent(inout)::lralt,lralt2
+    real(kind=8)::gamma,alpha,b,t,fxtdk,gradtd,picker,mmntm,rpropa,c,dummy
     real(kind=16)::delmax,delmin,del0,nablaplus,nablaminu
     real(kind=8),dimension(ndet,norb)::mmntmmx
-    integer::j,break,pick,k,sign,power
+    integer::j,break,pick,k,sign,power,nochange
     integer(kind=8)::temp, temp2
-    
+    DOUBLE PRECISION, external::ZBQLU01
     if (errorflag .ne. 0) return
 
     ! break=0
@@ -221,11 +221,16 @@ subroutine zombie_alter(zstore,grad_fin,haml,elect,en,dvecs,lralt,lralt2,nochang
         end if
         print*,'accept at', t, pick
     else 
+        print*,'reject at', t, pick
         nochange=nochange+1
-        if(nochange.eq.ndet)then 
+        ! if(lralt.eq.7)then
+        !     nochange=0
+        !     lralt=0
+        ! end if
+        if(modulo(nochange,(ndet-1)).eq.0)then 
             lralt=lralt+1
-            nochange2=nochange+1
         end if
+        
     !     do j=1,23        
     !         t=b*(alpha**j)
     !         temp_zom(pick)%phi(:)=zstore(pick)%phi(:)-(t*(grad_fin%vars(pick,:)))

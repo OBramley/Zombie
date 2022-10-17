@@ -499,6 +499,9 @@ MODULE alarrays
 
         
         deallocate(gradients%vars,stat=ierr)
+        if (ierr==0)deallocate(gradients%prev_phi,stat=ierr)
+        if (ierr==0)deallocate(gradients%rprop,stat=ierr)
+        if (ierr==0)deallocate(gradients%rpropaevious,stat=ierr)
         if (ierr/=0) then
             write(0,"(a,i0)") "Error in gradient matrix deallocation. ierr had value ", ierr
             errorflag=1

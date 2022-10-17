@@ -22,11 +22,11 @@ program MainZombie
     type(elecintrgl)::elect
     type(hamiltonian)::haml, clean_haml
     type(grad)::gradients
-    integer:: j,k, istat, clean_ndet,ierr,gd_loop
+    integer:: j,k,l, istat, clean_ndet,ierr,gd_loop,temp3
     complex(kind=8)::clean_norm, clean_erg
     character(LEN=4)::stateno
     character(LEN=100) :: CWD
-    real::temp,temp2,temp3,temp4
+    real::temp,temp2,temp4,dummy
     real(kind=8):: starttime, stoptime, runtime
     integer(kind=8):: randseed
     DOUBLE PRECISION, external::ZBQLU01
@@ -62,7 +62,7 @@ program MainZombie
     write(6,"(a)") "Random seed set"
 
 
-    GDflg='y'
+    GDflg='n'
     gd_loop=1
     if(GDflg=="y")then
         call allocgrad(gradients,ndet,norb)
@@ -165,7 +165,45 @@ program MainZombie
            
             if(GDflg.eq.'y')then
                 call final_grad(dvecs(1),haml,gradients)
-                call zombie_alter(zstore,gradients,haml,elect,en,dvecs,temp,temp2,temp3,temp4,k)
+                call zombie_alter(zstore,gradients,haml,elect,en,dvecs,temp,temp2,temp3,k)
+                ! if(temp4.lt.5)then
+                !     if(temp.gt.5)then
+                !         ! net=ndet+1
+                !         call alloczs(cstore,ndet+1)
+                !         cstore(1:ndet)=zstore(1:ndet)
+                !         do l=1,norb
+                !             dummy=-1
+                !             !$omp critical
+                !             do while((dummy.lt.0))
+                !             dummy=2*pirl*ZBQLU01(1)
+                !             end do
+                !             !$omp end critical
+                !             cstore(ndet+1)%phi(l)=dummy
+                !         end do 
+                !         cstore(ndet+1)%sin=sin(cmplx(cstore(ndet+1)%phi,0.0d0,kind=8))
+                !         cstore(ndet+1)%cos=cos(cmplx(cstore(ndet+1)%phi,0.0d0,kind=8))
+                !         call dealloczs(zstore)
+                !         call alloczs(zstore,ndet+1)
+                !         zstore=cstore
+                !         call dealloczs(cstore)
+                !         ndet=ndet+1
+                !         call deallocham(haml)
+                !         call allocham(haml,ndet,norb)
+                !         ! GDflg='n'
+                !         ! call hamgen(haml,zstore,elect,ndet,0)
+                !         call deallocdv(dvecs)
+                !         call allocdv(dvecs,1,ndet,norb)
+                !         ! call imgtime_prop(dvecs,en,haml)
+                !         call deallocgrad(gradients)
+                !         call allocgrad(gradients,ndet,norb)
+                !         ! gradients%current_erg=real(en%erg(1,timesteps+1))
+                !         ! GDflg='y'
+                !         temp2=2
+                !         temp=0
+                !         temp3=0
+                !         temp4=temp4+1
+                !     end if
+                !     end if
                 do j=1,ndet
                     call zombiewriter(zstore(j),j,k)
                 end do
@@ -174,6 +212,7 @@ program MainZombie
             end if
            
         end do
+        
         call deallocerg(en)
         if(GDflg.eq.'y')then 
             beta=200
