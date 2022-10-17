@@ -258,7 +258,7 @@ Module grad_d
             temp1(:)=0
             temp2(:)=0
             do l=1, ndet
-                ! temp1 = temp1 + dham(l)*dvec%d_diff(l,j,:)
+                temp1 = temp1 + dham(l)*dvec%d_diff(l,j,:)
                 if(l.eq.j)then
                     temp2=temp2+(real(dvec%d(l))*matmul(real(dvec%d),haml%diff_hjk(j,:,:)))
                 else 

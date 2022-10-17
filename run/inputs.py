@@ -19,7 +19,7 @@ run={
     'language':'fortran',
 
     # What is the name of the run
-    'runfolder':'Li2_GD_1d_20bf_nod',
+    'runfolder':'Li2_GD_10_-1_single_zs_type2_don_restat',
 
     # Amount of time to request on HPC 
     'runtime': "24:00:00",
@@ -33,7 +33,7 @@ run={
 
     # Name of file where any prior generated results are placed so the Fortran 
     # program can access them and continue a run
-    'datafile':'data',
+    'datafile':'GD_test',
 
     # 1 and 2 electron integrals can be calcualted by PySCF by the program
     # or they can be inputed as a seperate file at the moment only from MOLPRO
@@ -45,7 +45,7 @@ run={
 
     # Do you want to generate new zombie states. The program can work using previously gerated
     # Zombie states. Takes input 'y' or 'n'.
-    'zomgen':'y',
+    'zomgen':'n',
 
     'zombiefile':'zombie_states.pkl',
 
@@ -60,9 +60,9 @@ run={
     # the Zombie state Hamiltonian. Takes input 'y' or 'n'.
     'imagprop':'y',
 
-    'beta':200,
+    'beta':2000,
 
-    'timesteps':2000,
+    'timesteps':5000,
 
     # Do you want the starting energy to be the HF energy
     # Takes input 'y' or 'n' and then a number to defined the number of electrons
@@ -96,7 +96,7 @@ zombs={
     'spin':0,
 
     # Number of Zombie states
-    'ndet':20, 
+    'ndet':10, 
 
     # Type of zombie states. Random (ran), Hartree Fock (HF) or biased (bb)
     'zomtyp':'bb',
