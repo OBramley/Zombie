@@ -19,7 +19,7 @@ run={
     'language':'fortran',
 
     # What is the name of the run
-    'runfolder':'Li2_GD_new_method_GS',
+    'runfolder':'Li2_GD_new_method_updatedv',
 
     # Amount of time to request on HPC 
     'runtime': "24:00:00",
@@ -33,7 +33,7 @@ run={
 
     # Name of file where any prior generated results are placed so the Fortran 
     # program can access them and continue a run
-    'datafile':'GD_test2',
+    'datafile':'GD_test',
 
     # 1 and 2 electron integrals can be calcualted by PySCF by the program
     # or they can be inputed as a seperate file at the moment only from MOLPRO
@@ -60,9 +60,9 @@ run={
     # the Zombie state Hamiltonian. Takes input 'y' or 'n'.
     'imagprop':'y',
 
-    'beta':2000,
+    'beta':500,
 
-    'timesteps':5000,
+    'timesteps':1000,
 
     # Do you want the starting energy to be the HF energy
     # Takes input 'y' or 'n' and then a number to defined the number of electrons
@@ -79,7 +79,7 @@ run={
     # Gram Schmidt orthogonalisation and then specify the number of states. Takes input
     # 'y' or 'n' and an integer number note in the python code gramnum=1 will not find an excited state just a 
     # single ground state. But gramnum=1 will find a single excited state in the fortran code.
-    'gram':'y',
+    'gram':'n',
     'gramnum':4
 }
 

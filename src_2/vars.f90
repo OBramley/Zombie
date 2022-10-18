@@ -6,11 +6,11 @@ MODULE globvars
     type zombiest
         complex(kind=8), dimension(:), allocatable::sin
         complex(kind=8), dimension(:), allocatable::cos
-        real(kind=16),dimension(:),allocatable::phi
+        real(kind=8),dimension(:),allocatable::phi
         real(kind=8),dimension(:),allocatable::img
         integer,dimension(:),allocatable::dead
         integer,dimension(:),allocatable::alive
-    
+        integer::update_num
     end type zombiest
 
     ! Type defining the Hamiltonian matrix and the overlap matrix
@@ -52,6 +52,7 @@ MODULE globvars
         real(kind=8),dimension(:,:), allocatable::vars
         real(kind=8):: prev_erg
         real(kind=8):: current_erg
+        integer,dimension(:),allocatable::grad_avlb
         real(kind=8),dimension(:,:),allocatable::prev_phi
         real(kind=8),dimension(:,:),allocatable::rprop
         integer(kind=8),dimension(:,:),allocatable::rpropaevious

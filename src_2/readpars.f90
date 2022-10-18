@@ -218,6 +218,7 @@ MODULE readpars
                     zstore(j)%sin(k)=cmplx(sin(k),0.0,kind=8)
                 end do 
                 close(zomnum)
+                zstore(j)%update_num=0
             end do
         else if(imagflg=='y')then
             do j=1, ndet
@@ -244,8 +245,10 @@ MODULE readpars
                     zstore(j)%sin((k+1)/2)=cmplx(csin(k),csin(k+1),kind=8)
                 end do
                 close(zomnum)
+                zstore(j)%update_num=0
             end do
         end if
+        
         write(6,"(a)") "Zombie states succeffuly read in"
         return
         

@@ -83,8 +83,12 @@ MODULE outputs
         if (errorflag .ne. 0) return
 
         ierr=0
-
-        write(nums,"(i4.4)")num
+        
+        if(GDflg.eq.'y')then
+            write(nums,"(i4.4)")(num+1000)
+        else
+            write(nums,"(i4.4)")num
+        end if
 
         
         filenm = "data/zombie_"//trim(nums)//".csv"
@@ -93,6 +97,7 @@ MODULE outputs
         
         open(unit=zomnum,file=trim(filenm),status="unknown",iostat=ierr)
         if(ierr/=0)then
+            close(zomnum)
             write(0,"(a,i0)") "Error in opening zombie state file. ierr had value ", ierr
             errorflag=1
             return
@@ -183,6 +188,7 @@ MODULE outputs
         open(unit=ergnum,file=trim(filenm),status="unknown",iostat=ierr)
         if(ierr/=0)then
             write(0,"(a,i0)") "Error in opening energy output file. ierr had value ", ierr
+            close(ergnum)
             errorflag=1
             return
         end if
@@ -211,6 +217,35 @@ MODULE outputs
 
     end subroutine energywriter
 
+    subroutine epoc_writer(erg,step,chng_trk)
+
+        implicit none
+        real(kind=8),intent(in)::erg 
+        integer,intent(in)::step
+        integer,dimension(:),intent(in)::chng_trk
+        integer::epoc,ierr,k
+    
+        if (errorflag .ne. 0) return
+        epoc=450
+        ierr=0
+        open(unit=epoc,file='epoc.csv',status="unknown",iostat=ierr)
+        if(ierr/=0)then
+            write(0,"(a,i0)") "Error in opening epoc output file. ierr had value ", ierr
+            errorflag=1
+            return
+        end if
+        if(step.gt.0)then
+            do k=1, step
+                read(epoc,*)
+            end do
+        end if
+        write(epoc,'(i0,",",e25.17e3,",",*(i0:", "))') step,erg,(chng_trk(k),k=2,ndet)
+        close(epoc)
+        return
+        
+    end subroutine epoc_writer
+
+
     subroutine dvec_writer(d,size,p,loop)
 
         implicit none
@@ -223,12 +258,13 @@ MODULE outputs
         ierr=0
 
         write(stateno,"(i4.4)")p
-
+        
         vec=900+p
         open(unit=vec,file="data/dvec_"//trim(stateno)//".csv",status="unknown",iostat=ierr)
         if(ierr/=0)then
             write(0,"(a,i0)") "Error in opening dvector file. ierr had value ", ierr
             errorflag=1
+            close(vec)
             return
         end if
         if(loop.gt.1)then
@@ -236,7 +272,7 @@ MODULE outputs
                 read(vec,*)
             end do
         end if
-
+       
         if(imagflg=='n')then
             write(vec,'(*(e25.17e3 :", "))') (REAL(d(j)),j=1,size)
         else if(imagflg=='y')then

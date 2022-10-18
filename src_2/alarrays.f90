@@ -120,7 +120,7 @@ MODULE alarrays
         zs%phi(1:norb)=0.0d0
         zs%cos(1:norb)=(0.0d0,0.0d0)
         zs%sin(1:norb)=(0.0d0,0.0d0)
-       
+        zs%update_num=0
         return
     end subroutine alloczf
 
@@ -473,6 +473,7 @@ MODULE alarrays
 
         
         allocate(gradients%vars(num,length),stat=ierr)
+        if (ierr==0)allocate(gradients%grad_avlb(num),stat=ierr)
         if (ierr==0)allocate(gradients%prev_phi(num,length),stat=ierr)
         if (ierr==0)allocate(gradients%rprop(num,length),stat=ierr)
         if (ierr==0)allocate(gradients%rpropaevious(num,length),stat=ierr)
@@ -482,6 +483,7 @@ MODULE alarrays
             return
         end if
         gradients%vars=0
+        gradients%grad_avlb=0
         return
      
     end subroutine allocgrad
