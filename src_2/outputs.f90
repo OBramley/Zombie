@@ -239,7 +239,7 @@ MODULE outputs
                 read(epoc,*)
             end do
         end if
-        write(epoc,'(i0,",",e25.17e3,",",*(i0:", "))') step,erg,(chng_trk(k),k=2,ndet)
+        write(epoc,'(i0,",",e25.17e3,",",*(i0:", "))') step,erg,(chng_trk(k),k=1,ndet-1)
         close(epoc)
         return
         

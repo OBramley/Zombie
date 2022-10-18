@@ -318,7 +318,6 @@ MODULE gradient_descent
             end do
         end do
 
-        print*,diff_state
         return
 
     end subroutine gradient_row
@@ -339,8 +338,9 @@ MODULE gradient_descent
         type(hamiltonian)::temp_ham
         integer,allocatable,dimension(:,:,:)::occupancy_an
         integer,allocatable,dimension(:,:,:,:)::occupancy_an_cr,occupancy_2an
-        integer::lralt,rjct_cnt,ierr,j,k,l,epoc_cnt,next
-        real(kind=8)::alpha,b,t,fxtdk
+        integer::lralt,rjct_cnt,ierr,j,k,l,epoc_cnt,next,acpt_cnt,acpt1,acpt2,pick
+        integer,dimension(ndet-1)::picker
+        real(kind=8)::alpha,b,t,fxtdk,dummy
         
         if (errorflag .ne. 0) return
 
@@ -387,36 +387,52 @@ MODULE gradient_descent
     
         alpha=0.1  ! learning rate reduction
         lralt=0    ! power alpha is raised to  
-        b=1D-1 !starting learning rate
+        b=7.5D-1 !starting learning rate
         epoc_cnt=0 !epoc counter
         chng_trk=0
+        rjct_cnt=0
         t=b*(alpha**lralt)
+        acpt_cnt=0
         call alloczs(temp_zom,ndet)
         call allocham(temp_ham,ndet,norb)
+        do j=1, ndet-1
+            picker(j)=j+1
+        end do
+       
         do while(t.gt.(1.0d-10))
-            do j=2,ndet
+            dummy=0
+            if(t.gt.1.0d-5)then
+                call random_number(dummy)
+            end if
+            
+            do j=1,(ndet-1)
+                pick=picker(j)
                 t=b*(alpha**lralt)
+                if(dummy.gt.0.85)then 
+                    t=b*(alpha**(lralt+1))
+                end if
                 ! Setup temporary zombie state
                 temp_zom=zstore
-                temp_zom(j)%phi(:)=zstore(j)%phi(:)-(t*(grad_fin%vars(j,:)))
-                temp_zom(j)%sin=sin(cmplx(temp_zom(j)%phi,0.0d0,kind=8))
-                temp_zom(j)%cos=cos(cmplx(temp_zom(j)%phi,0.0d0,kind=8))
+                temp_zom(pick)%phi(:)=zstore(pick)%phi(:)-(t*(grad_fin%vars(pick,:)))
+                temp_zom(pick)%sin=sin(cmplx(temp_zom(pick)%phi,0.0d0,kind=8))
+                temp_zom(pick)%cos=cos(cmplx(temp_zom(pick)%phi,0.0d0,kind=8))
                 temp_ham=haml
              
-                call he_full_row(temp_ham,temp_zom,elect,j,ndet,occupancy_2an,occupancy_an_cr,occupancy_an)
+                call he_full_row(temp_ham,temp_zom,elect,pick,ndet,occupancy_2an,occupancy_an_cr,occupancy_an)
                 ! Imaginary time propagation for back tracing
                 dvecs(1)%d=cmplx(0.0,0.0)
                 en%erg=0
                 en%t=0
                 call imgtime_prop(dvecs,en,temp_ham,0)
                 fxtdk=real(en%erg(1,timesteps+1))
-                ! print*,fxtdk,j,grad_fin%prev_erg
+                ! print*,fxtdk,j,grad_fin%prev_erg,t
                 ! Check if energy is lower and accept or reject
                 if(fxtdk.lt.grad_fin%prev_erg)then
+                    acpt_cnt=acpt_cnt+1
                     zstore=temp_zom
-                    zstore(j)%update_num=zstore(j)%update_num+1
-                    call zombiewriter(zstore(j),j,zstore(j)%update_num)
-                    chng_trk(j)=j
+                    zstore(pick)%update_num=zstore(pick)%update_num+1
+                    call zombiewriter(zstore(pick),pick,zstore(pick)%update_num)
+                    chng_trk(j)=pick
                     haml=temp_ham
                     rjct_cnt=0
                     if(lralt.gt.0)then 
@@ -434,11 +450,15 @@ MODULE gradient_descent
                         lralt=lralt+1
                     end if
                 end if
-                
-                next=j+1
-                if(j.eq.ndet)then 
-                    next=2
+
+                if(j.eq.(ndet-1))then 
+                    ! picker=scramble(ndet-1)
+                    picker=picker
+                    next=picker(1)
+                else 
+                    next=picker(j+1)
                 end if
+              
                 !Set up gradients for next pass
                 if(grad_fin%grad_avlb(next).eq.0)then 
                     call gradient_row(haml,zstore,elect,next,ndet,occupancy_2an,occupancy_an_cr,occupancy_an)
@@ -457,8 +477,64 @@ MODULE gradient_descent
             call epoc_writer(grad_fin%prev_erg,epoc_cnt,chng_trk)
             write(6,"(a,i0,a,f20.16,a,f11.10)") "Energy after epoc no. ",epoc_cnt,": ", &
                                                     grad_fin%prev_erg, ". The current learning rate is: ",t
+            
+            
+            if(acpt_cnt.eq.1)then   
+                do j=1,ndet-1
+                    if(chng_trk(j).ne.0)then 
+                        if(acpt1.eq.0)then 
+                            acpt1=chng_trk(j)
+                            acpt_cnt=0
+                        else 
+                            if(j.ne.acpt1)then 
+                                acpt1=chng_trk(j)
+                                acpt2=0
+                                acpt_cnt=0
+                            else if(acpt2.lt.3)then
+                                acpt1=chng_trk(j) 
+                                acpt2=acpt2+1
+                                acpt_cnt=0
+                            else 
+                                lralt=lralt+1
+                                if(j.eq.2)then 
+                                    lralt=lralt+1
+                                end if
+                                acpt_cnt=0
+                            end if
+                        end if
+                        exit 
+                    end if
+                end do
+            else if(acpt_cnt.gt.1)then
+                acpt1=0
+                acpt2=0
+                acpt_cnt=0
+            end if
+
             chng_trk=0
-        
+
+            if((t.lt.1.0d-8))then
+                if(epoc_cnt.lt.5000)then
+                    if(b.eq.1D-1)then 
+                        if(alpha.eq.0.1)then
+                            alpha=0.05
+                            rjct_cnt=0
+                            lralt=0
+                        else 
+                            exit
+                        end if
+                    else if(b.gt.2.5d-1)then 
+                        b=(0.1+b)/2
+                        rjct_cnt=0
+                        lralt=0
+                    else if(b.le.2.5d-1)then
+                        b=0.1
+                        rjct_cnt=0
+                        lralt=0
+                    end if
+                end if
+            end if 
+
         end do
         
         call deallocham(temp_ham) 
@@ -474,6 +550,30 @@ MODULE gradient_descent
 
     end subroutine zombie_alter
 
+
+    function scramble( number_of_values ) result(array)
+        integer,intent(in)    :: number_of_values
+        integer,allocatable   :: array(:),array2(:)
+        array=[(j,j=1,number_of_values)]
+        array2=[(j,j=1,number_of_values+1)]
+        n=1; m=number_of_values
+        do k=1,2
+         do j=1,m+1
+          call random_number(u)
+          l = n + FLOOR((m+1-n)*u)
+          itemp=array2(l); array2(l)=array2(j); array2(j)=itemp
+         end do
+        end do
+        n=1
+        do j=1,m+1
+            if(array2(j).eq.1)then 
+                cycle
+            end if
+            array(n)=array2(j)
+            n=n+1
+        end do
+        return
+     end function scramble
 
 END MODUle gradient_descent
 
