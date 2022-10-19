@@ -151,7 +151,7 @@ MODULE imgtp
         integer,intent(in)::diff_state
         type(dvector), allocatable,dimension(:)::dvecs_copy
         complex(kind=8)::numer,den
-        complex(kind=8),dimension(ndet)::temp
+        ! complex(kind=8),dimension(ndet)::temp
         integer::states,j,k
 
         if (errorflag .ne. 0) return
@@ -165,9 +165,8 @@ MODULE imgtp
 
         do j=2,states
             do k=1, j-1
-                temp=matmul(haml%ovrlp,dvecs_copy(k)%d)
-                numer = dot_product(dvecs_copy(j)%d,temp)
-                den  = dot_product(dvecs_copy(k)%d,temp)
+                numer=dot_product(dvecs_copy(k)%d,matmul(haml%ovrlp,dvecs_copy(j)%d))
+                den=dot_product(dvecs_copy(k)%d,matmul(haml%ovrlp,dvecs_copy(k)%d))
                 dvecs_copy(j)%d = dvecs_copy(j)%d - (dvecs_copy(k)%d*(numer/den))
             end do
         end do

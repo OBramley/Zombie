@@ -122,6 +122,10 @@ MODULE outputs
             write(zomnum,'(*(1x,es25.17e3 :", "))') ((zom%cos(j)),j=1,norb)
             write(zomnum,'(*(1x,es25.17e3 :", "))') ((zom%sin(j)),j=1,norb)
         end if
+        write(zomnum,*)
+        write(zomnum,*)
+        write(zomnum,*)
+        write(zomnum,*)
 
         close(zomnum)
 
@@ -240,6 +244,10 @@ MODULE outputs
             end do
         end if
         write(epoc,'(i0,",",e25.17e3,",",*(i0:", "))') step,erg,(chng_trk(k),k=1,ndet-1)
+        write(epoc,*)
+        write(epoc,*)
+        write(epoc,*)
+        write(epoc,*)
         close(epoc)
         return
         

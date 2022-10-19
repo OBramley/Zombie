@@ -19,7 +19,7 @@ def plot(eb,rnum, beta, timesteps, filename):
         ax.plot(x,eb[1,:], linewidth=2, color=colors(0),label='Converged energy = '+"{:.5f}".format(eb[1,timesteps-1]))
     else:
         for i in range(rnum):
-            ax.plot(x,eb[i+1,:], linewidth=2, color=colors(i),label='State '+str(i)+' = '+"{:.5f}".format(eb[i+1,timesteps-1]))
+            ax.plot(x,eb[i+1,:], linewidth=2, color=colors(i),label='State '+str(i+1)+' = '+"{:.5f}".format(eb[i+1,timesteps-1]))
     ax.set_xlim(0,beta)
     ax.legend()
     # ax.set_ylim(-14.8615,-14.8575)
@@ -53,20 +53,20 @@ if(inputs.run['gram']=='n'):
     if((inputs.run['clean']=='y')or(inputs.run['clean']=='f')):
         with open('clean_energy.csv','rb') as file:
             clean= numpy.loadtxt(file,delimiter=',')
-        clean_plot(energy,1,inputs.run['beta'],clean[2],inputs.run['timesteps'],'result.png')
+        clean_plot(energy,1,inputs.run['beta'],clean[2],inputs.run['timesteps']+1,'result.png')
     else:
-        plot(energy,1,inputs.run['beta'],inputs.run['timesteps'],'result.png')
+        plot(energy,1,inputs.run['beta'],inputs.run['timesteps']+1,'result.png')
 else:
-    energy=numpy.zeros(inputs.run['gramnum']+2,inputs.run['timesteps'])
-    with open('energy_state_1.csv','rb') as file:
+    energy=numpy.zeros((inputs.run['gramnum']+2,inputs.run['timesteps']+1))
+    with open('energy_state_0001.csv','rb') as file:
         obj=numpy.loadtxt(file,delimiter=',')
     energy[0:2,:]=obj
     for i in range(inputs.run['gramnum']):
-        with open('energy_state_'+str(i+2)+'.csv','rb') as file:
+        with open('energy_state_'+str(i+2).zfill(4)+'.csv','rb') as file:
             obj=numpy.loadtxt(file,delimiter=',')
         energy[i+2,:]=obj[1,:]
 
-    plot(energy,inputs.run['gramnum']+1,inputs.run['beta'],inputs.run['timesteps'],'result.png')
+    plot(energy,inputs.run['gramnum']+1,inputs.run['beta'],inputs.run['timesteps']+1,'result.png')
 
 
 

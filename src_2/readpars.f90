@@ -199,7 +199,11 @@ MODULE readpars
 
         if(imagflg=='n') then
             do j=1, ndet
-                write(num,"(i4.4)")j
+                if(GDflg.eq.'y')then
+                    write(num,"(i4.4)")(j+1000)
+                else
+                    write(num,"(i4.4)")j
+                end if
                 filenm="data/zombie_"//trim(num)//".csv"
                 zomnum=500+j
                 open(unit=zomnum,file=trim(filenm),status="old",iostat=ierr)

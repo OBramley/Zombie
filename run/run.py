@@ -64,9 +64,9 @@ elif(isinstance(inputs.zombs['bb_imprv'],int)==False):
 
 if(inputs.zombs['zomtyp']=='HF'):
     ndetcheck=0
-    for i in range(inputs.zombs['norb']+1):
-        ndetcheck=ndetcheck+math.comb(inputs.zombs['norb'],i)
-    if(inputs.zombs['zomtyp']!=ndetcheck):
+    for i in range((inputs.zombs['norb']*2)+1):
+        ndetcheck=ndetcheck+math.comb(inputs.zombs['norb']*2,i)
+    if(inputs.zombs['ndet']!=ndetcheck):
         sys.exit('A Hartree Fock Basis for',inputs.zombs['norb'], 'orbitals should have', ndetcheck, 'basis functions')
 
 if(inputs.run['elecs']=='mol'):

@@ -339,8 +339,9 @@ MODULE gradient_descent
         integer,allocatable,dimension(:,:,:)::occupancy_an
         integer,allocatable,dimension(:,:,:,:)::occupancy_an_cr,occupancy_2an
         integer::lralt,rjct_cnt,ierr,j,k,l,epoc_cnt,next,acpt_cnt,acpt1,acpt2,pick
+        integer(kind=8)::temp_int1,temp_int2
         integer,dimension(ndet-1)::picker
-        real(kind=8)::alpha,b,t,fxtdk,dummy
+        real(kind=8)::alpha,b,t,fxtdk,l2_rglrstn
         
         if (errorflag .ne. 0) return
 
@@ -389,10 +390,11 @@ MODULE gradient_descent
         lralt=0    ! power alpha is raised to  
         b=7.5D-1 !starting learning rate
         epoc_cnt=0 !epoc counter
-        chng_trk=0
-        rjct_cnt=0
-        t=b*(alpha**lralt)
-        acpt_cnt=0
+        chng_trk=0 !stores which if any ZS changed
+        rjct_cnt=0 !tracks how many rejections 
+        t=b*(alpha**lralt) !learning rate
+        acpt_cnt=0  !counts how many ZS have been changed
+        l2_rglrstn=0.01 !L2 regularisation lambda paramter
         call alloczs(temp_zom,ndet)
         call allocham(temp_ham,ndet,norb)
         do j=1, ndet-1
@@ -400,24 +402,19 @@ MODULE gradient_descent
         end do
        
         do while(t.gt.(1.0d-10))
-            dummy=0
-            if(t.gt.1.0d-5)then
-                call random_number(dummy)
-            end if
+            
             
             do j=1,(ndet-1)
                 pick=picker(j)
                 t=b*(alpha**lralt)
-                if(dummy.gt.0.85)then 
-                    t=b*(alpha**(lralt+1))
-                end if
+              
                 ! Setup temporary zombie state
                 temp_zom=zstore
                 temp_zom(pick)%phi(:)=zstore(pick)%phi(:)-(t*(grad_fin%vars(pick,:)))
+                temp_zom(pick)%phi(:)=temp_zom(pick)%phi(:)+l2_rglrstn*((grad_fin%vars(pick,:))*grad_fin%vars(pick,:))
                 temp_zom(pick)%sin=sin(cmplx(temp_zom(pick)%phi,0.0d0,kind=8))
                 temp_zom(pick)%cos=cos(cmplx(temp_zom(pick)%phi,0.0d0,kind=8))
                 temp_ham=haml
-             
                 call he_full_row(temp_ham,temp_zom,elect,pick,ndet,occupancy_2an,occupancy_an_cr,occupancy_an)
                 ! Imaginary time propagation for back tracing
                 dvecs(1)%d=cmplx(0.0,0.0)
@@ -425,9 +422,17 @@ MODULE gradient_descent
                 en%t=0
                 call imgtime_prop(dvecs,en,temp_ham,0)
                 fxtdk=real(en%erg(1,timesteps+1))
-                ! print*,fxtdk,j,grad_fin%prev_erg,t
+                temp_int2=fxtdk*(1.0d13)
+                ! fxtdk=temp_int*(1.0d-13)
+                temp_int1=(grad_fin%prev_erg*1.0d13)
+                ! fxtdk=fxtdk-(1d-13)
+                ! btrk_val=btrk_alpha*t*sqrt(dot_product(grad_fin%vars(pick,:),grad_fin%vars(pick,:)))
+                ! print*,fxtdk,pick,grad_fin%prev_erg,t,rjct_cnt
+                ! print*,btrk_alpha*((grad_fin%vars(pick,:))*grad_fin%vars(pick,:))
+                ! print*,(grad_fin%vars(pick,:))
                 ! Check if energy is lower and accept or reject
-                if(fxtdk.lt.grad_fin%prev_erg)then
+                if(temp_int2.lt.temp_int1)then
+                    ! print*,'accept'
                     acpt_cnt=acpt_cnt+1
                     zstore=temp_zom
                     zstore(pick)%update_num=zstore(pick)%update_num+1
@@ -435,9 +440,6 @@ MODULE gradient_descent
                     chng_trk(j)=pick
                     haml=temp_ham
                     rjct_cnt=0
-                    if(lralt.gt.0)then 
-                        lralt=lralt-1
-                    end if
                     grad_fin%grad_avlb=0
                     grad_fin%vars=0.0
                     grad_fin%prev_erg=fxtdk
@@ -446,15 +448,30 @@ MODULE gradient_descent
                     haml%diff_ovrlp=0
                 else 
                     rjct_cnt=rjct_cnt+1
-                    if(modulo(rjct_cnt,(ndet-1)).eq.0)then 
+                    if(rjct_cnt.eq.(ndet-1))then 
                         lralt=lralt+1
                     end if
                 end if
 
                 if(j.eq.(ndet-1))then 
-                    ! picker=scramble(ndet-1)
-                    picker=picker
+                    epoc_cnt=epoc_cnt+1
+                    picker=scramble(ndet-1)
                     next=picker(1)
+                    !Every 100 epoc brings phi values back within the normal 0-2pi range
+                    if(modulo(epoc_cnt,100).eq.0)then 
+                        do k=2,ndet 
+                            do l=1,norb 
+                                if((zstore(k)%phi(l).gt.2*pirl).or.(zstore(k)%phi(l).lt.0))then 
+                                    zstore(k)%phi(l)=asin(real(zstore(k)%sin(l)))
+                                    if((zstore(k)%phi(l).gt.2*pirl))then
+                                        zstore(k)%phi(l)=zstore(k)%phi(l)-2*pirl
+                                    else if((zstore(k)%phi(l).lt.0))then
+                                        zstore(k)%phi(l)=zstore(k)%phi(l)+2*pirl
+                                    end if
+                                end if
+                            end do
+                        end do
+                    end if
                 else 
                     next=picker(j+1)
                 end if
@@ -472,13 +489,29 @@ MODULE gradient_descent
                 call final_grad(dvecs(1),haml,grad_fin,next)
             
             end do
+            
+            ! Increases learnign rate after each epoc if acceptance has occured
+            do j=1,ndet-1
+                if(chng_trk(j).ne.0)then
+                    rjct_cnt=0
+                    if(lralt.gt.0)then 
+                        lralt=lralt-1
+                    end if
+                    t=b*(alpha**lralt)
+                    if(lralt.eq.0)then 
+                        exit 
+                    end if 
+                end if 
+            end do 
+           
 
-            epoc_cnt=epoc_cnt+1
+            
             call epoc_writer(grad_fin%prev_erg,epoc_cnt,chng_trk)
             write(6,"(a,i0,a,f20.16,a,f11.10)") "Energy after epoc no. ",epoc_cnt,": ", &
                                                     grad_fin%prev_erg, ". The current learning rate is: ",t
             
             
+            ! If only a single ZS is being altered the learning rate is lowered to allow others to be changed
             if(acpt_cnt.eq.1)then   
                 do j=1,ndet-1
                     if(chng_trk(j).ne.0)then 
@@ -513,9 +546,18 @@ MODULE gradient_descent
 
             chng_trk=0
 
+            !Redces b value in learning rate 
             if((t.lt.1.0d-8))then
-                if(epoc_cnt.lt.5000)then
-                    if(b.eq.1D-1)then 
+                if((b.le.1.3d-1).and.(b.gt.1.1d-1))then
+                    b=0.1
+                    rjct_cnt=0
+                    lralt=0
+                else if(b.gt.1.3d-1)then 
+                    b=(((0.1+b)/2)+b)/2
+                    rjct_cnt=0
+                    lralt=0
+                else 
+                    if(b.eq.0.1)then
                         if(alpha.eq.0.1)then
                             alpha=0.05
                             rjct_cnt=0
@@ -523,20 +565,25 @@ MODULE gradient_descent
                         else 
                             exit
                         end if
-                    else if(b.gt.2.5d-1)then 
-                        b=(0.1+b)/2
-                        rjct_cnt=0
-                        lralt=0
-                    else if(b.le.2.5d-1)then
-                        b=0.1
-                        rjct_cnt=0
-                        lralt=0
-                    end if
+                    end if    
                 end if
             end if 
 
         end do
-        
+        !Brings phi values back within the normal 0-2pi range
+        do k=2,ndet 
+            do l=1,norb 
+                if((zstore(k)%phi(l).gt.2*pirl).or.(zstore(k)%phi(l).lt.0))then 
+                    zstore(k)%phi(l)=asin(real(zstore(k)%sin(l)))
+                    if((zstore(k)%phi(l).gt.2*pirl))then
+                        zstore(k)%phi(l)=zstore(k)%phi(l)-2*pirl
+                    else if((zstore(k)%phi(l).lt.0))then
+                        zstore(k)%phi(l)=zstore(k)%phi(l)+2*pirl
+                    end if
+                end if
+            end do
+        end do
+
         call deallocham(temp_ham) 
         call dealloczs(temp_zom) 
         deallocate(occupancy_an,stat=ierr)
@@ -550,26 +597,34 @@ MODULE gradient_descent
 
     end subroutine zombie_alter
 
+    ! Produces a random order for the ZS to be posisbly changed
+    function scramble( number_of_values ) result(out)
+        
+        implicit none
 
-    function scramble( number_of_values ) result(array)
         integer,intent(in)    :: number_of_values
-        integer,allocatable   :: array(:),array2(:)
-        array=[(j,j=1,number_of_values)]
-        array2=[(j,j=1,number_of_values+1)]
+        integer,allocatable   :: out(:),array(:)
+        integer::n,m,k,j,l,jtemp
+        real::u
+
+        out=[(j,j=1,number_of_values)]
+        array=[(j,j=1,number_of_values+1)]
         n=1; m=number_of_values
         do k=1,2
-         do j=1,m+1
-          call random_number(u)
-          l = n + FLOOR((m+1-n)*u)
-          itemp=array2(l); array2(l)=array2(j); array2(j)=itemp
-         end do
+            do j=1,m+1
+                call random_number(u)
+                l = n + FLOOR((m+1-n)*u)
+                jtemp=array(l)
+                array(l)=array(j)
+                array(j)=jtemp
+            end do
         end do
         n=1
         do j=1,m+1
-            if(array2(j).eq.1)then 
+            if(array(j).eq.1)then 
                 cycle
             end if
-            array(n)=array2(j)
+            out(n)=array(j)
             n=n+1
         end do
         return
