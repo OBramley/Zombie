@@ -36,6 +36,7 @@ MODULE imgtp
              end if
         end do
        
+       
         states=1
         if(gramflg.eq."y")then
             states=gramnum+1
@@ -43,7 +44,6 @@ MODULE imgtp
         else
             call d_norm(dvecs(1),haml,0,diff_state)
         end if 
-
         db=beta/timesteps
        
     
@@ -62,6 +62,7 @@ MODULE imgtp
             else
                 call d_norm(dvecs(1),haml,1,diff_state)
             end if
+   
         end do
 
         return
@@ -97,13 +98,14 @@ MODULE imgtp
         integer,intent(in)::step,diff_state
         real(kind=8)::norm
 
+       
         !$omp parallel 
         !$omp workshare
         norm=abs(dot_product((dvec%d),matmul(haml%ovrlp,(dvec%d))))
         norm=sqrt(norm)
         !$omp end workshare
         !$omp end parallel
-
+       
         dvec%norm=norm
         if(GDflg.eq.'y')then
             call d_normalise_diff(dvec,haml,step,diff_state)

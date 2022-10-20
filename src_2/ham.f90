@@ -8,13 +8,13 @@ MODULE ham
 
     ! Subroutine to calcualte Hamiltonian elements combines 1st and 2nd electron integral calcualations so remove double 
     ! calcualiton of certain results. This minimises the (slow) applicaiton of the creation and annihilaiton operators
-    subroutine he_row(ham,zstore,elecs,row,size,occupancy_2an,occupancy_an_cr,occupancy_an,passback,diff_state)
+    subroutine he_row(ham,zstore,elecs,row,size,occupancy_2an,occupancy_an_cr,occupancy_an,passback)
         
         implicit none
         type(hamiltonian), intent(inout)::ham
         type(zombiest),dimension(:),intent(in)::zstore
         type(elecintrgl),intent(in)::elecs
-        integer,intent(in)::row,size,diff_state
+        integer,intent(in)::row,size
         integer,dimension(:,:,:,:),intent(in)::occupancy_2an,occupancy_an_cr
         integer,dimension(:,:,:),intent(in)::occupancy_an
         complex(kind=8),dimension(:,:,:),intent(inout)::passback
@@ -86,6 +86,7 @@ MODULE ham
             h1etot_diff_ket=0.0
             h2etot_diff_bra=0.0
             h2etot_diff_ket=0.0
+    
           
             
             if(m.gt.row)then
@@ -113,14 +114,14 @@ MODULE ham
             h2etot_diff_ket=0.0
             
             equal=9
-            if(diff_state.eq.row)then 
+            if(2.eq.row)then 
                 if(row.eq.m)then 
                     equal=1
                 else if(row.ne.m)then 
                     equal=2
                 end if
-            else if(diff_state.ne.row)then 
-                if(m.eq.diff_state)then 
+            else if(2.ne.row)then 
+                if(m.eq.2)then 
                     equal=3
                 end if
             else 
@@ -148,10 +149,10 @@ MODULE ham
             ham%ovrlp(m,row)= ham%ovrlp(row,m)
             ham%hjk(row,m)=h1etot+h2etot+(elecs%hnuc*ham%ovrlp(row,m))
             ham%hjk(m,row)=ham%hjk(row,m)
-           
+            
 
             if(GDflg.eq.'y') then
-                if(row.eq.diff_state)then
+                if(row.eq.2)then
                     ham%diff_hjk(row,m,:)=h1etot_diff_bra+h2etot_diff_bra
                     if(m.eq.row)then
                         ham%diff_ovrlp(row,m,:) = 0
@@ -159,7 +160,7 @@ MODULE ham
                         overlap_diff = diff_overlap(zstore(row),zstore(m),equal)
                         ham%diff_ovrlp(row,m,:) = overlap_diff(1,:)
                     end if
-                else if(m.eq.diff_state)then
+                else if(m.eq.2)then
                     ham%diff_hjk(m,row,:)=h1etot_diff_ket+h2etot_diff_ket
                     overlap_diff = diff_overlap(zstore(row),zstore(m),equal)
                     ham%diff_ovrlp(m,row,:) = overlap_diff(2,:)
@@ -319,7 +320,7 @@ MODULE ham
     end subroutine two_elec_part
     
     ! Top level routine to allocate hamiltonian and overlap matrices 
-    subroutine hamgen(ham,zstore,elecs,size,verb,diff_state)
+    subroutine hamgen(ham,zstore,elecs,size,verb)
 
         implicit none
 
@@ -330,7 +331,7 @@ MODULE ham
         integer,allocatable,dimension(:,:,:,:)::occupancy_an_cr,occupancy_2an
         complex(kind=8),allocatable, dimension(:,:,:)::passback
         integer, allocatable,dimension(:)::IPIV1
-        integer,intent(in)::size,verb,diff_state
+        integer,intent(in)::size,verb
         complex(kind=8),allocatable,dimension(:)::WORK1
         real(kind=8),dimension(ndet,ndet,norb)::temp2
         integer:: j,k,l,ierr
@@ -385,7 +386,7 @@ MODULE ham
         !!$omp do ordered 
     
         do j=1, size
-            call he_row(ham,zstore,elecs,j,size,occupancy_2an,occupancy_an_cr,occupancy_an,passback,diff_state)
+            call he_row(ham,zstore,elecs,j,size,occupancy_2an,occupancy_an_cr,occupancy_an,passback)
             if(verb.eq.1)then
                 write(6,"(a,i0,a)") "Hamiltonian row ",j, " completed"
             end if  
@@ -440,32 +441,23 @@ MODULE ham
         ham%kinvh=matmul(ham%inv,ham%hjk)
         !$omp end workshare
         !$omp end parallel
-       
-        ! To find the derrivative of the inverse of a matrix we use the identity
-        ! d(omega^-1)= -omega^-1d(omega)omega^-1. Since this result is only used when being multiplied with the hamiltonian 
-        ! we will actually calculate omega^-1d(omega)omega^-1*H 
-        ! j decides which zombie state we differentiate by
-        ! omega^-1d(omega) is first calcualted. creating an ndet*ndet*norb array 
-        ! this tensor is then 
-        if(GDflg.eq.'y')then
-            j=diff_state 
-            do k=1, ndet
-                do l=1, ndet
-                    if(l.eq.j)then
-                        temp2(k,j,:)=matmul(REAL(ham%inv(k,:)),ham%diff_ovrlp(j,:,:))
-                    else
-                        temp2(k,l,:)=real(ham%inv(k,l))*ham%diff_ovrlp(j,l,:)
-                    end if
-                end do
-            end do
-            do k=1, ndet
-                do l=1, ndet
-                    ham%diff_invh(j,k,l,:)=matmul(transpose(temp2(k,:,:)),real(ham%kinvh(:,l)))*(-1)
-                end do
-            end do
-         
-        end if
+    
         
+        do k=1, ndet
+            do l=1, ndet
+                if(l.eq.j)then
+                    temp2(k,j,:)=matmul(REAL(ham%inv(k,:)),ham%diff_ovrlp(j,:,:))
+                else
+                    temp2(k,l,:)=real(ham%inv(k,l))*ham%diff_ovrlp(j,l,:)
+                end if
+            end do
+        end do
+        do k=1, ndet
+            do l=1, ndet
+                ham%diff_invh(j,k,l,:)=matmul(transpose(temp2(k,:,:)),real(ham%kinvh(:,l)))*(-1)
+            end do
+        end do
+
         return
         
     end subroutine hamgen

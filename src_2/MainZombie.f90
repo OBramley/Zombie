@@ -65,9 +65,9 @@ program MainZombie
     diff_state=0
     if(GDflg=="y")then
         call allocgrad(gradients,ndet,norb)
-        gradients%prev_erg=0
-        diff_state=0
-        gradients%grad_avlb(2)=0
+        ! gradients%prev_erg=0
+        ! diff_state=0
+        ! gradients%grad_avlb(2)=0
     end if
 
     ! generate 1 and 2 electron integrals
@@ -109,7 +109,7 @@ program MainZombie
      
         
         if(hamgflg=='y')then
-            call hamgen(haml,zstore,elect,ndet,1,diff_state)
+            call hamgen(haml,zstore,elect,ndet,1)
             if(k.eq.1)then
                 call matrixwriter(haml%hjk,ndet,"data/ham.csv")
                 call matrixwriter(haml%ovrlp,ndet,"data/ovlp.csv")
@@ -131,7 +131,6 @@ program MainZombie
         call imgtime_prop(dvecs,en,haml,diff_state)
         write(6,"(a)") "Imaginary time propagation finished"
         
-
         if(gramflg.eq."n")then
             write(stateno,"(i4.4)")k
             call dvec_writer(dvecs(1)%d,ndet,0,k)
@@ -145,6 +144,7 @@ program MainZombie
         end if
         
         if(GDflg.eq."y")then
+            ! call allocgrad(gradients,ndet,norb)
             gradients%prev_erg=real(en%erg(1,timesteps+1))
             write(6,"(a,f20.16)") "Initial energy: ", gradients%prev_erg
             allocate(chng_trk(ndet),stat=ierr)
@@ -157,7 +157,7 @@ program MainZombie
             if(rstrtflg.eq.'n')then 
                 call epoc_writer(gradients%prev_erg,0,chng_trk,0)
             end if
-            call final_grad(dvecs(1),haml,gradients,diff_state)
+            call final_grad(dvecs(1),haml,gradients,2)
             call zombie_alter(zstore,gradients,haml,elect,en,dvecs,chng_trk)
             GDflg='n'
             do j=1,ndet
