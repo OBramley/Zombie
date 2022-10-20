@@ -440,7 +440,7 @@ MODULE ham
         ham%kinvh=matmul(ham%inv,ham%hjk)
         !$omp end workshare
         !$omp end parallel
-
+       
         ! To find the derrivative of the inverse of a matrix we use the identity
         ! d(omega^-1)= -omega^-1d(omega)omega^-1. Since this result is only used when being multiplied with the hamiltonian 
         ! we will actually calculate omega^-1d(omega)omega^-1*H 

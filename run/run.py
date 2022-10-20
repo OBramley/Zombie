@@ -59,8 +59,7 @@ elif(isinstance(inputs.run['gramnum'],int)==False):
     sys.exit("Number of states to be investiated must be an integer")
 elif(inputs.run['clean'] not in {'y','n','f'}):
     sys.exit("Setting cleaning on or off must be 'y' or 'n' or 'f' (to clean from a previously generated file)")
-elif(isinstance(inputs.zombs['bb_imprv'],int)==False):
-    sys.exit("bb_imprv must be an integer 0 for no improvement loops or greater if wanting to improve the bias")
+
 
 if(inputs.zombs['zomtyp']=='HF'):
     ndetcheck=0
@@ -98,8 +97,6 @@ if(inputs.run['gram']=='y'):
     elif(inputs.run['gramnum']<2):
         sys.exit("If using Gram Schmidt more than one state must investigated")
 
-if((inputs.zombs['bb_imprv']>=1)and(inputs.zombs['zomtyp']!='bb')):
-    sys.exit('Biased basis improvement can only be used when the basis type is set to bb')
 
 print("Arguments checked")
 # Check if on HPC
@@ -166,21 +163,12 @@ if(inputs.run['language']=="python"):
         f.close()
         subprocess.call(['qsub',file1])
     else:
-        # if(inputs.run['cores']!=1):
-        #     os.environ["OMP_NUM_THREADS"]=str(inputs.run['cores'])
-        # number=random.randint(99999,1000000)
-        # file1="zombie"+str(number)+".sh"
-        # f=open("../Run/"+file1,"w")
-        # f.write("python " + EXDIR1+"/main.py")
-        # f.close()
-        # subprocess.run(['chmod', 'u+x', '../Run/zombie'+str(number)+'.sh'])
         subprocess.run(['python', 'main.py'])
 
 elif(inputs.run['language']=="fortran"):
     shutil.copy2("inputs.py",EXDIR1)
     shutil.copy2("graph.py",EXDIR1)
-    # if(inputs.run['clean']=='f'):
-    #     shutil.copy2('data/'+ inputs.run['cleanham'],EXDIR1)
+    shutil.copy2("restart.py",EXDIR1)
     if((inputs.run['elecs']=='no')):
         shutil.copytree('integrals',EXDIR1+"/integrals")
     elif((inputs.run['elecs']=='mol')):
@@ -237,7 +225,7 @@ elif(inputs.run['language']=="fortran"):
 
     with open(EXDIR1+'/rundata.csv','w',newline='')as file:
         writer = csv.writer(file)
-        writer.writerow([inputs.run['zomgen'],inputs.run['hamgen'],inputs.run['imagprop'],inputs.run['beta'],inputs.run['timesteps'],inputs.run['clean'],inputs.run['gram'],inputs.run['gramnum']])
+        writer.writerow([inputs.run['zomgen'],inputs.run['hamgen'],inputs.run['imagprop'],inputs.run['beta'],inputs.run['timesteps'],inputs.run['clean'],inputs.run['gram'],inputs.run['gramnum'],inputs.run['grad'],'n'])
         writer.writerow(inputs.zombs.values())
         writer.writerow([inputs.run['hamfile'],inputs.run['ovrlfile'],inputs.run['cleanham']])
 

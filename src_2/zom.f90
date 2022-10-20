@@ -293,12 +293,12 @@ MODULE zom
                     do while(val.lt.0)
                         ! val=2*pirl*sig(k)*ZBQLU01(1)
                         val=2*pirl*ZBQLNOR(mu(k),sig(k))
+                    
                         ! if((val.gt.0.5*pirl))then
                         !     val=-1
                         ! end if
                     end do
                     zstore(j)%phi(2*k)=val
-                    
                     ! print*,val(2*k-1),val(2*k)
                     ! val(2*k-1)=2*pirl*mu(k)*exp(-ZBQLUAB(0,0.1))
                     ! val(2*k)=2*pirl*mu(k)*exp(-ZBQLUAB(0,0.1))
@@ -333,7 +333,7 @@ MODULE zom
         implicit none
         real(kind=8),dimension(:),intent(inout)::mu,sig
         integer::alive,j
-        real(kind=8)::asrt,aend,dsrt,dend
+        real(kind=8)::asrt,aend,dsrt
 
 
         alive=int(nel/2)

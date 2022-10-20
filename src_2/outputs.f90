@@ -43,42 +43,47 @@ MODULE outputs
         integer,intent(in)::size
         character(LEN=*),intent(in)::filenm
         integer::ierr,j,k
-
+        logical :: file_exists
         if (errorflag .ne. 0) return
         
         ierr=0
+        inquire(file=filenm,exist=file_exists)
+        if(file_exists.eqv..false.) then
+            open(unit=200,file=filenm,status="new",iostat=ierr)
+            if(ierr/=0)then
+                write(0,"(a,i0)") "Error in opening matrix file. ierr had value ", ierr
+                errorflag=1
+                return
+            end if
+            if(imagflg=='n')then
+                do j=1, size
+                    write(200,'(*(e25.17e3 :", "))') (REAL(out(j,k)),k=1,size)
+                end do
+            else if (imagflg=='y')then
+                do j=1, size
+                    write(200,'(*(e25.17e3 :", "))') ((out(j,k)),k=1,size)
+                end do
+            end if
 
-        open(unit=200,file=filenm,status="new",iostat=ierr)
-        if(ierr/=0)then
-            write(0,"(a,i0)") "Error in opening matrix file. ierr had value ", ierr
-            errorflag=1
-            return
-        end if
-        if(imagflg=='n')then
-            do j=1, size
-                write(200,'(*(e25.17e3 :", "))') (REAL(out(j,k)),k=1,size)
-            end do
-        else if (imagflg=='y')then
-            do j=1, size
-                write(200,'(*(e25.17e3 :", "))') ((out(j,k)),k=1,size)
-            end do
-        end if
-
-        close(200)
+            close(200)
+        else 
+            write(6,"(a,a)") trim(filenm), " alread exists so not rewriting"
+        end if 
 
         return
 
     end subroutine matrixwriter
 
-    subroutine zombiewriter(zom,num,loop)
+    subroutine zombiewriter(zom,num,pass)
 
         implicit none
 
         type(zombiest),intent(in)::zom 
-        integer,intent(in)::num,loop
+        integer,intent(in)::num,pass
         character(LEN=20)::filenm
-        integer::ierr,zomnum,j,l
+        integer::ierr,zomnum,j
         character(LEN=4)::nums
+        logical :: file_exists
 
         if (errorflag .ne. 0) return
 
@@ -93,41 +98,52 @@ MODULE outputs
         
         filenm = "data/zombie_"//trim(nums)//".csv"
 
+        inquire(file=filenm,exist=file_exists)
         zomnum=300+num
-        
-        open(unit=zomnum,file=trim(filenm),status="unknown",iostat=ierr)
-        if(ierr/=0)then
-            close(zomnum)
-            write(0,"(a,i0)") "Error in opening zombie state file. ierr had value ", ierr
-            errorflag=1
-            return
-        end if
-        if(loop.ge.1)then
-            if(imagflg=='y')then
-                l=4
-            else 
-                l=3
+        if(file_exists.eqv..false.) then
+            open(unit=zomnum,file=trim(filenm),status="new",iostat=ierr)
+            if(ierr/=0)then
+                close(zomnum)
+                write(0,"(a,i0)") "Error in opening zombie state file. ierr had value ", ierr
+                errorflag=1
+                return
             end if
-            do j=1, l*(loop-1)
-                read(zomnum,*)
-            end do
+        
+            if(imagflg=='n') then
+                write(zomnum,'(*(e25.17e3 :", "))') ((zom%phi(j)),j=1,norb)
+                write(zomnum,'(*(e25.17e3 :", "))') (REAL(zom%cos(j)),j=1,norb)
+                write(zomnum,'(*(e25.17e3 :", "))') (REAL(zom%sin(j)),j=1,norb)
+            else if(imagflg=='y') then
+                write(zomnum,'(*(e25.17e3 :", ": ))') ((zom%phi(j)),j=1,norb)
+                write(zomnum,'(*(e25.17e3 :", ": ))') ((zom%img(j)),j=1,norb)
+                write(zomnum,'(*(1x,es25.17e3 :", "))') ((zom%cos(j)),j=1,norb)
+                write(zomnum,'(*(1x,es25.17e3 :", "))') ((zom%sin(j)),j=1,norb)
+            end if
+            close(zomnum)
+        else if(file_exists.eqv..true.) then
+            open(unit=zomnum,file=trim(filenm),status="old",access='append',iostat=ierr)
+            if(ierr/=0)then
+                close(zomnum)
+                write(0,"(a,i0)") "Error in opening zombie state file. ierr had value ", ierr
+                errorflag=1
+                return
+            end if
+            if(pass.eq.1)then
+                write(zomnum,*)' '
+            end if
+            if(imagflg=='n') then
+                write(zomnum,'(*(e25.17e3 :", "))') ((zom%phi(j)),j=1,norb)
+                write(zomnum,'(*(e25.17e3 :", "))') (REAL(zom%cos(j)),j=1,norb)
+                write(zomnum,'(*(e25.17e3 :", "))') (REAL(zom%sin(j)),j=1,norb)
+            else if(imagflg=='y') then
+                write(zomnum,'(*(e25.17e3 :", ": ))') ((zom%phi(j)),j=1,norb)
+                write(zomnum,'(*(e25.17e3 :", ": ))') ((zom%img(j)),j=1,norb)
+                write(zomnum,'(*(1x,es25.17e3 :", "))') ((zom%cos(j)),j=1,norb)
+                write(zomnum,'(*(1x,es25.17e3 :", "))') ((zom%sin(j)),j=1,norb)
+            end if 
+            close(zomnum)
         end if
-        if(imagflg=='n') then
-            write(zomnum,'(*(e25.17e3 :", "))') ((zom%phi(j)),j=1,norb)
-            write(zomnum,'(*(e25.17e3 :", "))') (REAL(zom%cos(j)),j=1,norb)
-            write(zomnum,'(*(e25.17e3 :", "))') (REAL(zom%sin(j)),j=1,norb)
-        else if(imagflg=='y') then
-            write(zomnum,'(*(e25.17e3 :", ": ))') ((zom%phi(j)),j=1,norb)
-            write(zomnum,'(*(e25.17e3 :", ": ))') ((zom%img(j)),j=1,norb)
-            write(zomnum,'(*(1x,es25.17e3 :", "))') ((zom%cos(j)),j=1,norb)
-            write(zomnum,'(*(1x,es25.17e3 :", "))') ((zom%sin(j)),j=1,norb)
-        end if
-        write(zomnum,*)
-        write(zomnum,*)
-        write(zomnum,*)
-        write(zomnum,*)
-
-        close(zomnum)
+       
 
         return
 
@@ -221,34 +237,45 @@ MODULE outputs
 
     end subroutine energywriter
 
-    subroutine epoc_writer(erg,step,chng_trk)
+    subroutine epoc_writer(erg,step,chng_trk,pass)
 
         implicit none
         real(kind=8),intent(in)::erg 
-        integer,intent(in)::step
+        integer,intent(in)::step,pass
         integer,dimension(:),intent(in)::chng_trk
         integer::epoc,ierr,k
-    
+        logical :: file_exists
+
         if (errorflag .ne. 0) return
+
+        
+        inquire(file='epoc.csv',exist=file_exists)
         epoc=450
         ierr=0
-        open(unit=epoc,file='epoc.csv',status="unknown",iostat=ierr)
-        if(ierr/=0)then
-            write(0,"(a,i0)") "Error in opening epoc output file. ierr had value ", ierr
-            errorflag=1
-            return
+        if(file_exists.eqv..false.) then
+            open(unit=epoc,file='epoc.csv',status="new",iostat=ierr)
+            if(ierr/=0)then
+                write(0,"(a,i0)") "Error in opening epoc output file. ierr had value ", ierr
+                errorflag=1
+                return
+            end if
+            write(epoc,'(i0,",",e25.17e3)') step,erg
+            close(epoc)
+        else if(file_exists.eqv..true.) then
+            open(unit=epoc,file='epoc.csv',status="old",access='append',iostat=ierr)
+            if(ierr/=0)then
+                write(0,"(a,i0)") "Error in opening epoc output file. ierr had value ", ierr
+                errorflag=1
+                return
+            end if
+            if(pass.eq.1)then
+                write(epoc,*)' '
+                write(epoc,'(i0,",",e25.17e3)') step,erg
+            else
+                write(epoc,'(i0,",",e25.17e3,",",*(i0:", "))') step,erg,(chng_trk(k),k=1,ndet-1)
+            end if
+            close(epoc)
         end if
-        if(step.gt.0)then
-            do k=1, step
-                read(epoc,*)
-            end do
-        end if
-        write(epoc,'(i0,",",e25.17e3,",",*(i0:", "))') step,erg,(chng_trk(k),k=1,ndet-1)
-        write(epoc,*)
-        write(epoc,*)
-        write(epoc,*)
-        write(epoc,*)
-        close(epoc)
         return
         
     end subroutine epoc_writer

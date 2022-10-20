@@ -19,7 +19,7 @@ run={
     'language':'fortran',
 
     # What is the name of the run
-    'runfolder':'Li2_i_think_final_test',
+    'runfolder':'Li_test',
 
     # Amount of time to request on HPC 
     'runtime': "24:00:00",
@@ -80,7 +80,10 @@ run={
     # 'y' or 'n' and an integer number note in the python code gramnum=1 will not find an excited state just a 
     # single ground state. But gramnum=1 will find a single excited state in the fortran code.
     'gram':'n',
-    'gramnum':4
+    'gramnum':4,
+
+    # Gradient descent flag takes input 'y' or 'n'. Only implemented in the fortran version 
+    'grad':'y'
 }
 
 
@@ -101,35 +104,11 @@ zombs={
     # Type of zombie states. Random (ran), Hartree Fock (HF) or biased (bb)
     'zomtyp':'bb',
     
-    # Biased basis improvement if 0 no loops to improve biased > 0 number of loops to improve the basis
-
-    'bb_imprv':0,
-
     # Make the first Zombie state the RHF det? Takes y or n
     'rhf_1':'y',
 
     # Make the zombie states imaginary (y) or real (n)
     'imagflg':'n'
-}
-
-# Parameters for the biasing protocol
-# The biasing method uses sampling of a trasformation of tanh graph
-# Note no paramter chekcing has been implemented for these values yet
-zom_bias={
-    # Number of ocuupied spin orbitals
-    # THE NUMBER OF SPIN ORBITALS IS HALF THE NUMBER OF ELECTRONS
-    'alive':2,
-    # Alive aplitude of 1st spin orbital
-    'alive_start':0.999,
-    # Alive aplitude of last "alive" orbital
-    'alive_end':0.175,
-    # Number of spin orbitals approximately 50/50 alive/dead aplitudes
-    'mid':0,
-    # Alive aplitude of 1st dead spin orbtial
-    'dead_start':0.351,
-    # Alive aplitude of last spin orbital
-    'dead_end':0.120
-
 }
 
 # pyscf={

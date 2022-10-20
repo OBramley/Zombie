@@ -99,7 +99,7 @@ MODULE imgtp
 
         !$omp parallel 
         !$omp workshare
-        norm=zabs(dot_product((dvec%d),matmul(haml%ovrlp,(dvec%d))))
+        norm=abs(dot_product((dvec%d),matmul(haml%ovrlp,(dvec%d))))
         norm=sqrt(norm)
         !$omp end workshare
         !$omp end parallel
@@ -131,13 +131,14 @@ MODULE imgtp
         if(GDflg.eq.'y')then
             call timestep_diff(dvec,haml,db,diff_state)
         end if
+   
         !$omp parallel 
         !$omp workshare
         ddot= -matmul((haml%kinvh),(dvec%d))
         dvec%d=dvec%d+(db*ddot)
         !$omp end workshare
         !$omp end parallel
-
+     
         return
 
     end subroutine timestep

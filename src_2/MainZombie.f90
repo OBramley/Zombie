@@ -61,18 +61,17 @@ program MainZombie
     call ZBQLINI(randseed,0)   ! Generates the seed value using the UCL random library
     write(6,"(a)") "Random seed set"
 
-
-    GDflg="y"
+   
     diff_state=0
     if(GDflg=="y")then
         call allocgrad(gradients,ndet,norb)
         gradients%prev_erg=0
-        diff_state=2
-        gradients%grad_avlb(2)=1
+        diff_state=0
+        gradients%grad_avlb(2)=0
     end if
 
     ! generate 1 and 2 electron integrals
-    if((cleanflg=="y").or.(cleanflg=="f").or.((hamgflg=='y')))then
+    if((cleanflg=="y").or.(cleanflg=="f").or.((hamgflg=='y')).or.(GDflg=='y'))then
         if((cleanflg=="y").or.((hamgflg=='y')))then
             call allocintgrl(elect)
             call electronintegrals(elect)
@@ -92,7 +91,7 @@ program MainZombie
         call flush(0)
     end if
 
-    
+  
     if(propflg=="y")then
         ! generate Hamiltonian and overlap
         call allocham(haml,ndet,norb)
@@ -154,8 +153,10 @@ program MainZombie
                 errorflag=1
                 return
             end if
-            chng_trk=0 
-            call epoc_writer(gradients%prev_erg,0,chng_trk)
+            chng_trk=0
+            if(rstrtflg.eq.'n')then 
+                call epoc_writer(gradients%prev_erg,0,chng_trk,0)
+            end if
             call final_grad(dvecs(1),haml,gradients,diff_state)
             call zombie_alter(zstore,gradients,haml,elect,en,dvecs,chng_trk)
             GDflg='n'

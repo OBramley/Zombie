@@ -67,6 +67,7 @@ MODULE globvars
     integer::timesteps  ! Number of time steps
     character(LEN=2)::zst !Type of zombie state to be generated
 
+    character(LEN=1)::rstrtflg   ! Flag to restart program
     character(LEN=1)::GDflg      ! Flag to decide if to use Gradient descent 
     character(LEN=1)::zomgflg    ! Flag to generate zombie states or not
     character(LEN=1)::hamgflg    ! Flag to generate Hamiltonian or not
@@ -76,7 +77,6 @@ MODULE globvars
     integer::gramnum             ! Number of additional states to be generated for GS orthogonalisation
     character(LEN=1)::rhf_1      ! Flag to decide if the first zombie state should be st as the RHF determinant
     character(LEN=1)::imagflg    ! Flag to decide if zombie states are imaginary or real
-    integer::bb_improv           ! Flag to improve the biasing (not yet implemented)
     real(kind=8)::pirl      ! pi
     real(kind=8) :: sqrtpi  ! square root of pi
     complex(kind=8)::i      ! The imagianry unit

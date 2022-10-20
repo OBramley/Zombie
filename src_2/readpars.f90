@@ -6,8 +6,8 @@ MODULE readpars
 
     subroutine readrunconds   !   Level 1 Subroutine
         implicit none
-        character(LEN=100)::LINE1, LINE2, LINE3, LINE4, LINE5, LINE6, LINE7, LINE8
-        character(LEN=100)::LINE9, LINE10, LINE11,LINE12, LINE13, LINE14, LINE15, LINE16
+        character(LEN=100)::LINE1, LINE2, LINE3, LINE4, LINE5, LINE6, LINE7, LINE8,LINE9, LINE10
+        character(LEN=100):: LINE11,LINE12, LINE13, LINE14, LINE15, LINE16, LINE17
         integer::ierr, n
         
         if (errorflag .ne. 0) return
@@ -20,8 +20,8 @@ MODULE readpars
           return
         end if
 
-        read(140,*,iostat=ierr)LINE1, LINE2, LINE3, LINE4, LINE5, LINE6, LINE7, LINE8
-        read(140,*,iostat=ierr)LINE9, LINE10, LINE11,LINE12, LINE13, LINE14, LINE15, LINE16
+        read(140,*,iostat=ierr)LINE1, LINE2, LINE3, LINE4, LINE5, LINE6, LINE7, LINE8,LINE9, LINE10
+        read(140,*,iostat=ierr)LINE11, LINE12, LINE13,LINE14, LINE15, LINE16, LINE17
         if (ierr.ne.0) then
             write(0,"(a)") "Error reading rundata.csv of input file"
             errorflag = 1
@@ -29,7 +29,8 @@ MODULE readpars
         end if
         close(140)
       
-
+        ! print*,LINE1, LINE2, LINE3, LINE4, LINE5, LINE6, LINE7, LINE8, LINE17, LINE18
+        ! print*,LINE9, LINE10, LINE11,LINE12, LINE13, LINE14, LINE15, LINE16
         n=0        
         if((LINE1(1:1).eq.'y').or.(LINE1(1:1).eq.'Y')) then
             zomgflg="y"
@@ -104,78 +105,91 @@ MODULE readpars
             return
         end if
         n=n+1
-        read(LINE9,*,iostat=ierr)norb
+        if((LINE9(1:1)=='y').or.(LINE9(1:1).eq.'Y')) then
+            GDflg="y"
+        else if((LINE9(1:1)=='n').or.(LINE9(1:1).eq.'N')) then
+            GDflg="n"
+        else
+            write(0,"(a,a)") "Error. GDflg flag must be YES/NO. Read ", trim(LINE9)
+            errorflag=1
+            return
+        end if
+        n=n+1 
+        if((LINE10(1:1)=='y').or.(LINE10(1:1).eq.'Y')) then
+            rstrtflg="y"
+        else if((LINE10(1:1)=='n').or.(LINE10(1:1).eq.'N')) then
+            rstrtflg="n"
+        else
+            write(0,"(a,a)") "Error. Restart flag must be YES/NO. Read ", trim(LINE10)
+            errorflag=1
+            return
+        end if
+        n=n+1
+        read(LINE11,*,iostat=ierr)norb
         if(ierr/=0) then
-            write(0,"(a,a)") "Error reading number of orbitals. Read ", trim(LINE9)
+            write(0,"(a,a)") "Error reading number of orbitals. Read ", trim(LINE11)
             errorflag=1
             return
         end if
         norb=norb*2
         n=n+1
-        read(LINE10,*,iostat=ierr)nel
+        read(LINE12,*,iostat=ierr)nel
         if(ierr/=0) then
-            write(0,"(a,a)") "Error reading number of electrons. Read ", trim(LINE10)
+            write(0,"(a,a)") "Error reading number of electrons. Read ", trim(LINE12)
             errorflag=1
             return
         end if
         n=n+1
-        read(LINE11,*,iostat=ierr)spin
+        read(LINE13,*,iostat=ierr)spin
         if(ierr/=0) then
-            write(0,"(a,a)") "Error reading spin. Read ", trim(LINE11)
+            write(0,"(a,a)") "Error reading spin. Read ", trim(LINE13)
             errorflag=1
             return
         end if
         n=n+1
-        read(LINE12,*,iostat=ierr)ndet
+        read(LINE14,*,iostat=ierr)ndet
         if(ierr/=0) then
-            write(0,"(a,a)") "Error reading number of zombie states. Read ", trim(LINE12)
+            write(0,"(a,a)") "Error reading number of zombie states. Read ", trim(LINE14)
             errorflag=1
             return
         end if
         n=n+1
-        if((LINE13(1:1)=='r').or.(LINE13(1:1).eq.'R')) then
+        if((LINE15(1:1)=='r').or.(LINE15(1:1).eq.'R')) then
             zst="RN"
-        else if((LINE13(1:1)=='h').or.(LINE13(1:1).eq.'H')) then
+        else if((LINE15(1:1)=='h').or.(LINE15(1:1).eq.'H')) then
             zst="HF"
-        else if((LINE13(1:1)=='b').or.(LINE13(1:1).eq.'B')) then
+        else if((LINE15(1:1)=='b').or.(LINE15(1:1).eq.'B')) then
             zst="BB"
         else
-            write(0,"(a,a)") "Error. Zombie state type must be hf/ran/bb. Read ", trim(LINE13)
-            errorflag=1
-            return
-        end if
-        n=n+1
-        read(LINE14,*,iostat=ierr)bb_improv
-        if(ierr/=0) then
-            write(0,"(a,a)") "Error reading number ofbb_improv. Read ", trim(LINE14)
-            errorflag=1
-            return
-        end if
-        n=n+1
-        if((LINE15(1:1)=='y').or.(LINE15(1:1).eq.'Y')) then
-            rhf_1="y"
-        else if((LINE15(1:1)=='n').or.(LINE15(1:1).eq.'N')) then
-                rhf_1="n"
-        else
-            write(0,"(a,a)") "Error. rhf_1 flag must be YES/NO. Read ", trim(LINE15)
+            write(0,"(a,a)") "Error. Zombie state type must be hf/ran/bb. Read ", trim(LINE15)
             errorflag=1
             return
         end if
         n=n+1
         if((LINE16(1:1)=='y').or.(LINE16(1:1).eq.'Y')) then
-            imagflg="y"
+            rhf_1="y"
         else if((LINE16(1:1)=='n').or.(LINE16(1:1).eq.'N')) then
+            rhf_1="n"
+        else
+            write(0,"(a,a)") "Error. rhf_1 flag must be YES/NO. Read ", trim(LINE16)
+            errorflag=1
+            return
+        end if
+        n=n+1
+        if((LINE17(1:1)=='y').or.(LINE17(1:1).eq.'Y')) then
+            imagflg="y"
+        else if((LINE17(1:1)=='n').or.(LINE17(1:1).eq.'N')) then
             imagflg="n"
         else
-            write(0,"(a,a)") "Error. imagflg flag must be YES/NO. Read ", trim(LINE16)
+            write(0,"(a,a)") "Error. imagflg flag must be YES/NO. Read ", trim(LINE17)
             errorflag=1
             return
         end if
         n=n+1
 
-        if (n.ne.16) then
+        if (n.ne.17) then
             write(0,"(a)") "Not all required variables read in readrunconds subroutine"
-            write(0,"(a,i0,a)") "Read a total of ", n, "of an expected 16 parameters"
+            write(0,"(a,i0,a)") "Read a total of ", n, "of an expected 17 parameters"
             errorflag = 1
             return
           end if
@@ -192,27 +206,62 @@ MODULE readpars
         real(kind=8),dimension(norb)::cos,sin,phi,img
         real(kind=8),dimension(norb*2)::ccos,csin
         character(len=4)::num
-        integer::ierr,j,k,zomnum
+        integer::ierr,j,k,zomnum,lines
         character(LEN=20)::filenm
 
         ierr=0
-
+        lines=0
+      
         if(imagflg=='n') then
             do j=1, ndet
                 if(GDflg.eq.'y')then
                     write(num,"(i4.4)")(j+1000)
+                    
                 else
                     write(num,"(i4.4)")j
                 end if
                 filenm="data/zombie_"//trim(num)//".csv"
                 zomnum=500+j
+                
+                if(rstrtflg.eq.'y')then
+                    open(unit=zomnum,file=trim(filenm),status="old",iostat=ierr)
+                    if(ierr/=0)then
+                        write(0,"(a,i0)") "Error in opening zombie state file to read in. ierr had value ", ierr
+                        errorflag=1
+                        return
+                    end if
+                    lines=0
+                    do 
+                        read(zomnum,*,iostat=ierr)
+                        
+                        if(ierr<0)then
+                            close(zomnum)
+                            exit
+                        else if (ierr/=0) then
+                            write(0,"(a,i0)") "Error in counting zombie rows. ierr had value ", ierr
+                            errorflag=1
+                            return
+                        end if
+                        lines=lines+1
+                    end do
+                    close(zomnum) 
+    
+                end if 
+                ierr=0
                 open(unit=zomnum,file=trim(filenm),status="old",iostat=ierr)
                 if(ierr/=0)then
                     write(0,"(a,i0)") "Error in opening zombie state file to read in. ierr had value ", ierr
                     errorflag=1
                     return
                 end if
-
+                if(rstrtflg.eq.'y')then
+                    if(lines.gt.3)then
+                        do k=1,lines-3
+                            read(zomnum,*)
+                        end do
+                    end if 
+                end if
+   
                 read(zomnum,*) phi
                 read(zomnum,*) cos
                 read(zomnum,*) sin

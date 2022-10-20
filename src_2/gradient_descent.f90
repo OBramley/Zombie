@@ -338,11 +338,11 @@ MODULE gradient_descent
         type(hamiltonian)::temp_ham
         integer,allocatable,dimension(:,:,:)::occupancy_an
         integer,allocatable,dimension(:,:,:,:)::occupancy_an_cr,occupancy_2an
-        integer::lralt,rjct_cnt,ierr,j,k,l,epoc_cnt,next,acpt_cnt,acpt1,acpt2,pick
+        integer::lralt,rjct_cnt,ierr,j,k,l,m,epoc_cnt,next,acpt_cnt,acpt1,acpt2,pick,rpstk
         integer(kind=8)::temp_int1,temp_int2
-        integer,dimension(ndet-1)::picker
+        integer,dimension(ndet-1)::picker,rsrtpass 
         real(kind=8)::alpha,b,t,fxtdk,l2_rglrstn
-        
+        logical::nanchk
         if (errorflag .ne. 0) return
 
         allocate(occupancy_an(norb,2,norb),stat=ierr)
@@ -388,26 +388,129 @@ MODULE gradient_descent
     
         alpha=0.1  ! learning rate reduction
         lralt=0    ! power alpha is raised to  
-        b=7.5D-1 !starting learning rate
+        b=1.0d0 !starting learning rate
         epoc_cnt=0 !epoc counter
         chng_trk=0 !stores which if any ZS changed
         rjct_cnt=0 !tracks how many rejections 
         t=b*(alpha**lralt) !learning rate
         acpt_cnt=0  !counts how many ZS have been changed
         l2_rglrstn=0.01 !L2 regularisation lambda paramter
+        rpstk=0 !checks if the only computer is changing
+        rsrtpass=0
         call alloczs(temp_zom,ndet)
         call allocham(temp_ham,ndet,norb)
         do j=1, ndet-1
             picker(j)=j+1
         end do
-       
+
+        if(rstrtflg.eq.'y')then 
+            open(unit=450,file='epoc.csv',status="old",iostat=ierr)
+            if(ierr/=0)then
+                write(0,"(a,i0)") "Error in opening epoc file to read in. ierr had value ", ierr
+                errorflag=1
+                return
+            end if
+            do 
+                read(450,*,iostat=ierr)
+                if(ierr<0)then
+                    close(450)
+                    exit
+                else if (ierr/=0) then
+                    write(0,"(a,i0)") "Error in counting epocs. ierr had value ", ierr
+                    errorflag=1
+                    return
+                end if
+                epoc_cnt=epoc_cnt+1
+            end do
+            close(450) 
+
+            call epoc_writer(grad_fin%prev_erg,epoc_cnt,chng_trk,1)
+            rsrtpass=1
+            ierr=0
+            ! call gradient_row(haml,zstore,elect,2,ndet,occupancy_2an,occupancy_an_cr,occupancy_an)
+            ! grad_fin%grad_avlb(2)=1
+        end if
+        nanchk=.false.
+        ! do k=1,norb 
+        !     if(isnan(grad_fin%vars(2,k)).eqv..true.)then
+        !         print*,k
+        !         nanchk=.true. 
+        !         grad_fin%vars=0 
+        !         grad_fin%grad_avlb=0
+        !         do l=1 ,10
+        !             print*,'loop', l 
+        !             call gradient_row(haml,zstore,elect,2,ndet,occupancy_2an,occupancy_an_cr,occupancy_an)
+        !             do m=1,norb
+        !                 if(isnan(grad_fin%vars(2,m)).eqv..true.)then 
+        !                     exit 
+        !                 end if 
+        !                 nanchk=.false.
+        !                 grad_fin%grad_avlb(2)=1
+        !             end do 
+        !             if(nanchk.eqv..false.)then 
+        !                 exit 
+        !             end if 
+        !         end do  
+        !         if(nanchk.eqv..true.)then 
+        !             errorflag=1 
+        !             write(0,"(a,i0)") "Error in gradient calculation for zombie state number ", 2 
+        !             return 
+        !         else 
+        !             exit 
+        !         end if 
+        !     end if 
+        ! end do
+
         do while(t.gt.(1.0d-10))
-            
-            
+            do j=2,(ndet)
+                print*,grad_fin%vars(j,:)
+            end do
             do j=1,(ndet-1)
                 pick=picker(j)
                 t=b*(alpha**lralt)
-              
+
+                if(grad_fin%grad_avlb(pick).eq.0)then 
+                    call gradient_row(haml,zstore,elect,pick,ndet,occupancy_2an,occupancy_an_cr,occupancy_an)
+                    do k=1,norb 
+                        if(isnan(grad_fin%vars(pick,k)).eqv..true.)then
+                            print*,k
+                            nanchk=.true. 
+                            grad_fin%vars=0 
+                            grad_fin%grad_avlb=0
+                            do l=1 ,10
+                                print*,'loop', l 
+                                call gradient_row(haml,zstore,elect,pick,ndet,occupancy_2an,occupancy_an_cr,occupancy_an)
+                                do m=1,norb
+                                    if(isnan(grad_fin%vars(pick,m)).eqv..true.)then 
+                                        exit 
+                                    end if 
+                                    nanchk=.false. 
+                                end do 
+                                if(nanchk.eqv..false.)then 
+                                    exit 
+                                end if 
+                            end do  
+                            if(nanchk.eqv..true.)then 
+                                errorflag=1 
+                                write(0,"(a,i0)") "Error in gradient calculation for zombie state number ", next 
+                                return 
+                            else 
+                                exit 
+                            end if 
+                        end if 
+                    end do
+                    dvecs(1)%d=cmplx(0.0,0.0)
+                    en%erg=0
+                    en%t=0
+                    call imgtime_prop(dvecs,en,temp_ham,pick)
+                    call final_grad(dvecs(1),haml,grad_fin,pick)
+                    grad_fin%grad_avlb(next)=1
+                end if
+
+
+                print*,pick
+                print*,grad_fin%vars(pick,:)
+                
                 ! Setup temporary zombie state
                 temp_zom=zstore
                 temp_zom(pick)%phi(:)=zstore(pick)%phi(:)-(t*(grad_fin%vars(pick,:)))
@@ -416,41 +519,55 @@ MODULE gradient_descent
                 temp_zom(pick)%cos=cos(cmplx(temp_zom(pick)%phi,0.0d0,kind=8))
                 temp_ham=haml
                 call he_full_row(temp_ham,temp_zom,elect,pick,ndet,occupancy_2an,occupancy_an_cr,occupancy_an)
+                
                 ! Imaginary time propagation for back tracing
                 dvecs(1)%d=cmplx(0.0,0.0)
                 en%erg=0
                 en%t=0
                 call imgtime_prop(dvecs,en,temp_ham,0)
                 fxtdk=real(en%erg(1,timesteps+1))
-                temp_int2=fxtdk*(1.0d13)
-                ! fxtdk=temp_int*(1.0d-13)
-                temp_int1=(grad_fin%prev_erg*1.0d13)
+                
                 ! fxtdk=fxtdk-(1d-13)
                 ! btrk_val=btrk_alpha*t*sqrt(dot_product(grad_fin%vars(pick,:),grad_fin%vars(pick,:)))
-                ! print*,fxtdk,pick,grad_fin%prev_erg,t,rjct_cnt
                 ! print*,btrk_alpha*((grad_fin%vars(pick,:))*grad_fin%vars(pick,:))
-                ! print*,(grad_fin%vars(pick,:))
+                
+                print*,fxtdk,pick,grad_fin%prev_erg,t,rjct_cnt
+               
+                temp_int1=int((grad_fin%prev_erg*1.0d13),kind=8)
+                temp_int2=int((fxtdk*1.0d13),kind=8)
+                
                 ! Check if energy is lower and accept or reject
-                if(temp_int2.lt.temp_int1)then
-                    ! print*,'accept'
+                if(fxtdk.lt.grad_fin%prev_erg)then
+                    print*,'accept'
                     acpt_cnt=acpt_cnt+1
                     zstore=temp_zom
                     zstore(pick)%update_num=zstore(pick)%update_num+1
-                    call zombiewriter(zstore(pick),pick,zstore(pick)%update_num)
+                    call zombiewriter(zstore(pick),pick,rsrtpass(pick))
+                    rsrtpass(pick)=0
                     chng_trk(j)=pick
                     haml=temp_ham
                     rjct_cnt=0
                     grad_fin%grad_avlb=0
                     grad_fin%vars=0.0
-                    grad_fin%prev_erg=fxtdk
                     haml%diff_hjk=0
                     haml%diff_invh=0
                     haml%diff_ovrlp=0
+                    grad_fin%prev_erg=fxtdk
                 else 
                     rjct_cnt=rjct_cnt+1
-                    if(rjct_cnt.eq.(ndet-1))then 
+                    if(rjct_cnt.eq.(ndet-1))then
+                        rjct_cnt=0
                         lralt=lralt+1
                     end if
+                end if
+
+                if(temp_int1.eq.temp_int2)then 
+                    rpstk=rpstk+1 
+                    if(rpstk.gt.1)then 
+                        lralt=lralt+1 
+                    end if
+                else 
+                    rpstk=0 
                 end if
 
                 if(j.eq.(ndet-1))then 
@@ -475,22 +592,57 @@ MODULE gradient_descent
                 else 
                     next=picker(j+1)
                 end if
-              
+             
                 !Set up gradients for next pass
-                if(grad_fin%grad_avlb(next).eq.0)then 
-                    call gradient_row(haml,zstore,elect,next,ndet,occupancy_2an,occupancy_an_cr,occupancy_an)
-                    grad_fin%grad_avlb(next)=1
-                end if
+                ! if(grad_fin%grad_avlb(next).eq.0)then 
+                !     call gradient_row(haml,zstore,elect,next,ndet,occupancy_2an,occupancy_an_cr,occupancy_an)
+                !     do k=1,norb 
+                !         if(isnan(grad_fin%vars(next,k)).eqv..true.)then
+                !             print*,k
+                !             nanchk=.true. 
+                !             grad_fin%vars=0 
+                !             grad_fin%grad_avlb=0
+                !             do l=1 ,10
+                !                 print*,'loop', l 
+                !                 call gradient_row(haml,zstore,elect,next,ndet,occupancy_2an,occupancy_an_cr,occupancy_an)
+                !                 do m=1,norb
+                !                     if(isnan(grad_fin%vars(next,m)).eqv..true.)then 
+                !                         exit 
+                !                     end if 
+                !                     nanchk=.false. 
+                !                 end do 
+                !                 if(nanchk.eqv..false.)then 
+                !                     exit 
+                !                 end if 
+                !             end do  
+                !             if(nanchk.eqv..true.)then 
+                !                 errorflag=1 
+                !                 write(0,"(a,i0)") "Error in gradient calculation for zombie state number ", next 
+                !                 return 
+                !             else 
+                !                 exit 
+                !             end if 
+                !         end if 
+                !     end do
+                !     grad_fin%grad_avlb(next)=1
+                ! end if
 
-                dvecs(1)%d=cmplx(0.0,0.0)
-                en%erg=0
-                en%t=0
-                call imgtime_prop(dvecs,en,temp_ham,next)
-                call final_grad(dvecs(1),haml,grad_fin,next)
+                ! dvecs(1)%d=cmplx(0.0,0.0)
+                ! en%erg=0
+                ! en%t=0
+                ! call imgtime_prop(dvecs,en,temp_ham,next)
+                ! call final_grad(dvecs(1),haml,grad_fin,next)
             
             end do
             
-            ! Increases learnign rate after each epoc if acceptance has occured
+            
+                       
+            call epoc_writer(grad_fin%prev_erg,epoc_cnt,chng_trk,0)
+            write(6,"(a,i0,a,f20.16,a,f12.10)") "Energy after epoc no. ",epoc_cnt,": ", &
+                                                    grad_fin%prev_erg, ". The current learning rate is: ",t
+            
+            
+            ! Increases learning rate after each epoc if acceptance has occured
             do j=1,ndet-1
                 if(chng_trk(j).ne.0)then
                     rjct_cnt=0
@@ -503,39 +655,29 @@ MODULE gradient_descent
                     end if 
                 end if 
             end do 
-           
-
-            
-            call epoc_writer(grad_fin%prev_erg,epoc_cnt,chng_trk)
-            write(6,"(a,i0,a,f20.16,a,f11.10)") "Energy after epoc no. ",epoc_cnt,": ", &
-                                                    grad_fin%prev_erg, ". The current learning rate is: ",t
-            
-            
             ! If only a single ZS is being altered the learning rate is lowered to allow others to be changed
             if(acpt_cnt.eq.1)then   
                 do j=1,ndet-1
                     if(chng_trk(j).ne.0)then 
+                        print*,'single',chng_trk(j)
                         if(acpt1.eq.0)then 
                             acpt1=chng_trk(j)
                             acpt_cnt=0
                         else 
-                            if(j.ne.acpt1)then 
+                            if(chng_trk(j).ne.acpt1)then 
                                 acpt1=chng_trk(j)
                                 acpt2=0
-                                acpt_cnt=0
-                            else if(acpt2.lt.3)then
-                                acpt1=chng_trk(j) 
+                                acpt_cnt=0 
+                            else if(chng_trk(j).eq.acpt1)then
                                 acpt2=acpt2+1
                                 acpt_cnt=0
-                            else 
-                                lralt=lralt+1
-                                if(j.eq.2)then 
+                                if(acpt2.gt.3)then
                                     lralt=lralt+1
-                                end if
-                                acpt_cnt=0
-                            end if
+                                end if 
+                            end if 
+                            acpt_cnt=0
                         end if
-                        exit 
+                        exit
                     end if
                 end do
             else if(acpt_cnt.gt.1)then
@@ -547,7 +689,7 @@ MODULE gradient_descent
             chng_trk=0
 
             !Redces b value in learning rate 
-            if((t.lt.1.0d-8))then
+            if((t.lt.9.9d-7))then
                 if((b.le.1.3d-1).and.(b.gt.1.1d-1))then
                     b=0.1
                     rjct_cnt=0
