@@ -442,22 +442,22 @@ MODULE ham
         !$omp end workshare
         !$omp end parallel
     
-        
-        do k=1, ndet
-            do l=1, ndet
-                if(l.eq.j)then
-                    temp2(k,j,:)=matmul(REAL(ham%inv(k,:)),ham%diff_ovrlp(j,:,:))
-                else
-                    temp2(k,l,:)=real(ham%inv(k,l))*ham%diff_ovrlp(j,l,:)
-                end if
+        if(GDflg.eq.'y')then
+            do k=1, ndet
+                do l=1, ndet
+                    if(l.eq.j)then
+                        temp2(k,j,:)=matmul(REAL(ham%inv(k,:)),ham%diff_ovrlp(j,:,:))
+                    else
+                        temp2(k,l,:)=real(ham%inv(k,l))*ham%diff_ovrlp(j,l,:)
+                    end if
+                end do
             end do
-        end do
-        do k=1, ndet
-            do l=1, ndet
-                ham%diff_invh(j,k,l,:)=matmul(transpose(temp2(k,:,:)),real(ham%kinvh(:,l)))*(-1)
+            do k=1, ndet
+                do l=1, ndet
+                    ham%diff_invh(j,k,l,:)=matmul(transpose(temp2(k,:,:)),real(ham%kinvh(:,l)))*(-1)
+                end do
             end do
-        end do
-
+        end if
         return
         
     end subroutine hamgen
