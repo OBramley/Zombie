@@ -110,12 +110,8 @@ program MainZombie
         
         if(hamgflg=='y')then
             call hamgen(haml,zstore,elect,ndet,1)
-            if(k.eq.1)then
-                call matrixwriter(haml%hjk,ndet,"data/ham.csv")
-                call matrixwriter(haml%ovrlp,ndet,"data/ovlp.csv")
-                ! call matrixwriter(haml%inv,ndet,"inv.csv")
-                ! call matrixwriter(haml%kinvh,ndet,"kinvh.csv")
-            end if
+            call matrixwriter(haml%hjk,ndet,"data/ham.csv")
+            call matrixwriter(haml%ovrlp,ndet,"data/ovlp.csv")
             write(6,"(a)") "Hamiltonian successfully generated"
         else if (hamgflg=='n')then
             call read_ham(haml,ndet)

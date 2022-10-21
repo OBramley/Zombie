@@ -452,6 +452,13 @@ MODULE gradient_descent
                 temp_zom=zstore
                 temp_zom(pick)%phi(:)=zstore(pick)%phi(:)-(t*(grad_fin%vars(pick,:)))
                 temp_zom(pick)%phi(:)=temp_zom(pick)%phi(:)+l2_rglrstn*((grad_fin%vars(pick,:))*grad_fin%vars(pick,:))
+                nanchk=.false. 
+                do k=1,norb
+                    if(isnan(temp_zom(pick)%phi(k)).eqv..true.)then
+                        temp_zom(pick)%phi=zstore(pick)%phi
+                        exit
+                    end if
+                end do
                 temp_zom(pick)%sin=sin(cmplx(temp_zom(pick)%phi,0.0d0,kind=8))
                 temp_zom(pick)%cos=cos(cmplx(temp_zom(pick)%phi,0.0d0,kind=8))
                 temp_ham=haml

@@ -29,7 +29,7 @@ elif(inputs.run['nodes']<1):
     sys.exit("Not enough nodes selected. Must be 1 or greater")
 elif(inputs.run['nodes']>100):
     sys.exit("Too many nodes. Maximum of 100 simultaneous submisions")
-elif(inputs.run['cores']>8):
+elif(inputs.run['cores']>20):
     sys.exit("Too many cores selected. Maximum of 8 available")
 elif(inputs.run['cores']<1):
     sys.exit("Not enough cores selected. Must be 1 or greater")
@@ -271,7 +271,7 @@ elif(inputs.run['language']=="fortran"):
         if(inputs.run['cores']!=1):
             f.write("#$ -pe smp "+str(inputs.run['cores'])+" \n") #Use shared memory parallel environemnt 
         f.write("#$ -l h_rt="+inputs.run['runtime']+"\n")
-        f.write("#$ -l h_vmem=12G \n")
+        f.write("#$ -l h_vmem=2G \n")
         f.write("module add mkl \n")
         # f.write('time ./d_check.exe')
         f.write('time ./ZOMBIE.exe')
