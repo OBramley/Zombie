@@ -387,7 +387,7 @@ MODULE gradient_descent
     
         alpha=0.1  ! learning rate reduction
         lralt=0    ! power alpha is raised to  
-        b=7.5D-1 !starting learning rate
+        b=1.0D0 !starting learning rate
         newb=b
         epoc_cnt=0 !epoc counter
         chng_trk=0 !stores which if any ZS changed
@@ -436,8 +436,18 @@ MODULE gradient_descent
             
             do j=1,(ndet-1)
                 pick=picker(j)
-                t=newb*(alpha**lralt)
-              
+                
+                do k=1,norb
+                    if(isnan(grad_fin%vars(pick,k)).eqv..true.)then
+                        call gradient_row(haml,zstore,elect,pick,ndet,occupancy_2an,occupancy_an_cr,occupancy_an)
+                        dvecs(1)%d=cmplx(0.0,0.0)
+                        en%erg=0
+                        en%t=0
+                        call imgtime_prop(dvecs,en,temp_ham,pick)
+                        call final_grad(dvecs(1),haml,grad_fin,pick)
+                        exit 
+                    end if 
+                end do
                 ! Setup temporary zombie state
                 temp_zom=zstore
                 temp_zom(pick)%phi(:)=zstore(pick)%phi(:)-(t*(grad_fin%vars(pick,:)))
@@ -456,7 +466,7 @@ MODULE gradient_descent
                 ! fxtdk=temp_int*(1.0d-13)
                 temp_int1=int((grad_fin%prev_erg*1.0d13),kind=8)
               
-                print*,fxtdk,pick,grad_fin%prev_erg,t,acpt_cnt,rjct_cnt
+                print*,fxtdk,pick,grad_fin%prev_erg,t,acpt_cnt,rjct_cnt,lralt
                 ! Check if energy is lower and accept or reject
                 if(temp_int2.lt.temp_int1)then
                     ! print*,'accept'
@@ -474,22 +484,27 @@ MODULE gradient_descent
                     haml%diff_invh=0
                     haml%diff_ovrlp=0
                     grad_fin%prev_erg=fxtdk
+                    if(lralt.gt.0)then 
+                        lralt=lralt-1
+                    end if
+                    t=newb*(alpha**lralt)
                 else 
                     rjct_cnt=rjct_cnt+1
                     if(rjct_cnt.eq.(ndet-1))then 
                         lralt=lralt+1
+                        t=newb*(alpha**lralt)
                         rjct_cnt=0
                     end if
                 end if
 
-                if(temp_int1.eq.temp_int2)then 
-                    rpstk=rpstk+1 
-                    if(rpstk.eq.1)then 
-                        lralt=lralt+1 
-                    end if
-                else 
-                    rpstk=0 
-                end if 
+                ! if(temp_int1.eq.temp_int2)then 
+                !     rpstk=rpstk+1 
+                !     if(rpstk.eq.1)then 
+                !         lralt=lralt+1 
+                !     end if
+                ! else 
+                !     rpstk=0 
+                ! end if 
                 if(j.eq.(ndet-1))then 
                     epoc_cnt=epoc_cnt+1
                     picker=scramble(ndet-1)
@@ -527,14 +542,12 @@ MODULE gradient_descent
                     call gradient_row(haml,zstore,elect,next,ndet,occupancy_2an,occupancy_an_cr,occupancy_an)
                     do k=1,norb 
                         if(isnan(grad_fin%vars(next,k)).eqv..true.)then
-                            ! print*,pick 
+                           
                             nanchk=.true. 
                             grad_fin%vars=0 
                             grad_fin%grad_avlb=0
                             do l=1 ,10
                                 call gradient_row(haml,zstore,elect,next,ndet,occupancy_2an,occupancy_an_cr,occupancy_an)
-                                ! print*,grad_fin%vars(pick,:)
-                                print*,l
                                 do m=1,norb
                                     if(isnan(grad_fin%vars(next,m)).eqv..true.)then 
                                         exit 
@@ -568,23 +581,23 @@ MODULE gradient_descent
             end do
 
             call epoc_writer(grad_fin%prev_erg,epoc_cnt,chng_trk,0)
-            write(6,"(a,i0,a,f20.16,a,f11.10,a,i0,a)") "Energy after epoc no. ",epoc_cnt,": ", &
+            write(6,"(a,i0,a,f20.16,a,f12.10,a,i0,a)") "Energy after epoc no. ",epoc_cnt,": ", &
                 grad_fin%prev_erg, ". The current learning rate is: ",t, ". ", acpt_cnt, " Zombie state(s) altered."
 
             rpstk=0 
             ! Increases learnign rate after each epoc if acceptance has occured
-            do j=1,ndet-1
-                if(chng_trk(j).ne.0)then
-                    ! rjct_cnt=0
-                    if(lralt.gt.0)then 
-                        lralt=lralt-1
-                    end if
-                    t=newb*(alpha**lralt)
-                    if(lralt.eq.0)then 
-                        exit 
-                    end if 
-                end if 
-            end do 
+            ! do j=1,ndet-1
+            !     if(chng_trk(j).ne.0)then
+            !         ! rjct_cnt=0
+            !         if(lralt.gt.0)then 
+            !             lralt=lralt-1
+            !         end if
+            !         t=newb*(alpha**lralt)
+            !         if(lralt.eq.0)then 
+            !             exit 
+            !         end if 
+            !     end if 
+            ! end do 
             if((acpt_cnt.gt.1).and.(newb.lt.b))then
                 newb=(((newb+b)/2)+b)/2
                 print*,'newb',newb
@@ -655,7 +668,9 @@ MODULE gradient_descent
                 end if
             end if
             acpt_cnt=0
-
+            if(epoc_cnt.gt.10000)then 
+                exit 
+            end if
         end do
         !Brings phi values back within the normal 0-2pi range
         do k=2,ndet 
