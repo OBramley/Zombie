@@ -19,7 +19,7 @@ run={
     'language':'fortran',
 
     # What is the name of the run
-    'runfolder':'Li_GS_withGD',
+    'runfolder':'inftest',
 
     # Amount of time to request on HPC 
     'runtime': "36:00:00",
@@ -45,7 +45,7 @@ run={
 
     # Do you want to generate new zombie states. The program can work using previously gerated
     # Zombie states. Takes input 'y' or 'n'.
-    'zomgen':'n',
+    'zomgen':'y',
 
     'zombiefile':'zombie_states.pkl',
 
@@ -79,11 +79,11 @@ run={
     # Gram Schmidt orthogonalisation and then specify the number of states. Takes input
     # 'y' or 'n' and an integer number note in the python code gramnum=1 will not find an excited state just a 
     # single ground state. But gramnum=1 will find a single excited state in the fortran code.
-    'gram':'y',
+    'gram':'n',
     'gramnum':4,
 
     # Gradient descent flag takes input 'y' or 'n'. Only implemented in the fortran version 
-    'grad':'n'
+    'grad':'y'
 }
 
 

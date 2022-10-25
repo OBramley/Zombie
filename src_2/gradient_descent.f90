@@ -7,6 +7,7 @@ MODULE gradient_descent
     use grad_d
     use imgtp
     use outputs
+    use infnan_mod
 
     contains
 
@@ -342,6 +343,7 @@ MODULE gradient_descent
         integer,dimension(ndet-1)::picker,rsrtpass
         real(kind=8)::alpha,b,newb,t,fxtdk,l2_rglrstn
         logical::nanchk
+        character(len=4)::ergerr
         if (errorflag .ne. 0) return
 
         allocate(occupancy_an(norb,2,norb),stat=ierr)
@@ -433,12 +435,14 @@ MODULE gradient_descent
 
         do while(t.gt.(1.0d-10))
             
-            
+            write(0,"(a)") '    Zombie state    |     Previous Energy     |    Energy after Gradient Descent step &
+                           &   | Learning rate | Acceptance count | Rejection count'
             do j=1,(ndet-1)
                 pick=picker(j)
                 
                 do k=1,norb
-                    if(isnan(grad_fin%vars(pick,k)).eqv..true.)then
+                    nanchk=.false. 
+                    if(is_nan(grad_fin%vars(pick,k)).eqv..true.)then
                         call gradient_row(haml,zstore,elect,pick,ndet,occupancy_2an,occupancy_an_cr,occupancy_an)
                         dvecs(1)%d=cmplx(0.0,0.0)
                         en%erg=0
@@ -452,9 +456,9 @@ MODULE gradient_descent
                 temp_zom=zstore
                 temp_zom(pick)%phi(:)=zstore(pick)%phi(:)-(t*(grad_fin%vars(pick,:)))
                 temp_zom(pick)%phi(:)=temp_zom(pick)%phi(:)+l2_rglrstn*((grad_fin%vars(pick,:))*grad_fin%vars(pick,:))
-                nanchk=.false. 
+               
                 do k=1,norb
-                    if(isnan(temp_zom(pick)%phi(k)).eqv..true.)then
+                    if(is_nan(temp_zom(pick)%phi(k)).eqv..true.)then
                         temp_zom(pick)%phi=zstore(pick)%phi
                         exit
                     end if
@@ -470,38 +474,54 @@ MODULE gradient_descent
                 call imgtime_prop(dvecs,en,temp_ham,0)
                 fxtdk=real(en%erg(1,timesteps+1))
                 temp_int2=int(fxtdk*(1.0d13),kind=8)
-                ! fxtdk=temp_int*(1.0d-13)
                 temp_int1=int((grad_fin%prev_erg*1.0d13),kind=8)
-              
-                print*,fxtdk,pick,grad_fin%prev_erg,t,acpt_cnt,rjct_cnt,lralt
-                ! Check if energy is lower and accept or reject
-                if(temp_int2.lt.temp_int1)then
-                    ! print*,'accept'
-                    acpt_cnt=acpt_cnt+1
-                    zstore=temp_zom
-                    zstore(pick)%update_num=zstore(pick)%update_num+1
-                    call zombiewriter(zstore(pick),pick,rsrtpass(pick))
-                    rsrtpass(pick)=0
-                    chng_trk(j)=pick
-                    haml=temp_ham
-                    rjct_cnt=0
-                    grad_fin%grad_avlb=0
-                    grad_fin%vars=0.0
-                    haml%diff_hjk=0
-                    haml%diff_invh=0
-                    haml%diff_ovrlp=0
-                    grad_fin%prev_erg=fxtdk
-                    if(lralt.gt.0)then 
-                        lralt=lralt-1
-                    end if
-                    t=newb*(alpha**lralt)
-                else 
-                    rjct_cnt=rjct_cnt+1
-                    if(rjct_cnt.eq.(ndet-1))then 
-                        lralt=lralt+1
-                        t=newb*(alpha**lralt)
+                if(is_nan(fxtdk).eqv..true.)then 
+                    nanchk=.true.
+                    ergerr='NaN ' 
+                else if(is_posinf(fxtdk).eqv..true.)then
+                    nanchk=.true.
+                    ergerr='+NaN'  
+                else if(is_neginf(fxtdk).eqv..true.)then
+                    nanchk=.true.
+                    ergerr='-NaN'  
+                end if
+                
+                write(0,"(a,i0,a,f21.16,a,f21.16,a,f12.10,a,i0,a,i0)") '       ', pick,'              ', &
+                grad_fin%prev_erg,'               ',fxtdk,'            ',t,'          ',acpt_cnt,'                 ',rjct_cnt
+                ! print*,fxtdk,pick,grad_fin%prev_erg,t,acpt_cnt,rjct_cnt,lralt
+                if(nanchk.eqv..false.)then
+                    ! Check if energy is lower and accept or reject
+                    if(fxtdk.lt.grad_fin%prev_erg)then
+                        ! print*,'accept'
+                        acpt_cnt=acpt_cnt+1
+                        zstore=temp_zom
+                        zstore(pick)%update_num=zstore(pick)%update_num+1
+                        call zombiewriter(zstore(pick),pick,rsrtpass(pick))
+                        rsrtpass(pick)=0
+                        chng_trk(j)=pick
+                        haml=temp_ham
                         rjct_cnt=0
+                        grad_fin%grad_avlb=0
+                        grad_fin%vars=0.0
+                        haml%diff_hjk=0
+                        haml%diff_invh=0
+                        haml%diff_ovrlp=0
+                        grad_fin%prev_erg=fxtdk
+                        if(lralt.gt.0)then 
+                            lralt=lralt-1
+                        end if
+                        t=newb*(alpha**lralt)
+                    else 
+                        rjct_cnt=rjct_cnt+1
+                        if(rjct_cnt.eq.(ndet-1))then 
+                            lralt=lralt+1
+                            t=newb*(alpha**lralt)
+                            rjct_cnt=0
+                        end if
                     end if
+                else 
+                    write(0,"(a,a,a,i0,a,i0)") "Error in energy calculation which took value ",ergerr, &
+                                               " for zombie state ", pick, ", on epoc ", epoc_cnt 
                 end if
 
                 ! if(temp_int1.eq.temp_int2)then 
@@ -588,7 +608,7 @@ MODULE gradient_descent
             end do
 
             call epoc_writer(grad_fin%prev_erg,epoc_cnt,chng_trk,0)
-            write(6,"(a,i0,a,f20.16,a,f12.10,a,i0,a)") "Energy after epoc no. ",epoc_cnt,": ", &
+            write(6,"(a,i0,a,f21.16,a,f12.10,a,i0,a)") "Energy after epoc no. ",epoc_cnt,": ", &
                 grad_fin%prev_erg, ". The current learning rate is: ",t, ". ", acpt_cnt, " Zombie state(s) altered."
 
             rpstk=0 
