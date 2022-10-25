@@ -19,14 +19,14 @@ run={
     'language':'fortran',
 
     # What is the name of the run
-    'runfolder':'N2',
+    'runfolder':'N2_50',
 
     # Amount of time to request on HPC 
     'runtime': "36:00:00",
 
     'nodes':1,
 
-    'cores':12,
+    'cores':30,
 
     # Set the numpy random seed for Zombie state generation
     'seed':1,
@@ -99,7 +99,7 @@ zombs={
     'spin':0,
 
     # Number of Zombie states
-    'ndet':10, 
+    'ndet':50, 
 
     # Type of zombie states. Random (ran), Hartree Fock (HF) or biased (bb)
     'zomtyp':'bb',
@@ -126,7 +126,7 @@ zombs={
 #     'symmetry_subgroup' : 0 #0 is code for A1 point group
 # }
 
-#  pyscf={
+# pyscf={
 #      # The units the geometry of the molecule is set up in
 #     'units':'Angstrom',
 #      # The geometry of the molecule being investigated

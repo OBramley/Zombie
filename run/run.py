@@ -29,7 +29,7 @@ elif(inputs.run['nodes']<1):
     sys.exit("Not enough nodes selected. Must be 1 or greater")
 elif(inputs.run['nodes']>100):
     sys.exit("Too many nodes. Maximum of 100 simultaneous submisions")
-elif(inputs.run['cores']>20):
+elif(inputs.run['cores']>30):
     sys.exit("Too many cores selected. Maximum of 8 available")
 elif(inputs.run['cores']<1):
     sys.exit("Not enough cores selected. Must be 1 or greater")
