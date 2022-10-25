@@ -161,7 +161,7 @@ program MainZombie
             end do
             dvecs(1)%d=(0.0,0.0)
             call imgtime_prop(dvecs,en,haml,0)
-            write(6,"(a,f20.16)") "Final energy: ", real(en%erg(1,timesteps+1))
+            write(6,"(a,f21.16)") "Final energy: ", real(en%erg(1,timesteps+1))
             call energywriter(en%t,en%erg(1,:),"energy_final.csv",0,1)
             call matrixwriter(haml%hjk,ndet,"data/ham_final.csv")
             call matrixwriter(haml%ovrlp,ndet,"data/ovlp_final.csv")
