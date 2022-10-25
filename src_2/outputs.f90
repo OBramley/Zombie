@@ -259,7 +259,7 @@ MODULE outputs
                 errorflag=1
                 return
             end if
-            write(epoc,'(i0,",",e25.17e3)') step,erg
+            write(epoc,'(i0,",",e25.17e3,",",*(i0:", "))') step,erg,(chng_trk(k),k=1,ndet-1)
             close(epoc)
         else if(file_exists.eqv..true.) then
             open(unit=epoc,file='epoc.csv',status="old",access='append',iostat=ierr)
@@ -270,7 +270,7 @@ MODULE outputs
             end if
             if(pass.eq.1)then
                 write(epoc,*)' '
-                write(epoc,'(i0,",",e25.17e3)') step,erg
+                write(epoc,'(i0,",",e25.17e3,",",*(i0:", "))') step,erg,(chng_trk(k),k=1,ndet-1)
             else
                 write(epoc,'(i0,",",e25.17e3,",",*(i0:", "))') step,erg,(chng_trk(k),k=1,ndet-1)
             end if
