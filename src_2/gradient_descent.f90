@@ -389,12 +389,12 @@ MODULE gradient_descent
     
         alpha=0.1  ! learning rate reduction
         lralt=0    ! power alpha is raised to  
-        b=1.0D0 !starting learning rate
+        b=5.0D-1 !starting learning rate
         newb=b
         epoc_cnt=0 !epoc counter
         chng_trk=0 !stores which if any ZS changed
         rjct_cnt=0 !tracks how many rejections 
-        t=b*(alpha**lralt) !learning rate
+        t=newb*(alpha**lralt) !learning rate
         acpt_cnt=0  !counts how many ZS have been changed
         l2_rglrstn=0.01 !L2 regularisation lambda paramter
         rsrtpass=0
@@ -434,8 +434,8 @@ MODULE gradient_descent
         
 
         do while(t.gt.(1.0d-10))
-            
-            write(0,"(a)") '    Zombie state    |     Previous Energy     |    Energy after Gradient Descent step &
+            t=newb*(alpha**lralt)
+            write(6,"(a)") '    Zombie state    |     Previous Energy     |    Energy after Gradient Descent step &
                            &   | Learning rate | Acceptance count | Rejection count'
             do j=1,(ndet-1)
                 pick=picker(j)
@@ -486,7 +486,7 @@ MODULE gradient_descent
                     ergerr='-NaN'  
                 end if
                 
-                write(0,"(a,i0,a,f21.16,a,f21.16,a,f12.10,a,i0,a,i0)") '       ', pick,'              ', &
+                write(6,"(a,i0,a,f21.16,a,f21.16,a,f12.10,a,i0,a,i0)") '       ', pick,'              ', &
                 grad_fin%prev_erg,'               ',fxtdk,'            ',t,'          ',acpt_cnt,'                 ',rjct_cnt
                 ! print*,fxtdk,pick,grad_fin%prev_erg,t,acpt_cnt,rjct_cnt,lralt
                 if(nanchk.eqv..false.)then
@@ -568,7 +568,7 @@ MODULE gradient_descent
                 if(grad_fin%grad_avlb(next).eq.0)then 
                     call gradient_row(haml,zstore,elect,next,ndet,occupancy_2an,occupancy_an_cr,occupancy_an)
                     do k=1,norb 
-                        if(isnan(grad_fin%vars(next,k)).eqv..true.)then
+                        if(is_nan(grad_fin%vars(next,k)).eqv..true.)then
                            
                             nanchk=.true. 
                             grad_fin%vars=0 
@@ -576,7 +576,7 @@ MODULE gradient_descent
                             do l=1 ,10
                                 call gradient_row(haml,zstore,elect,next,ndet,occupancy_2an,occupancy_an_cr,occupancy_an)
                                 do m=1,norb
-                                    if(isnan(grad_fin%vars(next,m)).eqv..true.)then 
+                                    if(is_nan(grad_fin%vars(next,m)).eqv..true.)then 
                                         exit 
                                     end if 
                                     nanchk=.false. 
@@ -594,8 +594,6 @@ MODULE gradient_descent
                             end if 
                         end if 
                     end do
-                    
-                    
                     grad_fin%grad_avlb(next)=1
                 end if
 
@@ -627,13 +625,12 @@ MODULE gradient_descent
             ! end do 
             if((acpt_cnt.gt.1).and.(newb.lt.b))then
                 newb=(((newb+b)/2)+b)/2
-                print*,'newb',newb
+                write(6,"(a,f12.10)") "b in learning rate equation t=b*(alpha^x) raised to ",newb 
                 lralt=0    
                 rjct_cnt=0
                 acpt_cnt=0
             end if
 
-            
             ! If only a single ZS is being altered the learning rate is lowered to allow others to be changed
             if(acpt_cnt.eq.1)then   
                 do j=1,ndet-1
@@ -669,11 +666,9 @@ MODULE gradient_descent
 
             chng_trk=0
 
-
             t=newb*(alpha**lralt)
             !Redces b value in learning rate 
             if((t.lt.9.9d-7))then
-                print*,'reducing'
                 if(newb.gt.1.3d-1)then 
                     newb=(((0.1+newb)/2)+newb)/2+0.1
                     rjct_cnt=0
@@ -693,6 +688,7 @@ MODULE gradient_descent
                         end if
                     end if    
                 end if
+                write(6,"(a,f12.10,a,f12.10)") "b in learning rate equation t=b*(alpha^x) reduced to ",newb, "alpha is ", alpha 
             end if
             acpt_cnt=0
             if(epoc_cnt.gt.20000)then 
