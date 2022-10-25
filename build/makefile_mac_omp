@@ -1,6 +1,7 @@
 # Makefile for use on chmlinxx computers.
 # Adapted from make file written by C. Symmonds for the MCE program which was inturn
 # made with the aid of the fmkmf utility (Copyright (c) The University of Edinburgh)
+# subsequent streamlining alterations have been made 
 
 F90=gfortran
 FFLAGS= -fopenmp -O3
