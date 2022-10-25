@@ -162,13 +162,13 @@ MODULE imgtp
         states = gramnum+1
         call allocdv(dvecs_copy,states,ndet,norb)
         
-        do j=1, states
-            dvecs_copy(j)%d(:)=dvecs(j)%d(:)
-        end do
-
+        ! do j=1, states
+        !     dvecs_copy(j)%d(:)=dvecs(j)%d(:)
+        ! end do
+        dvecs_copy=dvecs
         do j=2,states
             do k=1, j-1
-                numer=dot_product(dvecs_copy(k)%d,matmul(haml%ovrlp,dvecs_copy(j)%d))
+                numer=dot_product(dvecs(j)%d,matmul(haml%ovrlp,dvecs_copy(k)%d))
                 den=dot_product(dvecs_copy(k)%d,matmul(haml%ovrlp,dvecs_copy(k)%d))
                 dvecs_copy(j)%d = dvecs_copy(j)%d - (dvecs_copy(k)%d*(numer/den))
             end do
@@ -180,9 +180,9 @@ MODULE imgtp
             ! norm = dot_product(dvecs_copy(j)%d,temp)
             ! norm = 1/sqrt(norm)
             ! dvecs_copy(j)%d = dvecs_copy(j)%d*norm
-            dvecs(j)%d=dvecs_copy(j)%d
+            
         end do
-
+        dvecs=dvecs_copy
         call deallocdv(dvecs_copy)
 
         return

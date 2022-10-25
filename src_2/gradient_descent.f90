@@ -675,7 +675,7 @@ MODULE gradient_descent
                 end if
             end if
             acpt_cnt=0
-            if(epoc_cnt.gt.10000)then 
+            if(epoc_cnt.gt.20000)then 
                 exit 
             end if
         end do

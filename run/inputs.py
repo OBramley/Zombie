@@ -19,7 +19,7 @@ run={
     'language':'fortran',
 
     # What is the name of the run
-    'runfolder':'N2_50',
+    'runfolder':'Li_GS_withGD',
 
     # Amount of time to request on HPC 
     'runtime': "36:00:00",
@@ -33,7 +33,7 @@ run={
 
     # Name of file where any prior generated results are placed so the Fortran 
     # program can access them and continue a run
-    'datafile':'GD_test2',
+    'datafile':'Li_GD_zs',
 
     # 1 and 2 electron integrals can be calcualted by PySCF by the program
     # or they can be inputed as a seperate file at the moment only from MOLPRO
@@ -45,7 +45,7 @@ run={
 
     # Do you want to generate new zombie states. The program can work using previously gerated
     # Zombie states. Takes input 'y' or 'n'.
-    'zomgen':'y',
+    'zomgen':'n',
 
     'zombiefile':'zombie_states.pkl',
 
@@ -60,9 +60,9 @@ run={
     # the Zombie state Hamiltonian. Takes input 'y' or 'n'.
     'imagprop':'y',
 
-    'beta':500,
+    'beta':25000,
 
-    'timesteps':1000,
+    'timesteps':10000,
 
     # Do you want the starting energy to be the HF energy
     # Takes input 'y' or 'n' and then a number to defined the number of electrons
@@ -79,20 +79,20 @@ run={
     # Gram Schmidt orthogonalisation and then specify the number of states. Takes input
     # 'y' or 'n' and an integer number note in the python code gramnum=1 will not find an excited state just a 
     # single ground state. But gramnum=1 will find a single excited state in the fortran code.
-    'gram':'n',
+    'gram':'y',
     'gramnum':4,
 
     # Gradient descent flag takes input 'y' or 'n'. Only implemented in the fortran version 
-    'grad':'y'
+    'grad':'n'
 }
 
 
 zombs={
     # Number of orbitals
-    'norb':28,
+    'norb':5,
 
     # Number of electrons in the molecule
-    'nel':14,
+    'nel':6,
 
     # Spin of the moleucle 
 
@@ -102,7 +102,7 @@ zombs={
     'ndet':50, 
 
     # Type of zombie states. Random (ran), Hartree Fock (HF) or biased (bb)
-    'zomtyp':'bb',
+    'zomtyp':'ran',
     
     # Make the first Zombie state the RHF det? Takes y or n
     'rhf_1':'y',
@@ -141,28 +141,13 @@ zombs={
 #     'symmetry_subgroup' : 0 #0 is code for A1 point group
 # }
 
-# pyscf={
-#      # The units the geometry of the molecule is set up in
-#     'units':'Bohr',
-#      # The geometry of the molecule being investigated
-#     'atoms': 'Li 0 0 0; Li 0 0 6',
-#     # The type of basis used to generate the 1 and 2 electron integrals
-#     'bs' : '6-31g**',
-#     # How verbose do you want the PyScf output to be in your terminal?
-#     'verbosity' : 4,
-#     'symmetry' :True,
-#     'spin':0,
-#     'charge':0,
-#     'symmetry_subgroup' : 0 #0 is code for A1 point group
-# }
-
 pyscf={
      # The units the geometry of the molecule is set up in
-    'units':'Angstrom',
+    'units':'Bohr',
      # The geometry of the molecule being investigated
-    'atoms': 'N 0 0 0; N 0 0 1.094',
+    'atoms': 'Li 0 0 0; Li 0 0 6',
     # The type of basis used to generate the 1 and 2 electron integrals
-    'bs' : 'cc-pVDZ',
+    'bs' : '6-31g**',
     # How verbose do you want the PyScf output to be in your terminal?
     'verbosity' : 4,
     'symmetry' :True,
@@ -170,3 +155,18 @@ pyscf={
     'charge':0,
     'symmetry_subgroup' : 0 #0 is code for A1 point group
 }
+
+# pyscf={
+#      # The units the geometry of the molecule is set up in
+#     'units':'Angstrom',
+#      # The geometry of the molecule being investigated
+#     'atoms': 'N 0 0 0; N 0 0 1.094',
+#     # The type of basis used to generate the 1 and 2 electron integrals
+#     'bs' : 'cc-pVDZ',
+#     # How verbose do you want the PyScf output to be in your terminal?
+#     'verbosity' : 4,
+#     'symmetry' :True,
+#     'spin':0,
+#     'charge':0,
+#     'symmetry_subgroup' : 0 #0 is code for A1 point group
+# }
