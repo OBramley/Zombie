@@ -681,11 +681,15 @@ MODULE gradient_descent
             t=newb*(alpha**lralt)
             !Redces b value in learning rate 
             if((t.lt.9.9d-7))then
-                if(newb.gt.1.3d-1)then 
-                    newb=(((0.1+newb)/2)+newb)/2+0.1
+                if(newb.gt.1.3d-1)then
+                    if((newb.gt.3.0d-1).and.(newb.lt.3.1d-1))then
+                        newb=0.29 
+                    else 
+                        newb=(((0.1+newb)/2)+newb)/2+0.05
+                    end if
                     rjct_cnt=0
                     lralt=0
-                else if((newb.le.1.3d-1).and.(newb.gt.1.1d-1))then
+                else if((newb.le.2.9d-1).and.(newb.gt.1.1d-1))then
                     newb=0.1
                     rjct_cnt=0
                     lralt=0
@@ -852,10 +856,14 @@ MODULE gradient_descent
                         call final_grad(dvecs(1),haml,grad_fin,next)
                         grad_fin%grad_avlb(pick)=1
                     else if((rjct_cnt.ne.0)) then
-                        if(newb_zs(pick,pickorb).gt.1.3d-1)then 
-                            newb_zs(pick,pickorb)=(((0.1+newb_zs(pick,pickorb))/2)+newb_zs(pick,pickorb))/2+0.1
+                        if(newb_zs(pick,pickorb).gt.1.3d-1)then
+                            if((newb_zs(pick,pickorb).gt.3.0d-1).and.(newb_zs(pick,pickorb).lt.3.1d-1))then 
+                                newb_zs(pick,pickorb)=0.29
+                            else
+                            newb_zs(pick,pickorb)=(((0.1+newb_zs(pick,pickorb))/2)+newb_zs(pick,pickorb))/2+0.05
+                            end if
                             lralt_zs(pick,pickorb)=0
-                        else if((newb_zs(pick,pickorb).le.1.3d-1).and.(newb_zs(pick,pickorb).gt.1.1d-1))then
+                        else if((newb_zs(pick,pickorb).le.2.9d-1).and.(newb_zs(pick,pickorb).gt.1.1d-1))then
                             newb_zs(pick,pickorb)=0.1
                             lralt_zs(pick,pickorb)=0
                         else 
