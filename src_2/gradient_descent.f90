@@ -707,7 +707,7 @@ MODULE gradient_descent
                 write(6,"(a,f12.10,a,f12.10)") "b in learning rate equation t=b*(alpha^x) reduced to ",newb, "alpha is ", alpha 
             end if
             acpt_cnt=0
-            if(epoc_cnt.gt.25000)then 
+            if(epoc_cnt.gt.20000)then 
                 exit 
             end if
         end do
@@ -965,7 +965,7 @@ MODULE gradient_descent
             write(6,"(a,i0,a,f21.16)") "Energy after epoch no. ",epoc_cnt,": ",grad_fin%prev_erg
             acpt_cnt=0
             chng_trk=0
-            if(epoc_cnt.gt.20000)then 
+            if(epoc_cnt.gt.30000)then 
                 exit 
             end if
         end do
