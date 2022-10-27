@@ -19,21 +19,21 @@ run={
     'language':'fortran',
 
     # What is the name of the run
-    'runfolder':'N2_test_starting_lr_0.5',
+    'runfolder':'shit',
 
     # Amount of time to request on HPC 
     'runtime': "48:00:00",
 
     'nodes':1,
 
-    'cores':30,
+    'cores':4,
 
     # Set the numpy random seed for Zombie state generation
     'seed':1,
 
     # Name of file where any prior generated results are placed so the Fortran 
     # program can access them and continue a run
-    'datafile':'Li_GD_zs',
+    'datafile':'help',
 
     # 1 and 2 electron integrals can be calcualted by PySCF by the program
     # or they can be inputed as a seperate file at the moment only from MOLPRO
@@ -45,7 +45,7 @@ run={
 
     # Do you want to generate new zombie states. The program can work using previously gerated
     # Zombie states. Takes input 'y' or 'n'.
-    'zomgen':'y',
+    'zomgen':'n',
 
     'zombiefile':'zombie_states.pkl',
 
@@ -89,20 +89,20 @@ run={
 
 zombs={
     # Number of orbitals
-    'norb':28,
+    'norb':5,
 
     # Number of electrons in the molecule
-    'nel':14,
+    'nel':6,
 
     # Spin of the moleucle 
 
     'spin':0,
 
     # Number of Zombie states
-    'ndet':50, 
+    'ndet':10, 
 
     # Type of zombie states. Random (ran), Hartree Fock (HF) or biased (bb)
-    'zomtyp':'ran',
+    'zomtyp':'bb',
     
     # Make the first Zombie state the RHF det? Takes y or n
     'rhf_1':'y',
@@ -141,28 +141,13 @@ zombs={
 #     'symmetry_subgroup' : 0 #0 is code for A1 point group
 # }
 
-# pyscf={
-#      # The units the geometry of the molecule is set up in
-#     'units':'Bohr',
-#      # The geometry of the molecule being investigated
-#     'atoms': 'Li 0 0 0; Li 0 0 6',
-#     # The type of basis used to generate the 1 and 2 electron integrals
-#     'bs' : '6-31g**',
-#     # How verbose do you want the PyScf output to be in your terminal?
-#     'verbosity' : 4,
-#     'symmetry' :True,
-#     'spin':0,
-#     'charge':0,
-#     'symmetry_subgroup' : 0 #0 is code for A1 point group
-# }
-
 pyscf={
      # The units the geometry of the molecule is set up in
-    'units':'Angstrom',
+    'units':'Bohr',
      # The geometry of the molecule being investigated
-    'atoms': 'N 0 0 0; N 0 0 1.094',
+    'atoms': 'Li 0 0 0; Li 0 0 6',
     # The type of basis used to generate the 1 and 2 electron integrals
-    'bs' : 'cc-pVDZ',
+    'bs' : '6-31g**',
     # How verbose do you want the PyScf output to be in your terminal?
     'verbosity' : 4,
     'symmetry' :True,
@@ -170,3 +155,18 @@ pyscf={
     'charge':0,
     'symmetry_subgroup' : 0 #0 is code for A1 point group
 }
+
+# pyscf={
+#      # The units the geometry of the molecule is set up in
+#     'units':'Angstrom',
+#      # The geometry of the molecule being investigated
+#     'atoms': 'N 0 0 0; N 0 0 1.094',
+#     # The type of basis used to generate the 1 and 2 electron integrals
+#     'bs' : 'cc-pVDZ',
+#     # How verbose do you want the PyScf output to be in your terminal?
+#     'verbosity' : 4,
+#     'symmetry' :True,
+#     'spin':0,
+#     'charge':0,
+#     'symmetry_subgroup' : 0 #0 is code for A1 point group
+# }

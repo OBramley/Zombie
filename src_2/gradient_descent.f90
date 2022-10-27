@@ -323,148 +323,330 @@ MODULE gradient_descent
 
     end subroutine gradient_row
 
-    subroutine zombie_alter(zstore,grad_fin,haml,elect,en,dvecs,chng_trk)
+    subroutine grad_calc(haml,zstore,elect,pick,occupancy_2an,occupancy_an_cr,occupancy_an,dvec,grad_fin,en)
 
-        implicit none
+        implicit none 
 
-        type(zombiest),dimension(:),intent(inout)::zstore
+        type(zombiest),dimension(:),intent(in)::zstore
         type(grad),intent(inout)::grad_fin
         type(elecintrgl),intent(in)::elect
-        type(dvector),dimension(:),intent(inout)::dvecs
-        type(energy),intent(inout)::en
+        type(dvector),dimension(:),intent(inout)::dvec
         type(hamiltonian),intent(inout)::haml
+        integer,dimension(:,:,:),intent(in)::occupancy_an
+        integer,dimension(:,:,:,:),intent(in)::occupancy_an_cr,occupancy_2an
+        integer,intent(in)::pick
+        integer::k,l,m
+        logical::nanchk
+        type(energy),intent(inout)::en
+
+        if (errorflag .ne. 0) return
+
+        call gradient_row(haml,zstore,elect,pick,ndet,occupancy_2an,occupancy_an_cr,occupancy_an)
+        nanchk=.false. 
+        do k=1,norb
+            if(is_nan(grad_fin%vars(pick,k)).eqv..true.)then
+                nanchk=.true. 
+                grad_fin%vars=0 
+                grad_fin%grad_avlb=0
+                do l=1 ,10
+                    call gradient_row(haml,zstore,elect,pick,ndet,occupancy_2an,occupancy_an_cr,occupancy_an)
+                    do m=1,norb
+                        if(is_nan(grad_fin%vars(pick,m)).eqv..true.)then 
+                            exit 
+                        end if 
+                        nanchk=.false. 
+                    end do 
+                    if(nanchk.eqv..false.)then 
+                        exit 
+                    end if 
+                end do  
+                if(nanchk.eqv..true.)then 
+                    errorflag=1 
+                    write(0,"(a,i0)") "Error in gradient calculation for zombie state number ", pick 
+                    return 
+                else 
+                    exit 
+                end if  
+            end if 
+        end do
+        en%erg=0
+        en%t=0
+        call imgtime_prop(dvec,en,haml,pick)
+        call final_grad(dvec(1),haml,grad_fin,pick)
+
+        ! print*,grad_fin%vars(pick,:)
+        grad_fin%grad_avlb(pick)=1
+        
+        return
+
+    end subroutine grad_calc
+
+    subroutine orbital_gd(zstore,grad_fin,elect,dvecs,temp_dvecs,en,haml,temp_ham,chng_trk,temp_zom,occupancy_an,&
+        occupancy_an_cr,occupancy_2an,epoc_cnt,alphain,b,picker,maxloop) 
+
+        implicit none 
+
+        type(zombiest),dimension(:),intent(inout)::zstore,temp_zom
+        type(grad),intent(inout)::grad_fin
+        type(elecintrgl),intent(in)::elect
+        type(dvector),dimension(:),intent(inout)::dvecs,temp_dvecs
+        type(energy),intent(inout)::en
+        type(hamiltonian),intent(inout)::haml,temp_ham
         integer,dimension(:),intent(inout)::chng_trk
-        type(zombiest),dimension(:),allocatable::temp_zom
-        type(hamiltonian)::temp_ham
-        integer,allocatable,dimension(:,:,:)::occupancy_an
-        integer,allocatable,dimension(:,:,:,:)::occupancy_an_cr,occupancy_2an
-
-        integer::lralt,rjct_cnt,epoc_cnt,next,acpt_cnt,acpt1,acpt2,pick,rpstk,pickorb,rjct_cnt2
-        real(kind=8)::alpha,b,newb,t,fxtdk,l2_rglrstn
-        integer(kind=8)::temp_int1,temp_int2
-        integer,dimension(ndet-1)::picker,rsrtpass
-
+        integer,intent(inout)::epoc_cnt
+        integer,intent(in)::maxloop
+        integer,dimension(:,:,:)::occupancy_an
+        integer,dimension(:,:,:,:)::occupancy_an_cr,occupancy_2an
+        real(kind=8),intent(in)::b,alphain
+        integer,dimension(ndet-1),intent(inout)::picker
+        integer::rjct_cnt,next,acpt_cnt,pick,pickorb,rjct_cnt2,loops
+        real(kind=8)::t,fxtdk,l2_rglrstn
+        integer,dimension(ndet-1)::rsrtpass
         integer,dimension(ndet,norb)::lralt_zs
         integer,dimension(norb)::pickerorb
         real(kind=8),dimension(ndet,norb)::alpha_zs,newb_zs
         integer,dimension(norb)::chng_trk2
-       
-        
         logical::nanchk
         character(len=4)::ergerr
-        integer::ierr,j,k,l,m,n
+        integer::j,k,l,n
         
-        
+        alpha_zs=alphain  ! learning rate reduction
+        lralt_zs=0    ! power alpha is raised to 
+        newb_zs=b
+        chng_trk=0 !stores which if any ZS changed
+        chng_trk2=0 !stores which orbitals in the ZS have changed 
+        rjct_cnt=0 !tracks how many rejections 
+        acpt_cnt=0  !counts how many ZS have been changed
+        l2_rglrstn=0.01 !L2 regularisation lambda paramter
+        rjct_cnt2=0
+        acpt_cnt=0
+        loops=0
+        do while(rjct_cnt2.lt.(norb*100))
+            loops=loops+1
+            write(6,"(a)") '    Zombie state    |     Previous Energy     |    Energy after Gradient Descent steps &
+                           &   | Orbitals altered '
+            do j=1,(ndet-1)
+                grad_fin%current_erg=grad_fin%prev_erg
+                pick=picker(j)
+                pickerorb=scramble_norb(norb)
+                chng_trk2=0
+                acpt_cnt=0
+                do n=1,norb
+                    rjct_cnt=0
+                    pickorb=pickerorb(n)
+                    t=newb_zs(pick,pickorb)*(alpha_zs(pick,pickorb)**lralt_zs(pick,pickorb))
+                    do while(t.gt.(1.0d-10))
+                        nanchk=.false.
+                        if(is_nan(grad_fin%vars(pick,pickorb)).eqv..true.)then
+                            call grad_calc(haml,zstore,elect,pick,occupancy_2an,occupancy_an_cr,occupancy_an,dvecs,grad_fin,en) 
+                        end if 
+                        
+                        ! Setup temporary zombie state
+                        temp_zom=zstore
+                        temp_zom(pick)%phi(pickorb)=zstore(pick)%phi(pickorb)-(t*(grad_fin%vars(pick,pickorb)))
+                        temp_zom(pick)%phi(pickorb)=temp_zom(pick)%phi(pickorb)+&
+                                            l2_rglrstn*((grad_fin%vars(pick,pickorb))*grad_fin%vars(pick,pickorb))
+                    
+                        if(is_nan(temp_zom(pick)%phi(pickorb)).eqv..true.)then
+                            t=(1.0d-11)
+                        end if
+                
+                        temp_zom(pick)%sin(pickorb)=sin(cmplx(temp_zom(pick)%phi(pickorb),0.0d0,kind=8))
+                        temp_zom(pick)%cos(pickorb)=cos(cmplx(temp_zom(pick)%phi(pickorb),0.0d0,kind=8))
+                        temp_ham=haml
+                        call he_full_row(temp_ham,temp_zom,elect,pick,ndet,occupancy_2an,occupancy_an_cr,occupancy_an)
+                        ! Imaginary time propagation for back tracing
+                        
+                        en%erg=0
+                        en%t=0
+                        call imgtime_prop(temp_dvecs,en,temp_ham,0)
+                        fxtdk=real(en%erg(1,timesteps+1))
+                        if(is_nan(fxtdk).eqv..true.)then 
+                            ergerr='NaN ' 
+                            write(0,"(a,a,a,i0,a,i0)") "Error in energy calculation which took value ",ergerr, &
+                            " for zombie state ", pick, ",orbital ", pickorb 
+                            t=(1.0d-11)
+                            nanchk=.true.
+                            rjct_cnt=1
+                        else if(is_posinf(fxtdk).eqv..true.)then
+                            ergerr='+NaN'  
+                            write(0,"(a,a,a,i0,a,i0)") "Error in energy calculation which took value ",ergerr, &
+                            " for zombie state ", pick, ",orbital ", pickorb  
+                            t=(1.0d-11)
+                            nanchk=.true.
+                            rjct_cnt=1
+                        else if(is_neginf(fxtdk).eqv..true.)then
+                            ergerr='-NaN'  
+                            write(0,"(a,a,a,i0,a,i0)") "Error in energy calculation which took value ",ergerr, &
+                            " for zombie state ", pick, ",orbital ", pickorb 
+                            t=(1.0d-11)
+                            nanchk=.true.
+                            rjct_cnt=1
+                        end if
+                        
+                        if(nanchk.eqv..false.)then
+                            ! Check if energy is lower and accept or reject
+                            if(fxtdk.lt.grad_fin%prev_erg)then
+                                t=(1.0d-11)
+                                acpt_cnt=acpt_cnt+1
+                                zstore=temp_zom
+                                dvecs=temp_dvecs
+                                chng_trk(j)=pick
+                                chng_trk2(acpt_cnt)=pickorb
+                                rjct_cnt=0
+                                rjct_cnt2=0
+                                haml=temp_ham
+                                grad_fin%grad_avlb=0
+                                grad_fin%vars=0.0
+                                haml%diff_hjk=0
+                                haml%diff_invh=0
+                                haml%diff_ovrlp=0
+                                grad_fin%prev_erg=fxtdk
+                                if(lralt_zs(pick,pickorb).gt.0)then 
+                                    lralt_zs(pick,pickorb)=lralt_zs(pick,pickorb)-1
+                                end if
+                            else 
+                                lralt_zs(pick,pickorb)=lralt_zs(pick,pickorb)+1
+                                t=newb_zs(pick,pickorb)*(alpha_zs(pick,pickorb)**lralt_zs(pick,pickorb))
+                                rjct_cnt=rjct_cnt+1
+                            end if
+                        end if
+                    end do
+               
+                    if((rjct_cnt.eq.0).and.(n.ne.norb))then
+                        call grad_calc(haml,zstore,elect,pick,occupancy_2an,occupancy_an_cr,occupancy_an,dvecs,grad_fin,en) 
+                    end if
+                end do
+                
+
+                if(j.eq.(ndet-1))then 
+                    epoc_cnt=epoc_cnt+1
+                    picker=scramble(ndet-1)
+                    next=picker(1)
+                    if(modulo(epoc_cnt,2).eq.0)then 
+                        lralt_zs=0
+                    end if
+                    !Every 100 epoc brings phi values back within the normal 0-2pi range
+                    if(modulo(epoc_cnt,100).eq.0)then 
+                        do k=2,ndet 
+                            do l=1,norb 
+                                if((zstore(k)%phi(l).gt.2*pirl).or.(zstore(k)%phi(l).lt.0))then 
+                                    zstore(k)%phi(l)=asin(real(zstore(k)%sin(l)))
+                                    if((zstore(k)%phi(l).gt.2*pirl))then
+                                        zstore(k)%phi(l)=zstore(k)%phi(l)-2*pirl
+                                    else if((zstore(k)%phi(l).lt.0))then
+                                        zstore(k)%phi(l)=zstore(k)%phi(l)+2*pirl
+                                    end if
+                                end if
+                            end do
+                        end do
+                    end if
+                else 
+                    next=picker(j+1)
+                end if
+
+                if(grad_fin%grad_avlb(next).eq.1)then  
+                    do k=1,norb
+                        if(isnan(grad_fin%vars(next,k)).eqv..true.)then
+                            grad_fin%grad_avlb(next)=0
+                            exit 
+                        end if 
+                    end do
+                end if
+
+                !Set up gradients for next pass
+                if(grad_fin%grad_avlb(next).eq.0)then 
+                    call grad_calc(haml,zstore,elect,next,occupancy_2an,occupancy_an_cr,occupancy_an,dvecs,grad_fin,en) 
+                end if
+                if(acpt_cnt.gt.0)then
+                    write(6,"(a,i0,a,f21.16,a,f21.16,a,*(i0:','))") '       ', pick,'              ', &
+                    grad_fin%current_erg,'               ',grad_fin%prev_erg,'            ',chng_trk2(1:acpt_cnt) 
+                    rsrtpass(pick)=0
+                    zstore(pick)%update_num=zstore(pick)%update_num+1
+                    call zombiewriter(zstore(pick),pick,rsrtpass(pick))
+                else 
+                    write(6,"(a,i0,a,f21.16,a,f21.16,a,i0)") '       ', pick,'              ', &
+                    grad_fin%current_erg,'               ',grad_fin%prev_erg,'            ',0
+                    rjct_cnt2=rjct_cnt2+1
+                end if
+            end do
+
+            call epoc_writer(grad_fin%prev_erg,epoc_cnt,chng_trk,0)
+            write(6,"(a,i0,a,f21.16)") "Energy after epoch no. ",epoc_cnt,": ",grad_fin%prev_erg
+            acpt_cnt=0
+            chng_trk=0
+            if(loops.ge.maxloop)then 
+                exit 
+            end if
+        end do
+
+    end subroutine orbital_gd
+
+
+    subroutine full_zs_gd(zstore,grad_fin,elect,dvecs,temp_dvecs,en,haml,temp_ham,chng_trk,temp_zom,occupancy_an,&
+        occupancy_an_cr,occupancy_2an,epoc_cnt,alphain,b,picker) 
+
+        implicit none 
+
+        type(zombiest),dimension(:),intent(inout)::zstore,temp_zom
+        type(grad),intent(inout)::grad_fin
+        type(elecintrgl),intent(in)::elect
+        type(dvector),dimension(:),intent(inout)::dvecs
+        type(dvector), dimension(:), allocatable:: temp_dvecs
+        type(energy),intent(inout)::en
+        type(hamiltonian),intent(inout)::haml,temp_ham
+        integer,dimension(:),intent(inout)::chng_trk
+        integer,dimension(:,:,:),intent(in)::occupancy_an
+        integer,dimension(:,:,:,:),intent(in)::occupancy_an_cr,occupancy_2an
+        integer,intent(inout)::epoc_cnt
+        real(kind=8),intent(in)::b,alphain
+        integer,dimension(ndet-1),intent(inout)::picker
+        integer::lralt,rjct_cnt,next,acpt_cnt,acpt1,acpt2,pick,orbitcnt
+        real(kind=8)::newb,t,fxtdk,l2_rglrstn,alpha
+        integer(kind=8)::temp_int1,temp_int2
+        integer,dimension(ndet-1)::rsrtpass
+
+       
+        logical::nanchk
+        character(len=4)::ergerr
+        integer::j,k,l
+
+
         if (errorflag .ne. 0) return
 
-        allocate(occupancy_an(norb,2,norb),stat=ierr)
-        if(ierr==0) allocate(occupancy_2an(norb,norb,2,norb),stat=ierr)
-        if(ierr==0) allocate(occupancy_an_cr(norb,norb,2,norb),stat=ierr)
-        if (ierr/=0) then
-            write(0,"(a,i0)") "Error in occupancy vector allocation . ierr had value ", ierr
-            errorflag=1
-            return
-        end if 
 
-        occupancy_an=1
-        occupancy_2an=1
-        occupancy_an_cr=1
-
-        !$omp parallel private(j,k,l) shared(occupancy_an,occupancy_2an,occupancy_an_cr)
-        !$omp do
-        do j=1,norb
-            occupancy_an(j,1,j)=0
-            do l=j-1, 1, -1
-                occupancy_an(j,1,l)=-1
-            end do
-        end do
-        !$omp end do
-        !$omp barrier
-        !$omp do
-        do j=1,norb
-            do k=1, norb
-                occupancy_2an(j,k,:,:)=occupancy_an(j,:,:)
-                occupancy_2an(j,k,2,k)=occupancy_2an(j,k,1,k)
-                occupancy_2an(j,k,1,k)=0
-                occupancy_an_cr(j,k,:,:)=occupancy_an(j,:,:)
-                occupancy_an_cr(j,k,1,k)=occupancy_an_cr(j,k,2,k)
-                occupancy_an_cr(j,k,2,k)=0
-                do l=k-1,1,-1
-                    occupancy_2an(j,k,1,l)=occupancy_2an(j,k,1,l)*(-1)
-                    occupancy_an_cr(j,k,1,l)=occupancy_an_cr(j,k,1,l)*(-1)
-                end do
-            end do
-        end do
-        !$omp end do
-        !$omp end parallel
-    
-        alpha=0.1  ! learning rate reduction
+        alpha=alphain  ! learning rate reduction
         lralt=0    ! power alpha is raised to  
-        b=1.0D0 !starting learning rate
         newb=b
-        epoc_cnt=0 !epoc counter
         chng_trk=0 !stores which if any ZS changed
         rjct_cnt=0 !tracks how many rejections 
         t=newb*(alpha**lralt) !learning rate
         acpt_cnt=0  !counts how many ZS have been changed
         l2_rglrstn=0.01 !L2 regularisation lambda paramter
-        rsrtpass=0
-        rpstk=0 !checks for computer error
-        call alloczs(temp_zom,ndet)
-        call allocham(temp_ham,ndet,norb)
+        orbitcnt=0
 
         do j=1, ndet-1
             picker(j)=j+1
         end do
-       
-        if(rstrtflg.eq.'y')then 
-            open(unit=450,file='epoc.csv',status="old",iostat=ierr)
-            if(ierr/=0)then
-                write(0,"(a,i0)") "Error in opening epoc file to read in. ierr had value ", ierr
-                errorflag=1
-                return
-            end if
-            do 
-                read(450,*,iostat=ierr)
-                if(ierr<0)then
-                    close(450)
-                    exit
-                else if (ierr/=0) then
-                    write(0,"(a,i0)") "Error in counting epocs. ierr had value ", ierr
-                    errorflag=1
-                    return
-                end if
-                epoc_cnt=epoc_cnt+1
-            end do
-            close(450) 
-
-            call epoc_writer(grad_fin%prev_erg,epoc_cnt,chng_trk,1)
-            rsrtpass=1
-            ierr=0
-        end if
-        
 
         do while(t.gt.(1.0d-10))
             t=newb*(alpha**lralt)
             write(6,"(a)") '    Zombie state    |     Previous Energy     |    Energy after Gradient Descent step &
-                           &   | Learning rate | Acceptance count | Rejection count'
+            &   | Learning rate | Acceptance count | Rejection count'
+            
             do j=1,(ndet-1)
-                pick=picker(j)
                 
+                pick=picker(j)
+                nanchk=.false.
                 do k=1,norb
-                    nanchk=.false. 
                     if(is_nan(grad_fin%vars(pick,k)).eqv..true.)then
-                        call gradient_row(haml,zstore,elect,pick,ndet,occupancy_2an,occupancy_an_cr,occupancy_an)
-                        dvecs(1)%d=cmplx(0.0,0.0)
-                        en%erg=0
-                        en%t=0
-                        call imgtime_prop(dvecs,en,temp_ham,pick)
-                        call final_grad(dvecs(1),haml,grad_fin,pick)
-                        grad_fin%grad_avlb(pick)=1
+                        call grad_calc(haml,zstore,elect,pick,occupancy_2an,occupancy_an_cr,occupancy_an,dvecs,grad_fin,en)
+                        nanchk=.false. 
                         exit 
                     end if 
                 end do
                 ! Setup temporary zombie state
+             
                 temp_zom=zstore
                 temp_zom(pick)%phi(:)=zstore(pick)%phi(:)-(t*(grad_fin%vars(pick,:)))
                 temp_zom(pick)%phi(:)=temp_zom(pick)%phi(:)+l2_rglrstn*((grad_fin%vars(pick,:))*grad_fin%vars(pick,:))
@@ -479,11 +661,12 @@ MODULE gradient_descent
                 temp_zom(pick)%cos=cos(cmplx(temp_zom(pick)%phi,0.0d0,kind=8))
                 temp_ham=haml
                 call he_full_row(temp_ham,temp_zom,elect,pick,ndet,occupancy_2an,occupancy_an_cr,occupancy_an)
+                
                 ! Imaginary time propagation for back tracing
-                dvecs(1)%d=cmplx(0.0,0.0)
                 en%erg=0
                 en%t=0
-                call imgtime_prop(dvecs,en,temp_ham,0)
+                call imgtime_prop(temp_dvecs,en,temp_ham,0)
+              
                 fxtdk=real(en%erg(1,timesteps+1))
                 temp_int2=int(fxtdk*(1.0d13),kind=8)
                 temp_int1=int((grad_fin%prev_erg*1.0d13),kind=8)
@@ -510,6 +693,7 @@ MODULE gradient_descent
                         rsrtpass(pick)=0
                         chng_trk(j)=pick
                         haml=temp_ham
+                        dvecs=temp_dvecs
                         rjct_cnt=0
                         grad_fin%grad_avlb=0
                         grad_fin%vars=0.0
@@ -534,15 +718,6 @@ MODULE gradient_descent
                                                " for zombie state ", pick, ", on epoc ", epoc_cnt 
                 end if
 
-                ! if(temp_int1.eq.temp_int2)then 
-                !     rpstk=rpstk+1 
-                !     if(rpstk.eq.1)then 
-                !         lralt=lralt+1 
-                !     end if
-                ! else 
-                !     rpstk=0 
-                ! end if
-
                 if(j.eq.(ndet-1))then 
                     epoc_cnt=epoc_cnt+1
                     picker=scramble(ndet-1)
@@ -565,8 +740,7 @@ MODULE gradient_descent
                 else 
                     next=picker(j+1)
                 end if
-                
-             
+        
                 if(grad_fin%grad_avlb(next).eq.1)then  
                     do k=1,norb
                         if(isnan(grad_fin%vars(next,k)).eqv..true.)then
@@ -576,41 +750,8 @@ MODULE gradient_descent
                     end do
                 end if
                 !Set up gradients for next pass
-                if(grad_fin%grad_avlb(next).eq.0)then 
-                    call gradient_row(haml,zstore,elect,next,ndet,occupancy_2an,occupancy_an_cr,occupancy_an)
-                    do k=1,norb 
-                        if(is_nan(grad_fin%vars(next,k)).eqv..true.)then
-                           
-                            nanchk=.true. 
-                            grad_fin%vars=0 
-                            grad_fin%grad_avlb=0
-                            do l=1 ,10
-                                call gradient_row(haml,zstore,elect,next,ndet,occupancy_2an,occupancy_an_cr,occupancy_an)
-                                do m=1,norb
-                                    if(is_nan(grad_fin%vars(next,m)).eqv..true.)then 
-                                        exit 
-                                    end if 
-                                    nanchk=.false. 
-                                end do 
-                                if(nanchk.eqv..false.)then 
-                                    exit 
-                                end if 
-                            end do  
-                            if(nanchk.eqv..true.)then 
-                                errorflag=1 
-                                write(0,"(a,i0)") "Error in gradient calculation for zombie state number ", next 
-                                return 
-                            else 
-                                exit 
-                            end if 
-                        end if 
-                    end do
-                    grad_fin%grad_avlb(next)=1
-                    dvecs(1)%d=cmplx(0.0,0.0)
-                    en%erg=0
-                    en%t=0
-                    call imgtime_prop(dvecs,en,temp_ham,next)
-                    call final_grad(dvecs(1),haml,grad_fin,next)
+                if(grad_fin%grad_avlb(next).eq.0)then
+                    call grad_calc(haml,zstore,elect,next,occupancy_2an,occupancy_an_cr,occupancy_an,dvecs,grad_fin,en) 
                 end if
 
                 
@@ -621,20 +762,8 @@ MODULE gradient_descent
             write(6,"(a,i0,a,f21.16,a,f12.10,a,i0,a)") "Energy after epoc no. ",epoc_cnt,": ", &
                 grad_fin%prev_erg, ". The current learning rate is: ",t, ". ", acpt_cnt, " Zombie state(s) altered."
 
-            rpstk=0 
-            ! Increases learnign rate after each epoc if acceptance has occured
-            ! do j=1,ndet-1
-            !     if(chng_trk(j).ne.0)then
-            !         ! rjct_cnt=0
-            !         if(lralt.gt.0)then 
-            !             lralt=lralt-1
-            !         end if
-            !         t=newb*(alpha**lralt)
-            !         if(lralt.eq.0)then 
-            !             exit 
-            !         end if 
-            !     end if 
-            ! end do 
+           
+
             if((acpt_cnt.gt.1).and.(newb.lt.b))then
                 newb=(((newb+b)/2)+b)/2
                 write(6,"(a,f12.10)") "b in learning rate equation t=b*(alpha^x) raised to ",newb 
@@ -673,6 +802,17 @@ MODULE gradient_descent
                 acpt1=0
                 acpt2=0
                 acpt_cnt=0
+            else if(acpt_cnt.eq.0)then
+                if((orbitcnt.eq.0).and.(epoc_cnt.gt.50))then  
+                    call orbital_gd(zstore,grad_fin,elect,dvecs,temp_dvecs,en,haml,temp_ham,chng_trk,temp_zom,occupancy_an,&
+                    occupancy_an_cr,occupancy_2an,epoc_cnt,alphain,b,picker,1)
+                    orbitcnt=100
+                else
+                    dvecs(1)%d_diff=0
+                    do j=2,ndet
+                        call final_grad(dvecs(1),haml,grad_fin,j)
+                    end do 
+                end if
             end if
 
 
@@ -702,265 +842,131 @@ MODULE gradient_descent
                 end if
                 write(6,"(a,f12.10,a,f12.10)") "b in learning rate equation t=b*(alpha^x) reduced to ",newb, "alpha is ", alpha 
             end if
+            if(orbitcnt.gt.0)then 
+                orbitcnt=orbitcnt-2 
+            end if
             acpt_cnt=0
             if(epoc_cnt.gt.20000)then 
                 exit 
             end if
         end do
 
-        ! Now to change individual orbital values
+    end subroutine full_zs_gd
 
-        alpha_zs=0.1  ! learning rate reduction
-        lralt_zs=0    ! power alpha is raised to 
-        newb_zs=b
-        chng_trk=0 !stores which if any ZS changed
-        chng_trk2=0 !stores which orbitals in the ZS have changed 
-        rjct_cnt=0 !tracks how many rejections 
-        acpt_cnt=0  !counts how many ZS have been changed
-        l2_rglrstn=0.01 !L2 regularisation lambda paramter
-        rpstk=0 !checks for computer error
-        rjct_cnt2=0
-        acpt_cnt=0
-        do while(rjct_cnt2.lt.(norb*100))
-            write(6,"(a)") '    Zombie state    |     Previous Energy     |    Energy after Gradient Descent steps &
-                           &   | Orbitals altered '
-            do j=1,(ndet-1)
-                grad_fin%current_erg=grad_fin%prev_erg
-                pick=picker(j)
-                pickerorb=scramble_norb(norb)
-                chng_trk2=0
-                acpt_cnt=0
-                do n=1,norb
-                    rjct_cnt=0
-                    pickorb=pickerorb(n)
-                    t=newb_zs(pick,pickorb)*(alpha_zs(pick,pickorb)**lralt_zs(pick,pickorb))
-                    do while(t.gt.(1.0d-10))
-                        nanchk=.false.
-                        if(is_nan(grad_fin%vars(pick,pickorb)).eqv..true.)then
-                            call gradient_row(haml,zstore,elect,pick,ndet,occupancy_2an,occupancy_an_cr,occupancy_an)
-                            dvecs(1)%d=cmplx(0.0,0.0)
-                            en%erg=0
-                            en%t=0
-                            call imgtime_prop(dvecs,en,temp_ham,pick)
-                            call final_grad(dvecs(1),haml,grad_fin,pick)
-                            grad_fin%grad_avlb(pick)=1 
-                        end if 
-                        
-                        ! Setup temporary zombie state
-                        temp_zom=zstore
-                        temp_zom(pick)%phi(pickorb)=zstore(pick)%phi(pickorb)-(t*(grad_fin%vars(pick,pickorb)))
-                        temp_zom(pick)%phi(pickorb)=temp_zom(pick)%phi(pickorb)+&
-                                            l2_rglrstn*((grad_fin%vars(pick,pickorb))*grad_fin%vars(pick,pickorb))
-                    
-                        if(is_nan(temp_zom(pick)%phi(pickorb)).eqv..true.)then
-                            t=(1.0d-11)
-                        end if
-                
-                        temp_zom(pick)%sin(pickorb)=sin(cmplx(temp_zom(pick)%phi(pickorb),0.0d0,kind=8))
-                        temp_zom(pick)%cos(pickorb)=cos(cmplx(temp_zom(pick)%phi(pickorb),0.0d0,kind=8))
-                        temp_ham=haml
-                        call he_full_row(temp_ham,temp_zom,elect,pick,ndet,occupancy_2an,occupancy_an_cr,occupancy_an)
-                        ! Imaginary time propagation for back tracing
-                        dvecs(1)%d=cmplx(0.0,0.0)
-                        en%erg=0
-                        en%t=0
-                        call imgtime_prop(dvecs,en,temp_ham,0)
-                        fxtdk=real(en%erg(1,timesteps+1))
-                        if(is_nan(fxtdk).eqv..true.)then 
-                            ergerr='NaN ' 
-                            write(0,"(a,a,a,i0,a,i0)") "Error in energy calculation which took value ",ergerr, &
-                            " for zombie state ", pick, ",orbital ", pickorb 
-                            t=(1.0d-11)
-                            nanchk=.true.
-                            rjct_cnt=1
-                        else if(is_posinf(fxtdk).eqv..true.)then
-                            ergerr='+NaN'  
-                            write(0,"(a,a,a,i0,a,i0)") "Error in energy calculation which took value ",ergerr, &
-                            " for zombie state ", pick, ",orbital ", pickorb  
-                            t=(1.0d-11)
-                            nanchk=.true.
-                            rjct_cnt=1
-                        else if(is_neginf(fxtdk).eqv..true.)then
-                            ergerr='-NaN'  
-                            write(0,"(a,a,a,i0,a,i0)") "Error in energy calculation which took value ",ergerr, &
-                            " for zombie state ", pick, ",orbital ", pickorb 
-                            t=(1.0d-11)
-                            nanchk=.true.
-                            rjct_cnt=1
-                        end if
-                        
-                        if(nanchk.eqv..false.)then
-                            ! Check if energy is lower and accept or reject
-                            if(fxtdk.lt.grad_fin%prev_erg)then
-                                t=(1.0d-11)
-                                acpt_cnt=acpt_cnt+1
-                                zstore=temp_zom
-                                chng_trk(j)=pick
-                                chng_trk2(acpt_cnt)=pickorb
-                                rjct_cnt=0
-                                rjct_cnt2=0
-                                haml=temp_ham
-                                grad_fin%grad_avlb=0
-                                grad_fin%vars=0.0
-                                haml%diff_hjk=0
-                                haml%diff_invh=0
-                                haml%diff_ovrlp=0
-                                grad_fin%prev_erg=fxtdk
-                                if(lralt_zs(pick,pickorb).gt.0)then 
-                                    lralt_zs(pick,pickorb)=lralt_zs(pick,pickorb)-1
-                                end if
-                            else 
-                                lralt_zs(pick,pickorb)=lralt_zs(pick,pickorb)+1
-                                t=newb_zs(pick,pickorb)*(alpha_zs(pick,pickorb)**lralt_zs(pick,pickorb))
-                                rjct_cnt=rjct_cnt+1
-                            end if
-                        end if
-                    end do
-               
-                    if((rjct_cnt.eq.0).and.(n.ne.norb))then
-                        call gradient_row(haml,zstore,elect,pick,ndet,occupancy_2an,occupancy_an_cr,occupancy_an)
-                        do k=1,norb 
-                            if(is_nan(grad_fin%vars(pick,k)).eqv..true.)then
-                                nanchk=.true. 
-                                grad_fin%vars=0 
-                                grad_fin%grad_avlb=0
-                                do l=1 ,10
-                                    call gradient_row(haml,zstore,elect,pick,ndet,occupancy_2an,occupancy_an_cr,occupancy_an)
-                                    do m=1,norb
-                                        if(is_nan(grad_fin%vars(pick,m)).eqv..true.)then 
-                                            exit 
-                                        end if 
-                                        nanchk=.false. 
-                                    end do 
-                                    if(nanchk.eqv..false.)then 
-                                        exit 
-                                    end if 
-                                end do  
-                                if(nanchk.eqv..true.)then 
-                                    errorflag=1 
-                                    write(0,"(a,i0)") "Error in gradient calculation for zombie state number ", pick 
-                                    return 
-                                else 
-                                    exit 
-                                end if 
-                            end if 
-                        end do
-                        dvecs(1)%d=cmplx(0.0,0.0)
-                        en%erg=0
-                        en%t=0
-                        call imgtime_prop(dvecs,en,temp_ham,pick)
-                        call final_grad(dvecs(1),haml,grad_fin,next)
-                        grad_fin%grad_avlb(pick)=1
-                    else if((rjct_cnt.ne.0)) then
-                        if(newb_zs(pick,pickorb).gt.1.27d-1)then
-                            newb_zs(pick,pickorb)=(((0.025+newb_zs(pick,pickorb))/2)+newb_zs(pick,pickorb))/2+0.025
-                            lralt_zs(pick,pickorb)=0
-                        else if((newb_zs(pick,pickorb).gt.1.1d-1))then
-                            newb_zs(pick,pickorb)=0.1
-                            lralt_zs(pick,pickorb)=0
-                        else 
-                            if(newb_zs(pick,pickorb).eq.0.1)then
-                                if(alpha_zs(pick,pickorb).le.0.6)then
-                                    alpha_zs(pick,pickorb)=alpha_zs(pick,pickorb)/2
-                                    lralt_zs(pick,pickorb)=0
-                                else 
-                                    exit
-                                end if
-                            end if    
-                        end if
-                    end if
-                end do
-                
+    subroutine zombie_alter(zstore,grad_fin,haml,elect,en,dvecs,chng_trk)
 
-                if(j.eq.(ndet-1))then 
-                    epoc_cnt=epoc_cnt+1
-                    picker=scramble(ndet-1)
-                    next=picker(1)
-                    !Every 100 epoc brings phi values back within the normal 0-2pi range
-                    if(modulo(epoc_cnt,100).eq.0)then 
-                        do k=2,ndet 
-                            do l=1,norb 
-                                if((zstore(k)%phi(l).gt.2*pirl).or.(zstore(k)%phi(l).lt.0))then 
-                                    zstore(k)%phi(l)=asin(real(zstore(k)%sin(l)))
-                                    if((zstore(k)%phi(l).gt.2*pirl))then
-                                        zstore(k)%phi(l)=zstore(k)%phi(l)-2*pirl
-                                    else if((zstore(k)%phi(l).lt.0))then
-                                        zstore(k)%phi(l)=zstore(k)%phi(l)+2*pirl
-                                    end if
-                                end if
-                            end do
-                        end do
-                    end if
-                else 
-                    next=picker(j+1)
-                end if
+        implicit none
 
-                if(grad_fin%grad_avlb(next).eq.1)then  
-                    do k=1,norb
-                        if(isnan(grad_fin%vars(next,k)).eqv..true.)then
-                            grad_fin%grad_avlb(next)=0
-                            exit 
-                        end if 
-                    end do
-                end if
+        type(zombiest),dimension(:),intent(inout)::zstore
+        type(grad),intent(inout)::grad_fin
+        type(elecintrgl),intent(in)::elect
+        type(dvector),dimension(:),intent(inout)::dvecs
+        type(dvector), dimension(:), allocatable:: temp_dvecs
+        type(energy),intent(inout)::en
+        type(hamiltonian),intent(inout)::haml
+        integer,dimension(:),intent(inout)::chng_trk
+        type(zombiest),dimension(:),allocatable::temp_zom
+        type(hamiltonian)::temp_ham
+        integer,allocatable,dimension(:,:,:)::occupancy_an
+        integer,allocatable,dimension(:,:,:,:)::occupancy_an_cr,occupancy_2an
+        integer::epoc_cnt,epoc_max
+        real(kind=8)::alpha,b
+        integer,dimension(ndet-1)::picker,rsrtpass
 
-                !Set up gradients for next pass
-                if(grad_fin%grad_avlb(next).eq.0)then 
-                    call gradient_row(haml,zstore,elect,next,ndet,occupancy_2an,occupancy_an_cr,occupancy_an)
-                    do k=1,norb 
-                        if(is_nan(grad_fin%vars(next,k)).eqv..true.)then
-                            nanchk=.true. 
-                            grad_fin%vars=0 
-                            grad_fin%grad_avlb=0
-                            do l=1 ,10
-                                call gradient_row(haml,zstore,elect,next,ndet,occupancy_2an,occupancy_an_cr,occupancy_an)
-                                do m=1,norb
-                                    if(is_nan(grad_fin%vars(next,m)).eqv..true.)then 
-                                        exit 
-                                    end if 
-                                    nanchk=.false. 
-                                end do 
-                                if(nanchk.eqv..false.)then 
-                                    exit 
-                                end if 
-                            end do  
-                            if(nanchk.eqv..true.)then 
-                                errorflag=1 
-                                write(0,"(a,i0)") "Error in gradient calculation for zombie state number ", next 
-                                return 
-                            else 
-                                exit 
-                            end if 
-                        end if 
-                    end do
-                    grad_fin%grad_avlb(next)=1
-                    dvecs(1)%d=cmplx(0.0,0.0)
-                    en%erg=0
-                    en%t=0
-                    call imgtime_prop(dvecs,en,temp_ham,next)
-                    call final_grad(dvecs(1),haml,grad_fin,next)
-                end if
-                if(acpt_cnt.gt.0)then
-                    write(6,"(a,i0,a,f21.16,a,f21.16,a,*(i0:','))") '       ', pick,'              ', &
-                    grad_fin%current_erg,'               ',grad_fin%prev_erg,'            ',chng_trk2(1:acpt_cnt) 
-                    rsrtpass(pick)=0
-                    zstore(pick)%update_num=zstore(pick)%update_num+1
-                    call zombiewriter(zstore(pick),pick,rsrtpass(pick))
-                else 
-                    write(6,"(a,i0,a,f21.16,a,f21.16,a,i0)") '       ', pick,'              ', &
-                    grad_fin%current_erg,'               ',grad_fin%prev_erg,'            ',0
-                    rjct_cnt2=rjct_cnt2+1
-                end if
+     
+        integer::ierr,j,k,l
+        
+        if (errorflag .ne. 0) return
+
+        allocate(occupancy_an(norb,2,norb),stat=ierr)
+        if(ierr==0) allocate(occupancy_2an(norb,norb,2,norb),stat=ierr)
+        if(ierr==0) allocate(occupancy_an_cr(norb,norb,2,norb),stat=ierr)
+        if (ierr/=0) then
+            write(0,"(a,i0)") "Error in occupancy vector allocation . ierr had value ", ierr
+            errorflag=1
+            return
+        end if 
+     
+        occupancy_an=1
+        occupancy_2an=1
+        occupancy_an_cr=1
+
+        !$omp parallel private(j,k,l) shared(occupancy_an,occupancy_2an,occupancy_an_cr)
+        !$omp do
+        do j=1,norb
+            occupancy_an(j,1,j)=0
+            do l=j-1, 1, -1
+                occupancy_an(j,1,l)=-1
             end do
-
-            call epoc_writer(grad_fin%prev_erg,epoc_cnt,chng_trk,0)
-            write(6,"(a,i0,a,f21.16)") "Energy after epoch no. ",epoc_cnt,": ",grad_fin%prev_erg
-            acpt_cnt=0
-            chng_trk=0
-            if(epoc_cnt.gt.30000)then 
-                exit 
-            end if
         end do
+        !$omp end do
+        !$omp barrier
+        !$omp do
+        do j=1,norb
+            do k=1, norb
+                occupancy_2an(j,k,:,:)=occupancy_an(j,:,:)
+                occupancy_2an(j,k,2,k)=occupancy_2an(j,k,1,k)
+                occupancy_2an(j,k,1,k)=0
+                occupancy_an_cr(j,k,:,:)=occupancy_an(j,:,:)
+                occupancy_an_cr(j,k,1,k)=occupancy_an_cr(j,k,2,k)
+                occupancy_an_cr(j,k,2,k)=0
+                do l=k-1,1,-1
+                    occupancy_2an(j,k,1,l)=occupancy_2an(j,k,1,l)*(-1)
+                    occupancy_an_cr(j,k,1,l)=occupancy_an_cr(j,k,1,l)*(-1)
+                end do
+            end do
+        end do
+        !$omp end do
+        !$omp end parallel
+        
+
+        if(rstrtflg.eq.'y')then 
+            open(unit=450,file='epoc.csv',status="old",iostat=ierr)
+            if(ierr/=0)then
+                write(0,"(a,i0)") "Error in opening epoc file to read in. ierr had value ", ierr
+                errorflag=1
+                return
+            end if
+            do 
+                read(450,*,iostat=ierr)
+                if(ierr<0)then
+                    close(450)
+                    exit
+                else if (ierr/=0) then
+                    write(0,"(a,i0)") "Error in counting epocs. ierr had value ", ierr
+                    errorflag=1
+                    return
+                end if
+                epoc_cnt=epoc_cnt+1
+            end do
+            close(450) 
+
+            call epoc_writer(grad_fin%prev_erg,epoc_cnt,chng_trk,1)
+            rsrtpass=1
+            ierr=0
+        end if
+
+        alpha=0.1  ! learning rate reduction
+        b=1.0D0 !starting learning rate
+        
+        epoc_cnt=0 !epoc counter
+        chng_trk=0 !stores which if any ZS changed
+        rsrtpass=0
+        epoc_max=30000
+        do j=1, ndet-1
+            picker(j)=j+1
+        end do
+
+        call alloczs(temp_zom,ndet)
+        call allocham(temp_ham,ndet,norb)
+        call allocdv(temp_dvecs,1,ndet,norb)
+
+
+        call full_zs_gd(zstore,grad_fin,elect,dvecs,temp_dvecs,en,haml,temp_ham,&
+        chng_trk,temp_zom,occupancy_an,occupancy_an_cr,occupancy_2an,epoc_cnt,alpha,b,picker) 
+        
+        call orbital_gd(zstore,grad_fin,elect,dvecs,temp_dvecs,en,haml,temp_ham,chng_trk,temp_zom,occupancy_an,&
+        occupancy_an_cr,occupancy_2an,epoc_cnt,alpha,b,picker,(epoc_max-epoc_cnt)) 
 
         !Brings phi values back within the normal 0-2pi range
         do k=2,ndet 
@@ -977,7 +983,8 @@ MODULE gradient_descent
         end do
 
         call deallocham(temp_ham) 
-        call dealloczs(temp_zom) 
+        call dealloczs(temp_zom)
+        call deallocdv(temp_dvecs) 
         deallocate(occupancy_an,stat=ierr)
         if(ierr==0) deallocate(occupancy_2an,stat=ierr)
         if(ierr==0) deallocate(occupancy_an_cr,stat=ierr)

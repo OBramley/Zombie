@@ -276,7 +276,7 @@ Module grad_d
                 temp2=temp2+(real(dvec%d(l)*dvec%d(j))*haml%diff_hjk(j,l,:))
             end if
         end do
-  
+     
         grad_fin%vars(diff_state,:)=(2*temp1)+temp2
      
 
