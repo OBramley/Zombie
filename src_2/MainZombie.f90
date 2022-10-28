@@ -35,7 +35,7 @@ program MainZombie
     write(6,"(a)") " ________________________________________________________________ "
     write(6,"(a)") "|                                                                |"
     write(6,"(a)") "|                                                                |"
-    write(6,"(a)") "|               Zombie State Simulation Program v2.00            |"
+    write(6,"(a)") "|               Zombie State Simulation Program v3.00            |"
     write(6,"(a)") "|                                                                |"
     write(6,"(a)") "|________________________________________________________________|"
     write(6,"(a)") ""
@@ -153,7 +153,7 @@ program MainZombie
             if(rstrtflg.eq.'n')then 
                 call epoc_writer(gradients%prev_erg,0,chng_trk,0)
             end if
-            call final_grad(dvecs(1),haml,gradients,2)
+            call final_grad(dvecs(1),haml,gradients,2,1)
             call zombie_alter(zstore,gradients,haml,elect,en,dvecs,chng_trk)
             GDflg='n'
             do j=1,ndet
