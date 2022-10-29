@@ -134,7 +134,7 @@ program MainZombie
                 call energywriter(en%t,en%erg(j,:),"energy_state_"//trim(stateno)//".csv",j,k)
             end do
         end if
-        print*,real(en%erg(1,timesteps+1))
+        
         if(GDflg.eq."y")then
             ! call allocgrad(gradients,ndet,norb)
             gradients%prev_erg=real(en%erg(1,timesteps+1))
