@@ -19,7 +19,7 @@ run={
     'language':'fortran',
 
     # What is the name of the run
-    'runfolder':'shit',
+    'runfolder':'li2new40',
 
     # Amount of time to request on HPC 
     'runtime': "48:00:00",
@@ -45,7 +45,7 @@ run={
 
     # Do you want to generate new zombie states. The program can work using previously gerated
     # Zombie states. Takes input 'y' or 'n'.
-    'zomgen':'n',
+    'zomgen':'y',
 
     'zombiefile':'zombie_states.pkl',
 
@@ -99,7 +99,7 @@ zombs={
     'spin':0,
 
     # Number of Zombie states
-    'ndet':10, 
+    'ndet':40, 
 
     # Type of zombie states. Random (ran), Hartree Fock (HF) or biased (bb)
     'zomtyp':'bb',
