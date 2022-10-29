@@ -18,11 +18,11 @@ program MainZombie
   
     type(zombiest), dimension(:), allocatable:: zstore, cstore
     type(dvector), dimension(:), allocatable:: dvecs, dvec_clean
-    type(energy):: en, en_clean
+    type(energy):: en
     type(elecintrgl)::elect
     type(hamiltonian)::haml, clean_haml
     type(grad)::gradients
-    integer:: j,k,l, istat,clean_ndet,ierr,diff_state
+    integer:: j,k, istat,clean_ndet,ierr,diff_state
     complex(kind=8)::clean_norm, clean_erg
     character(LEN=4)::stateno
     character(LEN=100) :: CWD
@@ -115,10 +115,6 @@ program MainZombie
             write(6,"(a)") "Hamiltonian successfully generated"
         else if (hamgflg=='n')then
             call read_ham(haml,ndet)
-            ! call matrixwriter(haml%hjk,ndet,"data/ham2.csv")
-            ! call matrixwriter(haml%ovrlp,ndet,"data/ovlp2.csv")
-            ! call matrixwriter(haml%inv,ndet,"inv.csv")
-            ! call matrixwriter(haml%kinvh,ndet,"kinvh.csv")
             write(6,"(a)") "Hamiltonian successfully read in"
         end if
             
@@ -138,7 +134,7 @@ program MainZombie
                 call energywriter(en%t,en%erg(j,:),"energy_state_"//trim(stateno)//".csv",j,k)
             end do
         end if
-        
+        print*,real(en%erg(1,timesteps+1))
         if(GDflg.eq."y")then
             ! call allocgrad(gradients,ndet,norb)
             gradients%prev_erg=real(en%erg(1,timesteps+1))

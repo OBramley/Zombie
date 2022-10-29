@@ -736,7 +736,9 @@ MODULE gradient_descent
 
                 if(j.eq.(ndet-1))then 
                     epoc_cnt=epoc_cnt+1
-                    picker=scramble(ndet-1)
+                    if(acpt_cnt.gt.0)then 
+                        picker=scramble(ndet-1)
+                    end if
                     next=picker(1)
                     !Every 100 epoc brings phi values back within the normal 0-2pi range
                     if(modulo(epoc_cnt,100).eq.0)then 
@@ -776,8 +778,6 @@ MODULE gradient_descent
             call epoc_writer(grad_fin%prev_erg,epoc_cnt,chng_trk,0)
             write(6,"(a,i0,a,f21.16,a,f12.10,a,i0,a)") "Energy after epoc no. ",epoc_cnt,": ", &
                 grad_fin%prev_erg, ". The current learning rate is: ",t, ". ", acpt_cnt, " Zombie state(s) altered."
-
-           
 
             if((acpt_cnt.gt.1).and.(newb.lt.b))then
                 newb=(((newb+b)/2)+b)/2
@@ -821,10 +821,16 @@ MODULE gradient_descent
                 if((orbitcnt.eq.10).and.(epoc_cnt.gt.100))then  
                     call orbital_gd(zstore,grad_fin,elect,dvecs,temp_dvecs,en,haml,temp_ham,chng_trk,temp_zom,occupancy_an,&
                     occupancy_an_cr,occupancy_2an,epoc_cnt,alphain,b,picker,1)
-                    orbitcnt=-15
+                    orbitcnt=-17
+                    lralt=0
                 end if
             end if
-
+            ! if((epoc_cnt.eq.500).and.(orbitcnt.ge.0))then
+            !     call orbital_gd(zstore,grad_fin,elect,dvecs,temp_dvecs,en,haml,temp_ham,chng_trk,temp_zom,occupancy_an,&
+            !     occupancy_an_cr,occupancy_2an,epoc_cnt,alphain,b,picker,1)
+            !     orbitcnt=-15
+            !     lralt=0
+            ! end if
 
             chng_trk=0
 
@@ -854,7 +860,7 @@ MODULE gradient_descent
             end if
             
             acpt_cnt=0
-            if(epoc_cnt.gt.20000)then 
+            if(epoc_cnt.gt.10000)then 
                 exit 
             end if
         end do
@@ -955,7 +961,7 @@ MODULE gradient_descent
         end if
 
         alpha=0.5  ! learning rate reduction
-        b=1.0D0 !starting learning rate
+        b=4.0D0 !starting learning rate
         
        
         chng_trk=0 !stores which if any ZS changed

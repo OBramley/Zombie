@@ -282,8 +282,8 @@ MODULE zom
                 do k=1,norb/2
                     val=-1
                     do while(val.lt.0)
-                        val=2*pirl*sig(k)*ZBQLU01(1)    ! 
-                        !  val=2*pirl*ZBQLNOR(mu(k),sig(k))
+                        ! val=2*pirl*mu(k)*ZBQLU01(1)    ! 
+                        val=2*pirl*ZBQLNOR(mu(k),sig(k))
                         ! if((val.gt.0.5*pirl))then
                         !     val=-1
                         ! end if
@@ -291,8 +291,8 @@ MODULE zom
                     zstore(j)%phi(2*k-1)=val
                     val=-1
                     do while(val.lt.0)
-                        val=2*pirl*sig(k)*ZBQLU01(1)
-                        ! val=2*pirl*ZBQLNOR(mu(k),sig(k))
+                        ! val=2*pirl*mu(k)*ZBQLU01(1)
+                        val=2*pirl*ZBQLNOR(mu(k),sig(k))
                     
                         ! if((val.gt.0.5*pirl))then
                         !     val=-1
@@ -333,31 +333,30 @@ MODULE zom
         implicit none
         real(kind=8),dimension(:),intent(inout)::mu,sig
         integer::alive,j
-        real(kind=8)::asrt,aend,dsrt
+        real(kind=8)::asrt,aend,dsrt,dend,val
 
 
         alive=int(nel/2)
         mu(1:alive)=0.25
         mu(alive+1:)=0
 
-        asrt=0.0   !0.0001
-        ! asrt=0
-        aend=0.90     !  0.200
-        dsrt=0.90/((norb/2)-1)     !      0.08
-        !dend= 0.0006
+        val=(norb/10)
 
-        do j=1,(norb/2)
-            sig(j)=exp(-0.7*asrt)-0.5
-            asrt=asrt+dsrt
-        end do
+        asrt=0.0001/ceiling(val)
+        aend=0.17/ceiling(val)     
+        dsrt=0.35/ceiling(val)  
+        dend= 0.15/ceiling(val)
+
+       
         
-        ! do j=0, (alive-1)
-        !     sig(j+1)=((aend-asrt)/(alive-1)*j)+asrt
-        ! end do
+        do j=0, (alive-1)
+            sig(j+1)=((aend-asrt)/(alive-1)*j)+asrt
+        end do
 
-        ! do j=0, (((norb/2)-alive)-1)
-        !     sig(j+1+alive)=((dend-dsrt)/(((norb/2)-alive)-1)*j)+dsrt
-        ! end do
+        do j=0, (((norb/2)-alive)-1)
+            ! mu(j+1+alive)=((dend-dsrt)/(((norb/2)-alive)-1)*j)+dsrt
+            sig(j+1+alive)=((dend-dsrt)/(((norb/2)-alive)-1)*j)+dsrt
+        end do
 
         return
 
