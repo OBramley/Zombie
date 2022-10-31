@@ -821,7 +821,7 @@ MODULE gradient_descent
                 if((orbitcnt.eq.10).and.(epoc_cnt.gt.100))then  
                     call orbital_gd(zstore,grad_fin,elect,dvecs,temp_dvecs,en,haml,temp_ham,chng_trk,temp_zom,occupancy_an,&
                     occupancy_an_cr,occupancy_2an,epoc_cnt,alphain,b,picker,1)
-                    orbitcnt=-17
+                    orbitcnt=-19
                     lralt=0
                 end if
             end if
@@ -961,7 +961,7 @@ MODULE gradient_descent
         end if
 
         alpha=0.5  ! learning rate reduction
-        b=4.0D0 !starting learning rate
+        b=8.0D0 !starting learning rate
         
        
         chng_trk=0 !stores which if any ZS changed
