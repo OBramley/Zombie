@@ -53,9 +53,7 @@ MODULE globvars
         real(kind=8):: prev_erg
         real(kind=8):: current_erg
         integer,dimension(:),allocatable::grad_avlb
-        real(kind=8),dimension(:,:),allocatable::prev_phi
-        real(kind=8),dimension(:,:),allocatable::rprop
-        integer(kind=8),dimension(:,:),allocatable::rpropaevious
+        real(kind=8),dimension(:,:),allocatable::prev_mmntm
     end type grad
 
     

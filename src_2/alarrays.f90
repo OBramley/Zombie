@@ -474,14 +474,14 @@ MODULE alarrays
         
         allocate(gradients%vars(num,length),stat=ierr)
         if (ierr==0)allocate(gradients%grad_avlb(num),stat=ierr)
-        if (ierr==0)allocate(gradients%prev_phi(num,length),stat=ierr)
-        if (ierr==0)allocate(gradients%rprop(num,length),stat=ierr)
-        if (ierr==0)allocate(gradients%rpropaevious(num,length),stat=ierr)
+        if (ierr==0)allocate(gradients%prev_mmntm(num,length),stat=ierr)
+        
         if (ierr/=0) then
             write(0,"(a,i0)") "Error in gradient matrix allocation. ierr had value ", ierr
             errorflag=1
             return
         end if
+        gradients%prev_mmntm=0
         gradients%vars=0
         gradients%grad_avlb=0
         return
@@ -501,9 +501,8 @@ MODULE alarrays
 
         
         deallocate(gradients%vars,stat=ierr)
-        if (ierr==0)deallocate(gradients%prev_phi,stat=ierr)
-        if (ierr==0)deallocate(gradients%rprop,stat=ierr)
-        if (ierr==0)deallocate(gradients%rpropaevious,stat=ierr)
+        if (ierr==0)deallocate(gradients%grad_avlb,stat=ierr)
+        if (ierr==0)deallocate(gradients%prev_mmntm,stat=ierr)
         if (ierr/=0) then
             write(0,"(a,i0)") "Error in gradient matrix deallocation. ierr had value ", ierr
             errorflag=1

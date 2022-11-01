@@ -424,7 +424,7 @@ MODULE gradient_descent
         chng_trk2=0 !stores which orbitals in the ZS have changed 
         rjct_cnt=0 !tracks how many rejections 
         acpt_cnt=0  !counts how many ZS have been changed
-        l2_rglrstn=0.01 !L2 regularisation lambda paramter
+        l2_rglrstn=1! !L2 regularisation lambda paramter
         rjct_cnt2=0
         acpt_cnt=0
         loops=0
@@ -510,6 +510,7 @@ MODULE gradient_descent
                                 haml%diff_invh=0
                                 haml%diff_ovrlp=0
                                 grad_fin%prev_erg=fxtdk
+                                grad_fin%prev_mmntm(pick,:)=zstore(pick)%phi(:)
                                 if(lralt_zs(pick,pickorb).gt.0)then 
                                     lralt_zs(pick,pickorb)=lralt_zs(pick,pickorb)-1
                                 end if
@@ -608,10 +609,10 @@ MODULE gradient_descent
         integer,intent(inout)::epoc_cnt
         real(kind=8),intent(in)::b,alphain
         integer,dimension(ndet-1),intent(inout)::picker
-        integer::lralt,rjct_cnt,next,acpt_cnt,acpt1,acpt2,pick,orbitcnt,d_diff_flg,lralt_temp
-        real(kind=8)::newb,t,fxtdk,l2_rglrstn,alpha
+        integer::lralt,rjct_cnt,next,acpt_cnt,acpt1,acpt2,pick,orbitcnt,d_diff_flg,lralt_temp,mmntmflg
+        real(kind=8)::newb,t,fxtdk,l2_rglrstn,alpha,mmnmtb
         real(kind=8),dimension(norb)::gradient_norm
-        ! integer(kind=8)::temp_int1,temp_int2
+        real(kind=8),dimension(ndet)::mmntm,mmntma
         integer,dimension(ndet-1)::rsrtpass
         DOUBLE PRECISION, external::ZBQLU01
        
@@ -630,11 +631,13 @@ MODULE gradient_descent
         rjct_cnt=0 !tracks how many rejections 
         t=newb*(alpha**lralt) !learning rate
         acpt_cnt=0  !counts how many ZS have been changed
-        l2_rglrstn=0.01 !L2 regularisation lambda paramter
+        l2_rglrstn=1! !L2 regularisation lambda paramter
         orbitcnt=0
+        mmntm=0
+        mmntma=1
+        mmntmflg=0
 
-
-        do while(t.gt.(1.0d-10))
+        do while(rjct_cnt.lt.200)
             t=newb*(alpha**lralt)
             write(6,"(a)") '    Zombie state    |     Previous Energy     |    Energy after Gradient Descent step &
             &   | Learning rate | Acceptance count | Rejection count'
@@ -652,13 +655,14 @@ MODULE gradient_descent
                     end if 
                 end do
                 gradient_norm=((grad_fin%vars(pick,:))*grad_fin%vars(pick,:))
-                do while(t.gt.(1.0d-6))
+                do while(t.gt.(1.0d-5))
                     t=newb*(alpha**lralt_temp)
                     nanchk=.false.
-                    
+                    mmnmtb=(t*mmntm(pick))/mmntma(pick)
                     ! Setup temporary zombie state
                     temp_zom=zstore
-                    temp_zom(pick)%phi(:)=zstore(pick)%phi(:)-(t*(grad_fin%vars(pick,:)))
+                    temp_zom(pick)%phi(:)=zstore(pick)%phi(:)-(t*(grad_fin%vars(pick,:)))+&
+                       mmnmtb*(zstore(pick)%phi(:)-grad_fin%prev_mmntm(pick,:))
                     temp_zom(pick)%phi(:)=temp_zom(pick)%phi(:)+l2_rglrstn*gradient_norm
                 
                     do k=1,norb
@@ -710,6 +714,9 @@ MODULE gradient_descent
                             haml%diff_ovrlp=0
                             grad_fin%prev_erg=fxtdk
                             d_diff_flg=0
+                            grad_fin%prev_mmntm(pick,:)=zstore(pick)%phi(:)
+                            mmntma(pick)=t
+                            mmntm(pick)=mmnmtb
                             if(orbitcnt.lt.0)then
                                 orbitcnt=orbitcnt+1 
                             else
@@ -741,7 +748,7 @@ MODULE gradient_descent
                                                 " for zombie state ", pick, ", on epoc ", epoc_cnt 
                     end if
                 end do
-                if(t.le.(1.0d-6))then
+                if(t.le.(1.0d-5))then
                     rjct_cnt=rjct_cnt+1
                     write(6,"(a,i0,a,f21.16,a,f21.16,a,f12.10,a,i0,a,i0)") '       ', pick,'              ', &
                 grad_fin%prev_erg,'               ',fxtdk,'            ',0.0,'          ',acpt_cnt,'                 ',rjct_cnt
@@ -749,14 +756,12 @@ MODULE gradient_descent
                         ! lralt=lralt+1
                         ! t=newb*(alpha**lralt)
                         ! rjct_cnt=0
-                        if(epoc_cnt.gt.100)then
+                        if(orbitcnt.ne.0)then
                             orbitcnt=orbitcnt+1
                         end if
                     end if
                 end if
 
-            
-                
                 t=newb*(alpha**lralt)
                 if(j.eq.(ndet-1))then 
                     epoc_cnt=epoc_cnt+1
@@ -803,56 +808,63 @@ MODULE gradient_descent
             write(6,"(a,i0,a,f21.16,a,f12.10,a,i0,a)") "Energy after epoc no. ",epoc_cnt,": ", &
                 grad_fin%prev_erg, ". The current learning rate is: ",t, ". ", acpt_cnt, " Zombie state(s) altered."
 
-            if((acpt_cnt.gt.1).and.(newb.lt.b))then
-                newb=(((newb+b)/2)+b)/2
-                write(6,"(a,f12.10)") "b in learning rate equation t=b*(alpha^x) raised to ",newb 
-                lralt=0    
-                rjct_cnt=0
-                acpt_cnt=0
-            end if
+            ! if((acpt_cnt.gt.1).and.(newb.lt.b))then
+            !     newb=(((newb+b)/2)+b)/2
+            !     write(6,"(a,f12.10)") "b in learning rate equation t=b*(alpha^x) raised to ",newb 
+            !     lralt=0    
+            !     rjct_cnt=0
+            !     acpt_cnt=0
+            ! end if
 
+            
             ! If only a single ZS is being altered the learning rate is lowered to allow others to be changed
-            if(acpt_cnt.eq.1)then   
-                do j=1,ndet-1
-                    if(chng_trk(j).ne.0)then 
-                        if(acpt1.eq.0)then 
-                            acpt1=chng_trk(j)
-                            acpt_cnt=0
-                        else 
-                            if(chng_trk(j).ne.acpt1)then 
-                                acpt1=chng_trk(j)
-                                acpt2=0
-                                acpt_cnt=0 
-                            else if(chng_trk(j).eq.acpt1)then
-                                acpt2=acpt2+1
-                                acpt_cnt=0
-                                if(acpt2.gt.3)then
-                                    if((t.gt.9.9d-5))then
-                                        lralt=lralt+1
-                                    end if
-                                end if 
-                            end if 
-                            acpt_cnt=0
-                        end if
-                        exit
-                    end if
-                end do
-            else if(acpt_cnt.gt.1)then
-                acpt1=0
-                acpt2=0
-                acpt_cnt=0
-            else if(acpt_cnt.eq.0)then
-                if((orbitcnt.eq.10).and.(epoc_cnt.gt.100))then  
+            if(acpt_cnt.eq.1)then
+                if((orbitcnt.ge.0).and.(epoc_cnt.gt.100))then  
                     call orbital_gd(zstore,grad_fin,elect,dvecs,temp_dvecs,en,haml,temp_ham,chng_trk,temp_zom,occupancy_an,&
                     occupancy_an_cr,occupancy_2an,epoc_cnt,alphain,b,picker,1)
-                    orbitcnt=-19
+                    orbitcnt=-25
                     lralt=0
+                end if   
+                ! do j=1,ndet-1
+                !     if(chng_trk(j).ne.0)then 
+                !         if(acpt1.eq.0)then 
+                !             acpt1=chng_trk(j)
+                !             acpt_cnt=0
+                !         else 
+                !             if(chng_trk(j).ne.acpt1)then 
+                !                 acpt1=chng_trk(j)
+                !                 acpt2=0
+                !                 acpt_cnt=0 
+                !             else if(chng_trk(j).eq.acpt1)then
+                !                 acpt2=acpt2+1
+                !                 acpt_cnt=0
+                !                 if(acpt2.gt.3)then
+                !                     if((t.gt.9.9d-5))then
+                !                         lralt=lralt+1
+                !                     end if
+                !                 end if 
+                !             end if 
+                !             acpt_cnt=0
+                !         end if
+                !         exit
+                !     end if
+                ! end do
+            else if(acpt_cnt.gt.1)then
+                ! acpt1=0
+                ! acpt2=0
+                ! acpt_cnt=0
+            else if(acpt_cnt.eq.0)then
+                if((epoc_cnt.gt.50))then  
+                    call orbital_gd(zstore,grad_fin,elect,dvecs,temp_dvecs,en,haml,temp_ham,chng_trk,temp_zom,occupancy_an,&
+                    occupancy_an_cr,occupancy_2an,epoc_cnt,alphain,b,picker,1)
+                    orbitcnt=-25
                 end if
             end if
-            if((epoc_cnt.gt.500).and.(orbitcnt.ge.0).and.(modulo(epoc_cnt,200).eq.0))then
+
+            if((epoc_cnt.gt.500).and.(orbitcnt.ge.0).and.(modulo(epoc_cnt,100).eq.0))then
                 call orbital_gd(zstore,grad_fin,elect,dvecs,temp_dvecs,en,haml,temp_ham,chng_trk,temp_zom,occupancy_an,&
                 occupancy_an_cr,occupancy_2an,epoc_cnt,alphain,b,picker,1)
-                orbitcnt=-15
+                orbitcnt=-25
                 lralt=0
             end if
 
@@ -860,33 +872,36 @@ MODULE gradient_descent
 
             t=newb*(alpha**lralt)
             !Redces b value in learning rate 
-            if((t.lt.9.9d-7))then
-                if(newb.gt.1.27d-1)then
-                    newb=(((0.025+newb)/2)+newb)/2+0.025
-                    rjct_cnt=0
-                    lralt=0
-                else if((newb.gt.1.1d-1))then
-                    newb=0.1
-                    rjct_cnt=0
-                    lralt=0
-                else 
-                    if(newb.eq.0.1)then
-                        if(alpha.le.0.6)then
-                            alpha=alpha/2
-                            rjct_cnt=0
-                            lralt=0
-                        else 
-                            exit
-                        end if
-                    end if    
-                end if
-                write(6,"(a,f12.10,a,f12.10)") "b in learning rate equation t=b*(alpha^x) reduced to ",newb, "alpha is ", alpha 
-            end if
-            
+            ! if((t.lt.9.9d-7))then
+            !     if(newb.gt.1.27d-1)then
+            !         newb=(((0.025+newb)/2)+newb)/2+0.025
+            !         rjct_cnt=0
+            !         lralt=0
+            !     else if((newb.gt.1.1d-1))then
+            !         newb=0.1
+            !         rjct_cnt=0
+            !         lralt=0
+            !     else 
+            !         if(newb.eq.0.1)then
+            !             if(alpha.le.0.6)then
+            !                 alpha=alpha/2
+            !                 rjct_cnt=0
+            !                 lralt=0
+            !             else 
+            !                 exit
+            !             end if
+            !         end if    
+            !     end if
+            !     write(6,"(a,f12.10,a,f12.10)") "b in learning rate equation t=b*(alpha^x) reduced to ",newb, "alpha is ", alpha 
+            ! end if
+            if(mmntmflg.eq.0)then 
+                mmntm=0.4
+                mmntmflg=1
+            end if 
             acpt_cnt=0
-            if(epoc_cnt.gt.10000)then 
-                exit 
-            end if
+            ! if(epoc_cnt.gt.10000)then 
+            !     exit 
+            ! end if
         end do
 
     end subroutine full_zs_gd
