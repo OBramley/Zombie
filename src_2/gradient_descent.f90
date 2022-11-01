@@ -715,11 +715,13 @@ MODULE gradient_descent
                             else
                                 orbitcnt=0
                             end if
-                            if(lralt.eq.1)then 
-                                lralt=0
-                            else if(lralt.gt.1)then 
-                                lralt=lralt-2
-                            end if
+                            ! if(lralt.eq.1)then 
+                            !     lralt=0
+                            ! else if(lralt.gt.1)then 
+                            !     lralt=lralt-2
+                            ! end if
+                            write(6,"(a,i0,a,f21.16,a,f21.16,a,f12.10,a,i0,a,i0)") '       ', pick,'              ', &
+                grad_fin%prev_erg,'               ',fxtdk,'            ',t,'          ',acpt_cnt,'                 ',rjct_cnt
                             Exit
                             ! t=newb*(alpha**lralt)
                         else 
@@ -741,10 +743,12 @@ MODULE gradient_descent
                 end do
                 if(lralt.ne.lralt_temp)then
                     rjct_cnt=rjct_cnt+1
+                    write(6,"(a,i0,a,f21.16,a,f21.16,a,f12.10,a,i0,a,i0)") '       ', pick,'              ', &
+                grad_fin%prev_erg,'               ',fxtdk,'            ',0,'          ',acpt_cnt,'                 ',rjct_cnt
                     if(rjct_cnt.eq.(ndet-1))then
-                        lralt=lralt+1
-                        t=newb*(alpha**lralt)
-                        rjct_cnt=0
+                        ! lralt=lralt+1
+                        ! t=newb*(alpha**lralt)
+                        ! rjct_cnt=0
                         if(epoc_cnt.gt.100)then
                             orbitcnt=orbitcnt+1
                         end if
