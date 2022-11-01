@@ -19,7 +19,7 @@ run={
     'language':'fortran',
 
     # What is the name of the run
-    'runfolder':'Li_Lr2',
+    'runfolder':'Li_linesearch2',
 
     # Amount of time to request on HPC 
     'runtime': "48:00:00",
