@@ -741,10 +741,10 @@ MODULE gradient_descent
                                                 " for zombie state ", pick, ", on epoc ", epoc_cnt 
                     end if
                 end do
-                if(lralt.ne.lralt_temp)then
+                if(t.le.(1.0d-6))then
                     rjct_cnt=rjct_cnt+1
                     write(6,"(a,i0,a,f21.16,a,f21.16,a,f12.10,a,i0,a,i0)") '       ', pick,'              ', &
-                grad_fin%prev_erg,'               ',fxtdk,'            ',0,'          ',acpt_cnt,'                 ',rjct_cnt
+                grad_fin%prev_erg,'               ',fxtdk,'            ',0.0,'          ',acpt_cnt,'                 ',rjct_cnt
                     if(rjct_cnt.eq.(ndet-1))then
                         ! lralt=lralt+1
                         ! t=newb*(alpha**lralt)
@@ -755,8 +755,7 @@ MODULE gradient_descent
                     end if
                 end if
 
-                write(6,"(a,i0,a,f21.16,a,f21.16,a,f12.10,a,i0,a,i0)") '       ', pick,'              ', &
-                grad_fin%prev_erg,'               ',fxtdk,'            ',t,'          ',acpt_cnt,'                 ',rjct_cnt
+            
                 
                 t=newb*(alpha**lralt)
                 if(j.eq.(ndet-1))then 
