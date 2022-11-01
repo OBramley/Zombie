@@ -19,14 +19,14 @@ run={
     'language':'fortran',
 
     # What is the name of the run
-    'runfolder':'li2new40',
+    'runfolder':'GPU_test',
 
     # Amount of time to request on HPC 
     'runtime': "48:00:00",
 
     'nodes':1,
 
-    'cores':4,
+    'cores':2,
 
     # Set the numpy random seed for Zombie state generation
     'seed':1,
@@ -99,7 +99,7 @@ zombs={
     'spin':0,
 
     # Number of Zombie states
-    'ndet':40, 
+    'ndet':10, 
 
     # Type of zombie states. Random (ran), Hartree Fock (HF) or biased (bb)
     'zomtyp':'bb',

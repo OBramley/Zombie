@@ -18,11 +18,11 @@ program MainZombie
   
     type(zombiest), dimension(:), allocatable:: zstore, cstore
     type(dvector), dimension(:), allocatable:: dvecs, dvec_clean
-    type(energy):: en, en_clean
+    type(energy):: en
     type(elecintrgl)::elect
     type(hamiltonian)::haml, clean_haml
     type(grad)::gradients
-    integer:: j,k,l, istat,clean_ndet,ierr,diff_state
+    integer:: j,k, istat,clean_ndet,ierr,diff_state
     complex(kind=8)::clean_norm, clean_erg
     character(LEN=4)::stateno
     character(LEN=100) :: CWD
@@ -35,7 +35,7 @@ program MainZombie
     write(6,"(a)") " ________________________________________________________________ "
     write(6,"(a)") "|                                                                |"
     write(6,"(a)") "|                                                                |"
-    write(6,"(a)") "|               Zombie State Simulation Program v2.00            |"
+    write(6,"(a)") "|               Zombie State Simulation Program v3.00            |"
     write(6,"(a)") "|                                                                |"
     write(6,"(a)") "|________________________________________________________________|"
     write(6,"(a)") ""
@@ -115,10 +115,6 @@ program MainZombie
             write(6,"(a)") "Hamiltonian successfully generated"
         else if (hamgflg=='n')then
             call read_ham(haml,ndet)
-            ! call matrixwriter(haml%hjk,ndet,"data/ham2.csv")
-            ! call matrixwriter(haml%ovrlp,ndet,"data/ovlp2.csv")
-            ! call matrixwriter(haml%inv,ndet,"inv.csv")
-            ! call matrixwriter(haml%kinvh,ndet,"kinvh.csv")
             write(6,"(a)") "Hamiltonian successfully read in"
         end if
             
@@ -153,7 +149,7 @@ program MainZombie
             if(rstrtflg.eq.'n')then 
                 call epoc_writer(gradients%prev_erg,0,chng_trk,0)
             end if
-            call final_grad(dvecs(1),haml,gradients,2)
+            call final_grad(dvecs(1),haml,gradients,2,1)
             call zombie_alter(zstore,gradients,haml,elect,en,dvecs,chng_trk)
             GDflg='n'
             do j=1,ndet

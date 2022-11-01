@@ -323,7 +323,7 @@ MODULE gradient_descent
 
     end subroutine gradient_row
 
-    subroutine grad_calc(haml,zstore,elect,pick,occupancy_2an,occupancy_an_cr,occupancy_an,dvec,grad_fin,en)
+    subroutine grad_calc(haml,zstore,elect,pick,occupancy_2an,occupancy_an_cr,occupancy_an,dvec,grad_fin,en,d_diff_flg)
 
         implicit none 
 
@@ -334,7 +334,7 @@ MODULE gradient_descent
         type(hamiltonian),intent(inout)::haml
         integer,dimension(:,:,:),intent(in)::occupancy_an
         integer,dimension(:,:,:,:),intent(in)::occupancy_an_cr,occupancy_2an
-        integer,intent(in)::pick
+        integer,intent(in)::pick,d_diff_flg
         integer::k,l,m
         logical::nanchk
         type(energy),intent(inout)::en
@@ -371,12 +371,19 @@ MODULE gradient_descent
         end do
         en%erg=0
         en%t=0
-        call imgtime_prop(dvec,en,haml,pick)
-        call final_grad(dvec(1),haml,grad_fin,pick)
+
+        if(d_diff_flg.eq.1)then
+            call imgtime_prop(dvec,en,haml,pick)
+        end if
+
+        call final_grad(dvec(1),haml,grad_fin,pick,d_diff_flg)
 
         ! print*,grad_fin%vars(pick,:)
-        grad_fin%grad_avlb(pick)=1
-        
+        if(d_diff_flg.eq.0)then
+            grad_fin%grad_avlb(pick)=1
+        else if(d_diff_flg.eq.1)then 
+            grad_fin%grad_avlb(pick)=2
+        end if
         return
 
     end subroutine grad_calc
@@ -399,7 +406,7 @@ MODULE gradient_descent
         integer,dimension(:,:,:,:)::occupancy_an_cr,occupancy_2an
         real(kind=8),intent(in)::b,alphain
         integer,dimension(ndet-1),intent(inout)::picker
-        integer::rjct_cnt,next,acpt_cnt,pick,pickorb,rjct_cnt2,loops
+        integer::rjct_cnt,next,acpt_cnt,pick,pickorb,rjct_cnt2,loops,d_diff_flg
         real(kind=8)::t,fxtdk,l2_rglrstn
         integer,dimension(ndet-1)::rsrtpass
         integer,dimension(ndet,norb)::lralt_zs
@@ -421,6 +428,7 @@ MODULE gradient_descent
         rjct_cnt2=0
         acpt_cnt=0
         loops=0
+        d_diff_flg=1
         do while(rjct_cnt2.lt.(norb*100))
             loops=loops+1
             write(6,"(a)") '    Zombie state    |     Previous Energy     |    Energy after Gradient Descent steps &
@@ -438,7 +446,8 @@ MODULE gradient_descent
                     do while(t.gt.(1.0d-10))
                         nanchk=.false.
                         if(is_nan(grad_fin%vars(pick,pickorb)).eqv..true.)then
-                            call grad_calc(haml,zstore,elect,pick,occupancy_2an,occupancy_an_cr,occupancy_an,dvecs,grad_fin,en) 
+                            call grad_calc(haml,zstore,elect,pick,occupancy_2an,occupancy_an_cr,&
+                            occupancy_an,dvecs,grad_fin,en,d_diff_flg) 
                         end if 
                         
                         ! Setup temporary zombie state
@@ -450,7 +459,6 @@ MODULE gradient_descent
                         if(is_nan(temp_zom(pick)%phi(pickorb)).eqv..true.)then
                             t=(1.0d-11)
                         end if
-                
                         temp_zom(pick)%sin(pickorb)=sin(cmplx(temp_zom(pick)%phi(pickorb),0.0d0,kind=8))
                         temp_zom(pick)%cos(pickorb)=cos(cmplx(temp_zom(pick)%phi(pickorb),0.0d0,kind=8))
                         temp_ham=haml
@@ -514,7 +522,8 @@ MODULE gradient_descent
                     end do
                
                     if((rjct_cnt.eq.0).and.(n.ne.norb))then
-                        call grad_calc(haml,zstore,elect,pick,occupancy_2an,occupancy_an_cr,occupancy_an,dvecs,grad_fin,en) 
+                        call grad_calc(haml,zstore,elect,pick,occupancy_2an,&
+                        occupancy_an_cr,occupancy_an,dvecs,grad_fin,en,d_diff_flg) 
                     end if
                 end do
                 
@@ -523,9 +532,7 @@ MODULE gradient_descent
                     epoc_cnt=epoc_cnt+1
                     picker=scramble(ndet-1)
                     next=picker(1)
-                    if(modulo(epoc_cnt,2).eq.0)then 
-                        lralt_zs=0
-                    end if
+                    lralt_zs=0
                     !Every 100 epoc brings phi values back within the normal 0-2pi range
                     if(modulo(epoc_cnt,100).eq.0)then 
                         do k=2,ndet 
@@ -547,7 +554,7 @@ MODULE gradient_descent
 
                 if(grad_fin%grad_avlb(next).eq.1)then  
                     do k=1,norb
-                        if(isnan(grad_fin%vars(next,k)).eqv..true.)then
+                        if(is_nan(grad_fin%vars(next,k)).eqv..true.)then
                             grad_fin%grad_avlb(next)=0
                             exit 
                         end if 
@@ -556,7 +563,7 @@ MODULE gradient_descent
 
                 !Set up gradients for next pass
                 if(grad_fin%grad_avlb(next).eq.0)then 
-                    call grad_calc(haml,zstore,elect,next,occupancy_2an,occupancy_an_cr,occupancy_an,dvecs,grad_fin,en) 
+                    call grad_calc(haml,zstore,elect,next,occupancy_2an,occupancy_an_cr,occupancy_an,dvecs,grad_fin,en,d_diff_flg) 
                 end if
                 if(acpt_cnt.gt.0)then
                     write(6,"(a,i0,a,f21.16,a,f21.16,a,*(i0:','))") '       ', pick,'              ', &
@@ -601,11 +608,11 @@ MODULE gradient_descent
         integer,intent(inout)::epoc_cnt
         real(kind=8),intent(in)::b,alphain
         integer,dimension(ndet-1),intent(inout)::picker
-        integer::lralt,rjct_cnt,next,acpt_cnt,acpt1,acpt2,pick,orbitcnt
+        integer::lralt,rjct_cnt,next,acpt_cnt,acpt1,acpt2,pick,orbitcnt,d_diff_flg
         real(kind=8)::newb,t,fxtdk,l2_rglrstn,alpha
         integer(kind=8)::temp_int1,temp_int2
         integer,dimension(ndet-1)::rsrtpass
-
+        DOUBLE PRECISION, external::ZBQLU01
        
         logical::nanchk
         character(len=4)::ergerr
@@ -625,9 +632,6 @@ MODULE gradient_descent
         l2_rglrstn=0.01 !L2 regularisation lambda paramter
         orbitcnt=0
 
-        do j=1, ndet-1
-            picker(j)=j+1
-        end do
 
         do while(t.gt.(1.0d-10))
             t=newb*(alpha**lralt)
@@ -640,7 +644,8 @@ MODULE gradient_descent
                 nanchk=.false.
                 do k=1,norb
                     if(is_nan(grad_fin%vars(pick,k)).eqv..true.)then
-                        call grad_calc(haml,zstore,elect,pick,occupancy_2an,occupancy_an_cr,occupancy_an,dvecs,grad_fin,en)
+                        call grad_calc(haml,zstore,elect,pick,occupancy_2an,occupancy_an_cr,&
+                        occupancy_an,dvecs,grad_fin,en,d_diff_flg)
                         nanchk=.false. 
                         exit 
                     end if 
@@ -701,16 +706,27 @@ MODULE gradient_descent
                         haml%diff_invh=0
                         haml%diff_ovrlp=0
                         grad_fin%prev_erg=fxtdk
-                        if(lralt.gt.0)then 
-                            lralt=lralt-1
+                        d_diff_flg=0
+                        if(orbitcnt.lt.0)then
+                            orbitcnt=orbitcnt+1 
+                        else
+                            orbitcnt=0
+                        end if
+                        if(lralt.eq.1)then 
+                            lralt=0
+                        else if(lralt.gt.1)then 
+                            lralt=lralt-2
                         end if
                         t=newb*(alpha**lralt)
                     else 
                         rjct_cnt=rjct_cnt+1
-                        if(rjct_cnt.eq.(ndet-1))then 
+                        if(rjct_cnt.eq.(ndet-1))then
                             lralt=lralt+1
                             t=newb*(alpha**lralt)
                             rjct_cnt=0
+                            if(epoc_cnt.gt.100)then
+                                orbitcnt=orbitcnt+1
+                            end if
                         end if
                     end if
                 else 
@@ -720,7 +736,9 @@ MODULE gradient_descent
 
                 if(j.eq.(ndet-1))then 
                     epoc_cnt=epoc_cnt+1
-                    picker=scramble(ndet-1)
+                    if(acpt_cnt.gt.0)then 
+                        picker=scramble(ndet-1)
+                    end if
                     next=picker(1)
                     !Every 100 epoc brings phi values back within the normal 0-2pi range
                     if(modulo(epoc_cnt,100).eq.0)then 
@@ -741,28 +759,25 @@ MODULE gradient_descent
                     next=picker(j+1)
                 end if
         
-                if(grad_fin%grad_avlb(next).eq.1)then  
-                    do k=1,norb
-                        if(isnan(grad_fin%vars(next,k)).eqv..true.)then
-                            grad_fin%grad_avlb(next)=0
-                            exit 
-                        end if 
-                    end do
-                end if
-                !Set up gradients for next pass
-                if(grad_fin%grad_avlb(next).eq.0)then
-                    call grad_calc(haml,zstore,elect,next,occupancy_2an,occupancy_an_cr,occupancy_an,dvecs,grad_fin,en) 
+                if(grad_fin%grad_avlb(next).eq.1)then 
+                    d_diff_flg=1 
+                else 
+                    d_diff_flg=0
+                    if((ZBQLU01(1)).lt.0.3)then 
+                        d_diff_flg=1
+                    end if
                 end if
 
-                
-            
+                !Set up gradients for next pass
+                if(grad_fin%grad_avlb(next).lt.2)then
+                    call grad_calc(haml,zstore,elect,next,occupancy_2an,occupancy_an_cr,occupancy_an,dvecs,grad_fin,en,d_diff_flg) 
+                end if
+
             end do
 
             call epoc_writer(grad_fin%prev_erg,epoc_cnt,chng_trk,0)
             write(6,"(a,i0,a,f21.16,a,f12.10,a,i0,a)") "Energy after epoc no. ",epoc_cnt,": ", &
                 grad_fin%prev_erg, ". The current learning rate is: ",t, ". ", acpt_cnt, " Zombie state(s) altered."
-
-           
 
             if((acpt_cnt.gt.1).and.(newb.lt.b))then
                 newb=(((newb+b)/2)+b)/2
@@ -803,18 +818,19 @@ MODULE gradient_descent
                 acpt2=0
                 acpt_cnt=0
             else if(acpt_cnt.eq.0)then
-                if((orbitcnt.eq.0).and.(epoc_cnt.gt.50))then  
+                if((orbitcnt.eq.10).and.(epoc_cnt.gt.100))then  
                     call orbital_gd(zstore,grad_fin,elect,dvecs,temp_dvecs,en,haml,temp_ham,chng_trk,temp_zom,occupancy_an,&
                     occupancy_an_cr,occupancy_2an,epoc_cnt,alphain,b,picker,1)
-                    orbitcnt=100
-                else
-                    dvecs(1)%d_diff=0
-                    do j=2,ndet
-                        call final_grad(dvecs(1),haml,grad_fin,j)
-                    end do 
+                    orbitcnt=-17
+                    lralt=0
                 end if
             end if
-
+            ! if((epoc_cnt.eq.500).and.(orbitcnt.ge.0))then
+            !     call orbital_gd(zstore,grad_fin,elect,dvecs,temp_dvecs,en,haml,temp_ham,chng_trk,temp_zom,occupancy_an,&
+            !     occupancy_an_cr,occupancy_2an,epoc_cnt,alphain,b,picker,1)
+            !     orbitcnt=-15
+            !     lralt=0
+            ! end if
 
             chng_trk=0
 
@@ -842,11 +858,9 @@ MODULE gradient_descent
                 end if
                 write(6,"(a,f12.10,a,f12.10)") "b in learning rate equation t=b*(alpha^x) reduced to ",newb, "alpha is ", alpha 
             end if
-            if(orbitcnt.gt.0)then 
-                orbitcnt=orbitcnt-2 
-            end if
+            
             acpt_cnt=0
-            if(epoc_cnt.gt.20000)then 
+            if(epoc_cnt.gt.10000)then 
                 exit 
             end if
         end do
@@ -919,7 +933,7 @@ MODULE gradient_descent
         !$omp end do
         !$omp end parallel
         
-
+        epoc_cnt=0 !epoc counter
         if(rstrtflg.eq.'y')then 
             open(unit=450,file='epoc.csv',status="old",iostat=ierr)
             if(ierr/=0)then
@@ -946,13 +960,14 @@ MODULE gradient_descent
             ierr=0
         end if
 
-        alpha=0.1  ! learning rate reduction
-        b=1.0D0 !starting learning rate
+        alpha=0.5  ! learning rate reduction
+        b=4.0D0 !starting learning rate
         
-        epoc_cnt=0 !epoc counter
+       
         chng_trk=0 !stores which if any ZS changed
         rsrtpass=0
         epoc_max=30000
+
         do j=1, ndet-1
             picker(j)=j+1
         end do
@@ -961,6 +976,10 @@ MODULE gradient_descent
         call allocham(temp_ham,ndet,norb)
         call allocdv(temp_dvecs,1,ndet,norb)
 
+        if(epoc_cnt.eq.0)then
+            call orbital_gd(zstore,grad_fin,elect,dvecs,temp_dvecs,en,haml,temp_ham,chng_trk,temp_zom,occupancy_an,&
+            occupancy_an_cr,occupancy_2an,epoc_cnt,alpha,b,picker,1)
+        end if 
 
         call full_zs_gd(zstore,grad_fin,elect,dvecs,temp_dvecs,en,haml,temp_ham,&
         chng_trk,temp_zom,occupancy_an,occupancy_an_cr,occupancy_2an,epoc_cnt,alpha,b,picker) 
@@ -1001,18 +1020,18 @@ MODULE gradient_descent
         
         implicit none
 
-        integer,intent(in)    :: number_of_values
-        integer,allocatable   :: out(:),array(:)
+        integer,intent(in)::number_of_values
+        integer,allocatable::out(:),array(:)
         integer::n,m,k,j,l,jtemp
-        real::u
+        DOUBLE PRECISION, external::ZBQLU01
+    
 
         out=[(j,j=1,number_of_values)]
         array=[(j,j=1,number_of_values+1)]
         n=1; m=number_of_values
         do k=1,2
             do j=1,m+1
-                call random_number(u)
-                l = n + FLOOR((m+1-n)*u)
+                l = n + FLOOR((m+1-n)*ZBQLU01(1))
                 jtemp=array(l)
                 array(l)=array(j)
                 array(j)=jtemp
@@ -1034,17 +1053,16 @@ MODULE gradient_descent
     
         implicit none
 
-        integer,intent(in)    :: number_of_values
-        integer,allocatable   :: out(:)
+        integer,intent(in)::number_of_values
+        integer,allocatable::out(:)
         integer::n,m,k,j,l,jtemp
-        real::u
+        DOUBLE PRECISION, external::ZBQLU01
 
         out=[(j,j=1,number_of_values)]
         n=1; m=number_of_values
         do k=1,2
             do j=1,m
-                call random_number(u)
-                l = n + FLOOR((m-n)*u)
+                l = n + FLOOR((m-n)*(ZBQLU01(1)))
                 jtemp=out(l)
                 out(l)=out(j)
                 out(j)=jtemp
