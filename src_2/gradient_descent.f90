@@ -690,9 +690,7 @@ MODULE gradient_descent
                         nanchk=.true.
                         ergerr='-NaN'  
                     end if
-                    
-                    ! write(6,"(a,i0,a,f21.16,a,f21.16,a,f12.10,a,i0,a,i0)") '       ', pick,'              ', &
-                    ! grad_fin%prev_erg,'               ',fxtdk,'            ',t,'          ',acpt_cnt,'                 ',rjct_cnt
+            
                     if(nanchk.eqv..false.)then
                         ! Check if energy is lower and accept or reject
                         if(fxtdk.lt.grad_fin%prev_erg)then
