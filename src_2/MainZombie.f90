@@ -94,7 +94,9 @@ program MainZombie
   
     if(propflg=="y")then
         ! generate Hamiltonian and overlap
+        !$omp target defaultmap(to: allocatable)
         call allocham(haml,ndet,norb)
+        !$omp end target
         if(gramflg.eq."n")then
             call allocdv(dvecs,1,ndet,norb)
             call allocerg(en,1)

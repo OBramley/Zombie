@@ -609,7 +609,7 @@ MODULE gradient_descent
         integer,intent(inout)::epoc_cnt
         real(kind=8),intent(in)::b,alphain
         integer,dimension(ndet-1),intent(inout)::picker
-        integer::lralt,rjct_cnt,next,acpt_cnt,acpt1,acpt2,pick,orbitcnt,d_diff_flg,lralt_temp,mmntmflg
+        integer::lralt,rjct_cnt,next,acpt_cnt,acpt1,acpt2,pick,orbitcnt,d_diff_flg,lralt_temp,mmntmflg,loop_max,loop_dwn
         real(kind=8)::newb,t,fxtdk,l2_rglrstn,alpha,mmnmtb
         real(kind=8),dimension(norb)::gradient_norm
         real(kind=8),dimension(ndet)::mmntm,mmntma
@@ -636,6 +636,8 @@ MODULE gradient_descent
         mmntm=0
         mmntma=1
         mmntmflg=0
+        loop_max=20
+        loop_dwn=0 
 
         do while(rjct_cnt.lt.200)
             t=newb*(alpha**lralt)
@@ -655,7 +657,7 @@ MODULE gradient_descent
                     end if 
                 end do
                 gradient_norm=((grad_fin%vars(pick,:))*grad_fin%vars(pick,:))
-                do while(t.gt.(1.0d-5))
+                do while(lralt_temp.lt.(loop_max))
                     t=newb*(alpha**lralt_temp)
                     nanchk=.false.
                     mmnmtb=(t*mmntm(pick))/mmntma(pick)
@@ -682,8 +684,7 @@ MODULE gradient_descent
                     call imgtime_prop(temp_dvecs,en,temp_ham,0)
                 
                     fxtdk=real(en%erg(1,timesteps+1))
-                    ! temp_int2=int(fxtdk*(1.0d13),kind=8)
-                    ! temp_int1=int((grad_fin%prev_erg*1.0d13),kind=8)
+                   
                     if(is_nan(fxtdk).eqv..true.)then 
                         nanchk=.true.
                         ergerr='NaN ' 
@@ -717,10 +718,15 @@ MODULE gradient_descent
                             grad_fin%prev_mmntm(pick,:)=zstore(pick)%phi(:)
                             mmntma(pick)=t
                             mmntm(pick)=mmnmtb
+                            loop_dwn=loop_dwn+1
                             if(orbitcnt.lt.0)then
                                 orbitcnt=orbitcnt+1 
                             else
                                 orbitcnt=0
+                            end if
+                            if((loop_max.gt.20).and.(loop_dwn.eq.5))then
+                                loop_max=loop_max-1
+                                loop_dwn=0
                             end if
                             ! if(lralt.eq.1)then 
                             !     lralt=0
@@ -748,20 +754,20 @@ MODULE gradient_descent
                                                 " for zombie state ", pick, ", on epoc ", epoc_cnt 
                     end if
                 end do
-                if(t.le.(1.0d-5))then
+                if(lralt_temp.ge.loop_max)then
                     rjct_cnt=rjct_cnt+1
                     write(6,"(a,i0,a,f21.16,a,f21.16,a,f12.10,a,i0,a,i0)") '       ', pick,'              ', &
                 grad_fin%prev_erg,'               ',fxtdk,'            ',0.0,'          ',acpt_cnt,'                 ',rjct_cnt
-                    if(rjct_cnt.eq.(ndet-1))then
-                        ! lralt=lralt+1
-                        ! t=newb*(alpha**lralt)
-                        ! rjct_cnt=0
-                        if(orbitcnt.ne.0)then
-                            orbitcnt=orbitcnt+1
-                        end if
+                    if(orbitcnt.ne.0)then
+                        orbitcnt=orbitcnt+1
                     end if
+                    if(loop_max.lt.35)then 
+                        loop_max=loop_max+1
+                    end if
+                    loop_dwn=0 
                 end if
-
+                
+               
                 t=newb*(alpha**lralt)
                 if(j.eq.(ndet-1))then 
                     epoc_cnt=epoc_cnt+1
@@ -899,9 +905,9 @@ MODULE gradient_descent
                 mmntmflg=1
             end if 
             acpt_cnt=0
-            ! if(epoc_cnt.gt.10000)then 
-            !     exit 
-            ! end if
+            if(epoc_cnt.gt.30000)then 
+                exit 
+            end if
         end do
 
     end subroutine full_zs_gd

@@ -384,14 +384,20 @@ MODULE ham
        
         !!$omp parallel private(j) shared(occupancy_an,occupancy_2an,occupancy_an_cr,ham,zstore,elecs)
         !!$omp do ordered 
-    
+        !!$omp declare mapper(elcmap : type(elecintrgl)::elecs) map(elecs%h1ei,elecs%h2ei,elecs%hnuc)
+        !!$omp declare mapper(hamap : type(hamiltonian)::ham) map(ham%hjk,ham%inv,ham%inv,ham%ovrlp)
+        !!$omp declare mapper(zmap : type(zombiest)::zstore(1:ndet)) map(zs%alive,zs%dead,zs%phi,zs%cos,zs%sin,zs%update_num)
+        ! !$omp target data map(alloc:ham%hjk(1:ndet,1:ndet))
+        !!$omp target data map(tofrom:ham%hjk(1:ndet,1:ndet))
+        !$omp target data map(to:occupancy_2an,occupancy_an_cr,occupancy_an,passback)
         do j=1, size
             call he_row(ham,zstore,elecs,j,size,occupancy_2an,occupancy_an_cr,occupancy_an,passback)
             if(verb.eq.1)then
                 write(6,"(a,i0,a)") "Hamiltonian row ",j, " completed"
             end if  
         end do
-        
+        !$omp end target data
+        !!$omp end target data
         ! print*, ham%diff_hjk(2,1,:)
         ! print*, ham%diff_ovrlp(2,1,:)
         !$ call omp_set_nested(.FALSE.)
