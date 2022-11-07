@@ -343,7 +343,7 @@ MODULE zom
         val=(norb/10)
 
         asrt=0.0001/ceiling(val)
-        aend=0.17/ceiling(val)     
+        aend=0.17/ceiling(val)   
         dsrt=0.35/ceiling(val)  
         dend= 0.15/ceiling(val)
 

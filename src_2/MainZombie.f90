@@ -62,12 +62,10 @@ program MainZombie
     write(6,"(a)") "Random seed set"
 
    
+    GPUflg='n'
     diff_state=0
     if(GDflg=="y")then
         call allocgrad(gradients,ndet,norb)
-        ! gradients%prev_erg=0
-        ! diff_state=0
-        ! gradients%grad_avlb(2)=0
     end if
 
     ! generate 1 and 2 electron integrals
@@ -94,9 +92,8 @@ program MainZombie
   
     if(propflg=="y")then
         ! generate Hamiltonian and overlap
-        !$omp target defaultmap(to: allocatable)
         call allocham(haml,ndet,norb)
-        !$omp end target
+       
         if(gramflg.eq."n")then
             call allocdv(dvecs,1,ndet,norb)
             call allocerg(en,1)
@@ -111,7 +108,11 @@ program MainZombie
      
         
         if(hamgflg=='y')then
-            call hamgen(haml,zstore,elect,ndet,1)
+            if(GPUflg.eq.'n')then
+                call hamgen(haml,zstore,elect,ndet,1)
+            else if(GPUflg.eq.'y')then
+                ! call hamgen_gpu(haml,zstore,elect,ndet,1)
+            end if
             call matrixwriter(haml%hjk,ndet,"data/ham.csv")
             call matrixwriter(haml%ovrlp,ndet,"data/ovlp.csv")
             write(6,"(a)") "Hamiltonian successfully generated"
@@ -136,9 +137,8 @@ program MainZombie
                 call energywriter(en%t,en%erg(j,:),"energy_state_"//trim(stateno)//".csv",j,k)
             end do
         end if
-        
+        print*,real(en%erg(1,timesteps+1))
         if(GDflg.eq."y")then
-            ! call allocgrad(gradients,ndet,norb)
             gradients%prev_erg=real(en%erg(1,timesteps+1))
             write(6,"(a,f20.16)") "Initial energy: ", gradients%prev_erg
             allocate(chng_trk(ndet),stat=ierr)
