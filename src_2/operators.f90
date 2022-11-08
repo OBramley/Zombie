@@ -40,8 +40,6 @@ MODULE operators
     
         if (errorflag .ne. 0) return
 
-     
-  
         overlap=product(((conjg(z1%sin)*z2%sin)*(z1%alive*z2%alive))+((conjg(z1%cos)*z2%cos)*(z1%dead*z2%dead)))
         
         return

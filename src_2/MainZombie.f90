@@ -62,7 +62,7 @@ program MainZombie
     write(6,"(a)") "Random seed set"
 
    
-    GPUflg='n'
+    GPUflg='y'
     diff_state=0
     if(GDflg=="y")then
         call allocgrad(gradients,ndet,norb)
@@ -111,7 +111,7 @@ program MainZombie
             if(GPUflg.eq.'n')then
                 call hamgen(haml,zstore,elect,ndet,1)
             else if(GPUflg.eq.'y')then
-                ! call hamgen_gpu(haml,zstore,elect,ndet,1)
+                call hamgen_gpu(haml,zstore,elect,ndet,1)
             end if
             call matrixwriter(haml%hjk,ndet,"data/ham.csv")
             call matrixwriter(haml%ovrlp,ndet,"data/ovlp.csv")
