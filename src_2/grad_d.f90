@@ -286,4 +286,44 @@ Module grad_d
         return
     end subroutine final_grad
 
+    subroutine final_grad_gpu(pvars,phjk,pdiff_hjk,d_diff,d,diff_state,d_diff_flg)
+
+        implicit none
+
+        real(kind=8),dimension(:,:), pointer,intent(inout)::pvars
+        complex(kind=8), dimension(:,:), pointer,intent(inout)::phjk
+        real(kind=8), dimension(:,:,:), pointer,intent(inout)::pdiff_hjk
+        complex(kind=8), dimension(:)::d
+        real(kind=8), dimension(:,:,:)::d_diff
+        integer,intent(in)::diff_state,d_diff_flg
+        integer::j,l
+        real(kind=8),dimension(norb)::temp1,temp2
+        real(kind=8),dimension(ndet)::dham
+
+        if (errorflag .ne. 0) return
+        dham=matmul(REAL(d),REAL(phjk))
+        j=diff_state !do j=1, ndet !Each ZS{j} dependence
+
+        !$omp target map(to:d,dham,j,d_diff) map(alloc:temp1(norb),temp2(norb))
+        temp1(:)=0
+        temp2(:)=0
+        !$omp parallel do
+        do l=1, ndet
+            temp1 = temp1 + dham(l)*d_diff(l,j,:)
+            if(l.eq.j)then
+                temp2=temp2+(real(d(l))*matmul(real(d),pdiff_hjk(j,:,:)))
+            else 
+                temp2=temp2+(real(d(l)*d(j))*pdiff_hjk(j,l,:))
+            end if
+        end do
+        !$omp end parallel do
+        if(d_diff_flg.eq.0)then 
+            temp1=0 
+        end if
+        pvars(diff_state,:)=(2*temp1)+temp2
+        !$omp end target
+
+        return
+    end subroutine final_grad_gpu
+
     END MODULE grad_d

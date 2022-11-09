@@ -12,6 +12,7 @@ program MainZombie
     use zom
     use grad_d
     use gradient_descent
+    use omp_lib
 
     implicit none
     
@@ -111,6 +112,7 @@ program MainZombie
             if(GPUflg.eq.'n')then
                 call hamgen(haml,zstore,elect,ndet,1)
             else if(GPUflg.eq.'y')then
+                call omp_set_dynamic(.true.)
                 call hamgen_gpu(haml,zstore,elect,ndet,1)
             end if
             call matrixwriter(haml%hjk,ndet,"data/ham.csv")
@@ -138,6 +140,7 @@ program MainZombie
             end do
         end if
         print*,real(en%erg(1,timesteps+1))
+        
         if(GDflg.eq."y")then
             gradients%prev_erg=real(en%erg(1,timesteps+1))
             write(6,"(a,f20.16)") "Initial energy: ", gradients%prev_erg
@@ -152,7 +155,11 @@ program MainZombie
                 call epoc_writer(gradients%prev_erg,0,chng_trk,0)
             end if
             call final_grad(dvecs(1),haml,gradients,2,1)
-            call zombie_alter(zstore,gradients,haml,elect,en,dvecs,chng_trk)
+            if(GPUflg.eq.'n')then
+                call zombie_alter(zstore,gradients,haml,elect,en,dvecs,chng_trk)
+            else if(GPUflg.eq.'y')then
+                call zombie_alter_gpu(zstore,gradients,haml,elect,en,dvecs,chng_trk)
+            end if
             GDflg='n'
             do j=1,ndet
                 call zombiewriter(zstore(j),j,0)

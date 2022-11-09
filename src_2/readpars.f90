@@ -216,7 +216,7 @@ MODULE readpars
             do j=1, ndet
                 if(GDflg.eq.'y')then
                     write(num,"(i4.4)")(j+1000)
-                    
+                    ! write(num,"(i4.4)")j
                 else
                     write(num,"(i4.4)")j
                 end if

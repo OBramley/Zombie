@@ -135,7 +135,7 @@ MODULE ham
                 call one_elec_part(zstore(row),z2l,h1etot,occupancy_an_cr,&
                                     elecs%h1ei,h1etot_diff_bra,h1etot_diff_ket,zstore(m),equal)
             end if
-            print*,h1etot
+            
             z2l=z2l*occupancy_an
             !$omp flush(z2l)
             if(m.eq.row)then
@@ -145,7 +145,7 @@ MODULE ham
                 call two_elec_part(zstore(row),z1jk,z2l,h2etot,occupancy_2an,occupancy_an,&
                                             elecs%h2ei,h2etot_diff_bra,h2etot_diff_ket,zstore(m),equal)
             end if
-            print*,h2etot
+          
             ham%ovrlp(row,m)=overlap(zstore(row),zstore(m))
             ham%ovrlp(m,row)= ham%ovrlp(row,m)
             ham%hjk(row,m)=h1etot+h2etot+(elecs%hnuc*ham%ovrlp(row,m))
@@ -217,6 +217,7 @@ MODULE ham
                 zomt(2,k)=cmplx(0.0,0.0)
                 zomt=zomt*occupancy(j,k,:,:)
                 temp=temp+product((conjg(zs1%sin)*zomt(1,:))+(conjg(zs1%cos)*zomt(2,:)))*h1ei(j,k)
+                write(6,*) temp 
                 if(GDflg.eq.'y')then
                     if(equal.lt.4)then 
                         h1etot_diff = h1etot_diff+ diff_overlap_cran(zs1,zs2,equal,zomt,j,k,occupancy(j,k,:,:))*h1ei(j,k)
@@ -226,7 +227,7 @@ MODULE ham
         end do
         !$omp end do
         !$omp end parallel
-        ! print*,'h1ei complete'
+       
         h1etot=temp
         h1etot_diff_bra=  h1etot_diff(1,:)
         h1etot_diff_ket=  h1etot_diff(2,:)
@@ -305,7 +306,7 @@ MODULE ham
                                 occupancy,j,k,l,zs1,zs2)
                         end do
                     end do
-                    ! print*,j
+                   
                 end do
             end if
             !!$omp end do
@@ -315,7 +316,7 @@ MODULE ham
         h2etot=tot*0.5
         h2etot_diff_bra = h2etot_diff(1,:)*0.5
         h2etot_diff_ket = h2etot_diff(2,:)*0.5
-        ! print*,'h2ei complete'
+       
         return
 
     end subroutine two_elec_part
@@ -487,7 +488,7 @@ MODULE ham
         real(kind=8),dimension(norb)::h1etot_diff_ket,h2etot_diff_ket
         real(kind=8),dimension(norb)::bra_prod,ket_prod,prod,temp
         
-        !!$omp declare target
+
         if (errorflag .ne. 0) return
         ierr = 0
 
@@ -501,8 +502,8 @@ MODULE ham
         end if
   
         
-        !$omp target teams map(alloc:z1jk(norb,norb,2,norb),z2l(norb,2,norb),prod(norb),bra_prod(norb),temp(norb),ket_prod(norb))&
-        !$omp & map(to:h1etot,h2etot,h1etot_diff_bra,h2etot_diff_bra,h1etot_diff_ket,h2etot_diff_ket,equal)
+        !$omp target teams map(alloc:z1jk(norb,norb,2,norb),z2l(norb,2,norb),prod(norb),bra_prod(norb),temp(norb),ket_prod(norb),&
+        !$omp h1etot_diff_bra(norb),h2etot_diff_bra(norb),h1etot_diff_ket(norb),h2etot_diff_ket(norb)) map(to:h1etot,h2etot,equal)
         h1etot=cmplx(0.0,0.0)
         h2etot=cmplx(0.0,0.0)
         h1etot_diff_bra=0.0
@@ -575,19 +576,15 @@ MODULE ham
                 equal = 9
             end if
           
-          
+         
             call one_elec_part_gpu(psin(row,:),psin(m,:),pcos(row,:),pcos(m,:),pphi(row,:),&
-                z2l,h1etot,occupancy_an_cr,ph1ei,h1etot_diff_bra,h1etot_diff_ket,equal)
-                    
-            print*,h1etot
+                z2l,h1etot,occupancy_an_cr,ph1ei,h1etot_diff_bra,h1etot_diff_ket,equal) 
+
             z2l=z2l*occupancy_an
-            
+          
             call two_elec_part_gpu(psin(row,:),psin(m,:),pcos(row,:),pcos(m,:),z1jk,z2l,h2etot,occupancy_2an,&
             occupancy_an,ph2ei,h2etot_diff_bra,h2etot_diff_ket,equal)
-            ! h2etot=h2etot*0.5
             
-            print*,h2etot
-
             povrlp(row,m)=product(((conjg(psin(row,:))*psin(m,:)))+((conjg(pcos(row,:))*pcos(m,:))))
             povrlp(m,row)= povrlp(row,m)
             phjk(row,m)=h1etot+h2etot+(phnuc*povrlp(row,m))
@@ -657,33 +654,37 @@ MODULE ham
         complex(kind=8), dimension(:),intent(in)::pcos1,pcos2
         real(kind=8),dimension(:),intent(in)::pphi1
         complex(kind=8),dimension(2,norb)::zomt
-        real(kind=8),dimension(2,norb)::h1etot_diff
-        real(kind=8),dimension(norb)::temp1,temp2
+        real(kind=8),dimension(norb)::temp1,temp2,bra_prod,ket_prod,prod
         integer::j,k,l
-        real(kind=8),dimension(norb)::bra_prod,ket_prod,prod
 
+        
        
         !$omp declare target
         if (errorflag .ne. 0) return
         h1etot=(0.0,0.0)
         h1etot_diff_bra=0.0
         h1etot_diff_ket=0.0
-        h1etot_diff=0.0
+
         
-        !$omp target teams distribute parallel do simd collapse(2)reduction(+:h1etot,h1etot_diff_bra,h1etot_diff_ket)&
-        !$omp & map(alloc:zomt(2,norb),bra_prod(norb),ket_prod(norb),prod(norb),temp1(norb),temp2(norb)) & 
+        
+        !$omp target teams distribute parallel do simd collapse(2) reduction(+:h1etot,h1etot_diff_bra,h1etot_diff_ket)&
+        !$omp & map(alloc:zomt(2,norb),bra_prod(norb),ket_prod(norb),prod(norb),temp1(norb),temp2(norb)) &
+        !!$omp & num_teams(2) thread_limit(max_thrds) &
         !$omp & private(zomt,j,k,l,temp1,temp2,bra_prod,ket_prod,prod) &
         !$omp & shared(ph1ei,psin1,psin2,pcos1,pcos2,pphi1,occupancy,equal,z2l)
+       
         do j=1, norb
             do k=1, norb
+                if(ph1ei(j,k).eq.0.0)then
+                    cycle
+                end if
                 zomt(:,:)=z2l(j,:,:)
                 zomt(1,k)=zomt(2,k)
                 zomt(2,k)=cmplx(0.0,0.0)
                 zomt=zomt*occupancy(j,k,:,:)
-                h1etot=h1etot+product((conjg(psin1)*zomt(1,:))+(conjg(pcos1)*zomt(2,:)))*ph1ei(j,k)
+                h1etot=h1etot+product((conjg(psin1)*zomt(1,:))+(conjg(pcos1)*zomt(2,:)))*ph1ei(j,k) 
                 if(GDflg.eq.'y')then
                     if(equal.lt.4)then
-                        !h1etot_diff = h1etot_diff+ diff_overlap_cran(zs1,zs2,equal,zomt,j,k,occupancy(j,k,:,:))*h1ei(j,k)
                         prod=real(((conjg(psin1)*zomt(1,:)))+((conjg(pcos1)*zomt(2,:))))
                         ! Differntial of overlap of the same ZS 0 unless an operator has acted on ZS
                         if(equal.eq.1)then
@@ -751,7 +752,7 @@ MODULE ham
             end do
         end do
         !$omp end target teams distribute parallel do simd
-       
+   
         return
 
     end subroutine one_elec_part_gpu
@@ -789,7 +790,8 @@ MODULE ham
         h2etot_diff_ket=0.0
         h2etot_diff=0.0
      
-        !$omp target teams distribute parallel do reduction(+:h2etot) map(to:gg,hh,gmax,hmin,jspin) map(alloc:vmult(2,norb)) &
+        !$omp target teams distribute parallel do reduction(+:h2etot) map(to:gg,hh,gmax,hmin,jspin) &
+        !$omp & map(alloc:vmult(2,norb)) &
         !$omp & private(j,k,l,jspin,occupancy,gg,hh,gmax,hmin,vmult) shared(z2l,z1jk,occupancy_2an,occupancy_an,ph2ei)
         do j=1, norb
             if(psin1(j)==(0.0,0.0))then
@@ -860,11 +862,14 @@ MODULE ham
         end do
        !$omp end target teams distribute parallel do
         h2etot=h2etot*0.5
-    
+
         if(GDflg.eq.'y')then
             if(equal.lt.4)then 
                 !$omp target teams distribute parallel do reduction(+:h2etot_diff_bra,h2etot_diff_ket) &
-                !$omp map(to:gg_1,hh_1,gg_2,hh_2,jspin,occupancy,breakflag) map(alloc:vmultr,vmult_dd)
+                !$omp map(to:gg_1,hh_1,gg_2,hh_2,gmax1,hmin1,gmax2,hmin2,jspin,breakflag) &
+                !$omp & map(alloc:vmultr(2,norb),vmult_dd(2,norb),occupancy(2,norb)) &
+                !$omp & private(gg_1,hh_1,gg_2,hh_2,gmax1,gmax2,hmin1,hmin2,jspin,occupancy,breakflag,vmultr,vmult_dd)&
+                !$omp & shared(ph2ei,z1jk,z2l) 
                 do j=1, norb
                     if(modulo(j,2)==0)then
                         jspin=2
@@ -1248,7 +1253,7 @@ MODULE ham
                         end do
                     end do
                 end do
-                !$omp end target teams distribute parallel do
+                !$omp end target teams distribute parallel do 
                 h2etot_diff_bra = h2etot_diff_bra*0.5
                 h2etot_diff_ket = h2etot_diff_ket*0.5
             end if
@@ -1296,7 +1301,7 @@ MODULE ham
 
        
         if (errorflag .ne. 0) return
-        
+
         allocate(occupancy_an(norb,2,norb),stat=ierr)
         if(ierr==0) allocate(occupancy_2an(norb,norb,2,norb),stat=ierr)
         if(ierr==0) allocate(occupancy_an_cr(norb,norb,2,norb),stat=ierr)
@@ -1380,7 +1385,7 @@ MODULE ham
             end if  
         end do
        
-
+        
         pinv=povrlp
    
         !$omp target map(alloc:IPIV1(size),WORK1(size))
