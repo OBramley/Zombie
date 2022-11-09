@@ -441,16 +441,16 @@ MODULE ham
         if(GDflg.eq.'y')then
             do k=1, ndet
                 do l=1, ndet
-                    if(l.eq.j)then
-                        temp2(k,j,:)=matmul(REAL(ham%inv(k,:)),ham%diff_ovrlp(j,:,:))
+                    if(l.eq.2)then
+                        temp2(k,j,:)=matmul(REAL(ham%inv(k,:)),ham%diff_ovrlp(2,:,:))
                     else
-                        temp2(k,l,:)=real(ham%inv(k,l))*ham%diff_ovrlp(j,l,:)
+                        temp2(k,l,:)=real(ham%inv(k,l))*ham%diff_ovrlp(2,l,:)
                     end if
                 end do
             end do
             do k=1, ndet
                 do l=1, ndet
-                    ham%diff_invh(j,k,l,:)=matmul(transpose(temp2(k,:,:)),real(ham%kinvh(:,l)))*(-1)
+                    ham%diff_invh(2,k,l,:)=matmul(transpose(temp2(k,:,:)),real(ham%kinvh(:,l)))*(-1)
                 end do
             end do
         end if
@@ -488,7 +488,7 @@ MODULE ham
         real(kind=8),dimension(norb)::h1etot_diff_ket,h2etot_diff_ket
         real(kind=8),dimension(norb)::bra_prod,ket_prod,prod,temp
         
-
+        !$omp declare target 
         if (errorflag .ne. 0) return
         ierr = 0
 
@@ -503,13 +503,14 @@ MODULE ham
   
         
         !$omp target teams map(alloc:z1jk(norb,norb,2,norb),z2l(norb,2,norb),prod(norb),bra_prod(norb),temp(norb),ket_prod(norb),&
-        !$omp h1etot_diff_bra(norb),h2etot_diff_bra(norb),h1etot_diff_ket(norb),h2etot_diff_ket(norb)) map(to:h1etot,h2etot,equal)
+        !$omp h1etot_diff_bra(norb),h2etot_diff_bra(norb),h1etot_diff_ket(norb),h2etot_diff_ket(norb)) &
+        !$omp map(to:h1etot,h2etot,equal,row,m)
         h1etot=cmplx(0.0,0.0)
         h2etot=cmplx(0.0,0.0)
-        h1etot_diff_bra=0.0
-        h1etot_diff_ket=0.0
-        h2etot_diff_bra=0.0
-        h2etot_diff_ket=0.0
+        h1etot_diff_bra(:)=0.0
+        h1etot_diff_ket(:)=0.0
+        h2etot_diff_bra(:)=0.0
+        h2etot_diff_ket(:)=0.0
     
     
         if(row.eq.1)then
@@ -541,10 +542,10 @@ MODULE ham
         
             h1etot=cmplx(0.0,0.0)
             h2etot=cmplx(0.0,0.0)
-            h1etot_diff_bra=0.0
-            h1etot_diff_ket=0.0
-            h2etot_diff_bra=0.0
-            h2etot_diff_ket=0.0
+            h1etot_diff_bra(:)=0.0
+            h1etot_diff_ket(:)=0.0
+            h2etot_diff_bra(:)=0.0
+            h2etot_diff_ket(:)=0.0
     
             if(m.gt.row)then
                 !$omp distribute parallel do simd
@@ -594,7 +595,8 @@ MODULE ham
 
             if(GDflg.eq.'y') then
                 if(row.eq.2)then
-                    pdiff_hjk(row,m,:)=h1etot_diff_bra+h2etot_diff_bra
+                    temp=h1etot_diff_bra(:)+h2etot_diff_bra(:)
+                    pdiff_hjk(row,m,:)= temp !h1etot_diff_bra(:)+h2etot_diff_bra(:)
                     if(m.eq.row)then
                         pdiff_ovrlp(row,m,:) = 0
                     else
@@ -609,7 +611,8 @@ MODULE ham
                  
                     end if
                 else if(m.eq.2)then
-                    pdiff_hjk(m,row,:)=h1etot_diff_ket+h2etot_diff_ket
+                    temp=h1etot_diff_ket(:)+h2etot_diff_ket(:)
+                    pdiff_hjk(m,row,:)=temp!h1etot_diff_ket(:)+h2etot_diff_ket(:)
                     prod=real((conjg(psin(row,:))*psin(m,:))+(conjg(pcos(row,:))*pcos(m,:)))
                     ket_prod=real(conjg(psin(row,:))*pcos(m,:))-real(conjg(pcos(row,:))*psin(m,:))
                     !$omp parallel do
@@ -672,7 +675,6 @@ MODULE ham
         !!$omp & num_teams(2) thread_limit(max_thrds) &
         !$omp & private(zomt,j,k,l,temp1,temp2,bra_prod,ket_prod,prod) &
         !$omp & shared(ph1ei,psin1,psin2,pcos1,pcos2,pphi1,occupancy,equal,z2l)
-       
         do j=1, norb
             do k=1, norb
                 if(ph1ei(j,k).eq.0.0)then
@@ -1296,7 +1298,6 @@ MODULE ham
         real(kind=8), dimension(:,:,:), pointer::pdiff_hjk
         real(kind=8), dimension(:,:,:), pointer::pdiff_ovrlp
         real(kind=8), dimension(:,:,:,:), pointer::pdiff_invh
-
         integer:: j,k,l,ierr
 
        
@@ -1391,33 +1392,38 @@ MODULE ham
         !$omp target map(alloc:IPIV1(size),WORK1(size))
         if (ierr==0) call ZGETRF(size,size,pinv,size,IPIV1,ierr)
         if (ierr/=0) then
-            write(0,"(a,i0)")"Error in ZGETRF",ierr
+            !write(0,"(a,i0)")"Error in ZGETRF",ierr
         end if
         if (ierr==0) call ZGETRI(size,pinv,size,IPIV1,WORK1,size,ierr)
         if (ierr/=0) then
-            write(0,"(a,i0)")"Error in ZGETRF",ierr
+           ! write(0,"(a,i0)")"Error in ZGETRF",ierr
         end if
         !$omp end target 
         
         pkinvh=matmul(pinv,phjk)
         
+        
         if(GDflg.eq.'y')then
-            !$omp target teams map(alloc:temp2(ndet,ndet,norb))
-            !$omp  distribute parallel do 
+            !$omp target teams map(alloc:temp2(ndet,ndet,norb)) map(to:j)
+            !$omp  distribute parallel do simd collapse(2) 
             do k=1, ndet
                 do l=1, ndet
-                    if(l.eq.j)then
-                        temp2(k,j,:)=matmul(REAL(pinv(k,:)),pdiff_ovrlp(j,:,:))
+                    if(l.eq.2)then
+                        do j=1, ndet 
+                            temp2(k,2,j)=sum(pinv(k,:)*pdiff_ovrlp(2,j,:))
+                        end do
                     else
-                        temp2(k,l,:)=real(pinv(k,l))*pdiff_ovrlp(j,l,:)
+                        temp2(k,l,:)=real(pinv(k,l)*pdiff_ovrlp(2,l,:))
                     end if
                 end do
             end do
             !!$omp end teams distribute parallel do simd
-            !$omp distribute parallel do 
+            !$omp distribute parallel do simd collapse(2) 
             do k=1, ndet
                 do l=1, ndet
-                    pdiff_invh(j,k,l,:)=matmul(transpose(temp2(k,:,:)),real(pkinvh(:,l)))*(-1)
+                    do j=1, ndet
+                        pdiff_invh(2,k,l,j)= sum(temp2(k,j,:)*real(pkinvh(:,l)))*(-1)
+                    end do
                 end do
             end do
             !$omp end target teams

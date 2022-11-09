@@ -8,7 +8,7 @@ MODULE gradient_descent
     use imgtp
     use outputs
     use infnan_mod
-
+    
     contains
 
     ! Subroutine to calcualte Hamiltonian elements combines 1st and 2nd electron integral calcualations so remove double 
@@ -303,19 +303,18 @@ MODULE gradient_descent
             return
         end if 
 
-        j=diff_state 
         do k=1, ndet
             do l=1, ndet
-                if(l.eq.j)then
-                    temp2(k,j,:)=matmul(REAL(haml%inv(k,:)),haml%diff_ovrlp(j,:,:))
+                if(l.eq.diff_state)then
+                    temp2(k,diff_state ,:)=matmul(REAL(haml%inv(k,:)),haml%diff_ovrlp(diff_state ,:,:))
                 else
-                    temp2(k,l,:)=real(haml%inv(k,l))*haml%diff_ovrlp(j,l,:)
+                    temp2(k,l,:)=real(haml%inv(k,l))*haml%diff_ovrlp(diff_state ,l,:)
                 end if
             end do
         end do
         do k=1, ndet
             do l=1, ndet
-                haml%diff_invh(j,k,l,:)=matmul(transpose(temp2(k,:,:)),real(haml%kinvh(:,l)))*(-1)
+                haml%diff_invh(diff_state,k,l,:)=matmul(transpose(temp2(k,:,:)),real(haml%kinvh(:,l)))*(-1)
             end do
         end do
 
@@ -620,7 +619,7 @@ MODULE gradient_descent
         character(len=4)::ergerr
         integer::j,k,l
 
-
+       
         if (errorflag .ne. 0) return
 
 
@@ -1030,6 +1029,7 @@ MODULE gradient_descent
         integer, allocatable,dimension(:)::IPIV1
         complex(kind=8),allocatable,dimension(:)::WORK1
         
+        !$omp declare target 
         if (errorflag .ne. 0) return
         ierr = 0
 
@@ -1115,15 +1115,20 @@ MODULE gradient_descent
         
         if (ierr==0) call ZGETRF(size,size,pinv,size,IPIV1,ierr)
         if (ierr/=0) then
-            write(0,"(a,i0)")"Error in ZGETRF",ierr
+            ! write(0,"(a,i0)")"Error in ZGETRF",ierr
         end if
         if (ierr==0) call ZGETRI(size,pinv,size,IPIV1,WORK1,size,ierr)
         if (ierr/=0) then
-            write(0,"(a,i0)")"Error in ZGETRF",ierr
+            ! write(0,"(a,i0)")"Error in ZGETRF",ierr
         end if
-
-        pkinvh=matmul(pinv,phjk)
-        
+        !$omp distribute parallel do simd collapse(2)
+        do j=1,ndet
+            do k=1,ndet
+                pkinvh(j,k)=sum(pinv(j,:)*phjk(:,k))
+            end do
+        end do
+        !$omp end distribute parallel do simd 
+      
         !$omp end target teams 
 
         if (ierr==0) deallocate(IPIV1,stat=ierr)
@@ -1174,8 +1179,10 @@ MODULE gradient_descent
         real(kind=8),dimension(2,norb)::vmult_dd,vmultr
         integer,dimension(2,norb)::occupancy
         integer::j,k,l,m,ierr, jspin
-        real(kind=8),dimension(norb)::bra_prod,prod,temp1,gg_1,hh_1
+        real(kind=8),dimension(norb)::bra_prod,prod,temp1,gg_1,hh_1,temp
         integer::n,p,gmax1,hmin1,breakflag
+
+        !$omp declare target 
 
         if (errorflag .ne. 0) return
         ierr = 0
@@ -1188,12 +1195,14 @@ MODULE gradient_descent
             return
         end if 
 
-    
-        !$omp target teams map(alloc:z1jk(norb,norb,2,norb),z2l(norb,2,norb),zomt(2,norb),temp2(ndet,ndet,norb),&
-        !$omp bra_prod(norb),prod(norb),temp1(norb),vmultr(2,norb),vmult_dd(2,norb),occupancy(2,norb)) &
-        !$omp & map(to:h1etot_diff_bra,h2etot_diff_bra,diff_state,gg_1,hh_1,gmax1,hmin1,jspin,breakflag)&
-        !$omp & private(zomt,j,k,l,temp1,bra_prod,prod,gg_1,hh_1,gmax1,hmin1,jspin,occupancy,breakflag,vmultr,vmult_dd) &
-        !$omp & shared(ph1ei,ph2ei,psin,pcos,pphi,occupancy_an_cr,z2l,z1jk,occupancy_2an,occupancy_an)
+      
+        !$omp target teams map(alloc:z1jk(norb,norb,2,norb),z2l(norb,2,norb),zomt(2,norb),temp(norb),temp2(ndet,ndet,norb),&
+        !$omp bra_prod(norb),prod(norb),temp1(norb),vmultr(2,norb),vmult_dd(2,norb),occupancy(2,norb),&
+        !$omp h1etot_diff_bra(norb),h2etot_diff_bra(norb))&
+        !$omp & map(to:j,k,l,diff_state,gg_1,hh_1,gmax1,hmin1,jspin,breakflag,diff_state)&
+        !$omp & shared(ph1ei,ph2ei,psin,pcos,pphi,occupancy_an_cr,z2l,z1jk,occupancy_2an,occupancy_an,diff_state)
+        !!$omp & private(j,k,l,zomt,temp1,bra_prod,prod,gg_1,hh_1,gmax1,hmin1,jspin,occupancy,breakflag,vmultr,vmult_dd)
+        !!$omp & shared(ph1ei,ph2ei,psin,pcos,pphi,occupancy_an_cr,z2l,z1jk,occupancy_2an,occupancy_an,diff_state)
 
        
         !$omp distribute parallel do simd
@@ -1562,7 +1571,8 @@ MODULE gradient_descent
             !$omp end distribute parallel do 
             h2etot_diff_bra = h2etot_diff_bra*0.5
 
-            pdiff_hjk(diff_state,m,:)=h1etot_diff_bra+h2etot_diff_bra
+            temp =h1etot_diff_bra+h2etot_diff_bra
+            pdiff_hjk(diff_state,m,:)=temp
             if(m.eq.diff_state)then
                 pdiff_ovrlp(diff_state,m,:) = 0
             else
@@ -1577,25 +1587,29 @@ MODULE gradient_descent
             end if
         end do  
 
-        j=diff_state
-        !$omp  distribute parallel do  
+        !$omp  distribute parallel do simd collapse(2) 
         do k=1, ndet
             do l=1, ndet
-                if(l.eq.j)then
-                    temp2(k,j,:)=matmul(REAL(pinv(k,:)),pdiff_ovrlp(j,:,:))
+                if(l.eq.2)then
+                    do j=1, ndet 
+                        temp2(k,diff_state,j)=sum(pinv(k,:)*pdiff_ovrlp(diff_state,j,:))
+                    end do
                 else
-                    temp2(k,l,:)=real(pinv(k,l))*pdiff_ovrlp(j,l,:)
+                    temp2(k,l,:)=real(pinv(k,l)*pdiff_ovrlp(diff_state,l,:))
                 end if
             end do
         end do
-        !$omp distribute parallel do 
+        !!$omp end teams distribute parallel do simd
+        !$omp distribute parallel do simd collapse(2) 
         do k=1, ndet
             do l=1, ndet
-                pdiff_invh(j,k,l,:)=matmul(transpose(temp2(k,:,:)),real(pkinvh(:,l)))*(-1)
+                do j=1, ndet
+                    pdiff_invh(diff_state,k,l,j)= sum(temp2(k,j,:)*real(pkinvh(:,l)))*(-1)
+                end do
             end do
         end do
-
         !$omp end target teams
+
 
         deallocate(z1jk,stat=ierr)
         if(ierr==0) deallocate(z2l,stat=ierr)
@@ -1636,7 +1650,7 @@ MODULE gradient_descent
         integer::k,l,m
         logical::nanchk
         
-
+        !$omp declare target 
         if (errorflag .ne. 0) return
 
         call gradient_row_gpu(psin,pcos,pphi,ph1ei,ph2ei,pkinvh,pinv,pdiff_hjk,&
@@ -1740,6 +1754,8 @@ MODULE gradient_descent
         character(len=4)::ergerr
         integer::j,k,l,n
         
+        !$omp declare target 
+
         alpha_zs=alphain  ! learning rate reduction
         lralt_zs=0    ! power alpha is raised to 
         newb_zs=b
@@ -1981,7 +1997,7 @@ MODULE gradient_descent
         character(len=4)::ergerr
         integer::j,k,l
 
-
+        !$omp declare target 
         if (errorflag .ne. 0) return
 
 
@@ -2445,15 +2461,18 @@ MODULE gradient_descent
         integer,intent(in)::number_of_values
         integer,allocatable::out(:),array(:)
         integer::n,m,k,j,l,jtemp
-        DOUBLE PRECISION, external::ZBQLU01
+        ! real::ran
+        DOUBLE PRECISION::ran
     
+        !$omp declare target 
 
         out=[(j,j=1,number_of_values)]
         array=[(j,j=1,number_of_values+1)]
         n=1; m=number_of_values
         do k=1,2
             do j=1,m+1
-                l = n + FLOOR((m+1-n)*ZBQLU01(1))
+                ran=ZBQLU012(1)
+                l = n + FLOOR((m+1-n)*ran)
                 jtemp=array(l)
                 array(l)=array(j)
                 array(j)=jtemp
@@ -2478,13 +2497,14 @@ MODULE gradient_descent
         integer,intent(in)::number_of_values
         integer,allocatable::out(:)
         integer::n,m,k,j,l,jtemp
-        DOUBLE PRECISION, external::ZBQLU01
+        real::ran
 
+        !$omp declare target 
         out=[(j,j=1,number_of_values)]
         n=1; m=number_of_values
         do k=1,2
             do j=1,m
-                l = n + FLOOR((m-n)*(ZBQLU01(1)))
+                l = n + FLOOR((m-n)*ran)
                 jtemp=out(l)
                 out(l)=out(j)
                 out(j)=jtemp
@@ -2493,5 +2513,5 @@ MODULE gradient_descent
 
         return
     end function scramble_norb
-
+        
 END MODUlE gradient_descent

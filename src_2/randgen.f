@@ -303,7 +303,7 @@
       SAVE /ZBQL0001/
       SAVE CURPOS,ID22,ID43
       DATA CURPOS,ID22,ID43 /1,22,43/
-
+      
       B2 = B
       BINV = 1.0D0/B
  5    X = ZBQLIX(ID22) - ZBQLIX(ID43) - C

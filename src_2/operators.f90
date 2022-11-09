@@ -372,16 +372,18 @@ MODULE operators
         complex(kind=8),dimension(:,:),intent(in)::mat
         integer::j
         complex(kind=8)::tt 
-    
+
+        occ_iszero=.false.
+        !$omp target
         do j=1, size(mat(1,:))
             tt=conjg(mat(1,j))*mat(1,j) + conjg(mat(2,j))*mat(2,j)
             if(tt==(0.0,0.0))then
                 occ_iszero=.true.
-                return
+                exit
             end if
         end do
-
-        occ_iszero=.false.
+        
+        !$omp end target
         return
     end function occ_iszero
     

@@ -297,23 +297,27 @@ Module grad_d
         real(kind=8), dimension(:,:,:)::d_diff
         integer,intent(in)::diff_state,d_diff_flg
         integer::j,l
-        real(kind=8),dimension(norb)::temp1,temp2
+        real(kind=8),dimension(norb)::temp1,temp2,temp3
         real(kind=8),dimension(ndet)::dham
 
         if (errorflag .ne. 0) return
         dham=matmul(REAL(d),REAL(phjk))
         j=diff_state !do j=1, ndet !Each ZS{j} dependence
 
-        !$omp target map(to:d,dham,j,d_diff) map(alloc:temp1(norb),temp2(norb))
+        !$omp target map(to:d,dham,j,d_diff) map(alloc:temp1(norb),temp3(norb),temp2(norb))
         temp1(:)=0
         temp2(:)=0
         !$omp parallel do
         do l=1, ndet
-            temp1 = temp1 + dham(l)*d_diff(l,j,:)
-            if(l.eq.j)then
-                temp2=temp2+(real(d(l))*matmul(real(d),pdiff_hjk(j,:,:)))
+            temp1 = temp1 + dham(l)*d_diff(l,diff_state,:)
+            if(l.eq.diff_state)then
+                do j=1, ndet
+                    temp3(j)=real(sum(d*pdiff_hjk(diff_state,j,:)))
+                end do
+                    temp2=temp2+real(d(l)*temp3)
+                ! temp2=temp2+(real(d(l))*matmul(real(d),pdiff_hjk(diff_state,:,:)))
             else 
-                temp2=temp2+(real(d(l)*d(j))*pdiff_hjk(j,l,:))
+                temp2=temp2+(real(d(l)*d(diff_state))*pdiff_hjk(diff_state,l,:))
             end if
         end do
         !$omp end parallel do
