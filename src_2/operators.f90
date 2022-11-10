@@ -367,14 +367,14 @@ MODULE operators
     end function iszero
 
     logical function occ_iszero(mat)
-
+        !$omp declare target
         implicit none
         complex(kind=8),dimension(:,:),intent(in)::mat
         integer::j
         complex(kind=8)::tt 
 
         occ_iszero=.false.
-        !$omp target
+        
         do j=1, size(mat(1,:))
             tt=conjg(mat(1,j))*mat(1,j) + conjg(mat(2,j))*mat(2,j)
             if(tt==(0.0,0.0))then
@@ -383,7 +383,6 @@ MODULE operators
             end if
         end do
         
-        !$omp end target
         return
     end function occ_iszero
     

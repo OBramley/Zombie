@@ -71,6 +71,7 @@ contains
 
 
 elemental pure function is_nan_sp(x) result(y)
+!$omp declare target
 implicit none
 real(SP), intent(in) :: x
 logical :: y
@@ -78,6 +79,7 @@ y = (.not. (x <= huge(x) .and. x >= -huge(x))) .and. (.not. abs(x) > huge(x))
 end function is_nan_sp
 
 elemental pure function is_nan_dp(x) result(y)
+!$omp declare target
 implicit none
 real(DP), intent(in) :: x
 logical :: y
@@ -86,6 +88,7 @@ end function is_nan_dp
 
 
 elemental pure function is_finite_sp(x) result(y)
+!$omp declare target
 implicit none
 real(SP), intent(in) :: x
 logical :: y
@@ -93,6 +96,7 @@ y = (x <= huge(x) .and. x >= -huge(x))
 end function is_finite_sp
 
 elemental pure function is_finite_dp(x) result(y)
+!$omp declare target
 implicit none
 real(DP), intent(in) :: x
 logical :: y
@@ -101,6 +105,7 @@ end function is_finite_dp
 
 
 elemental pure function is_inf_sp(x) result(y)
+!$omp declare target
 implicit none
 real(SP), intent(in) :: x
 logical :: y
@@ -108,6 +113,7 @@ y = (abs(x) > huge(x))
 end function is_inf_sp
 
 elemental pure function is_inf_dp(x) result(y)
+!$omp declare target
 implicit none
 real(DP), intent(in) :: x
 logical :: y
@@ -116,6 +122,7 @@ end function is_inf_dp
 
 
 elemental pure function is_posinf_sp(x) result(y)
+!$omp declare target
 implicit none
 real(SP), intent(in) :: x
 logical :: y
@@ -123,6 +130,7 @@ y = (abs(x) > huge(x)) .and. (x > 0)
 end function is_posinf_sp
 
 elemental pure function is_posinf_dp(x) result(y)
+!$omp declare target
 implicit none
 real(DP), intent(in) :: x
 logical :: y
@@ -131,6 +139,7 @@ end function is_posinf_dp
 
 
 elemental pure function is_neginf_sp(x) result(y)
+!$omp declare target
 implicit none
 real(SP), intent(in) :: x
 logical :: y
@@ -138,6 +147,7 @@ y = (abs(x) > huge(x)) .and. (x < 0)
 end function is_neginf_sp
 
 elemental pure function is_neginf_dp(x) result(y)
+!$omp declare target
 implicit none
 real(DP), intent(in) :: x
 logical :: y

@@ -488,7 +488,7 @@ MODULE ham
         real(kind=8),dimension(norb)::h1etot_diff_ket,h2etot_diff_ket
         real(kind=8),dimension(norb)::bra_prod,ket_prod,prod,temp
         
-        !$omp declare target 
+        !!$omp declare target 
         if (errorflag .ne. 0) return
         ierr = 0
 
@@ -644,7 +644,7 @@ MODULE ham
 
     subroutine one_elec_part_gpu(psin1,psin2,pcos1,pcos2,pphi1,z2l,h1etot,occupancy,&
         ph1ei,h1etot_diff_bra,h1etot_diff_ket,equal)
-
+        !!$omp declare target 
         implicit none
 
         complex(kind=8),dimension(:,:,:),intent(in)::z2l
@@ -662,7 +662,7 @@ MODULE ham
 
         
        
-        !$omp declare target
+        !!$omp declare target
         if (errorflag .ne. 0) return
         h1etot=(0.0,0.0)
         h1etot_diff_bra=0.0
@@ -672,7 +672,6 @@ MODULE ham
         
         !$omp target teams distribute parallel do simd collapse(2) reduction(+:h1etot,h1etot_diff_bra,h1etot_diff_ket)&
         !$omp & map(alloc:zomt(2,norb),bra_prod(norb),ket_prod(norb),prod(norb),temp1(norb),temp2(norb)) &
-        !!$omp & num_teams(2) thread_limit(max_thrds) &
         !$omp & private(zomt,j,k,l,temp1,temp2,bra_prod,ket_prod,prod) &
         !$omp & shared(ph1ei,psin1,psin2,pcos1,pcos2,pphi1,occupancy,equal,z2l)
         do j=1, norb
@@ -761,7 +760,7 @@ MODULE ham
         
     subroutine two_elec_part_gpu(psin1,psin2,pcos1,pcos2,z1jk,z2l,h2etot,occupancy_2an,&
         occupancy_an,ph2ei,h2etot_diff_bra,h2etot_diff_ket,equal)
-
+        !!$omp declare target 
         implicit none
 
         complex(kind=8),dimension(:,:,:),intent(in)::z2l
@@ -783,7 +782,7 @@ MODULE ham
         real(kind=8),dimension(norb)::gg_1,hh_1,gg_2,hh_2
         integer::n,p,gmax,hmin,gmax1,hmin1,gmax2,hmin2,breakflag
 
-        !$omp declare target 
+       
         if (errorflag .ne. 0) return
 
         
@@ -792,8 +791,8 @@ MODULE ham
         h2etot_diff_ket=0.0
         h2etot_diff=0.0
      
-        !$omp target teams distribute parallel do reduction(+:h2etot) map(to:gg,hh,gmax,hmin,jspin) &
-        !$omp & map(alloc:vmult(2,norb)) &
+        !$omp target teams distribute parallel do reduction(+:h2etot) map(to:gmax,hmin,jspin) &
+        !$omp & map(alloc:vmult(2,norb),gg(norb),hh(norb),occupancy(2,norb)) &
         !$omp & private(j,k,l,jspin,occupancy,gg,hh,gmax,hmin,vmult) shared(z2l,z1jk,occupancy_2an,occupancy_an,ph2ei)
         do j=1, norb
             if(psin1(j)==(0.0,0.0))then
@@ -1377,7 +1376,7 @@ MODULE ham
 
         !$omp target data map(to:ph1ei,ph2ei,phnuc,psin,pcos,pphi,occupancy_2an,&
         !$omp occupancy_an_cr,occupancy_an,passback,errorflag,ierr,GDflg) &
-        !$omp & map(tofrom:phjk,povrlp,pkinvh,pinv,pdiff_hjk,pdiff_ovrlp,pdiff_invh)
+        !$omp & map(tofrom:phjk,povrlp) if(GDflg.eq.'y') map(tofrom:pdiff_hjk,pdiff_ovrlp)
         do j=1, size
             call he_row_gpu(ph1ei,ph2ei,phnuc,psin,pcos,pphi,occupancy_2an,&
             & occupancy_an_cr,occupancy_an,passback,phjk,povrlp,pdiff_hjk,pdiff_ovrlp,j,size)
@@ -1385,50 +1384,46 @@ MODULE ham
                 write(6,"(a,i0,a)") "Hamiltonian row ",j, " completed"
             end if  
         end do
-       
-        
+        !$omp end target data
+      
         pinv=povrlp
-   
-        !$omp target map(alloc:IPIV1(size),WORK1(size))
+        
+       
         if (ierr==0) call ZGETRF(size,size,pinv,size,IPIV1,ierr)
         if (ierr/=0) then
-            !write(0,"(a,i0)")"Error in ZGETRF",ierr
+            write(0,"(a,i0)")"Error in ZGETRF",ierr
         end if
         if (ierr==0) call ZGETRI(size,pinv,size,IPIV1,WORK1,size,ierr)
         if (ierr/=0) then
-           ! write(0,"(a,i0)")"Error in ZGETRF",ierr
+            write(0,"(a,i0)")"Error in ZGETRF",ierr
         end if
-        !$omp end target 
-        
+     
+        !$omp parallel
+        !$omp workshare
         pkinvh=matmul(pinv,phjk)
-        
-        
+        !$omp end workshare
+        !$omp end parallel
+       
         if(GDflg.eq.'y')then
-            !$omp target teams map(alloc:temp2(ndet,ndet,norb)) map(to:j)
-            !$omp  distribute parallel do simd collapse(2) 
+            !$omp parallel do simd collapse(2) 
             do k=1, ndet
                 do l=1, ndet
                     if(l.eq.2)then
-                        do j=1, ndet 
-                            temp2(k,2,j)=sum(pinv(k,:)*pdiff_ovrlp(2,j,:))
-                        end do
+                        temp2(k,j,:)=matmul(REAL(pinv(k,:)),pdiff_ovrlp(2,:,:))
                     else
-                        temp2(k,l,:)=real(pinv(k,l)*pdiff_ovrlp(2,l,:))
+                        temp2(k,l,:)=real(pinv(k,l))*pdiff_ovrlp(2,l,:)
                     end if
                 end do
             end do
-            !!$omp end teams distribute parallel do simd
-            !$omp distribute parallel do simd collapse(2) 
+            !$omp parallel do simd collapse(2) 
             do k=1, ndet
                 do l=1, ndet
-                    do j=1, ndet
-                        pdiff_invh(2,k,l,j)= sum(temp2(k,j,:)*real(pkinvh(:,l)))*(-1)
-                    end do
+                    pdiff_invh(2,k,l,:)=matmul(transpose(temp2(k,:,:)),real(pkinvh(:,l)))*(-1)
                 end do
             end do
-            !$omp end target teams
+            
         end if
-        !$omp end target data
+        
 
         deallocate(occupancy_an,stat=ierr)
         if(ierr==0) deallocate(passback,stat=ierr)

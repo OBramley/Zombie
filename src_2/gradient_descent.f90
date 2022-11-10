@@ -1002,9 +1002,9 @@ MODULE gradient_descent
 
     ! Subroutine to calcualte Hamiltonian elements combines 1st and 2nd electron integral calcualations so remove double 
     ! calcualiton of certain results. This minimises the (slow) applicaiton of the creation and annihilaiton operators
-    subroutine he_full_row_gpu(ph1ei,ph2ei,phnuc,psin,pcos,pphi,occupancy_2an,&
+    subroutine he_full_row_gpu(ph1ei,ph2ei,phnuc,psin,pcos,occupancy_2an,&
         occupancy_an_cr,occupancy_an,phjk,povrlp,pinv,pkinvh,diff_state,size)
-        
+
         implicit none
 
         real(kind=8),pointer,dimension(:,:),intent(in)::ph1ei
@@ -1012,7 +1012,6 @@ MODULE gradient_descent
         real(kind=8),pointer,intent(in) :: phnuc
         complex(kind=8), dimension(:,:),intent(in)::psin
         complex(kind=8), dimension(:,:),intent(in)::pcos
-        real(kind=8),dimension(:,:),intent(in)::pphi
         complex(kind=8), dimension(:,:), pointer,intent(inout)::phjk
         complex(kind=8), dimension(:,:), pointer,intent(inout)::povrlp
         complex(kind=8), dimension(:,:), pointer,intent(inout)::pinv
@@ -1020,16 +1019,19 @@ MODULE gradient_descent
         integer,intent(in)::size,diff_state
         integer,dimension(:,:,:,:),intent(in)::occupancy_2an,occupancy_an_cr
         integer,dimension(:,:,:),intent(in)::occupancy_an
+        integer,dimension(2,norb)::occupancy
         complex(kind=8),allocatable, dimension(:,:,:,:)::z1jk
         complex(kind=8),allocatable, dimension(:,:,:)::z2l
-        integer::j,k,l,m,ierr,equal
+        integer::j,k,l,m,ierr,equal,n,p,gmax,hmin,jspin
         complex(kind=8)::h1etot, h2etot
+        complex(kind=8),dimension(2,norb)::zomt,vmult
+        complex(kind=8),dimension(norb)::gg,hh
         real(kind=8),dimension(norb)::h1etot_diff_bra,h2etot_diff_bra
         real(kind=8),dimension(norb)::h1etot_diff_ket,h2etot_diff_ket
         integer, allocatable,dimension(:)::IPIV1
         complex(kind=8),allocatable,dimension(:)::WORK1
         
-        !$omp declare target 
+
         if (errorflag .ne. 0) return
         ierr = 0
 
@@ -1051,23 +1053,27 @@ MODULE gradient_descent
             write(0,"(a,i0)") "Error in WORK vector allocation . ierr had value ", ierr
             errorflag=1
         end if  
-
-        !$omp target teams map(alloc:z1jk(norb,norb,2,norb),z2l(norb,2,norb),WORK1(size),IPIV1(size))&
-        !$omp & map(to:h1etot,h2etot,equal,ierr)
+      
+        !$omp target teams map(alloc:z1jk(norb,norb,2,norb),z2l(norb,2,norb),zomt(2,norb),&
+        !$omp vmult(2,norb),gg(norb),hh(norb),occupancy(2,norb)) &
+        !$omp & map(to:h1etot,h2etot,jspin,gmax,hmin)&
+        !$omp & shared(ph1ei,z2l,z1jk,occupancy_2an,occupancy_an,occupancy_an_cr,ph2ei)&
+        !$omp & private(occupancy,vmult,gg,hh,jspin,gmax,hmin,zomt) 
+        !!$omp & shared(ph1ei,z2l)&
 
         h1etot=cmplx(0.0,0.0)
         h2etot=cmplx(0.0,0.0)
  
-       !$omp distribute parallel do simd
+       !$omp  distribute parallel do simd
         do l=1, norb
             z2l(l,1,:)=psin(diff_state,:) 
             z2l(l,2,:)=pcos(diff_state,:)
             z2l(l,2,l)=z2l(l,1,l)
             z2l(l,1,l)=cmplx(0.0,0.0)
         end do
-       !$omp end distribute parallel do simd
+       !$omp end  distribute parallel do simd
 
-        !$omp distribute parallel do simd collapse(2)
+        !$omp  distribute parallel do simd collapse(2)
         do j=1, norb
             do k=1, norb
                 z1jk(j,k,:,:)=z2l(j,:,:)
@@ -1075,11 +1081,10 @@ MODULE gradient_descent
                 z1jk(j,k,1,k)=cmplx(0.0,0.0)
             end do
         end do
-        !$omp end distribute parallel do simd
+        !$omp end  distribute parallel do simd
        
         z1jk=z1jk*occupancy_2an
 
-        !!$omp distribute parallel do
         do m=1,size
       
             h1etot=cmplx(0.0,0.0)
@@ -1094,42 +1099,114 @@ MODULE gradient_descent
             end do
             !$omp end distribute parallel do simd
             
-            equal=9
-            
-            call one_elec_part_gpu(psin(diff_state,:),psin(m,:),pcos(diff_state,:),pcos(m,:),pphi(diff_state,:),&
-                z2l,h1etot,occupancy_an_cr,ph1ei,h1etot_diff_bra,h1etot_diff_ket,equal) 
+            !$omp distribute parallel do simd collapse(2) reduction(+:h1etot)
+            do j=1, norb
+                do k=1, norb
+                    if(ph1ei(j,k).eq.0.0)then
+                        cycle
+                    end if
+                    zomt(:,:)=z2l(j,:,:)
+                    zomt(1,k)=zomt(2,k)
+                    zomt(2,k)=cmplx(0.0,0.0)
+                    zomt=zomt*occupancy_an_cr(j,k,:,:)
+                    h1etot=h1etot+product((conjg(psin(diff_state,:))*zomt(1,:))+(conjg(pcos(diff_state,:))*zomt(2,:)))*ph1ei(j,k) 
+                end do 
+            end do
+           !$omp end distribute parallel do simd
            
             z2l=z2l*occupancy_an
-            call two_elec_part_gpu(psin(diff_state,:),psin(m,:),pcos(diff_state,:),pcos(m,:),z1jk,z2l,h2etot,occupancy_2an,&
-            occupancy_an,ph2ei,h2etot_diff_bra,h2etot_diff_ket,equal)
-            
+            !$omp distribute parallel do reduction(+:h2etot)
+            do j=1, norb
+                if(psin(diff_state,j)==(0.0,0.0))then
+                    CYCLE
+                end if
+                if(modulo(j,2)==0)then
+                    jspin=2
+                else
+                    jspin=1
+                end if
+                do k=1, norb
+                    if(j.eq.k) cycle
+                    if(occ_iszero(z1jk(j,k,:,:)).eqv..true.)then
+                        CYCLE
+                    end if
+                    do l=jspin, norb, 2
+                        if(psin(m,l)==(0.0,0.0))then
+                            CYCLE
+                        end if
+    
+                        vmult=conjg(z1jk(j,k,:,:))*(z2l(l,:,:))
+        
+                        gg(1:norb)=(0.0,0.0)
+                        hh(1:norb)=(0.0,0.0)
+                        gmax=norb
+                        gg(1)=vmult(2,1)-vmult(1,1)
+    
+                        do n=2, norb
+                            gg(n)=gg(n-1)*(vmult(2,n)-vmult(1,n))
+                            if(gg(n)==(0.0,0.0))then
+                                gmax=n
+                                EXIT 
+                            end if
+                        end do
+                        
+                        hmin=0
+                        hh(norb) = vmult(2,norb)+vmult(1,norb)
+                        do n=(norb-1),1,-(1)
+                            hh(n)=hh(n+1)*(vmult(2,n)+vmult(1,n))
+                            if(hh(n)==(0.0,0.0))then
+                                hmin=n
+                                EXIT 
+                            end if
+                        end do
+    
+                        if (gmax < hmin) then
+                            h2etot=h2etot+0.0
+                            cycle
+                        end if
+    
+                        if(ph2ei(j,k,l,1).ne.0) then
+                            h2etot = h2etot+(conjg(z1jk(j,k,2,1))*z2l(l,1,1)*hh(2)*ph2ei(j,k,l,1))
+                        end if
+    
+                        do n=2,norb-1
+                            if(ph2ei(j,k,l,n).ne.0.0) then
+                                h2etot = h2etot+ (gg(n-1)*conjg(z1jk(j,k,2,n))*z2l(l,1,n)*hh(n+1)*ph2ei(j,k,l,n))
+                            end if
+                        end do
+    
+                        if(ph2ei(j,k,l,norb).ne.0) then
+                            h2etot = h2etot +(gg(norb-1)*conjg(z1jk(j,k,2,norb))*z2l(l,1,norb)*ph2ei(j,k,l,norb))
+                        end if
+    
+                    end do
+                end do
+            end do
+            !$omp end distribute parallel do
+            h2etot=h2etot*0.5
+           
             povrlp(diff_state,m)=product(((conjg(psin(diff_state,:))*psin(m,:)))+((conjg(pcos(diff_state,:))*pcos(m,:))))
             povrlp(m,diff_state)= povrlp(diff_state,m)
             phjk(diff_state,m)=h1etot+h2etot+(phnuc*povrlp(diff_state,m))
             phjk(m,diff_state)=phjk(diff_state,m)
             
         end do
-        !!$omp end parallel do
-
+        !$omp end target teams
+        !$omp target update from(povrlp,phjk)
         pinv=povrlp
         
         if (ierr==0) call ZGETRF(size,size,pinv,size,IPIV1,ierr)
         if (ierr/=0) then
-            ! write(0,"(a,i0)")"Error in ZGETRF",ierr
+            write(0,"(a,i0)")"Error in ZGETRF",ierr
         end if
         if (ierr==0) call ZGETRI(size,pinv,size,IPIV1,WORK1,size,ierr)
         if (ierr/=0) then
-            ! write(0,"(a,i0)")"Error in ZGETRF",ierr
+            write(0,"(a,i0)")"Error in ZGETRF",ierr
         end if
-        !$omp distribute parallel do simd collapse(2)
-        do j=1,ndet
-            do k=1,ndet
-                pkinvh(j,k)=sum(pinv(j,:)*phjk(:,k))
-            end do
-        end do
-        !$omp end distribute parallel do simd 
-      
-        !$omp end target teams 
+
+        pkinvh=matmul(pinv,phjk)
+        !$omp target update to(pinv, pkinvh)
+       
 
         if (ierr==0) deallocate(IPIV1,stat=ierr)
         if (ierr/=0) then
@@ -1182,8 +1259,6 @@ MODULE gradient_descent
         real(kind=8),dimension(norb)::bra_prod,prod,temp1,gg_1,hh_1,temp
         integer::n,p,gmax1,hmin1,breakflag
 
-        !$omp declare target 
-
         if (errorflag .ne. 0) return
         ierr = 0
 
@@ -1197,8 +1272,9 @@ MODULE gradient_descent
 
       
         !$omp target teams map(alloc:z1jk(norb,norb,2,norb),z2l(norb,2,norb),zomt(2,norb),temp(norb),temp2(ndet,ndet,norb),&
-        !$omp bra_prod(norb),prod(norb),temp1(norb),vmultr(2,norb),vmult_dd(2,norb),occupancy(2,norb),&
-        !$omp h1etot_diff_bra(norb),h2etot_diff_bra(norb)) map(to:j,k,l,diff_state,gg_1,hh_1,gmax1,hmin1,jspin,breakflag)&
+        !$omp  bra_prod(norb),prod(norb),temp1(norb),vmultr(2,norb),vmult_dd(2,norb),occupancy(2,norb),&
+        !$omp h1etot_diff_bra(norb),h2etot_diff_bra(norb)) & !map(to:j,k,l,diff_state,gg_1,hh_1)&
+        !map(to:j,k,l,diff_state,gg_1,hh_1,gmax1,hmin1,jspin,breakflag)&
         !$omp & shared(ph1ei,ph2ei,psin,pcos,pphi,occupancy_an_cr,z2l,z1jk,occupancy_2an,occupancy_an,diff_state)&
         !$omp & private(j,k,l,zomt,temp1,bra_prod,prod,gg_1,hh_1,gmax1,hmin1,jspin,occupancy,breakflag,vmultr,vmult_dd)
 
@@ -1584,30 +1660,27 @@ MODULE gradient_descent
                 end do
             end if
         end do  
+        !$omp end target teams
 
-        !$omp  distribute parallel do simd collapse(2) 
+        !$omp target update from(pinv,pkinvh)
+
+        !$omp parallel do simd collapse(2) 
         do k=1, ndet
             do l=1, ndet
-                if(l.eq.2)then
-                    do j=1, ndet 
-                        temp2(k,diff_state,j)=real(sum(pinv(k,:)*pdiff_ovrlp(diff_state,j,:)))
-                    end do
+                if(l.eq.diff_state)then
+                    temp2(k,j,:)=matmul(REAL(pinv(k,:)),pdiff_ovrlp(diff_state,:,:))
                 else
-                    temp2(k,l,:)=real(pinv(k,l)*pdiff_ovrlp(diff_state,l,:))
+                    temp2(k,l,:)=real(pinv(k,l))*pdiff_ovrlp(diff_state,l,:)
                 end if
             end do
         end do
-    
-        !$omp distribute parallel do simd collapse(2) 
+        !$omp parallel do simd collapse(2) 
         do k=1, ndet
             do l=1, ndet
-                do j=1, ndet
-                    pdiff_invh(diff_state,k,l,j)= sum(temp2(k,j,:)*real(pkinvh(:,l)))*(-1)
-                end do
+                pdiff_invh(diff_state,k,l,:)=matmul(transpose(temp2(k,:,:)),real(pkinvh(:,l)))*(-1)
             end do
         end do
-        !$omp end target teams
-
+        !$omp target update to(pdiff_invh)
 
         deallocate(z1jk,stat=ierr)
         if(ierr==0) deallocate(z2l,stat=ierr)
@@ -1648,12 +1721,12 @@ MODULE gradient_descent
         integer::k,l,m
         logical::nanchk
         
-        !$omp declare target 
+       
         if (errorflag .ne. 0) return
 
         call gradient_row_gpu(psin,pcos,pphi,ph1ei,ph2ei,pkinvh,pinv,pdiff_hjk,&
         pdiff_ovrlp,pdiff_invh,occupancy_an,occupancy_an_cr,occupancy_2an,pick,ndet)
-            
+        
         nanchk=.false.
         !$omp target update from(pvars(pick,:))
         do k=1,norb
@@ -1662,6 +1735,7 @@ MODULE gradient_descent
                 pvars=0 
                 pgrad_avlb=0
                 do l=1 ,10
+                    !!$omp declare target( gradient_row_gpu)
                     call gradient_row_gpu(psin,pcos,pphi,ph1ei,ph2ei,pkinvh,pinv,pdiff_hjk,&
                     pdiff_ovrlp,pdiff_invh,occupancy_an,occupancy_an_cr,occupancy_2an,pick,ndet)
                     !$omp target update from(pvars(pick,:))
@@ -1708,7 +1782,7 @@ MODULE gradient_descent
 
     subroutine orbital_gd_gpu(temp_ham,haml, psin,pcos,pphi,pvars,pprev_erg,pcurrent_erg,pgrad_avlb,pprev_mmntm,ph1ei,ph2ei,& 
         phnuc,dvecs,temp_dvecs,en,phjk,povrlp,pkinvh,pinv,pdiff_hjk,pdiff_ovrlp,pdiff_invh,phjkt,povrlpt,pkinvht,pinvt,chng_trk,&
-        psint,pcost,pphit,occupancy_an,occupancy_an_cr,occupancy_2an,epoc_cnt,alphain,b,picker,maxloop,zstore,rands,randcnt)
+        psint,pcost,pphit,occupancy_an,occupancy_an_cr,occupancy_2an,epoc_cnt,alphain,b,picker,maxloop,zstore)
         
        
         implicit none 
@@ -1735,12 +1809,11 @@ MODULE gradient_descent
         type(energy),intent(inout)::en
         type(hamiltonian),intent(inout)::temp_ham,haml
         integer,dimension(:),intent(inout)::chng_trk
-        integer,intent(inout)::epoc_cnt,randcnt
+        integer,intent(inout)::epoc_cnt
         integer,intent(in)::maxloop
         integer,dimension(:,:,:)::occupancy_an
         integer,dimension(:,:,:,:)::occupancy_an_cr,occupancy_2an
         real(kind=8),intent(in)::b,alphain
-        real(kind=8),dimension(:),intent(inout)::rands
         integer,dimension(ndet-1),intent(inout)::picker
         integer::rjct_cnt,next,acpt_cnt,pick,pickorb,rjct_cnt2,loops,d_diff_flg
         real(kind=8)::t,fxtdk,l2_rglrstn
@@ -1752,9 +1825,7 @@ MODULE gradient_descent
         logical::nanchk
         character(len=4)::ergerr
         integer::j,k,l,n
-        
-        !$omp declare target 
-
+       
         alpha_zs=alphain  ! learning rate reduction
         lralt_zs=0    ! power alpha is raised to 
         newb_zs=b
@@ -1774,11 +1845,7 @@ MODULE gradient_descent
             do j=1,(ndet-1)
                 pcurrent_erg=pprev_erg
                 pick=picker(j)
-                pickerorb=scramble_norb_gpu(norb,rands,randcnt)
-                randcnt=randcnt+((norb)*2)
-                if(randcnt.gt.5000)then 
-                    randcnt=randcnt-5000
-                end if
+                pickerorb=scramble_norb(norb)
                 chng_trk2=0
                 acpt_cnt=0
                 do n=1,norb
@@ -1788,6 +1855,7 @@ MODULE gradient_descent
                     do while(t.gt.(1.0d-13))
                         nanchk=.false.
                         if(is_nan(pvars(pick,pickorb)).eqv..true.)then
+                            
                             call grad_calc_gpu(psin,pcos,pphi,ph1ei,ph2ei,phjk,pkinvh,pinv,pdiff_hjk,pvars,pgrad_avlb,&
                             pdiff_ovrlp,pdiff_invh,pick,occupancy_2an,occupancy_an_cr,occupancy_an,dvecs,en,d_diff_flg,haml)
                         end if 
@@ -1811,10 +1879,10 @@ MODULE gradient_descent
                         pinvt=pinv
                         pkinvht=pkinvh
                        
-                        
-                        call he_full_row_gpu(ph1ei,ph2ei,phnuc,psint,pcost,pphit,occupancy_2an,&
+                        !$omp end target
+                        call he_full_row_gpu(ph1ei,ph2ei,phnuc,psint,pcost,occupancy_2an,&
                         occupancy_an_cr,occupancy_an,phjkt,povrlpt,pinvt,pkinvht,pick,ndet)
-                        !$omp end target  
+    
                         !$omp target update from(phjkt,povrlpt,pkinvht)
                     
                         ! Imaginary time propagation for back tracing
@@ -1893,11 +1961,7 @@ MODULE gradient_descent
 
                 if(j.eq.(ndet-1))then 
                     epoc_cnt=epoc_cnt+1
-                    picker=scramble_gpu(ndet,rands,randcnt)
-                    randcnt=randcnt+((ndet)*2)
-                    if(randcnt.gt.5000)then 
-                        randcnt=randcnt-5000
-                    end if
+                    picker=scramble(ndet)
                     next=picker(1)
                     lralt_zs=0
                     !Every 100 epoc brings phi values back within the normal 0-2pi range
@@ -1960,7 +2024,7 @@ MODULE gradient_descent
 
     subroutine full_zs_gd_gpu(temp_ham,haml,psin,pcos,pphi,pvars,pprev_erg,pcurrent_erg,pgrad_avlb,pprev_mmntm,ph1ei,ph2ei,& 
         phnuc,dvecs,temp_dvecs,en,phjk,povrlp,pkinvh,pinv,pdiff_hjk,pdiff_ovrlp,pdiff_invh,phjkt,povrlpt,pkinvht,pinvt,chng_trk,&
-        psint,pcost,pphit,occupancy_an,occupancy_an_cr,occupancy_2an,epoc_cnt,alphain,b,picker,zstore,rands,randcnt)
+        psint,pcost,pphit,occupancy_an,occupancy_an_cr,occupancy_2an,epoc_cnt,alphain,b,picker,zstore)
 
         implicit none 
 
@@ -1990,8 +2054,7 @@ MODULE gradient_descent
         integer,dimension(:),intent(inout)::chng_trk
         integer,dimension(:,:,:),intent(in)::occupancy_an
         integer,dimension(:,:,:,:),intent(in)::occupancy_an_cr,occupancy_2an
-        integer,intent(inout)::epoc_cnt,randcnt
-        real(kind=8),dimension(:),intent(inout)::rands
+        integer,intent(inout)::epoc_cnt
         real(kind=8),intent(in)::b,alphain
         integer,dimension(ndet-1),intent(inout)::picker
         integer::lralt,rjct_cnt,next,acpt_cnt,pick,orbitcnt,d_diff_flg,lralt_temp,mmntmflg,loop_max,loop_dwn
@@ -1999,12 +2062,11 @@ MODULE gradient_descent
         real(kind=8),dimension(norb)::gradient_norm
         real(kind=8),dimension(ndet)::mmntm,mmntma
         integer,dimension(ndet-1)::rsrtpass
-       
+        DOUBLE PRECISION, external::ZBQLU01
         logical::nanchk
         character(len=4)::ergerr
         integer::j,k,l
 
-        !$omp declare target 
         if (errorflag .ne. 0) return
 
 
@@ -2068,11 +2130,9 @@ MODULE gradient_descent
                     povrlpt=povrlp
                     pinvt=pinv
                     pkinvht=pkinvh
-                   
-                    call he_full_row_gpu(ph1ei,ph2ei,phnuc,psint,pcost,pphit,occupancy_2an,&
+                   !$omp end target
+                    call he_full_row_gpu(ph1ei,ph2ei,phnuc,psint,pcost,occupancy_2an,&
                         occupancy_an_cr,occupancy_an,phjkt,povrlpt,pinvt,pkinvht,pick,ndet)
-
-                    !$omp end target
                     !$omp target update from(phjkt,povrlpt,pkinvht)
 
                     ! Imaginary time propagation for back tracing
@@ -2164,11 +2224,7 @@ MODULE gradient_descent
                 if(j.eq.(ndet-1))then 
                     epoc_cnt=epoc_cnt+1
                     if(acpt_cnt.gt.0)then
-                        picker=scramble_gpu(ndet-1,rands,randcnt)
-                        randcnt=randcnt+((ndet)*2)
-                        if(randcnt.gt.5000)then 
-                            randcnt=randcnt-5000
-                        end if
+                        picker=scramble(ndet-1)
                     end if
                     next=picker(1)
                     !Every 100 epoc brings phi values back within the normal 0-2pi range
@@ -2194,11 +2250,7 @@ MODULE gradient_descent
                     d_diff_flg=1 
                 else 
                     d_diff_flg=0
-                    randcnt=randcnt+1
-                    if(randcnt.gt.5000)then 
-                        randcnt=randcnt-5000
-                    end if
-                    if((rands(randcnt)).lt.0.3)then 
+                    if(ZBQLU01(1).lt.0.3)then 
                         d_diff_flg=1
                     end if
                 end if
@@ -2222,7 +2274,7 @@ MODULE gradient_descent
                     call orbital_gd_gpu(temp_ham,haml,psin,pcos,pphi,pvars,pprev_erg,pcurrent_erg,pgrad_avlb,pprev_mmntm,& 
                     ph1ei,ph2ei,phnuc,dvecs,temp_dvecs,en,phjk,povrlp,pkinvh,pinv,pdiff_hjk,pdiff_ovrlp,pdiff_invh,&
                     phjkt,povrlpt,pkinvht,pinvt,chng_trk,psint,pcost,pphit,occupancy_an,occupancy_an_cr,occupancy_2an,&
-                    epoc_cnt,alphain,b,picker,1,zstore,rands,randcnt)
+                    epoc_cnt,alphain,b,picker,1,zstore)
                     orbitcnt=-(10*ndet)
                     lralt=0
                 end if   
@@ -2231,7 +2283,7 @@ MODULE gradient_descent
                     call orbital_gd_gpu(temp_ham,haml,psin,pcos,pphi,pvars,pprev_erg,pcurrent_erg,pgrad_avlb,pprev_mmntm,& 
                     ph1ei,ph2ei,phnuc,dvecs,temp_dvecs,en,phjk,povrlp,pkinvh,pinv,pdiff_hjk,pdiff_ovrlp,pdiff_invh,&
                     phjkt,povrlpt,pkinvht,pinvt,chng_trk,psint,pcost,pphit,occupancy_an,occupancy_an_cr,occupancy_2an,&
-                    epoc_cnt,alphain,b,picker,1,zstore,rands,randcnt)
+                    epoc_cnt,alphain,b,picker,1,zstore)
                     orbitcnt=-(10*ndet)
                 end if
             end if
@@ -2240,7 +2292,7 @@ MODULE gradient_descent
                 call orbital_gd_gpu(temp_ham,haml,psin,pcos,pphi,pvars,pprev_erg,pcurrent_erg,pgrad_avlb,pprev_mmntm,& 
                 ph1ei,ph2ei,phnuc,dvecs,temp_dvecs,en,phjk,povrlp,pkinvh,pinv,pdiff_hjk,pdiff_ovrlp,pdiff_invh,&
                 phjkt,povrlpt,pkinvht,pinvt,chng_trk,psint,pcost,pphit,occupancy_an,occupancy_an_cr,occupancy_2an,&
-                epoc_cnt,alphain,b,picker,1,zstore,rands,randcnt)
+                epoc_cnt,alphain,b,picker,1,zstore)
                 orbitcnt=-(10*ndet)
                 lralt=0
             end if
@@ -2262,7 +2314,7 @@ MODULE gradient_descent
     subroutine zombie_alter_gpu(zstore,grad_fin,haml,elect,en,dvecs,chng_trk)
 
         implicit none
-
+       
         type(zombiest),dimension(:),intent(inout)::zstore
         type(grad),intent(inout),target::grad_fin
         type(elecintrgl),intent(in),target::elect
@@ -2277,8 +2329,7 @@ MODULE gradient_descent
         integer::epoc_cnt,epoc_max
         real(kind=8)::alpha,b
         integer,dimension(ndet-1)::picker,rsrtpass
-        DOUBLE PRECISION, external::ZBQLU01
-
+       
         real(kind=8),pointer,dimension(:,:)::ph1ei
         real(kind=8), dimension(:,:,:,:), pointer::ph2ei
         real(kind=8),pointer :: phnuc
@@ -2301,8 +2352,7 @@ MODULE gradient_descent
         real(kind=8),pointer:: pcurrent_erg
         integer,dimension(:),pointer::pgrad_avlb
         real(kind=8),dimension(:,:),pointer::pprev_mmntm
-        real(kind=8),dimension(5000)::rands 
-        integer::ierr,j,k,l,randcnt
+        integer::ierr,j,k,l
         
         if (errorflag .ne. 0) return
 
@@ -2348,11 +2398,6 @@ MODULE gradient_descent
         end do
         !$omp end do
         !$omp end parallel
-
-        do j=1,5000
-            rands(j)=ZBQLU01(1)
-        end do
-        randcnt=1
 
         epoc_cnt=0 !epoc counter
         if(rstrtflg.eq.'y')then 
@@ -2425,27 +2470,27 @@ MODULE gradient_descent
         do j=1, ndet-1
             picker(j)=j+1
         end do
-
-        !$omp target data map(to:ph1ei,ph2ei,phnuc,rsrtpass,occupancy_2an,occupancy_an_cr,occupancy_an,errorflag,pvars,&
-        !$omp pprev_erg,pprev_mmntm,pdiff_hjk,pdiff_ovrlp,pdiff_invh,norb,ndet,pkinvh,pinv,rands,randcnt)&
+      
+        !$omp target data map(to:ph1ei,ph2ei,phnuc,rsrtpass,occupancy_2an,occupancy_an_cr,occupancy_an,errorflag,&
+        !$omp pprev_erg,pprev_mmntm,pdiff_hjk,pdiff_ovrlp,pdiff_invh,pkinvh,pinv,norb,ndet)&
         !$omp & map(alloc:psint(ndet,norb),pcost(ndet,norb),pphit(ndet,norb),phjkt(ndet,ndet),povrlpt(ndet,ndet),&
-        !$omp pkinvht(ndet,ndet),pinvt(ndet,ndet)) map(tofrom:phjk,povrlp,psin,pcos,pphi) 
+        !$omp pkinvht(ndet,ndet),pinvt(ndet,ndet)) map(tofrom:phjk,povrlp,psin,pcos,pphi,pvars) 
         
         if(epoc_cnt.eq.0)then
             call orbital_gd_gpu(temp_ham,haml,psin,pcos,pphi,pvars,pprev_erg,pcurrent_erg,pgrad_avlb,pprev_mmntm,& 
             ph1ei,ph2ei,phnuc,dvecs,temp_dvecs,en,phjk,povrlp,pkinvh,pinv,pdiff_hjk,pdiff_ovrlp,pdiff_invh,&
             phjkt,povrlpt,pkinvht,pinvt,chng_trk,psint,pcost,pphit,occupancy_an,occupancy_an_cr,occupancy_2an,&
-            epoc_cnt,alpha,b,picker,1,zstore,rands,randcnt)
+            epoc_cnt,alpha,b,picker,1,zstore)
         end if 
 
         call full_zs_gd_gpu(temp_ham,haml,psin,pcos,pphi,pvars,pprev_erg,pcurrent_erg,pgrad_avlb,pprev_mmntm,ph1ei,ph2ei,& 
         phnuc,dvecs,temp_dvecs,en,phjk,povrlp,pkinvh,pinv,pdiff_hjk,pdiff_ovrlp,pdiff_invh,phjkt,povrlpt,pkinvht,pinvt,chng_trk,&
-        psint,pcost,pphit,occupancy_an,occupancy_an_cr,occupancy_2an,epoc_cnt,alpha,b,picker,zstore,rands,randcnt)
+        psint,pcost,pphit,occupancy_an,occupancy_an_cr,occupancy_2an,epoc_cnt,alpha,b,picker,zstore)
             
         call orbital_gd_gpu(temp_ham,haml,psin,pcos,pphi,pvars,pprev_erg,pcurrent_erg,pgrad_avlb,pprev_mmntm,& 
         ph1ei,ph2ei,phnuc,dvecs,temp_dvecs,en,phjk,povrlp,pkinvh,pinv,pdiff_hjk,pdiff_ovrlp,pdiff_invh,&
         phjkt,povrlpt,pkinvht,pinvt,chng_trk,psint,pcost,pphit,occupancy_an,occupancy_an_cr,occupancy_2an,&
-        epoc_cnt,alpha,b,picker,(epoc_max-epoc_cnt),zstore,rands,randcnt)
+        epoc_cnt,alpha,b,picker,(epoc_max-epoc_cnt),zstore)
         
         !$omp end target data
 
@@ -2532,69 +2577,69 @@ MODULE gradient_descent
         return
     end function scramble_norb
 
-    function scramble_gpu(number_of_values, rands,randcnt) result(out)
+    ! function scramble_gpu(number_of_values, rands,randcnt) result(out)
         
-        implicit none
+    !     implicit none
 
-        integer,intent(in)::number_of_values
-        integer,allocatable::out(:),array(:)
-        integer::n,m,k,j,l,jtemp,randcnt,r
-        real(kind=8),dimension(:),intent(in)::rands
-        !!$omp declare target
-        r=randcnt
-        out=[(j,j=1,number_of_values)]
-        array=[(j,j=1,number_of_values+1)]
-        n=1; m=number_of_values
-        do k=1,2
-            do j=1,m+1
-                if(r.gt.5000)then 
-                    r=r-5000
-                end if
-                l = n + FLOOR((m+1-n)*rands(r))
-                r=r+1
-                jtemp=array(l)
-                array(l)=array(j)
-                array(j)=jtemp
-            end do
-        end do
-        n=1
-        do j=1,m+1
-            if(array(j).eq.1)then 
-                cycle
-            end if
-            out(n)=array(j)
-            n=n+1
-        end do
-        return
-     end function scramble_gpu
+    !     integer,intent(in)::number_of_values
+    !     integer,allocatable::out(:),array(:)
+    !     integer::n,m,k,j,l,jtemp,randcnt,r
+    !     real(kind=8),dimension(:),intent(in)::rands
+    !     !!$omp declare target
+    !     r=randcnt
+    !     out=[(j,j=1,number_of_values)]
+    !     array=[(j,j=1,number_of_values+1)]
+    !     n=1; m=number_of_values
+    !     do k=1,2
+    !         do j=1,m+1
+    !             if(r.gt.5000)then 
+    !                 r=r-5000
+    !             end if
+    !             l = n + FLOOR((m+1-n)*rands(r))
+    !             r=r+1
+    !             jtemp=array(l)
+    !             array(l)=array(j)
+    !             array(j)=jtemp
+    !         end do
+    !     end do
+    !     n=1
+    !     do j=1,m+1
+    !         if(array(j).eq.1)then 
+    !             cycle
+    !         end if
+    !         out(n)=array(j)
+    !         n=n+1
+    !     end do
+    !     return
+    !  end function scramble_gpu
 
-     ! Produces a random order for the ZS to be posisbly changed
-    function scramble_norb_gpu(number_of_values,rands,randcnt) result(out)
+    !  ! Produces a random order for the ZS to be posisbly changed
+    ! function scramble_norb_gpu(number_of_values,rands,randcnt) result(out)
     
-        implicit none
+    !     implicit none
 
-        integer,intent(in)::number_of_values
-        integer,allocatable::out(:)
-        integer::n,m,k,j,l,jtemp,randcnt,r
-        real(kind=8),dimension(:),intent(in)::rands
-        !!$omp declare target
-        r=randcnt
-        out=[(j,j=1,number_of_values)]
-        n=1; m=number_of_values
-        do k=1,2
-            do j=1,m
-                if(r.gt.5000)then 
-                    r=r-5000
-                end if
-                l = n + FLOOR((m-n)*rands(r))
-                r=r+1
-                jtemp=out(l)
-                out(l)=out(j)
-                out(j)=jtemp
-            end do
-        end do
+    !     integer,intent(in)::number_of_values
+    !     integer,allocatable::out(:)
+    !     integer::n,m,k,j,l,jtemp,randcnt,r
+    !     real(kind=8),dimension(:),intent(in)::rands
+    !     !!$omp declare target
+    !     r=randcnt
+    !     out=[(j,j=1,number_of_values)]
+    !     n=1; m=number_of_values
+    !     do k=1,2
+    !         do j=1,m
+    !             if(r.gt.5000)then 
+    !                 r=r-5000
+    !             end if
+    !             l = n + FLOOR((m-n)*rands(r))
+    !             r=r+1
+    !             jtemp=out(l)
+    !             out(l)=out(j)
+    !             out(j)=jtemp
+    !         end do
+    !     end do
 
-        return
-    end function scramble_norb_gpu
+    !     return
+    ! end function scramble_norb_gpu
         
 END MODUlE gradient_descent
