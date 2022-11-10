@@ -302,16 +302,17 @@ MODULE gradient_descent
             errorflag=1
             return
         end if 
-
+        !$omp parallel do
         do k=1, ndet
             do l=1, ndet
                 if(l.eq.diff_state)then
-                    temp2(k,diff_state ,:)=matmul(REAL(haml%inv(k,:)),haml%diff_ovrlp(diff_state ,:,:))
+                    temp2(k,diff_state,:)=matmul(REAL(haml%inv(k,:)),haml%diff_ovrlp(diff_state,:,:))
                 else
-                    temp2(k,l,:)=real(haml%inv(k,l))*haml%diff_ovrlp(diff_state ,l,:)
+                    temp2(k,l,:)=real(haml%inv(k,l))*haml%diff_ovrlp(diff_state,l,:)
                 end if
             end do
         end do
+        !$omp parallel do
         do k=1, ndet
             do l=1, ndet
                 haml%diff_invh(diff_state,k,l,:)=matmul(transpose(temp2(k,:,:)),real(haml%kinvh(:,l)))*(-1)
@@ -377,7 +378,7 @@ MODULE gradient_descent
 
         call final_grad(dvec(1),haml,grad_fin,pick,d_diff_flg)
 
-        ! print*,grad_fin%vars(pick,:)
+       
         if(d_diff_flg.eq.0)then
             grad_fin%grad_avlb(pick)=1
         else if(d_diff_flg.eq.1)then 
@@ -436,6 +437,7 @@ MODULE gradient_descent
                 grad_fin%current_erg=grad_fin%prev_erg
                 pick=picker(j)
                 pickerorb=scramble_norb(norb)
+                ! pickerorb=(/1,2,3,4,5,6,7,8,9,10/)
                 chng_trk2=0
                 acpt_cnt=0
                 do n=1,norb
@@ -449,6 +451,7 @@ MODULE gradient_descent
                             occupancy_an,dvecs,grad_fin,en,d_diff_flg) 
                         end if 
                         
+                       
                         ! Setup temporary zombie state
                         temp_zom=zstore
                         temp_zom(pick)%phi(pickorb)=zstore(pick)%phi(pickorb)-(t*(grad_fin%vars(pick,pickorb)))
@@ -468,6 +471,7 @@ MODULE gradient_descent
                         en%t=0
                         call imgtime_prop(temp_dvecs,en,temp_ham,0)
                         fxtdk=real(en%erg(1,timesteps+1))
+                     
                         if(is_nan(fxtdk).eqv..true.)then 
                             ergerr='NaN ' 
                             write(0,"(a,a,a,i0,a,i0)") "Error in energy calculation which took value ",ergerr, &
@@ -520,7 +524,7 @@ MODULE gradient_descent
                             end if
                         end if
                     end do
-               
+                    
                     if((rjct_cnt.eq.0).and.(n.ne.norb))then
                         call grad_calc(haml,zstore,elect,pick,occupancy_2an,&
                         occupancy_an_cr,occupancy_an,dvecs,grad_fin,en,d_diff_flg) 
@@ -1019,18 +1023,15 @@ MODULE gradient_descent
         integer,intent(in)::size,diff_state
         integer,dimension(:,:,:,:),intent(in)::occupancy_2an,occupancy_an_cr
         integer,dimension(:,:,:),intent(in)::occupancy_an
-        integer,dimension(2,norb)::occupancy
         complex(kind=8),allocatable, dimension(:,:,:,:)::z1jk
         complex(kind=8),allocatable, dimension(:,:,:)::z2l
-        integer::j,k,l,m,ierr,equal,n,p,gmax,hmin,jspin
+        integer::j,k,l,m,ierr,n,gmax,hmin,jspin
         complex(kind=8)::h1etot, h2etot
         complex(kind=8),dimension(2,norb)::zomt,vmult
         complex(kind=8),dimension(norb)::gg,hh
-        real(kind=8),dimension(norb)::h1etot_diff_bra,h2etot_diff_bra
-        real(kind=8),dimension(norb)::h1etot_diff_ket,h2etot_diff_ket
         integer, allocatable,dimension(:)::IPIV1
         complex(kind=8),allocatable,dimension(:)::WORK1
-        
+        complex(kind=8)::totc
 
         if (errorflag .ne. 0) return
         ierr = 0
@@ -1055,11 +1056,10 @@ MODULE gradient_descent
         end if  
       
         !$omp target teams map(alloc:z1jk(norb,norb,2,norb),z2l(norb,2,norb),zomt(2,norb),&
-        !$omp vmult(2,norb),gg(norb),hh(norb),occupancy(2,norb)) &
-        !$omp & map(to:h1etot,h2etot,jspin,gmax,hmin)&
+        !$omp vmult(2,norb),gg(norb),hh(norb)) &
+        !$omp & map(to:h1etot,h2etot,jspin,gmax,hmin,totc)&
         !$omp & shared(ph1ei,z2l,z1jk,occupancy_2an,occupancy_an,occupancy_an_cr,ph2ei)&
-        !$omp & private(occupancy,vmult,gg,hh,jspin,gmax,hmin,zomt) 
-        !!$omp & shared(ph1ei,z2l)&
+        !$omp & private(vmult,gg,hh,jspin,gmax,hmin,zomt,totc) 
 
         h1etot=cmplx(0.0,0.0)
         h2etot=cmplx(0.0,0.0)
@@ -1159,26 +1159,26 @@ MODULE gradient_descent
                                 EXIT 
                             end if
                         end do
-    
+                        totc=(0.0,0.0)
                         if (gmax < hmin) then
-                            h2etot=h2etot+0.0
+                            h2etot=h2etot+totc
                             cycle
                         end if
     
                         if(ph2ei(j,k,l,1).ne.0) then
-                            h2etot = h2etot+(conjg(z1jk(j,k,2,1))*z2l(l,1,1)*hh(2)*ph2ei(j,k,l,1))
+                            totc = totc+(conjg(z1jk(j,k,2,1))*z2l(l,1,1)*hh(2)*ph2ei(j,k,l,1))
                         end if
     
                         do n=2,norb-1
                             if(ph2ei(j,k,l,n).ne.0.0) then
-                                h2etot = h2etot+ (gg(n-1)*conjg(z1jk(j,k,2,n))*z2l(l,1,n)*hh(n+1)*ph2ei(j,k,l,n))
+                                totc = totc+ (gg(n-1)*conjg(z1jk(j,k,2,n))*z2l(l,1,n)*hh(n+1)*ph2ei(j,k,l,n))
                             end if
                         end do
     
                         if(ph2ei(j,k,l,norb).ne.0) then
-                            h2etot = h2etot +(gg(norb-1)*conjg(z1jk(j,k,2,norb))*z2l(l,1,norb)*ph2ei(j,k,l,norb))
+                            totc = totc +(gg(norb-1)*conjg(z1jk(j,k,2,norb))*z2l(l,1,norb)*ph2ei(j,k,l,norb))
                         end if
-    
+                        h2etot=h2etot+totc
                     end do
                 end do
             end do
@@ -1258,7 +1258,7 @@ MODULE gradient_descent
         integer::j,k,l,m,ierr, jspin
         real(kind=8),dimension(norb)::bra_prod,prod,temp1,gg_1,hh_1,temp
         integer::n,p,gmax1,hmin1,breakflag
-
+        real(kind=8)::tot
         if (errorflag .ne. 0) return
         ierr = 0
 
@@ -1274,9 +1274,9 @@ MODULE gradient_descent
         !$omp target teams map(alloc:z1jk(norb,norb,2,norb),z2l(norb,2,norb),zomt(2,norb),temp(norb),temp2(ndet,ndet,norb),&
         !$omp  bra_prod(norb),prod(norb),temp1(norb),vmultr(2,norb),vmult_dd(2,norb),occupancy(2,norb),&
         !$omp h1etot_diff_bra(norb),h2etot_diff_bra(norb)) & !map(to:j,k,l,diff_state,gg_1,hh_1)&
-        !map(to:j,k,l,diff_state,gg_1,hh_1,gmax1,hmin1,jspin,breakflag)&
+        !map(to:j,k,l,diff_state,gg_1,hh_1,gmax1,hmin1,jspin,breakflag,tot)&
         !$omp & shared(ph1ei,ph2ei,psin,pcos,pphi,occupancy_an_cr,z2l,z1jk,occupancy_2an,occupancy_an,diff_state)&
-        !$omp & private(j,k,l,zomt,temp1,bra_prod,prod,gg_1,hh_1,gmax1,hmin1,jspin,occupancy,breakflag,vmultr,vmult_dd)
+        !$omp & private(j,k,l,zomt,temp1,bra_prod,prod,gg_1,hh_1,gmax1,hmin1,jspin,occupancy,breakflag,vmultr,vmult_dd,temp,tot)
 
        
         !$omp distribute parallel do simd
@@ -1389,14 +1389,16 @@ MODULE gradient_descent
                     end if
                     do l=jspin, norb, 2
                         occupancy=occupancy_2an(j,k,:,:)*occupancy_an(l,:,:)
-                        vmultr=real(z1jk(j,k,:,:))*real(z2l(l,:,:))
                         if(diff_state.eq.m)then !Differentiation when zombie states are the same
                             do n=1, norb    !Differentiating w.r.t to orbital n
                                 breakflag=0
+                                temp=0
+                                vmultr=real(z1jk(j,k,:,:))*real(z2l(l,:,:))
                                 vmult_dd=vmultr
                                 if(j.eq.k)then
+                                    temp(n)=0
                                     cycle
-                                else if((j.eq.j).or.(k.eq.n))then
+                                else if((j.eq.n).or.(k.eq.n))then
                                     if(l.eq.n)then    !before diff alive:0 dead:a^(a)_(1j)*a^(a)_(1j)
                                         vmult_dd(1,n)=0
                                         vmult_dd(2,n)=2*real(psin(diff_state,n)*pcos(diff_state,n))*occupancy(2,n)
@@ -1420,7 +1422,7 @@ MODULE gradient_descent
                 
                                 do p=2, norb
                                     gg_1(p)=gg_1(p-1)*(vmult_dd(2,p)-vmult_dd(1,p))
-                                    if(gg_1(k)==(0.0))then
+                                    if(gg_1(p)==(0.0))then
                                         gmax1=p
                                         EXIT 
                                     end if
@@ -1436,40 +1438,41 @@ MODULE gradient_descent
                                     end if
                                 end do
                 
-    
+                                tot=0.0
                                 if (gmax1 < hmin1) then
+                                    temp(n)=tot
                                     cycle
                                 end if
                 
                                 if((breakflag.eq.0).or.(breakflag.eq.1))then
                                     if(ph2ei(j,k,l,1).ne.0) then
                                         if(breakflag.eq.1)then
-                                            h2etot_diff_bra(n)=(1.0-2*((real(psin(diff_state,1)))**2))*&
+                                            temp(n)=(1.0-2*((real(psin(diff_state,1)))**2))*&
                                             occupancy(2,1)*hh_1(2)*ph2ei(j,k,l,1)
                                             cycle
                                         end if
-                                        if(j.eq.1)then
+                                        if(n.eq.1)then
                                             if((j.eq.1).or.(k.eq.1))then
                                                 if(l.ne.1)then
-                                                    h2etot_diff_bra(n) = h2etot_diff_bra(n)+&
+                                                    tot = tot+&
                                                     (2*real(psin(diff_state,1)*pcos(diff_state,1))*occupancy(2,1)*&
                                                     hh_1(2)*ph2ei(j,k,l,1))
                                                 end if
                                             else
                                                 if(l.ne.1)then
-                                                    h2etot_diff_bra(n) = h2etot_diff_bra(n)+&
+                                                    tot = tot+&
                                                     ((1.0-2*((real(psin(diff_state,1)))**2))*occupancy(2,1)*&
                                                     hh_1(2)*ph2ei(j,k,l,1))
                                                 end if 
                                             end if
                                         else
-                                            h2etot_diff_bra(n) = h2etot_diff_bra(n)+&
+                                            tot = tot+&
                                             (REAL(conjg(z1jk(j,k,2,1))*z2l(l,1,1))*hh_1(2)*ph2ei(j,k,l,1))
                                         end if
                                     end if
                                 else if((breakflag.lt.norb))then
                                     if(breakflag.ne.0)then
-                                        h2etot_diff_bra(n)=(gg_1(n-1)*((1.0-2*((real(psin(diff_state,n)))**2))*&
+                                        temp(n)=(gg_1(n-1)*((1.0-2*((real(psin(diff_state,n)))**2))*&
                                         occupancy(2,n))*hh_1(n+1)*ph2ei(j,k,l,n))
                                         cycle
                                     end if
@@ -1478,26 +1481,26 @@ MODULE gradient_descent
                                             if(p.eq.n)then
                                                 if((j.eq.p).or.(k.eq.p))then
                                                     if(l.ne.p)then
-                                                        h2etot_diff_bra(n) = h2etot_diff_bra(n)+&
+                                                        tot = tot+&
                                                         (gg_1(p-1)*(2*real(psin(diff_state,p)*pcos(diff_state,p))*&
                                                         occupancy(2,p))*hh_1(p+1)*ph2ei(j,k,l,p))
                                                     end if
                                                 else
                                                     if(l.ne.p)then
-                                                        h2etot_diff_bra(n) = h2etot_diff_bra(n)+&
+                                                        tot = tot+&
                                                         (gg_1(p-1)*((1.0-2*((real(psin(diff_state,p)))**2))*&
                                                         occupancy(2,p))*hh_1(p+1)*ph2ei(j,k,l,p))
                                                     end if 
                                                 end if
                                             else
-                                                h2etot_diff_bra(n) = h2etot_diff_bra(n)+&
-                                                 (gg_1(p-1)*REAL(conjg(z1jk(j,k,2,p))*z2l(l,1,p))*hh_1(p+1)*ph2ei(j,k,l,p))
+                                                tot = tot+&
+                                                (gg_1(p-1)*REAL(conjg(z1jk(j,k,2,p))*z2l(l,1,p))*hh_1(p+1)*ph2ei(j,k,l,p))
                                             end if
                                         end if
                                     end do
                                 else
                                     if(breakflag.eq.norb)then
-                                        h2etot_diff_bra(n)=(gg_1(norb-1)*((1.0-2*((real(psin(diff_state,norb)))**2))&
+                                        temp(n)=(gg_1(norb-1)*((1.0-2*((real(psin(diff_state,norb)))**2))&
                                         *occupancy(2,norb))*ph2ei(j,k,l,norb))
                                         cycle
                                     end if
@@ -1505,28 +1508,33 @@ MODULE gradient_descent
                                         if(norb.eq.n)then
                                             if((j.eq.norb).or.(k.eq.norb))then
                                                 if(l.ne.norb)then
-                                                    h2etot_diff_bra(n) = h2etot_diff_bra(n)+&
+                                                    tot= tot+&
                                                     (gg_1(norb-1)*(2*real(psin(diff_state,norb)*pcos(diff_state,norb))*&
                                                     occupancy(2,norb))*ph2ei(j,k,l,norb))
                                                 end if
                                             else
                                                 if(l.ne.norb)then
-                                                    h2etot_diff_bra(n) = h2etot_diff_bra(n)+&
+                                                    tot = tot+&
                                                      (gg_1(norb-1)*((1.0-2*((real(psin(diff_state,norb)))**2))*&
                                                      occupancy(2,norb))*ph2ei(j,k,l,norb))
                                                 end if    
                                             end if
                                         else
-                                            h2etot_diff_bra(n) = h2etot_diff_bra(n)+&
+                                            tot = tot+&
                                             (gg_1(norb-1)*REAL(conjg(z1jk(j,k,2,norb))*z2l(l,1,norb))*ph2ei(j,k,l,norb))
                                         end if
                                     end if
                                 end if
+                                temp(n)=tot
                             end do
+                            h2etot_diff_bra(:)=h2etot_diff_bra(:)+temp(:)
                         else  !Differentiation when zombie states are not the same
+                            temp=0
+                            vmultr=real(z1jk(j,k,:,:))*real(z2l(l,:,:))
                             do n=1, norb
                                 vmult_dd=vmultr
                                 if(j.eq.k)then
+                                    temp(n)=0
                                     cycle
                                 else if((j.eq.n).or.(k.eq.n))then
                                     if(l.eq.n)then !before diff alive:0 dead:a^(a)_(1j)*a^(b)_(1j)
@@ -1559,6 +1567,7 @@ MODULE gradient_descent
                                     end if
                                 end do
                 
+                                
                                 hmin1=0
                                 
                                 hh_1(norb) = (vmult_dd(2,norb)+vmult_dd(1,norb))
@@ -1571,8 +1580,9 @@ MODULE gradient_descent
                                     end if
                                 end do
                 
-                                
+                                tot=0.0
                                 if((gmax1 < hmin1))then
+                                    temp(n)=tot
                                     cycle
                                 end if
                 
@@ -1580,17 +1590,17 @@ MODULE gradient_descent
                                     if(n.eq.1)then
                                         if((j.eq.1).or.(k.eq.1))then
                                             if(l.ne.1)then    !before diff alive:0 dead:a^(a)_(1j)*a^(b)_(1j)
-                                                h2etot_diff_bra(n) = h2etot_diff_bra(n)+&
+                                                tot = tot+&
                                                 ((REAL(pcos(diff_state,1)*psin(m,1))*occupancy(2,1))*hh_1(2)*ph2ei(j,k,l,1))
                                             end if
                                         else
                                             if(l.ne.1)then    !before diff alive:0 dead:a^(a)_(0j)*a^(b)_(1j)
-                                                h2etot_diff_bra(n) = h2etot_diff_bra(n)+&
+                                                tot = tot+&
                                                 ((REAL(-psin(diff_state,1)*psin(m,1))*occupancy(2,1))*hh_1(2)*ph2ei(j,k,l,1))
                                             end if 
                                         end if
                                     else
-                                        h2etot_diff_bra(n) = h2etot_diff_bra(n)+&
+                                        tot= tot+&
                                         (REAL(conjg(z1jk(j,k,2,1))*z2l(l,1,1))*hh_1(2)*ph2ei(j,k,l,1))
                                     end if
                                 end if
@@ -1599,19 +1609,19 @@ MODULE gradient_descent
                                         if(p.eq.n)then
                                             if((j.eq.p).or.(k.eq.p))then
                                                 if(l.ne.p)then    !before diff alive:0 dead:a^(a)_(1j)*a^(b)_(1j)
-                                                    h2etot_diff_bra(n) = h2etot_diff_bra(n)+&
+                                                    tot= tot+&
                                                     (gg_1(p-1)*(REAL(pcos(diff_state,p)*psin(m,p))*&
                                                     occupancy(2,p))*hh_1(p+1)*ph2ei(j,k,l,p))
                                                 end if
                                             else
                                                 if(l.ne.p)then    !before diff alive:0 dead:a^(a)_(0j)*a^(b)_(1j)
-                                                    h2etot_diff_bra(n) = h2etot_diff_bra(n)+&
+                                                    tot = tot+&
                                                     (gg_1(p-1)*(REAL(-psin(diff_state,p)*psin(m,p))*occupancy(2,p))*&
                                                     hh_1(p+1)*ph2ei(j,k,l,p))
                                                 end if 
                                             end if
                                         else
-                                            h2etot_diff_bra(n) = h2etot_diff_bra(n)+&
+                                            tot = tot+&
                                              (gg_1(p-1)*REAL(conjg(z1jk(j,k,2,p))*z2l(l,1,p))*hh_1(p+1)*ph2ei(j,k,l,p))
                                         end if
                                     end if
@@ -1621,23 +1631,25 @@ MODULE gradient_descent
                                     if(norb.eq.j)then
                                         if((j.eq.norb).or.(k.eq.norb))then
                                             if(l.ne.norb)then !before diff alive:0 dead:a^(a)_(1j)*a^(b)_(1j)
-                                                h2etot_diff_bra(n) = h2etot_diff_bra(n)+&
+                                                tot = tot+&
                                                 (gg_1(norb-1)*(REAL(pcos(diff_state,norb)*psin(m,norb))*&
                                                 occupancy(2,norb))*ph2ei(j,k,l,norb))
                                             end if
                                         else
                                             if(l.ne.k)then    !before diff alive:0 dead:a^(a)_(0j)*a^(b)_(1j)
-                                                h2etot_diff_bra(n) = h2etot_diff_bra(n)+&
+                                                tot =tot+&
                                                 (gg_1(norb-1)*(REAL(-psin(diff_state,norb)*psin(m,norb))*&
                                                 occupancy(2,norb))*ph2ei(j,k,l,norb))
                                             end if 
                                         end if
                                     else
-                                        h2etot_diff_bra(n) = h2etot_diff_bra(n)+&
+                                        tot=tot+&
                                         (gg_1(norb-1)*REAL(conjg(z1jk(j,k,2,norb))*z2l(l,1,norb))*ph2ei(j,k,l,norb))
                                     end if
                                 end if
+                                temp(n)=tot
                             end do
+                            h2etot_diff_bra=h2etot_diff_bra+temp
                         end if
                     end do
                 end do
@@ -1664,17 +1676,17 @@ MODULE gradient_descent
 
         !$omp target update from(pinv,pkinvh)
 
-        !$omp parallel do simd collapse(2) 
+        !$omp parallel do
         do k=1, ndet
             do l=1, ndet
                 if(l.eq.diff_state)then
-                    temp2(k,j,:)=matmul(REAL(pinv(k,:)),pdiff_ovrlp(diff_state,:,:))
+                    temp2(k,diff_state,:)=matmul(REAL(pinv(k,:)),pdiff_ovrlp(diff_state,:,:))
                 else
                     temp2(k,l,:)=real(pinv(k,l))*pdiff_ovrlp(diff_state,l,:)
                 end if
             end do
         end do
-        !$omp parallel do simd collapse(2) 
+        !$omp parallel do
         do k=1, ndet
             do l=1, ndet
                 pdiff_invh(diff_state,k,l,:)=matmul(transpose(temp2(k,:,:)),real(pkinvh(:,l)))*(-1)
@@ -1768,7 +1780,7 @@ MODULE gradient_descent
 
         call final_grad_gpu(pvars,phjk,pdiff_hjk,dvec(1)%d_diff,dvec(1)%d,pick,d_diff_flg)
 
-        ! print*,grad_fin%vars(pick,:)
+       
        
         if(d_diff_flg.eq.0)then
             pgrad_avlb(pick)=1
@@ -1845,7 +1857,8 @@ MODULE gradient_descent
             do j=1,(ndet-1)
                 pcurrent_erg=pprev_erg
                 pick=picker(j)
-                pickerorb=scramble_norb(norb)
+                !pickerorb=scramble_norb(norb)
+                pickerorb=(/1,2,3,4,5,6,7,8,9,10/)
                 chng_trk2=0
                 acpt_cnt=0
                 do n=1,norb
@@ -1855,11 +1868,10 @@ MODULE gradient_descent
                     do while(t.gt.(1.0d-13))
                         nanchk=.false.
                         if(is_nan(pvars(pick,pickorb)).eqv..true.)then
-                            
                             call grad_calc_gpu(psin,pcos,pphi,ph1ei,ph2ei,phjk,pkinvh,pinv,pdiff_hjk,pvars,pgrad_avlb,&
                             pdiff_ovrlp,pdiff_invh,pick,occupancy_2an,occupancy_an_cr,occupancy_an,dvecs,en,d_diff_flg,haml)
                         end if 
-                        
+                    
                         !$omp target map(to:t,l2_rglrstn,pick,pickorb)
                         ! Setup temporary zombie state
                         psint=psin
@@ -1882,15 +1894,16 @@ MODULE gradient_descent
                         !$omp end target
                         call he_full_row_gpu(ph1ei,ph2ei,phnuc,psint,pcost,occupancy_2an,&
                         occupancy_an_cr,occupancy_an,phjkt,povrlpt,pinvt,pkinvht,pick,ndet)
-    
+               
                         !$omp target update from(phjkt,povrlpt,pkinvht)
-                    
+          
                         ! Imaginary time propagation for back tracing
                         
                         en%erg=0
                         en%t=0
                         call imgtime_prop(temp_dvecs,en,temp_ham,0)
                         fxtdk=real(en%erg(1,timesteps+1))
+                       
                         if(is_nan(fxtdk).eqv..true.)then 
                             ergerr='NaN ' 
                             write(0,"(a,a,a,i0,a,i0)") "Error in energy calculation which took value ",ergerr, &
@@ -1927,7 +1940,6 @@ MODULE gradient_descent
                                 povrlp=povrlpt
                                 pinv=pinvt
                                 pkinvh=pkinvht
-                                pgrad_avlb=0
                                 pvars=0.0
                                 pdiff_hjk=0
                                 pdiff_invh=0
@@ -1935,6 +1947,7 @@ MODULE gradient_descent
                                 pprev_erg=fxtdk
                                 pprev_mmntm(pick,:)=pphi(pick,:)
                                 !$omp end target
+                                pgrad_avlb=0
                                 dvecs=temp_dvecs
                                 chng_trk(j)=pick
                                 chng_trk2(acpt_cnt)=pickorb
@@ -1951,7 +1964,7 @@ MODULE gradient_descent
                             end if
                         end if
                     end do
-               
+                    
                     if((rjct_cnt.eq.0).and.(n.ne.norb))then
                         call grad_calc_gpu(psin,pcos,pphi,ph1ei,ph2ei,phjk,pkinvh,pinv,pdiff_hjk,pvars,pgrad_avlb,&
                         pdiff_ovrlp,pdiff_invh,pick,occupancy_2an,occupancy_an_cr,occupancy_an,dvecs,en,d_diff_flg,haml)
@@ -1961,7 +1974,7 @@ MODULE gradient_descent
 
                 if(j.eq.(ndet-1))then 
                     epoc_cnt=epoc_cnt+1
-                    picker=scramble(ndet)
+                    picker=scramble(ndet-1)
                     next=picker(1)
                     lralt_zs=0
                     !Every 100 epoc brings phi values back within the normal 0-2pi range
@@ -2279,13 +2292,11 @@ MODULE gradient_descent
                     lralt=0
                 end if   
             else if(acpt_cnt.eq.0)then
-                if((epoc_cnt.gt.50))then  
-                    call orbital_gd_gpu(temp_ham,haml,psin,pcos,pphi,pvars,pprev_erg,pcurrent_erg,pgrad_avlb,pprev_mmntm,& 
-                    ph1ei,ph2ei,phnuc,dvecs,temp_dvecs,en,phjk,povrlp,pkinvh,pinv,pdiff_hjk,pdiff_ovrlp,pdiff_invh,&
-                    phjkt,povrlpt,pkinvht,pinvt,chng_trk,psint,pcost,pphit,occupancy_an,occupancy_an_cr,occupancy_2an,&
-                    epoc_cnt,alphain,b,picker,1,zstore)
-                    orbitcnt=-(10*ndet)
-                end if
+                call orbital_gd_gpu(temp_ham,haml,psin,pcos,pphi,pvars,pprev_erg,pcurrent_erg,pgrad_avlb,pprev_mmntm,& 
+                ph1ei,ph2ei,phnuc,dvecs,temp_dvecs,en,phjk,povrlp,pkinvh,pinv,pdiff_hjk,pdiff_ovrlp,pdiff_invh,&
+                phjkt,povrlpt,pkinvht,pinvt,chng_trk,psint,pcost,pphit,occupancy_an,occupancy_an_cr,occupancy_2an,&
+                epoc_cnt,alphain,b,picker,1,zstore)
+                orbitcnt=-(10*ndet)
             end if
 
             if((epoc_cnt.gt.500).and.(orbitcnt.ge.0).and.(modulo(epoc_cnt,100).eq.0))then
@@ -2428,6 +2439,7 @@ MODULE gradient_descent
 
         call allocham(temp_ham,ndet,norb)
         call allocdv(temp_dvecs,1,ndet,norb)
+        temp_ham=haml 
 
         ph1ei=>elect%h1ei
         ph2ei=>elect%h2ei
@@ -2459,10 +2471,13 @@ MODULE gradient_descent
             pphi(j,:)=zstore(j)%phi(:)
         end do
 
+        psint=psin 
+        pcost=pcos
+        pphit=pphi
+
         alpha=0.5  ! learning rate reduction
         b=8.0D0 !starting learning rate
         
-       
         chng_trk=0 !stores which if any ZS changed
         rsrtpass=0
         epoc_max=30000

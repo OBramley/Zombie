@@ -72,7 +72,7 @@ MODULE globvars
     character(LEN=1)::propflg    ! Flag to propagate in imaginary time or not
     character(LEN=1)::cleanflg   ! Flag to determine if cleaning is to occur
     character(LEN=1)::gramflg    ! Flag to determine if gram schmidt orthogolnalisation should be carried out
-    character(LEN=1)::GPUflg
+    character(LEN=1)::GPUflg     ! GPU flag
     integer::gramnum             ! Number of additional states to be generated for GS orthogonalisation
     character(LEN=1)::rhf_1      ! Flag to decide if the first zombie state should be st as the RHF determinant
     character(LEN=1)::imagflg    ! Flag to decide if zombie states are imaginary or real

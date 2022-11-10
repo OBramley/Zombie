@@ -151,7 +151,7 @@ MODULE ham
             ham%hjk(row,m)=h1etot+h2etot+(elecs%hnuc*ham%ovrlp(row,m))
             ham%hjk(m,row)=ham%hjk(row,m)
             
-
+   
             if(GDflg.eq.'y') then
                 if(row.eq.2)then
                     ham%diff_hjk(row,m,:)=h1etot_diff_bra+h2etot_diff_bra
@@ -217,7 +217,6 @@ MODULE ham
                 zomt(2,k)=cmplx(0.0,0.0)
                 zomt=zomt*occupancy(j,k,:,:)
                 temp=temp+product((conjg(zs1%sin)*zomt(1,:))+(conjg(zs1%cos)*zomt(2,:)))*h1ei(j,k)
-                write(6,*) temp 
                 if(GDflg.eq.'y')then
                     if(equal.lt.4)then 
                         h1etot_diff = h1etot_diff+ diff_overlap_cran(zs1,zs2,equal,zomt,j,k,occupancy(j,k,:,:))*h1ei(j,k)
@@ -231,6 +230,7 @@ MODULE ham
         h1etot=temp
         h1etot_diff_bra=  h1etot_diff(1,:)
         h1etot_diff_ket=  h1etot_diff(2,:)
+    
         return
 
     end subroutine one_elec_part
@@ -286,6 +286,7 @@ MODULE ham
             end do
         end do
         !$omp end do
+      
        !$omp end parallel
         if(GDflg.eq.'y')then
             if(equal.lt.4)then 
@@ -316,7 +317,7 @@ MODULE ham
         h2etot=tot*0.5
         h2etot_diff_bra = h2etot_diff(1,:)*0.5
         h2etot_diff_ket = h2etot_diff(2,:)*0.5
-       
+   
         return
 
     end subroutine two_elec_part
@@ -391,6 +392,8 @@ MODULE ham
                 write(6,"(a,i0,a)") "Hamiltonian row ",j, " completed"
             end if  
         end do
+
+        
      
        if(ierr==0) deallocate(passback,stat=ierr)
         if (ierr/=0) then
@@ -437,12 +440,12 @@ MODULE ham
         ham%kinvh=matmul(ham%inv,ham%hjk)
         !$omp end workshare
         !$omp end parallel
-    
+       
         if(GDflg.eq.'y')then
             do k=1, ndet
                 do l=1, ndet
                     if(l.eq.2)then
-                        temp2(k,j,:)=matmul(REAL(ham%inv(k,:)),ham%diff_ovrlp(2,:,:))
+                        temp2(k,2,:)=matmul(REAL(ham%inv(k,:)),ham%diff_ovrlp(2,:,:))
                     else
                         temp2(k,l,:)=real(ham%inv(k,l))*ham%diff_ovrlp(2,l,:)
                     end if
@@ -454,6 +457,7 @@ MODULE ham
                 end do
             end do
         end if
+      
         return
         
     end subroutine hamgen
@@ -591,7 +595,7 @@ MODULE ham
             phjk(row,m)=h1etot+h2etot+(phnuc*povrlp(row,m))
             phjk(m,row)=phjk(row,m)
        
-            
+           
 
             if(GDflg.eq.'y') then
                 if(row.eq.2)then
@@ -753,7 +757,8 @@ MODULE ham
             end do
         end do
         !$omp end target teams distribute parallel do simd
-   
+
+    
         return
 
     end subroutine one_elec_part_gpu
@@ -774,26 +779,26 @@ MODULE ham
         complex(kind=8), dimension(:),intent(in)::psin1,psin2
         complex(kind=8), dimension(:),intent(in)::pcos1,pcos2
         integer,dimension(2,norb)::occupancy
-        real(kind=8),dimension(2,norb)::h2etot_diff
         integer::j,k,l,jspin
+        real(kind=8)::tot
+        complex(kind=8)::totc
         complex(kind=8),dimension(2,norb)::vmult
         real(kind=8),dimension(2,norb)::vmult_dd,vmultr
         complex(kind=8),dimension(norb)::gg,hh
         real(kind=8),dimension(norb)::gg_1,hh_1,gg_2,hh_2
         integer::n,p,gmax,hmin,gmax1,hmin1,gmax2,hmin2,breakflag
 
-       
+        real(kind=8),dimension(norb)::temp
         if (errorflag .ne. 0) return
 
         
         h2etot=(0.0,0.0)
         h2etot_diff_bra=0.0
         h2etot_diff_ket=0.0
-        h2etot_diff=0.0
      
-        !$omp target teams distribute parallel do reduction(+:h2etot) map(to:gmax,hmin,jspin) &
+        !$omp target teams distribute parallel do reduction(+:h2etot) map(to:gmax,hmin,jspin,tot,totc) &
         !$omp & map(alloc:vmult(2,norb),gg(norb),hh(norb),occupancy(2,norb)) &
-        !$omp & private(j,k,l,jspin,occupancy,gg,hh,gmax,hmin,vmult) shared(z2l,z1jk,occupancy_2an,occupancy_an,ph2ei)
+        !$omp & private(j,k,l,jspin,occupancy,gg,hh,gmax,hmin,vmult,tot,toc,temp) shared(z2l,z1jk,occupancy_2an,occupancy_an,ph2ei)
         do j=1, norb
             if(psin1(j)==(0.0,0.0))then
                 CYCLE
@@ -838,39 +843,41 @@ MODULE ham
                             EXIT 
                         end if
                     end do
-
+                    totc=(0.0,0.0)
                     if (gmax < hmin) then
-                        h2etot=h2etot+0.0
+                        h2etot=h2etot+totc
                         cycle
                     end if
 
                     if(ph2ei(j,k,l,1).ne.0) then
-                        h2etot = h2etot+(conjg(z1jk(j,k,2,1))*z2l(l,1,1)*hh(2)*ph2ei(j,k,l,1))
+                        totc = totc+(conjg(z1jk(j,k,2,1))*z2l(l,1,1)*hh(2)*ph2ei(j,k,l,1))
                     end if
 
                     do n=2,norb-1
                         if(ph2ei(j,k,l,n).ne.0.0) then
-                            h2etot = h2etot+ (gg(n-1)*conjg(z1jk(j,k,2,n))*z2l(l,1,n)*hh(n+1)*ph2ei(j,k,l,n))
+                            totc = totc+ (gg(n-1)*conjg(z1jk(j,k,2,n))*z2l(l,1,n)*hh(n+1)*ph2ei(j,k,l,n))
                         end if
                     end do
 
                     if(ph2ei(j,k,l,norb).ne.0) then
-                        h2etot = h2etot +(gg(norb-1)*conjg(z1jk(j,k,2,norb))*z2l(l,1,norb)*ph2ei(j,k,l,norb))
+                        totc = totc +(gg(norb-1)*conjg(z1jk(j,k,2,norb))*z2l(l,1,norb)*ph2ei(j,k,l,norb))
                     end if
-
+                    h2etot=h2etot+totc
                 end do
             end do
         end do
        !$omp end target teams distribute parallel do
         h2etot=h2etot*0.5
-
+       
         if(GDflg.eq.'y')then
             if(equal.lt.4)then 
+                h2etot_diff_ket=0.0
+                h2etot_diff_bra=0.0
                 !$omp target teams distribute parallel do reduction(+:h2etot_diff_bra,h2etot_diff_ket) &
                 !$omp map(to:gg_1,hh_1,gg_2,hh_2,gmax1,hmin1,gmax2,hmin2,jspin,breakflag) &
-                !$omp & map(alloc:vmultr(2,norb),vmult_dd(2,norb),occupancy(2,norb)) &
-                !$omp & private(gg_1,hh_1,gg_2,hh_2,gmax1,gmax2,hmin1,hmin2,jspin,occupancy,breakflag,vmultr,vmult_dd)&
-                !$omp & shared(ph2ei,z1jk,z2l) 
+                !$omp & map(alloc:vmultr(2,norb),vmult_dd(2,norb),occupancy(2,norb),temp(norb)) &
+                !$omp & private(gg_1,hh_1,gg_2,hh_2,gmax1,gmax2,hmin1,hmin2,jspin,occupancy,breakflag,vmultr,vmult_dd,temp)&
+                !$omp & shared(ph2ei,z1jk,z2l)
                 do j=1, norb
                     if(modulo(j,2)==0)then
                         jspin=2
@@ -882,15 +889,19 @@ MODULE ham
                             cycle
                         end if
                         do l=jspin, norb, 2
+                            
                             occupancy=occupancy_2an(j,k,:,:)*occupancy_an(l,:,:)
-                            vmultr=real(z1jk(j,k,:,:))*real(z2l(l,:,:))
+                             !j,k,l=annihilate1,annihilate1_2,annihilate2
                             if(equal.eq.1) then !Differentiation when zombie states are the same
+                                temp=0
+                                vmultr=real(z1jk(j,k,:,:))*real(z2l(l,:,:))
                                 do n=1, norb    !Differentiating w.r.t to orbital n
                                     breakflag=0
                                     vmult_dd=vmultr
                                     if(j.eq.k)then
+                                        temp(n)=0
                                         cycle
-                                    else if((j.eq.j).or.(k.eq.n))then
+                                    else if((j.eq.n).or.(k.eq.n))then
                                         if(l.eq.n)then    !before diff alive:0 dead:a^(a)_(1j)*a^(a)_(1j)
                                             vmult_dd(1,n)=0
                                             vmult_dd(2,n)=2*real(psin1(n)*pcos1(n))*occupancy(2,n) !(sin2x=2sinxcosx)
@@ -914,7 +925,7 @@ MODULE ham
                     
                                     do p=2, norb
                                         gg_1(p)=gg_1(p-1)*(vmult_dd(2,p)-vmult_dd(1,p))
-                                        if(gg_1(k)==(0.0))then
+                                        if(gg_1(p)==(0.0))then
                                             gmax1=p
                                             EXIT 
                                         end if
@@ -930,38 +941,39 @@ MODULE ham
                                         end if
                                     end do
                     
-        
+                                    tot=0.0
                                     if (gmax1 < hmin1) then
+                                        temp(n)=tot
                                         cycle
                                     end if
                     
                                     if((breakflag.eq.0).or.(breakflag.eq.1))then
                                         if(ph2ei(j,k,l,1).ne.0) then
                                             if(breakflag.eq.1)then
-                                                h2etot_diff_bra(n)=(1.0-2*((real(psin1(1)))**2))*&
+                                                temp(n)=(1.0-2*((real(psin1(1)))**2))*&
                                                 occupancy(2,1)*hh_1(2)*ph2ei(j,k,l,1)
                                                 cycle
                                             end if
-                                            if(j.eq.1)then
+                                            if(n.eq.1)then
                                                 if((j.eq.1).or.(k.eq.1))then
                                                     if(l.ne.1)then
-                                                        h2etot_diff_bra(n) = h2etot_diff_bra(n)+&
+                                                        tot = tot+&
                                                         (2*real(psin1(1)*pcos1(1))*occupancy(2,1)*hh_1(2)*ph2ei(j,k,l,1))
                                                     end if
                                                 else
                                                     if(l.ne.1)then
-                                                        h2etot_diff_bra(n) = h2etot_diff_bra(n)+&
+                                                        tot = tot+&
                                                         ((1.0-2*((real(psin1(1)))**2))*occupancy(2,1)*hh_1(2)*ph2ei(j,k,l,1))
                                                     end if 
                                                 end if
                                             else
-                                                h2etot_diff_bra(n) = h2etot_diff_bra(n)+&
+                                                tot = tot+&
                                                 (REAL(conjg(z1jk(j,k,2,1))*z2l(l,1,1))*hh_1(2)*ph2ei(j,k,l,1))
                                             end if
                                         end if
                                     else if((breakflag.lt.norb))then
                                         if(breakflag.ne.0)then
-                                            h2etot_diff_bra(n)=(gg_1(n-1)*((1.0-2*((real(psin1(n)))**2))*&
+                                            temp(n)=(gg_1(n-1)*((1.0-2*((real(psin1(n)))**2))*&
                                             occupancy(2,n))*hh_1(n+1)*ph2ei(j,k,l,n))
                                             cycle
                                         end if
@@ -970,26 +982,26 @@ MODULE ham
                                                 if(p.eq.n)then
                                                     if((j.eq.p).or.(k.eq.p))then
                                                         if(l.ne.p)then
-                                                            h2etot_diff_bra(n) = h2etot_diff_bra(n)+&
+                                                            tot = tot+&
                                                             (gg_1(p-1)*(2*real(psin1(p)*pcos1(p))*&
                                                             occupancy(2,p))*hh_1(p+1)*ph2ei(j,k,l,p))
                                                         end if
                                                     else
                                                         if(l.ne.p)then
-                                                            h2etot_diff_bra(n) = h2etot_diff_bra(n)+&
+                                                            tot = tot+&
                                                             (gg_1(p-1)*((1.0-2*((real(psin1(p)))**2))*&
                                                             occupancy(2,p))*hh_1(p+1)*ph2ei(j,k,l,p))
                                                         end if 
                                                     end if
                                                 else
-                                                    h2etot_diff_bra(n) = h2etot_diff_bra(n)+&
-                                                     (gg_1(p-1)*REAL(conjg(z1jk(j,k,2,p))*z2l(l,1,p))*hh_1(p+1)*ph2ei(j,k,l,p))
+                                                    tot = tot+&
+                                                    (gg_1(p-1)*REAL(conjg(z1jk(j,k,2,p))*z2l(l,1,p))*hh_1(p+1)*ph2ei(j,k,l,p))
                                                 end if
                                             end if
                                         end do
                                     else
                                         if(breakflag.eq.norb)then
-                                            h2etot_diff_bra(n)=(gg_1(norb-1)*((1.0-2*((real(psin1(norb)))**2))&
+                                            temp(n)=(gg_1(norb-1)*((1.0-2*((real(psin1(norb)))**2))&
                                             *occupancy(2,norb))*ph2ei(j,k,l,norb))
                                             cycle
                                         end if
@@ -997,29 +1009,38 @@ MODULE ham
                                             if(norb.eq.n)then
                                                 if((j.eq.norb).or.(k.eq.norb))then
                                                     if(l.ne.norb)then
-                                                        h2etot_diff_bra(n) = h2etot_diff_bra(n)+&
+                                                        tot = tot+&
                                                         (gg_1(norb-1)*(2*real(psin1(norb)*pcos1(norb))*&
                                                         occupancy(2,norb))*ph2ei(j,k,l,norb))
                                                     end if
                                                 else
                                                     if(l.ne.norb)then
-                                                        h2etot_diff_bra(n) = h2etot_diff_bra(n)+&
+                                                        tot = tot+&
                                                          (gg_1(norb-1)*((1.0-2*((real(psin1(norb)))**2))*&
                                                          occupancy(2,norb))*ph2ei(j,k,l,norb))
                                                     end if    
                                                 end if
                                             else
-                                                h2etot_diff_bra(n) = h2etot_diff_bra(n)+&
+                                                tot = tot+&
                                                 (gg_1(norb-1)*REAL(conjg(z1jk(j,k,2,norb))*z2l(l,1,norb))*ph2ei(j,k,l,norb))
                                             end if
                                         end if
                                     end if
+                                    temp(n)=tot
+                                    
                                 end do
-                                h2etot_diff_bra=h2etot_diff_ket
+                                h2etot_diff_bra(:)=h2etot_diff_bra(:)+temp(:)
+                                h2etot_diff_ket=h2etot_diff_bra
+                               
+                                
+                        
                             else if(equal.eq.2)then !Differentiation when zombie states are not the same
+                                temp=0
+                                vmultr=real(z1jk(j,k,:,:))*real(z2l(l,:,:))
                                 do n=1, norb
                                     vmult_dd=vmultr
                                     if(j.eq.k)then
+                                        temp(n)=0
                                         cycle
                                     else if((j.eq.n).or.(k.eq.n))then
                                         if(l.eq.n)then !before diff alive:0 dead:a^(a)_(1j)*a^(b)_(1j)
@@ -1053,7 +1074,6 @@ MODULE ham
                                     end do
                     
                                     
-                                    
                                     hmin1=0
                                     
                                     hh_1(norb) = (vmult_dd(2,norb)+vmult_dd(1,norb))
@@ -1066,8 +1086,9 @@ MODULE ham
                                         end if
                                     end do
                     
-                                    
+                                    tot=0.0
                                     if((gmax1 < hmin1))then
+                                        temp(n)=tot
                                         cycle
                                     end if
                     
@@ -1075,17 +1096,17 @@ MODULE ham
                                         if(n.eq.1)then
                                             if((j.eq.1).or.(k.eq.1))then
                                                 if(l.ne.1)then    !before diff alive:0 dead:a^(a)_(1j)*a^(b)_(1j)
-                                                    h2etot_diff_bra(n) = h2etot_diff_bra(n)+&
+                                                    tot = tot+&
                                                     ((REAL(pcos1(1)*psin2(1))*occupancy(2,1))*hh_1(2)*ph2ei(j,k,l,1))
                                                 end if
                                             else
                                                 if(l.ne.1)then    !before diff alive:0 dead:a^(a)_(0j)*a^(b)_(1j)
-                                                    h2etot_diff_bra(n) = h2etot_diff_bra(n)+&
+                                                    tot = tot+&
                                                     ((REAL(-psin1(1)*psin2(1))*occupancy(2,1))*hh_1(2)*ph2ei(j,k,l,1))
                                                 end if 
                                             end if
                                         else
-                                            h2etot_diff_bra(n) = h2etot_diff_bra(n)+&
+                                            tot = tot+&
                                             (REAL(conjg(z1jk(j,k,2,1))*z2l(l,1,1))*hh_1(2)*ph2ei(j,k,l,1))
                                         end if
                                     end if
@@ -1094,52 +1115,55 @@ MODULE ham
                                             if(p.eq.n)then
                                                 if((j.eq.p).or.(k.eq.p))then
                                                     if(l.ne.p)then    !before diff alive:0 dead:a^(a)_(1j)*a^(b)_(1j)
-                                                        h2etot_diff_bra(n) = h2etot_diff_bra(n)+&
+                                                        tot = tot+&
                                                         (gg_1(p-1)*(REAL(pcos1(p)*psin2(p))*&
                                                         occupancy(2,p))*hh_1(p+1)*ph2ei(j,k,l,p))
                                                     end if
                                                 else
                                                     if(l.ne.p)then    !before diff alive:0 dead:a^(a)_(0j)*a^(b)_(1j)
-                                                        h2etot_diff_bra(n) = h2etot_diff_bra(n)+&
+                                                        tot = tot+&
                                                         (gg_1(p-1)*(REAL(-psin1(p)*psin2(p))*occupancy(2,p))*&
                                                         hh_1(p+1)*ph2ei(j,k,l,p))
                                                     end if 
                                                 end if
                                             else
-                                                h2etot_diff_bra(n) = h2etot_diff_bra(n)+&
+                                                tot= tot+&
                                                  (gg_1(p-1)*REAL(conjg(z1jk(j,k,2,p))*z2l(l,1,p))*hh_1(p+1)*ph2ei(j,k,l,p))
                                             end if
                                         end if
                                     end do
                     
                                     if(ph2ei(j,k,l,norb).ne.0) then
-                                        if(norb.eq.j)then
+                                        if(norb.eq.n)then
                                             if((j.eq.norb).or.(k.eq.norb))then
                                                 if(l.ne.norb)then !before diff alive:0 dead:a^(a)_(1j)*a^(b)_(1j)
-                                                    h2etot_diff_bra(n) = h2etot_diff_bra(n)+&
+                                                    tot =tot+&
                                                     (gg_1(norb-1)*(REAL(pcos1(norb)*psin2(norb))*&
                                                     occupancy(2,norb))*ph2ei(j,k,l,norb))
                                                 end if
                                             else
-                                                if(l.ne.k)then    !before diff alive:0 dead:a^(a)_(0j)*a^(b)_(1j)
-                                                    h2etot_diff_bra(n) = h2etot_diff_bra(n)+&
+                                                if(l.ne.p)then    !before diff alive:0 dead:a^(a)_(0j)*a^(b)_(1j)
+                                                    tot = tot+&
                                                     (gg_1(norb-1)*(REAL(-psin1(norb)*psin2(norb))*&
                                                     occupancy(2,norb))*ph2ei(j,k,l,norb))
                                                 end if 
                                             end if
                                         else
-                                            h2etot_diff_bra(n) = h2etot_diff_bra(n)+&
+                                            tot = tot+&
                                             (gg_1(norb-1)*REAL(conjg(z1jk(j,k,2,norb))*z2l(l,1,norb))*ph2ei(j,k,l,norb))
                                         end if
                                     end if
-
+                                    temp(n)=tot
                                 end do
-                                
+                                h2etot_diff_bra=h2etot_diff_bra+temp
+                                cycle
                             else if(equal.eq.3)then
-                                
+                                temp=0
+                                vmultr=real(z1jk(j,k,:,:))*real(z2l(l,:,:))
                                 do n=1, norb
                                     vmult_dd=vmultr
                                     if(j.eq.k)then
+                                        temp(n)=0
                                         cycle
                                     else if((j.eq.n).or.(k.eq.n))then
                                         if(l.eq.n)then !before diff alive:0 dead:a^(a)_(1j)*a^(b)_(1j)
@@ -1183,8 +1207,9 @@ MODULE ham
                                             EXIT 
                                         end if
                                     end do
-                    
+                                    tot=0.0
                                     if((gmax2 < hmin2))then
+                                        temp(n)=tot
                                         cycle
                                     end if
                     
@@ -1192,17 +1217,17 @@ MODULE ham
                                         if(n.eq.1)then
                                             if((j.eq.1).or.(k.eq.1))then
                                                 if(l.ne.1)then    !before diff alive:0 dead:a^(a)_(1j)*a^(b)_(1j)
-                                                    h2etot_diff_ket(n) = h2etot_diff_ket(n)+&
+                                                    tot = tot+&
                                                     ((REAL(psin2(1)*pcos1(1))*occupancy(2,1))*hh_2(2)*ph2ei(j,k,l,1))
                                                 end if
                                             else
                                                 if(l.ne.1)then    !before diff alive:0 dead:a^(a)_(0j)*a^(b)_(1j)
-                                                    h2etot_diff_ket(n) = h2etot_diff_ket(n)+&
+                                                    tot =tot+&
                                                     ((REAL(pcos2(1)*pcos1(1))*occupancy(2,1))*hh_2(2)*ph2ei(j,k,l,1))
                                                 end if 
                                             end if
                                         else
-                                            h2etot_diff_ket(n) = h2etot_diff_ket(n)+&
+                                            tot = tot+&
                                             (REAL(conjg(z1jk(j,k,2,1))*z2l(l,1,1))*hh_2(2)*ph2ei(j,k,l,1))
                                         end if
                                     end if
@@ -1211,19 +1236,19 @@ MODULE ham
                                             if(p.eq.n)then
                                                 if((j.eq.p).or.(k.eq.p))then
                                                     if(l.ne.p)then    !before diff alive:0 dead:a^(a)_(1j)*a^(b)_(1j)
-                                                        h2etot_diff_ket(n) = h2etot_diff_ket(n)+&
+                                                        tot=tot+&
                                                         (gg_2(p-1)*(REAL(psin2(p)*pcos1(p))*&
                                                         occupancy(2,p))*hh_2(p+1)*ph2ei(j,k,l,p))
                                                     end if
                                                 else
                                                     if(l.ne.p)then    !before diff alive:0 dead:a^(a)_(0j)*a^(b)_(1j)
-                                                        h2etot_diff_ket(n) = h2etot_diff_ket(n)+&
+                                                        tot = tot+&
                                                         (gg_2(p-1)*(REAL(pcos2(p)*pcos1(p))*&
                                                         occupancy(2,p))*hh_2(p+1)*ph2ei(j,k,l,p))
                                                     end if 
                                                 end if
                                             else
-                                                h2etot_diff_ket(n) = h2etot_diff_ket(n)+&
+                                                tot = tot+&
                                                 (gg_2(p-1)*REAL(conjg(z1jk(j,k,2,p))*z2l(l,1,p))*hh_2(p+1)*ph2ei(j,k,l,p))
                                             end if
                                         end if
@@ -1233,24 +1258,30 @@ MODULE ham
                                         if(norb.eq.n)then
                                             if((j.eq.norb).or.(k.eq.norb))then
                                                 if(l.ne.norb)then !before diff alive:0 dead:a^(a)_(1j)*a^(b)_(1j)
-                                                    h2etot_diff_ket(n) = h2etot_diff_ket(n)+&
+                                                    tot= tot+&
                                                     (gg_2(norb-1)*(REAL(psin2(norb)*pcos1(norb))*&
                                                     occupancy(2,norb))*ph2ei(j,k,l,norb))
                                                 end if
                                             else
                                                 if(l.ne.k)then    !before diff alive:0 dead:a^(a)_(0j)*a^(b)_(1j)
-                                                    h2etot_diff_ket(n) = h2etot_diff_ket(n)+&
+                                                    tot = tot+&
                                                     (gg_2(norb-1)*(REAL(pcos2(norb)*pcos1(norb))*&
                                                     occupancy(2,norb))*ph2ei(j,k,l,norb))
                                                 end if 
                                             end if
                                         else
-                                            h2etot_diff_ket(n) = h2etot_diff_ket(n)+&
+                                            tot = tot+&
                                             (gg_2(norb-1)*REAL(conjg(z1jk(j,k,2,norb))*z2l(l,1,norb))*ph2ei(j,k,l,norb))
                                         end if
                                     end if
+
+                                    temp(n)=tot
+
                                 end do
+                                h2etot_diff_ket=h2etot_diff_ket+temp
+                                cycle
                             end if
+                           
                         end do
                     end do
                 end do
@@ -1259,6 +1290,8 @@ MODULE ham
                 h2etot_diff_ket = h2etot_diff_ket*0.5
             end if
         end if
+
+    
         
         return
 
@@ -1385,7 +1418,7 @@ MODULE ham
             end if  
         end do
         !$omp end target data
-      
+        
         pinv=povrlp
         
        
@@ -1403,25 +1436,23 @@ MODULE ham
         pkinvh=matmul(pinv,phjk)
         !$omp end workshare
         !$omp end parallel
-       
+        
+        
         if(GDflg.eq.'y')then
-            !$omp parallel do simd collapse(2) 
             do k=1, ndet
                 do l=1, ndet
                     if(l.eq.2)then
-                        temp2(k,j,:)=matmul(REAL(pinv(k,:)),pdiff_ovrlp(2,:,:))
+                        temp2(k,2,:)=matmul(REAL(ham%inv(k,:)),ham%diff_ovrlp(2,:,:))
                     else
-                        temp2(k,l,:)=real(pinv(k,l))*pdiff_ovrlp(2,l,:)
+                        temp2(k,l,:)=real(ham%inv(k,l))*ham%diff_ovrlp(2,l,:)
                     end if
                 end do
             end do
-            !$omp parallel do simd collapse(2) 
             do k=1, ndet
                 do l=1, ndet
-                    pdiff_invh(2,k,l,:)=matmul(transpose(temp2(k,:,:)),real(pkinvh(:,l)))*(-1)
+                    ham%diff_invh(2,k,l,:)=matmul(transpose(temp2(k,:,:)),real(ham%kinvh(:,l)))*(-1)
                 end do
             end do
-            
         end if
         
 
@@ -1445,7 +1476,7 @@ MODULE ham
             write(0,"(a,i0)") "Error in WORK vector deallocation . ierr had value ", ierr
             errorflag=1
         end if
-    
+        
         return
        
 

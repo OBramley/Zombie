@@ -19,21 +19,21 @@ run={
     'language':'fortran',
 
     # What is the name of the run
-    'runfolder':'gpu_test2',
+    'runfolder':'gpuon',
 
     # Amount of time to request on HPC 
     'runtime': "48:00:00",
 
     'nodes':1,
 
-    'cores':4,
+    'cores':1,
 
     # Set the numpy random seed for Zombie state generation
     'seed':1,
 
     # Name of file where any prior generated results are placed so the Fortran 
     # program can access them and continue a run
-    'datafile':'Li2_ham',
+    'datafile':'data',
 
     # 1 and 2 electron integrals can be calcualted by PySCF by the program
     # or they can be inputed as a seperate file at the moment only from MOLPRO
@@ -45,7 +45,7 @@ run={
 
     # Do you want to generate new zombie states. The program can work using previously gerated
     # Zombie states. Takes input 'y' or 'n'.
-    'zomgen':'y',
+    'zomgen':'n',
 
     'zombiefile':'zombie_states.pkl',
 

@@ -64,6 +64,7 @@ program MainZombie
 
    
     GPUflg='y'
+    print*,GPUflg
     diff_state=0
     if(GDflg=="y")then
         call allocgrad(gradients,ndet,norb)
@@ -112,7 +113,7 @@ program MainZombie
             if(GPUflg.eq.'n')then
                 call hamgen(haml,zstore,elect,ndet,1)
             else if(GPUflg.eq.'y')then
-                call omp_set_dynamic(.true.)
+                ! call omp_set_dynamic(.true.)
                 call hamgen_gpu(haml,zstore,elect,ndet,1)
             end if
             call matrixwriter(haml%hjk,ndet,"data/ham.csv")
@@ -154,7 +155,8 @@ program MainZombie
             if(rstrtflg.eq.'n')then 
                 call epoc_writer(gradients%prev_erg,0,chng_trk,0)
             end if
-            call final_grad(dvecs(1),haml,gradients,2,1)
+            call final_grad(dvecs(1),haml,gradients,2,0)
+           
             if(GPUflg.eq.'n')then
                 call zombie_alter(zstore,gradients,haml,elect,en,dvecs,chng_trk)
             else if(GPUflg.eq.'y')then

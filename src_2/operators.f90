@@ -872,6 +872,7 @@ MODULE operators
 
                 temp(j)=tot1
             end do
+  
             !$omp end do
             !$omp end parallel
             z_an_z3_diff(1,:)=temp(:)
@@ -930,8 +931,6 @@ MODULE operators
                         EXIT 
                     end if
                 end do
-
-                
                 
                 hmin1=0
                
