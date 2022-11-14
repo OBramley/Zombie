@@ -145,13 +145,13 @@ MODULE ham
                 call two_elec_part(zstore(row),z1jk,z2l,h2etot,occupancy_2an,occupancy_an,&
                                             elecs%h2ei,h2etot_diff_bra,h2etot_diff_ket,zstore(m),equal)
             end if
-          
+  
+        
             ham%ovrlp(row,m)=overlap(zstore(row),zstore(m))
             ham%ovrlp(m,row)= ham%ovrlp(row,m)
             ham%hjk(row,m)=h1etot+h2etot+(elecs%hnuc*ham%ovrlp(row,m))
             ham%hjk(m,row)=ham%hjk(row,m)
             
-   
             if(GDflg.eq.'y') then
                 if(row.eq.2)then
                     ham%diff_hjk(row,m,:)=h1etot_diff_bra+h2etot_diff_bra
@@ -589,24 +589,22 @@ MODULE ham
           
             call two_elec_part_gpu(psin(row,:),psin(m,:),pcos(row,:),pcos(m,:),z1jk,z2l,h2etot,occupancy_2an,&
             occupancy_an,ph2ei,h2etot_diff_bra,h2etot_diff_ket,equal)
-            
+
             povrlp(row,m)=product(((conjg(psin(row,:))*psin(m,:)))+((conjg(pcos(row,:))*pcos(m,:))))
             povrlp(m,row)= povrlp(row,m)
             phjk(row,m)=h1etot+h2etot+(phnuc*povrlp(row,m))
             phjk(m,row)=phjk(row,m)
-       
-           
-
+            
             if(GDflg.eq.'y') then
                 if(row.eq.2)then
                     temp=h1etot_diff_bra(:)+h2etot_diff_bra(:)
-                    pdiff_hjk(row,m,:)= temp !h1etot_diff_bra(:)+h2etot_diff_bra(:)
+                    pdiff_hjk(row,m,:)= temp 
                     if(m.eq.row)then
                         pdiff_ovrlp(row,m,:) = 0
                     else
                         prod=real((conjg(psin(row,:))*psin(m,:))+(conjg(pcos(row,:))*pcos(m,:)))
                         bra_prod=real(conjg(pcos(row,:))*psin(m,:))-real(conjg(psin(row,:))*pcos(m,:))
-                        !$omp parallel do
+                        !$omp distribute parallel do
                         do j=1,norb
                             temp=prod
                             temp(j)=bra_prod(j)
@@ -619,7 +617,7 @@ MODULE ham
                     pdiff_hjk(m,row,:)=temp!h1etot_diff_ket(:)+h2etot_diff_ket(:)
                     prod=real((conjg(psin(row,:))*psin(m,:))+(conjg(pcos(row,:))*pcos(m,:)))
                     ket_prod=real(conjg(psin(row,:))*pcos(m,:))-real(conjg(pcos(row,:))*psin(m,:))
-                    !$omp parallel do
+                    !$omp distribute parallel do
                     do j=1,norb
                         temp=prod
                         temp(j)=ket_prod(j)
@@ -666,7 +664,7 @@ MODULE ham
 
         
        
-        !!$omp declare target
+  
         if (errorflag .ne. 0) return
         h1etot=(0.0,0.0)
         h1etot_diff_bra=0.0
@@ -696,12 +694,10 @@ MODULE ham
                             if(j.eq.k)then
                                 if((real(pcos2(j)).eq.0).and.(real(psin2(j)).eq.1).or.(real(psin2(j)).eq.0))then
                                     h1etot_diff_bra(j)=h1etot_diff_bra(j)+0
-                                    h1etot_diff_ket(j)=h1etot_diff_ket(j)+0
                                 else
                                     bra_prod=prod           !dead amplitude is zero
                                     bra_prod(j)=sin(2*pphi1(j))*occupancy(j,k,1,j)
                                     h1etot_diff_bra(j)= h1etot_diff_bra(j)+product(bra_prod)*ph1ei(j,k)
-                                    h1etot_diff_ket(j)= h1etot_diff_ket(j)+product(bra_prod)*ph1ei(j,k)      
                                 end if 
                             else if(j.ne.k)then
                                 bra_prod=prod
@@ -712,8 +708,7 @@ MODULE ham
                                 else
                                     bra_prod(j)=cos(2*pphi1(j))*occupancy(j,k,2,j)
                                 end if
-                                h1etot_diff_bra(j)= h1etot_diff_bra(j) + product(bra_prod)*ph1ei(j,k) 
-                                h1etot_diff_ket(j)= h1etot_diff_ket(j) + product(bra_prod)*ph1ei(j,k)        
+                                h1etot_diff_bra(j)= h1etot_diff_bra(j) + product(bra_prod)*ph1ei(j,k)      
                                 bra_prod=prod
                                 if((real(pcos2(k)).eq.0).and.(real(psin2(k)).eq.1)) then
                                     bra_prod(k)=-1*occupancy(j,k,1,k)
@@ -722,9 +717,9 @@ MODULE ham
                                 else
                                     bra_prod(k)=cos(2*pphi1(k))*occupancy(j,k,1,k)
                                 end if               !dead amplitude is zero
-                                h1etot_diff_bra(k)= h1etot_diff_bra(k) + product(bra_prod)*ph1ei(j,k)
-                                h1etot_diff_ket(k)= h1etot_diff_ket(k) + product(bra_prod)*ph1ei(j,k)          
+                                h1etot_diff_bra(k)= h1etot_diff_bra(k) + product(bra_prod)*ph1ei(j,k)       
                             end if
+                            h1etot_diff_ket=h1etot_diff_bra
                         else if(equal.eq.2)then 
                             bra_prod=real(pcos1*psin2*occupancy(j,k,1,:)-psin1*pcos2*occupancy(j,k,2,:))            
                             if(j.eq.k)then  !dead amplitude is zero
@@ -795,10 +790,12 @@ MODULE ham
         h2etot=(0.0,0.0)
         h2etot_diff_bra=0.0
         h2etot_diff_ket=0.0
-     
-        !$omp target teams distribute parallel do reduction(+:h2etot) map(to:gmax,hmin,jspin,tot,totc) &
+        tot=0.0
+        totc=(0.0,0.0)
+        !$omp target teams distribute parallel do simd reduction(+:h2etot,totc) map(to:gmax,hmin,jspin,tot,totc) &
         !$omp & map(alloc:vmult(2,norb),gg(norb),hh(norb),occupancy(2,norb)) &
-        !$omp & private(j,k,l,jspin,occupancy,gg,hh,gmax,hmin,vmult,tot,toc,temp) shared(z2l,z1jk,occupancy_2an,occupancy_an,ph2ei)
+        !$omp & private(j,k,l,jspin,occupancy,gg,hh,gmax,hmin,vmult,temp) &
+        !$omp & shared(z2l,z1jk,occupancy_2an,occupancy_an,ph2ei)
         do j=1, norb
             if(psin1(j)==(0.0,0.0))then
                 CYCLE
@@ -866,14 +863,14 @@ MODULE ham
                 end do
             end do
         end do
-       !$omp end target teams distribute parallel do
-        h2etot=h2etot*0.5
+       !$omp end target teams distribute parallel do simd
+      
        
         if(GDflg.eq.'y')then
             if(equal.lt.4)then 
                 h2etot_diff_ket=0.0
                 h2etot_diff_bra=0.0
-                !$omp target teams distribute parallel do reduction(+:h2etot_diff_bra,h2etot_diff_ket) &
+                !$omp target teams distribute parallel do reduction(+:h2etot_diff_bra,h2etot_diff_ket,tot) &
                 !$omp map(to:gg_1,hh_1,gg_2,hh_2,gmax1,hmin1,gmax2,hmin2,jspin,breakflag) &
                 !$omp & map(alloc:vmultr(2,norb),vmult_dd(2,norb),occupancy(2,norb),temp(norb)) &
                 !$omp & private(gg_1,hh_1,gg_2,hh_2,gmax1,gmax2,hmin1,hmin2,jspin,occupancy,breakflag,vmultr,vmult_dd,temp)&
@@ -1286,13 +1283,13 @@ MODULE ham
                     end do
                 end do
                 !$omp end target teams distribute parallel do 
-                h2etot_diff_bra = h2etot_diff_bra*0.5
-                h2etot_diff_ket = h2etot_diff_ket*0.5
+               
             end if
         end if
 
-    
-        
+        h2etot=h2etot*0.5
+        h2etot_diff_bra = h2etot_diff_bra*0.5
+        h2etot_diff_ket = h2etot_diff_ket*0.5
         return
 
     end subroutine two_elec_part_gpu

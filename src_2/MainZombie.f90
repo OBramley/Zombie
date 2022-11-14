@@ -123,12 +123,13 @@ program MainZombie
             call read_ham(haml,ndet)
             write(6,"(a)") "Hamiltonian successfully read in"
         end if
-            
+       
         ! Imaginary time propagation
         write(6,"(a)") "Imaginary time propagation started"
-        call imgtime_prop(dvecs,en,haml,diff_state)
+        call imgtime_prop(dvecs,en,haml,0)
         write(6,"(a)") "Imaginary time propagation finished"
-        
+       
+
         if(gramflg.eq."n")then
             write(stateno,"(i4.4)")k
             call dvec_writer(dvecs(1)%d,ndet,0,k)
@@ -155,8 +156,9 @@ program MainZombie
             if(rstrtflg.eq.'n')then 
                 call epoc_writer(gradients%prev_erg,0,chng_trk,0)
             end if
-            call final_grad(dvecs(1),haml,gradients,2,0)
            
+            call final_grad(dvecs(1),haml,gradients,2,0)
+            
             if(GPUflg.eq.'n')then
                 call zombie_alter(zstore,gradients,haml,elect,en,dvecs,chng_trk)
             else if(GPUflg.eq.'y')then
