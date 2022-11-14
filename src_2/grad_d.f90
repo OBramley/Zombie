@@ -306,7 +306,7 @@ Module grad_d
         dham=matmul(REAL(d),REAL(phjk))
         j=diff_state !do j=1, ndet !Each ZS{j} dependence
 
-        !$omp target map(to:d,dham,j,d_diff) map(alloc:temp1(norb),temp2(norb))
+        !!$omp target map(to:d,dham,j,d_diff) map(alloc:temp1(norb),temp2(norb))
         temp1(:)=0
         temp2(:)=0
         !$omp parallel do
@@ -323,7 +323,8 @@ Module grad_d
             temp1=0 
         end if
         pvars(diff_state,:)=(2*temp1)+temp2
-        !$omp end target
+        !$omp target update to(pvars)
+        !!$omp end target
 
         return
     end subroutine final_grad_gpu
