@@ -3,8 +3,8 @@
 # made with the aid of the fmkmf utility (Copyright (c) The University of Edinburgh)
 # subsequent streamlining alterations have been made 
 
-F90=nvhpc
-FFLAGS= -mp=gpu
+F90=nvfortran
+FFLAGS= -O3 -mp=gpu  -Minfo
 FLINKS= -llapack -lblas
 VPATH=../src_2
 
