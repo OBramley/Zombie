@@ -113,6 +113,13 @@ program MainZombie
             if(GPUflg.eq.'n')then
                 call hamgen(haml,zstore,elect,ndet,1)
             else if(GPUflg.eq.'y')then
+                num_devices = omp_get_num_devices()
+                if(num_devices.eq.0)then 
+                    max_threads=omp_get_max_threads()
+                    max_teams=1 !max_threads
+                    threadpteam=max_threads
+                end if
+                
                 ! call omp_set_dynamic(.true.)
                 call hamgen_gpu(haml,zstore,elect,ndet,1)
             end if

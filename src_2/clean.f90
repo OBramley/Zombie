@@ -10,6 +10,69 @@ MODULE clean
 
     contains
 
+    ! subroutine sd_anal()
+
+    !     implicit none 
+
+    !     type(zombiest),dimension(:),allocatable,intent(inout)::cstore
+    !     type(hamiltonian), intent(inout)::cleanham
+    !     integer, intent(inout)::clean_ndet
+    !     type(elecintrgl),intent(in)::elecs 
+    !     type(zombiest),dimension(:),intent(in)::zstore
+    !     integer, intent(in)::nume
+    !     type(zombiest),dimension(:),allocatable::cstoretemp
+    !     integer, allocatable, dimension(:,:)::combs,combs2,combsfix
+    !     integer, allocatable, dimension(:)::magovrlp
+    !     integer::j,k,ierr,total,total2,total3,totalf,checker
+    !     complex(kind=8)::magnitude
+
+    !     total=choose(norb,nume)
+    !     allocate(combs(total,nume),stat=ierr)
+    !     if(ierr==0)  allocate (combs2(total,nume),stat=ierr)
+    !     if(ierr==0)  allocate (combsfix(total,nume),stat=ierr)
+    !     if(ierr/=0) then
+    !         write(0,"(a,i0)") "Error in combination matrix allocation. ierr had value ", ierr
+    !         errorflag=1
+    !         return
+    !     end if
+    !     write(6,"(a,i0)") 'Total combinations ',total
+
+
+    !     ! The occupational combiantions for the correct number of electrons are found 
+    !     call combinations(norb,nume,combs,total)
+        
+     
+    !     do j=1, total
+    !         checker=0
+    !         do k=1,nume
+    !             checker=checker+modulo(combs(j,k),2)
+    !         end do
+    !         if(checker==((nume/2)-spin))then
+    !             total2=total2+1
+    !             combs2(total2,:)=combsfix(j,:)
+    !         end if
+    !     end do
+    
+    !     call alloczs(cstoretemp,total2)
+
+    !     allocate(magovrlp(total2),stat=ierr)
+    !     if(ierr/=0) then
+    !         write(0,"(a,i0)") "Error in magovrlp allocation. ierr had value ", ierr
+    !         errorflag=1
+    !         return
+    !     end if
+    
+    !     deallocate(combs,stat=ierr)
+
+    
+    !     do j=1, total2
+    !         call zomhfc(cstoretemp(j),combs2(j,:))
+    !     end do
+ 
+
+
+    ! end subroutine sd_anal
+
     subroutine clean_setup(cstore,nume,cleanham,elecs,clean_ndet,zstore)
 
         implicit none
@@ -66,6 +129,8 @@ MODULE clean
         end do
         !$omp end do
 
+        ! This can be turn off by making combsfix=combs and totalf=total
+        ! totalf=total
         ! combsfix=combs
 
         !$OMP barrier

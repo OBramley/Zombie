@@ -82,6 +82,10 @@ MODULE globvars
 
     integer:: errorflag      ! Error flag
 
+    integer::num_devices     !number of devices 
+    integer::max_threads
+    integer::max_teams
+    integer::threadpteam
 
     contains
 
