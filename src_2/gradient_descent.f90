@@ -1069,7 +1069,7 @@ MODULE gradient_descent
             z2l(l,1,l)=cmplx(0.0,0.0)
         end do
        !$omp end  distribute parallel do simd
-       print*,'z2l made1' ! print*,'1070'
+    !    print*,'z2l made1' ! print*,'1070'
         !$omp  distribute parallel do simd collapse(2)
         do j=1, norb
             do k=1, norb
@@ -1081,9 +1081,9 @@ MODULE gradient_descent
         !$omp end  distribute parallel do simd
         !$omp end target teams
         z1jk=z1jk*occupancy_2an
-        print*,'z1jk made1'! print*,'1082'
+        ! print*,'z1jk made1'! print*,'1082'
         do m=1,size
-            print*,m
+            ! print*,m
             h1etot=cmplx(0.0,0.0)
             h2etot=cmplx(0.0,0.0)
             totc=(0.0,0.0)
@@ -1095,13 +1095,13 @@ MODULE gradient_descent
                 z2l(l,1,l)=cmplx(0.0,0.0)
             end do
             !$omp end target teams distribute parallel do simd
-            print*,'z2l made2'! print*,'1096'
+            ! print*,'z2l made2'! print*,'1096'
             !$omp target teams distribute parallel do simd collapse(2) reduction(+:totc) &
             !$omp shared(ph1ei,occupancy_an_cr,z2l) private(zomt)&
             !$omp num_teams(max_teams) thread_limit(threadpteam)
             do j=1, norb
                 do k=1, norb
-                    print*,j,k
+                    ! print*,j,k
                     if(ph1ei(j,k).eq.0.0)then
                         cycle
                     end if
@@ -1114,7 +1114,7 @@ MODULE gradient_descent
             end do
            !$omp end target teams distribute parallel do simd
             h1etot=totc
-            print*, '1elecdone'! print*,'1113'
+            ! print*, '1elecdone'! print*,'1113'
             z2l=z2l*occupancy_an
             totc=(0.0,0.0)
             !$omp flush
@@ -1190,21 +1190,21 @@ MODULE gradient_descent
             !$omp end target teams distribute parallel do
             !$omp flush(h2etot)
             h2etot=h2etot*0.5
-            print*,'2elec done'! print*,'1188'
+            ! print*,'2elec done'! print*,'1188'
             povrlp(diff_state,m)=product(((conjg(psin(diff_state,:))*psin(m,:)))+((conjg(pcos(diff_state,:))*pcos(m,:))))
-            print*,'after calc'
+            ! print*,'after calc'
             povrlp(m,diff_state)= povrlp(diff_state,m)
-            print*,'after fill'
+            ! print*,'after fill'
             phjk(diff_state,m)=h1etot+h2etot+(phnuc*povrlp(diff_state,m))
-            print*,'after ham'
+            ! print*,'after ham'
             phjk(m,diff_state)=phjk(diff_state,m)
-            print*,'after ham fill'
+            ! print*,'after ham fill'
             ! print*,'1194'
         end do
         !$omp end target data
         !$omp target update from(povrlp,phjk)
         pinv=povrlp
-        print*,'llapack'! print*,'1199'
+        ! print*,'llapack'! print*,'1199'
         if (ierr==0) call ZGETRF(size,size,pinv,size,IPIV1,ierr)
         if (ierr/=0) then
             write(0,"(a,i0)")"Error in ZGETRF",ierr
@@ -1213,14 +1213,14 @@ MODULE gradient_descent
         if (ierr/=0) then
             write(0,"(a,i0)")"Error in ZGETRF",ierr
         end if
-        print*,'done llapack'! print*,'1208'
+        ! print*,'done llapack'! print*,'1208'
         !$omp parallel
         !$omp workshare
         pkinvh=matmul(pinv,phjk)
         !$omp end workshare
         !$omp end parallel
         !$omp target update to(pinv, pkinvh)
-       print*,'done matmul'
+    !    print*,'done matmul'
 
         ! if (ierr==0) deallocate(IPIV1,stat=ierr)
         ! if (ierr/=0) then
@@ -1879,7 +1879,7 @@ MODULE gradient_descent
                     pickorb=pickerorb(n)
                     lralt_zs=0
                     t=b*(alphain**lralt_zs)
-                    print*,pickorb
+                    ! print*,pickorb
                     do while(t.gt.(1.0d-13))
                         nanchk=.false.
                         if(is_nan(pvars(pick,pickorb)).eqv..true.)then
@@ -1904,7 +1904,7 @@ MODULE gradient_descent
                         phjkt=phjk
                         povrlpt=povrlp
                      
-                       print*,'before herow'
+                    !    print*,'before herow'
                         !$omp end target
                         call he_full_row_gpu(ph1ei,ph2ei,phnuc,psint,pcost,occupancy_2an,&
                         occupancy_an_cr,occupancy_an,phjkt,povrlpt,pinvt,pkinvht,pick,ndet)
@@ -1912,7 +1912,7 @@ MODULE gradient_descent
                         !$omp target update from(phjkt,povrlpt,pkinvht)
           
                         ! Imaginary time propagation for back tracing
-                        print*,'after herow'
+                        ! print*,'after herow'
                         en%erg=0
                         en%t=0
                         call imgtime_prop(temp_dvecs,en,temp_ham,0)

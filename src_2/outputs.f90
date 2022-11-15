@@ -200,32 +200,33 @@ MODULE outputs
         character(LEN=*),intent(in)::filenm
         integer,intent(in)::j,loop
         integer::ergnum,ierr,k,l
+        logical :: file_exists
 
         if (errorflag .ne. 0) return
 
         ergnum=400+j
         ierr=0
-        open(unit=ergnum,file=trim(filenm),status="unknown",iostat=ierr)
-        if(ierr/=0)then
-            write(0,"(a,i0)") "Error in opening energy output file. ierr had value ", ierr
-            close(ergnum)
-            errorflag=1
-            return
-        end if
-        if(loop.gt.1)then
-            if(imagflg=='y')then
-                l=2
-            else 
-                l=1
+        inquire(file=trim(filenm),exist=file_exists)
+        if(file_exists.eqv..false.) then
+            open(unit=ergnum,file=trim(filenm),status="new",iostat=ierr)
+            if(ierr/=0)then
+                write(0,"(a,i0)") "Error in opening energy file. ierr had value ", ierr
+                errorflag=1
+                close(ergnum)
+                return
             end if
-          
-            do k=1, l*(loop-1)
-                read(ergnum,*)
-            end do
-        end if
-        if(loop.eq.1)then
             write(ergnum,'(*(e25.17e3 :", "))') (time(k),k=1,timesteps+1)
+        else 
+            open(unit=ergnum,file=trim(filenm),status="old",access='append',iostat=ierr)
+            if(ierr/=0)then
+                write(0,"(a,i0)") "Error in opening energy file. ierr had value ", ierr
+                errorflag=1
+                close(ergnum)
+                return
+            end if
+            write(ergnum,*)' '
         end if
+        
         write(ergnum,'(*(e25.17e3 :", "))') (REAL(erg(k)),k=1,timesteps+1)
         if(imagflg=='y')then
             write(ergnum,'(*(e25.17e3 :", "))') (CMPLX(erg(k)),k=1,timesteps+1)
@@ -288,6 +289,7 @@ MODULE outputs
         character(LEN=4)::stateno
         integer,intent(in)::size,p,loop
         integer::ierr,j,vec
+        logical :: file_exists
         if (errorflag .ne. 0) return
         
         ierr=0
@@ -295,17 +297,24 @@ MODULE outputs
         write(stateno,"(i4.4)")p
         
         vec=900+p
-        open(unit=vec,file="data/dvec_"//trim(stateno)//".csv",status="unknown",iostat=ierr)
-        if(ierr/=0)then
-            write(0,"(a,i0)") "Error in opening dvector file. ierr had value ", ierr
-            errorflag=1
-            close(vec)
-            return
-        end if
-        if(loop.gt.1)then
-            do j=1, (loop-1)
-                read(vec,*)
-            end do
+        inquire(file="data/dvec_"//trim(stateno)//".csv",exist=file_exists)
+        if(file_exists.eqv..false.) then
+            open(unit=vec,file="data/dvec_"//trim(stateno)//".csv",status="new",iostat=ierr)
+            if(ierr/=0)then
+                write(0,"(a,i0)") "Error in opening dvector file. ierr had value ", ierr
+                errorflag=1
+                close(vec)
+                return
+            end if
+        else 
+            open(unit=vec,file="data/dvec_"//trim(stateno)//".csv",status="old",access='append',iostat=ierr)
+            if(ierr/=0)then
+                write(0,"(a,i0)") "Error in opening dvector file. ierr had value ", ierr
+                errorflag=1
+                close(vec)
+                return
+            end if
+            write(vec,*)' '
         end if
        
         if(imagflg=='n')then

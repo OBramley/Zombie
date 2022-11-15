@@ -676,7 +676,7 @@ MODULE ham
         !$omp target teams distribute parallel do simd collapse(2) reduction(+:h1etot,h1etot_diff_bra,h1etot_diff_ket)&
         !$omp & map(alloc:zomt(2,norb),bra_prod(norb),ket_prod(norb),prod(norb),temp1(norb),temp2(norb)) &
         !$omp & private(zomt,j,k,l,temp1,temp2,bra_prod,ket_prod,prod) &
-        !$omp & shared(ph1ei,psin1,psin2,pcos1,pcos2,pphi1,occupancy,equal,z2l)!&
+        !$omp & shared(ph1ei,psin1,psin2,pcos1,pcos2,pphi1,occupancy,equal,z2l)&
         !$omp & num_teams(max_teams) thread_limit(threadpteam)
         do j=1, norb
             do k=1, norb
