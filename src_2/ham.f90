@@ -508,7 +508,8 @@ MODULE ham
         
         !$omp target teams map(alloc:z1jk(norb,norb,2,norb),z2l(norb,2,norb),prod(norb),bra_prod(norb),temp(norb),ket_prod(norb),&
         !$omp h1etot_diff_bra(norb),h2etot_diff_bra(norb),h1etot_diff_ket(norb),h2etot_diff_ket(norb)) &
-        !$omp map(to:h1etot,h2etot,equal,row,m)
+        !$omp map(to:h1etot,h2etot,equal,row,m)&
+        !$omp num_teams(max_teams) thread_limit(threadpteam)
         h1etot=cmplx(0.0,0.0)
         h2etot=cmplx(0.0,0.0)
         h1etot_diff_bra(:)=0.0
@@ -675,7 +676,8 @@ MODULE ham
         !$omp target teams distribute parallel do simd collapse(2) reduction(+:h1etot,h1etot_diff_bra,h1etot_diff_ket)&
         !$omp & map(alloc:zomt(2,norb),bra_prod(norb),ket_prod(norb),prod(norb),temp1(norb),temp2(norb)) &
         !$omp & private(zomt,j,k,l,temp1,temp2,bra_prod,ket_prod,prod) &
-        !$omp & shared(ph1ei,psin1,psin2,pcos1,pcos2,pphi1,occupancy,equal,z2l)
+        !$omp & shared(ph1ei,psin1,psin2,pcos1,pcos2,pphi1,occupancy,equal,z2l)!&
+        !$omp & num_teams(max_teams) thread_limit(threadpteam)
         do j=1, norb
             do k=1, norb
                 if(ph1ei(j,k).eq.0.0)then
@@ -795,7 +797,8 @@ MODULE ham
         !$omp target teams distribute parallel do simd reduction(+:h2etot,totc) map(to:gmax,hmin,jspin,tot,totc) &
         !$omp & map(alloc:vmult(2,norb),gg(norb),hh(norb),occupancy(2,norb)) &
         !$omp & private(j,k,l,jspin,occupancy,gg,hh,gmax,hmin,vmult,temp) &
-        !$omp & shared(z2l,z1jk,occupancy_2an,occupancy_an,ph2ei)
+        !$omp & shared(z2l,z1jk,occupancy_2an,occupancy_an,ph2ei)&
+        !$omp & num_teams(max_teams) thread_limit(threadpteam)
         do j=1, norb
             if(psin1(j)==(0.0,0.0))then
                 CYCLE
@@ -874,7 +877,8 @@ MODULE ham
                 !$omp map(to:gg_1,hh_1,gg_2,hh_2,gmax1,hmin1,gmax2,hmin2,jspin,breakflag) &
                 !$omp & map(alloc:vmultr(2,norb),vmult_dd(2,norb),occupancy(2,norb),temp(norb)) &
                 !$omp & private(gg_1,hh_1,gg_2,hh_2,gmax1,gmax2,hmin1,hmin2,jspin,occupancy,breakflag,vmultr,vmult_dd,temp)&
-                !$omp & shared(ph2ei,z1jk,z2l)
+                !$omp & shared(ph2ei,z1jk,z2l)&
+                !$omp & num_teams(max_teams) thread_limit(threadpteam)
                 do j=1, norb
                     if(modulo(j,2)==0)then
                         jspin=2

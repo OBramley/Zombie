@@ -255,7 +255,7 @@ elif(inputs.run['language']=="fortran"):
             # shutil.copy2("../build/makefile_mac_omp","../build/Makefile")
             # subprocess.run(["make"])
     
-     
+ 
     shutil.copy2("ZOMBIE.exe",EXDIR1)
 
     # if(HPCFLG==1):
@@ -268,7 +268,7 @@ elif(inputs.run['language']=="fortran"):
     # shutil.copy2("d_check.exe",EXDIR1)
     exit()
     os.chdir(EXDIR1)
-
+   
     if(HPCFLG==1):
         if(inputs.run['cores']!=1):
             os.environ["OMP_NUM_THREADS"]=str(inputs.run['cores'])

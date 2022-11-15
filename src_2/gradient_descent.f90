@@ -731,26 +731,12 @@ MODULE gradient_descent
                                 loop_max=loop_max-1
                                 loop_dwn=0
                             end if
-                            ! if(lralt.eq.1)then 
-                            !     lralt=0
-                            ! else if(lralt.gt.1)then 
-                            !     lralt=lralt-2
-                            ! end if
                             write(6,"(a,i0,a,f21.16,a,f21.16,a,f12.10,a,i0,a,i0)") '       ', pick,'              ', &
                 grad_fin%prev_erg,'               ',fxtdk,'            ',t,'          ',acpt_cnt,'                 ',rjct_cnt
                             Exit
-                            ! t=newb*(alpha**lralt)
+                           
                         else 
                             lralt_temp=lralt_temp+1
-                            ! rjct_cnt=rjct_cnt+1
-                            ! if(rjct_cnt.eq.(ndet-1))then
-                            !     lralt=lralt+1
-                            !     t=newb*(alpha**lralt)
-                            !     rjct_cnt=0
-                            !     if(epoc_cnt.gt.100)then
-                            !         orbitcnt=orbitcnt+1
-                            !     end if
-                            ! end if
                         end if
                     else 
                         write(0,"(a,a,a,i0,a,i0)") "Error in energy calculation which took value ",ergerr, &
@@ -1025,37 +1011,37 @@ MODULE gradient_descent
         integer,intent(in)::size,diff_state
         integer,dimension(:,:,:,:),intent(in)::occupancy_2an,occupancy_an_cr
         integer,dimension(:,:,:),intent(in)::occupancy_an
-        complex(kind=8),allocatable, dimension(:,:,:,:)::z1jk
-        complex(kind=8),allocatable, dimension(:,:,:)::z2l
+        complex(kind=8), dimension(norb,norb,2,norb)::z1jk
+        complex(kind=8), dimension(norb,2,norb)::z2l
         integer::j,k,l,m,ierr,n,gmax,hmin,jspin
         complex(kind=8)::h1etot, h2etot
         complex(kind=8),dimension(2,norb)::zomt,vmult
         complex(kind=8),dimension(norb)::gg,hh
-        integer, allocatable,dimension(:)::IPIV1
-        complex(kind=8),allocatable,dimension(:)::WORK1
+        integer,dimension(size)::IPIV1
+        complex(kind=8),dimension(size)::WORK1
         complex(kind=8)::totc
 
         if (errorflag .ne. 0) return
         ierr = 0
+       
+        ! allocate(z1jk(norb,norb,2,norb),stat=ierr)
+        ! if(ierr==0) allocate(z2l(norb,2,norb),stat=ierr)
+        ! if (ierr/=0) then
+        !     write(0,"(a,i0)") "Error in annihilation and creation array vector allocation . ierr had value ", ierr
+        !     errorflag=1
+        !     return
+        ! end if 
 
-        allocate(z1jk(norb,norb,2,norb),stat=ierr)
-        if(ierr==0) allocate(z2l(norb,2,norb),stat=ierr)
-        if (ierr/=0) then
-            write(0,"(a,i0)") "Error in annihilation and creation array vector allocation . ierr had value ", ierr
-            errorflag=1
-            return
-        end if 
-
-        allocate(IPIV1(size),stat=ierr)
-        if (ierr/=0) then
-            write(0,"(a,i0)") "Error in IPIV vector allocation . ierr had value ", ierr
-            errorflag=1
-        end if 
-        if (ierr==0) allocate(WORK1(size),stat=ierr)
-        if (ierr/=0) then
-            write(0,"(a,i0)") "Error in WORK vector allocation . ierr had value ", ierr
-            errorflag=1
-        end if  
+        ! allocate(IPIV1(size),stat=ierr)
+        ! if (ierr/=0) then
+        !     write(0,"(a,i0)") "Error in IPIV vector allocation . ierr had value ", ierr
+        !     errorflag=1
+        ! end if 
+        ! if (ierr==0) allocate(WORK1(size),stat=ierr)
+        ! if (ierr/=0) then
+        !     write(0,"(a,i0)") "Error in WORK vector allocation . ierr had value ", ierr
+        !     errorflag=1
+        ! end if  
       
         !!$omp target teams map(alloc:z1jk(norb,norb,2,norb),z2l(norb,2,norb),zomt(2,norb),&
         !!$omp vmult(2,norb),gg(norb),hh(norb)) &
@@ -1066,11 +1052,15 @@ MODULE gradient_descent
         !$omp target data map(alloc:z1jk(norb,norb,2,norb),z2l(norb,2,norb),zomt(2,norb),&
         !$omp vmult(2,norb),gg(norb),hh(norb)) &
         !$omp & map(to:h1etot,h2etot,jspin,gmax,hmin,totc)
-
+        !!$omp & shared(ph1ei,z1jk,occupancy_2an,occupancy_an,occupancy_an_cr,ph2ei)
+        !!$omp & private(vmult,gg,hh,jspin,gmax,hmin,zomt)
+        !!$omp & shared(ph1ei,z2l,z1jk,occupancy_2an,occupancy_an,occupancy_an_cr,ph2ei)&
+        !!$omp & private(vmult,gg,hh,jspin,gmax,hmin,zomt) 
+        ! print*,'1057'
         h1etot=cmplx(0.0,0.0)
         h2etot=cmplx(0.0,0.0)
-        totc=(0.0,0.0)
-        !$omp target teams 
+        totc=cmplx(0.0,0.0)
+        !$omp target teams  num_teams(max_teams) thread_limit(threadpteam)
         !$omp  distribute parallel do simd
         do l=1, norb
             z2l(l,1,:)=psin(diff_state,:) 
@@ -1079,7 +1069,7 @@ MODULE gradient_descent
             z2l(l,1,l)=cmplx(0.0,0.0)
         end do
        !$omp end  distribute parallel do simd
-
+       print*,'z2l made1' ! print*,'1070'
         !$omp  distribute parallel do simd collapse(2)
         do j=1, norb
             do k=1, norb
@@ -1091,13 +1081,13 @@ MODULE gradient_descent
         !$omp end  distribute parallel do simd
         !$omp end target teams
         z1jk=z1jk*occupancy_2an
-
+        print*,'z1jk made1'! print*,'1082'
         do m=1,size
-      
+            print*,m
             h1etot=cmplx(0.0,0.0)
             h2etot=cmplx(0.0,0.0)
             totc=(0.0,0.0)
-            !$omp target teams distribute parallel do simd
+            !$omp target teams distribute parallel do simd num_teams(max_teams) thread_limit(threadpteam)
             do l=1, norb
                 z2l(l,1,:)=psin(m,:) 
                 z2l(l,2,:)=pcos(m,:)
@@ -1105,15 +1095,17 @@ MODULE gradient_descent
                 z2l(l,1,l)=cmplx(0.0,0.0)
             end do
             !$omp end target teams distribute parallel do simd
-            
+            print*,'z2l made2'! print*,'1096'
             !$omp target teams distribute parallel do simd collapse(2) reduction(+:totc) &
-            !$omp shared(ph1ei,occupancy_an_cr,z2l) private(zomt)
+            !$omp shared(ph1ei,occupancy_an_cr,z2l) private(zomt)&
+            !$omp num_teams(max_teams) thread_limit(threadpteam)
             do j=1, norb
                 do k=1, norb
+                    print*,j,k
                     if(ph1ei(j,k).eq.0.0)then
                         cycle
                     end if
-                    zomt(:,:)=z2l(j,:,:)
+                    zomt=z2l(j,:,:)
                     zomt(1,k)=zomt(2,k)
                     zomt(2,k)=cmplx(0.0,0.0)
                     zomt=zomt*occupancy_an_cr(j,k,:,:)
@@ -1122,12 +1114,13 @@ MODULE gradient_descent
             end do
            !$omp end target teams distribute parallel do simd
             h1etot=totc
-          
+            print*, '1elecdone'! print*,'1113'
             z2l=z2l*occupancy_an
             totc=(0.0,0.0)
             !$omp flush
             !$omp target teams distribute parallel do reduction(+:h2etot,totc)&
-            !$omp & private(vmult,gg,hh,jspin,gmax,hmin,zomt) shared(z2l,z1jk,ph2ei)
+            !$omp & private(vmult,gg,hh,jspin,gmax,hmin,zomt) shared(z2l,z1jk,ph2ei)&
+            !$omp & num_teams(max_teams) thread_limit(threadpteam)
             do j=1, norb
                 if(psin(diff_state,j)==(0.0,0.0))then
                     CYCLE
@@ -1146,14 +1139,14 @@ MODULE gradient_descent
                         if(psin(m,l)==(0.0,0.0))then
                             CYCLE
                         end if
-    
+                        ! print*,'1137'
                         vmult=conjg(z1jk(j,k,:,:))*(z2l(l,:,:))
         
                         gg(1:norb)=(0.0,0.0)
                         hh(1:norb)=(0.0,0.0)
                         gmax=norb
                         gg(1)=vmult(2,1)-vmult(1,1)
-    
+                        ! print*,'1144'
                         do n=2, norb
                             gg(n)=gg(n-1)*(vmult(2,n)-vmult(1,n))
                             if(gg(n)==(0.0,0.0))then
@@ -1161,7 +1154,7 @@ MODULE gradient_descent
                                 EXIT 
                             end if
                         end do
-                        
+                        ! print*,'1152'
                         hmin=0
                         hh(norb) = vmult(2,norb)+vmult(1,norb)
                         do n=(norb-1),1,-(1)
@@ -1176,7 +1169,7 @@ MODULE gradient_descent
                             h2etot=h2etot+totc
                             cycle
                         end if
-    
+                        ! print*,'1167'
                         if(ph2ei(j,k,l,1).ne.0) then
                             totc = totc+(conjg(z1jk(j,k,2,1))*z2l(l,1,1)*hh(2)*ph2ei(j,k,l,1))
                         end if
@@ -1186,7 +1179,7 @@ MODULE gradient_descent
                                 totc = totc+ (gg(n-1)*conjg(z1jk(j,k,2,n))*z2l(l,1,n)*hh(n+1)*ph2ei(j,k,l,n))
                             end if
                         end do
-    
+                        ! print*,'1177'
                         if(ph2ei(j,k,l,norb).ne.0) then
                             totc = totc +(gg(norb-1)*conjg(z1jk(j,k,2,norb))*z2l(l,1,norb)*ph2ei(j,k,l,norb))
                         end if
@@ -1197,18 +1190,21 @@ MODULE gradient_descent
             !$omp end target teams distribute parallel do
             !$omp flush(h2etot)
             h2etot=h2etot*0.5
-          
+            print*,'2elec done'! print*,'1188'
             povrlp(diff_state,m)=product(((conjg(psin(diff_state,:))*psin(m,:)))+((conjg(pcos(diff_state,:))*pcos(m,:))))
+            print*,'after calc'
             povrlp(m,diff_state)= povrlp(diff_state,m)
+            print*,'after fill'
             phjk(diff_state,m)=h1etot+h2etot+(phnuc*povrlp(diff_state,m))
+            print*,'after ham'
             phjk(m,diff_state)=phjk(diff_state,m)
-          
-
+            print*,'after ham fill'
+            ! print*,'1194'
         end do
         !$omp end target data
         !$omp target update from(povrlp,phjk)
         pinv=povrlp
-        
+        print*,'llapack'! print*,'1199'
         if (ierr==0) call ZGETRF(size,size,pinv,size,IPIV1,ierr)
         if (ierr/=0) then
             write(0,"(a,i0)")"Error in ZGETRF",ierr
@@ -1217,32 +1213,32 @@ MODULE gradient_descent
         if (ierr/=0) then
             write(0,"(a,i0)")"Error in ZGETRF",ierr
         end if
-
+        print*,'done llapack'! print*,'1208'
         !$omp parallel
         !$omp workshare
         pkinvh=matmul(pinv,phjk)
         !$omp end workshare
         !$omp end parallel
         !$omp target update to(pinv, pkinvh)
-       
+       print*,'done matmul'
 
-        if (ierr==0) deallocate(IPIV1,stat=ierr)
-        if (ierr/=0) then
-            write(0,"(a,i0)") "Error in IPIV vector deallocation . ierr had value ", ierr
-            errorflag=1
-        end if
-        if (ierr==0) deallocate(WORK1,stat=ierr)
-        if (ierr/=0) then
-            write(0,"(a,i0)") "Error in WORK vector deallocation . ierr had value ", ierr
-            errorflag=1
-        end if
-        deallocate(z1jk,stat=ierr)
-        if(ierr==0) deallocate(z2l,stat=ierr)
-        if (ierr/=0) then
-            write(0,"(a,i0)") "Error in annihilation and creation array vector deallocation . ierr had value ", ierr
-            errorflag=1
-            return
-        end if 
+        ! if (ierr==0) deallocate(IPIV1,stat=ierr)
+        ! if (ierr/=0) then
+        !     write(0,"(a,i0)") "Error in IPIV vector deallocation . ierr had value ", ierr
+        !     errorflag=1
+        ! end if
+        ! if (ierr==0) deallocate(WORK1,stat=ierr)
+        ! if (ierr/=0) then
+        !     write(0,"(a,i0)") "Error in WORK vector deallocation . ierr had value ", ierr
+        !     errorflag=1
+        ! end if
+        ! deallocate(z1jk,stat=ierr)
+        ! if(ierr==0) deallocate(z2l,stat=ierr)
+        ! if (ierr/=0) then
+        !     write(0,"(a,i0)") "Error in annihilation and creation array vector deallocation . ierr had value ", ierr
+        !     errorflag=1
+        !     return
+        ! end if 
         return
 
     end subroutine he_full_row_gpu
@@ -1266,8 +1262,8 @@ MODULE gradient_descent
         integer,intent(in)::size,diff_state
         integer,dimension(:,:,:,:),intent(in)::occupancy_2an,occupancy_an_cr
         integer,dimension(:,:,:),intent(in)::occupancy_an
-        complex(kind=8),allocatable, dimension(:,:,:,:)::z1jk
-        complex(kind=8),allocatable, dimension(:,:,:)::z2l
+        complex(kind=8),dimension(norb,norb,2,norb)::z1jk
+        complex(kind=8), dimension(norb,2,norb)::z2l
         complex(kind=8),dimension(2,norb)::zomt
         real(kind=8),dimension(norb)::h1etot_diff_bra,h2etot_diff_bra
         real(kind=8),dimension(ndet,ndet,norb)::temp2
@@ -1280,22 +1276,24 @@ MODULE gradient_descent
         if (errorflag .ne. 0) return
         ierr = 0
 
-        allocate(z1jk(norb,norb,2,norb),stat=ierr)
-        if(ierr==0) allocate(z2l(norb,2,norb),stat=ierr)
-        if (ierr/=0) then
-            write(0,"(a,i0)") "Error in annihilation and creation array vector allocation . ierr had value ", ierr
-            errorflag=1
-            return
-        end if 
+        ! allocate(z1jk(norb,norb,2,norb),stat=ierr)
+        ! if(ierr==0) allocate(z2l(norb,2,norb),stat=ierr)
+        ! if (ierr/=0) then
+        !     write(0,"(a,i0)") "Error in annihilation and creation array vector allocation . ierr had value ", ierr
+        !     errorflag=1
+        !     return
+        ! end if 
 
       
         !$omp target teams map(alloc:z1jk(norb,norb,2,norb),z2l(norb,2,norb),zomt(2,norb),temp(norb),temp2(ndet,ndet,norb),&
         !$omp  bra_prod(norb),prod(norb),temp1(norb),vmultr(2,norb),vmult_dd(2,norb),occupancy(2,norb),&
         !$omp h1etot_diff_bra(norb),h2etot_diff_bra(norb)) & !map(to:j,k,l,diff_state,gg_1,hh_1)&
-        !map(to:j,k,l,diff_state,gg_1,hh_1,gmax1,hmin1,jspin,breakflag,tot)&
+        !$omp & map(to:j,k,l,diff_state,gg_1,hh_1,gmax1,hmin1,jspin,breakflag,tot)&
         !$omp & shared(ph1ei,ph2ei,psin,pcos,pphi,occupancy_an_cr,z2l,z1jk,occupancy_2an,occupancy_an,diff_state)&
-        !$omp & private(j,k,l,zomt,temp1,bra_prod,prod,gg_1,hh_1,gmax1,hmin1,jspin,occupancy,breakflag,vmultr,vmult_dd,temp,tot)
-        !!$omp &num_teams(8) !call omp_set_num_teams(8)
+        !$omp & private(j,k,l,zomt,temp1,bra_prod,prod,gg_1,hh_1,gmax1,hmin1,jspin,occupancy,breakflag,vmultr,vmult_dd,temp,tot)&
+        !$omp & num_teams(max_teams) thread_limit(threadpteam)
+
+        print*,diff_state
        
         !$omp distribute parallel do simd
         do l=1, norb
@@ -1712,13 +1710,13 @@ MODULE gradient_descent
         end do
         !$omp target update to(pdiff_invh)
 
-        deallocate(z1jk,stat=ierr)
-        if(ierr==0) deallocate(z2l,stat=ierr)
-        if (ierr/=0) then
-            write(0,"(a,i0)") "Error in annihilation and creation array vector deallocation . ierr had value ", ierr
-            errorflag=1
-            return
-        end if 
+        ! deallocate(z1jk,stat=ierr)
+        ! if(ierr==0) deallocate(z2l,stat=ierr)
+        ! if (ierr/=0) then
+        !     write(0,"(a,i0)") "Error in annihilation and creation array vector deallocation . ierr had value ", ierr
+        !     errorflag=1
+        !     return
+        ! end if 
 
         return
 
@@ -1845,20 +1843,17 @@ MODULE gradient_descent
         integer,dimension(:,:,:,:)::occupancy_an_cr,occupancy_2an
         real(kind=8),intent(in)::b,alphain
         integer,dimension(ndet-1),intent(inout)::picker
-        integer::rjct_cnt,next,acpt_cnt,pick,pickorb,rjct_cnt2,loops,d_diff_flg
+        integer::rjct_cnt,next,acpt_cnt,pick,pickorb,rjct_cnt2,loops,d_diff_flg,lralt_zs
         real(kind=8)::t,fxtdk,l2_rglrstn
         integer,dimension(ndet-1)::rsrtpass
-        integer,dimension(ndet,norb)::lralt_zs
         integer,dimension(norb)::pickerorb
-        real(kind=8),dimension(ndet,norb)::alpha_zs,newb_zs
         integer,dimension(norb)::chng_trk2
         logical::nanchk
         character(len=4)::ergerr
         integer::j,k,l,n
        
-        alpha_zs=alphain  ! learning rate reduction
-        lralt_zs=0    ! power alpha is raised to 
-        newb_zs=b
+       
+        lralt_zs=0    ! power alpha is raised to
         chng_trk=0 !stores which if any ZS changed
         chng_trk2=0 !stores which orbitals in the ZS have changed 
         rjct_cnt=0 !tracks how many rejections 
@@ -1882,14 +1877,16 @@ MODULE gradient_descent
                 do n=1,norb
                     rjct_cnt=0
                     pickorb=pickerorb(n)
-                    t=newb_zs(pick,pickorb)*(alpha_zs(pick,pickorb)**lralt_zs(pick,pickorb))
+                    lralt_zs=0
+                    t=b*(alphain**lralt_zs)
+                    print*,pickorb
                     do while(t.gt.(1.0d-13))
                         nanchk=.false.
                         if(is_nan(pvars(pick,pickorb)).eqv..true.)then
                             call grad_calc_gpu(psin,pcos,pphi,ph1ei,ph2ei,phjk,pkinvh,pinv,pdiff_hjk,pvars,pgrad_avlb,&
                             pdiff_ovrlp,pdiff_invh,pick,occupancy_2an,occupancy_an_cr,occupancy_an,dvecs,en,d_diff_flg,haml)
                         end if 
-                       
+                        ! print*,'start',pick,t
                         !$omp target map(to:t,l2_rglrstn,pick,pickorb)
                        
                         ! Setup temporary zombie state
@@ -1907,7 +1904,7 @@ MODULE gradient_descent
                         phjkt=phjk
                         povrlpt=povrlp
                      
-                       
+                       print*,'before herow'
                         !$omp end target
                         call he_full_row_gpu(ph1ei,ph2ei,phnuc,psint,pcost,occupancy_2an,&
                         occupancy_an_cr,occupancy_an,phjkt,povrlpt,pinvt,pkinvht,pick,ndet)
@@ -1915,7 +1912,7 @@ MODULE gradient_descent
                         !$omp target update from(phjkt,povrlpt,pkinvht)
           
                         ! Imaginary time propagation for back tracing
-                        
+                        print*,'after herow'
                         en%erg=0
                         en%t=0
                         call imgtime_prop(temp_dvecs,en,temp_ham,0)
@@ -1971,13 +1968,10 @@ MODULE gradient_descent
                                 chng_trk2(acpt_cnt)=pickorb
                                 rjct_cnt=0
                                 rjct_cnt2=0
-                                !$omp target update from(psin,pcos,pphi,pprev_erg)
-                                if(lralt_zs(pick,pickorb).gt.0)then 
-                                    lralt_zs(pick,pickorb)=lralt_zs(pick,pickorb)-1
-                                end if
+                                !$omp target update from(psin(pick,pickorb),pcos(pick,pickorb),pphi(pick,pickorb),pprev_erg)
                             else 
-                                lralt_zs(pick,pickorb)=lralt_zs(pick,pickorb)+1
-                                t=newb_zs(pick,pickorb)*(alpha_zs(pick,pickorb)**lralt_zs(pick,pickorb))
+                                lralt_zs=lralt_zs+1
+                                t=b*(alphain**lralt_zs)
                                 rjct_cnt=rjct_cnt+1
                             end if
                         end if
@@ -2564,13 +2558,12 @@ MODULE gradient_descent
         implicit none
 
         integer,intent(in)::number_of_values
-        integer,allocatable::out(:),array(:)
+        integer::out(number_of_values),array(number_of_values+1)
         integer::n,m,k,j,l,jtemp
         real::r
         !DOUBLE PRECISION, external::ZBQLU01
 
-        out=[(j,j=1,number_of_values)]
-        array=[(j,j=1,number_of_values+1)]
+        
         n=1; m=number_of_values
         do k=1,2
             do j=1,m+1
@@ -2598,12 +2591,11 @@ MODULE gradient_descent
         implicit none
 
         integer,intent(in)::number_of_values
-        integer,allocatable::out(:)
+        integer::out(number_of_values)
         integer::n,m,k,j,l,jtemp
         !DOUBLE PRECISION, external::ZBQLU01
         real::r
 
-        out=[(j,j=1,number_of_values)]
         n=1; m=number_of_values
         do k=1,2
             do j=1,m
