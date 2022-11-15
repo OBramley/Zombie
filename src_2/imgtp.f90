@@ -15,8 +15,8 @@ MODULE imgtp
         integer,intent(in)::diff_state
         integer::j,k,states
         real(kind=8)::p
-        real::db
-        DOUBLE PRECISION, external::ZBQLU01,ZBQLUAB
+        real::db,r
+        !DOUBLE PRECISION, external::ZBQLU01,ZBQLUAB
 
         if (errorflag .ne. 0) return
 
@@ -26,7 +26,8 @@ MODULE imgtp
                 if(zst=='HF') then
                     do k=1, ndet
                     ! k=int(ZBQLUAB(1,ndet))
-                        p=ZBQLU01(1)
+                        call random_number(r)
+                        p=r !ZBQLU01(1)
                         dvecs(j)%d(k)=cmplx(p,0.0,kind=8)
                     end do
                 end if

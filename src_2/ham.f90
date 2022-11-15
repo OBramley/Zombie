@@ -1403,7 +1403,7 @@ MODULE ham
             pphi(j,:)=zstore(j)%phi(:)
         end do
         
-
+        
         !$omp target data map(to:ph1ei,ph2ei,phnuc,psin,pcos,pphi,occupancy_2an,&
         !$omp occupancy_an_cr,occupancy_an,passback,errorflag,ierr,GDflg) &
         !$omp & map(tofrom:phjk,povrlp) if(GDflg.eq.'y') map(tofrom:pdiff_hjk,pdiff_ovrlp)

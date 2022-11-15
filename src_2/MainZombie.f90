@@ -48,19 +48,19 @@ program MainZombie
     call initialise
     call readrunconds
 
-    open(unit=570, file="/dev/urandom", access="stream", &
-    form="unformatted", action="read", status="old", iostat=istat)
-    if (istat == 0) then
-        read(570) randseed    ! This takes the random seed from the true-random bin. If
-        close(570)           ! the urandom bin does not exist the random seed is set
-    else                   ! to zero which forces the date to be used
-        randseed=0
-    end if
+    ! open(unit=570, file="/dev/urandom", access="stream", &
+    ! form="unformatted", action="read", status="old", iostat=istat)
+    ! if (istat == 0) then
+    !     read(570) randseed    ! This takes the random seed from the true-random bin. If
+    !     close(570)           ! the urandom bin does not exist the random seed is set
+    ! else                   ! to zero which forces the date to be used
+    !     randseed=0
+    ! end if
 
-    randseed = abs(randseed)    ! Negative seed values seem to cause instability
+    ! randseed = abs(randseed)    ! Negative seed values seem to cause instability
 
-    call ZBQLINI(randseed,0)   ! Generates the seed value using the UCL random library
-    write(6,"(a)") "Random seed set"
+    ! call ZBQLINI(randseed,0)   ! Generates the seed value using the UCL random library
+    ! write(6,"(a)") "Random seed set"
 
    
     GPUflg='y'
@@ -150,7 +150,6 @@ program MainZombie
             if (ierr/=0) then
                 write(0,"(a,i0)") "Error in zombie change tracking array allocation . ierr had value ", ierr
                 errorflag=1
-                return
             end if
             chng_trk=0
             if(rstrtflg.eq.'n')then 
@@ -178,7 +177,6 @@ program MainZombie
             if (ierr/=0) then
                 write(0,"(a,i0)") "Error in zombie change tracking array deallocation . ierr had value ", ierr
                 errorflag=1
-                return
             end if
         end if
 

@@ -367,8 +367,9 @@ MODULE operators
     end function iszero
 
     logical function occ_iszero(mat)
-        !$omp declare target
         implicit none
+        !$omp declare target
+        
         complex(kind=8),dimension(:,:),intent(in)::mat
         integer::j
         complex(kind=8)::tt 

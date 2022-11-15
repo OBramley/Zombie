@@ -617,8 +617,8 @@ MODULE gradient_descent
         real(kind=8),dimension(norb)::gradient_norm
         real(kind=8),dimension(ndet)::mmntm,mmntma
         integer,dimension(ndet-1)::rsrtpass
-        DOUBLE PRECISION, external::ZBQLU01
-       
+        !DOUBLE PRECISION, external::ZBQLU01
+        real::r
         logical::nanchk
         character(len=4)::ergerr
         integer::j,k,l
@@ -801,7 +801,9 @@ MODULE gradient_descent
                     d_diff_flg=1 
                 else 
                     d_diff_flg=0
-                    if((ZBQLU01(1)).lt.0.3)then 
+                    call random_number(r)
+                    if(r.lt.0.3)then 
+                    ! if(ZBQLU01(1).lt.0.3)then 
                         d_diff_flg=1
                     end if
                 end if
@@ -1064,10 +1066,6 @@ MODULE gradient_descent
         !$omp target data map(alloc:z1jk(norb,norb,2,norb),z2l(norb,2,norb),zomt(2,norb),&
         !$omp vmult(2,norb),gg(norb),hh(norb)) &
         !$omp & map(to:h1etot,h2etot,jspin,gmax,hmin,totc)
-        !!$omp & shared(ph1ei,z1jk,occupancy_2an,occupancy_an,occupancy_an_cr,ph2ei)
-        !!$omp & private(vmult,gg,hh,jspin,gmax,hmin,zomt)
-        !!$omp & shared(ph1ei,z2l,z1jk,occupancy_2an,occupancy_an,occupancy_an_cr,ph2ei)&
-        !!$omp & private(vmult,gg,hh,jspin,gmax,hmin,zomt) 
 
         h1etot=cmplx(0.0,0.0)
         h2etot=cmplx(0.0,0.0)
@@ -1297,7 +1295,7 @@ MODULE gradient_descent
         !map(to:j,k,l,diff_state,gg_1,hh_1,gmax1,hmin1,jspin,breakflag,tot)&
         !$omp & shared(ph1ei,ph2ei,psin,pcos,pphi,occupancy_an_cr,z2l,z1jk,occupancy_2an,occupancy_an,diff_state)&
         !$omp & private(j,k,l,zomt,temp1,bra_prod,prod,gg_1,hh_1,gmax1,hmin1,jspin,occupancy,breakflag,vmultr,vmult_dd,temp,tot)
-
+        !!$omp &num_teams(8) !call omp_set_num_teams(8)
        
         !$omp distribute parallel do simd
         do l=1, norb
@@ -1760,7 +1758,7 @@ MODULE gradient_descent
         pdiff_ovrlp,pdiff_invh,occupancy_an,occupancy_an_cr,occupancy_2an,pick,ndet)
         
         nanchk=.false.
-        !$omp target update from(pvars(pick,:))
+        !$omp target update from(pvars)
         do k=1,norb
             if(is_nan(pvars(pick,k)).eqv..true.)then
                 nanchk=.true. 
@@ -1770,7 +1768,7 @@ MODULE gradient_descent
                     !!$omp declare target( gradient_row_gpu)
                     call gradient_row_gpu(psin,pcos,pphi,ph1ei,ph2ei,pkinvh,pinv,pdiff_hjk,&
                     pdiff_ovrlp,pdiff_invh,occupancy_an,occupancy_an_cr,occupancy_2an,pick,ndet)
-                    !$omp target update from(pvars(pick,:))
+                    !$omp target update from(pvars)
                     do m=1,norb
                         if(is_nan(pvars(pick,m)).eqv..true.)then 
                             exit 
@@ -1793,7 +1791,7 @@ MODULE gradient_descent
         
         en%erg=0
         en%t=0
-        !$omp target update if(d_diff_flg.eq.1) from(pdiff_hjk(pick,:,:),pdiff_ovrlp(pick,:,:),pdiff_invh(pick,:,:,:))
+        !$omp target update if(d_diff_flg.eq.1) from(pdiff_hjk,pdiff_ovrlp,pdiff_invh)
         if(d_diff_flg.eq.1)then
             call imgtime_prop(dvec,en,haml,pick)
         end if
@@ -1973,7 +1971,7 @@ MODULE gradient_descent
                                 chng_trk2(acpt_cnt)=pickorb
                                 rjct_cnt=0
                                 rjct_cnt2=0
-                                !$omp target update from(psin(pick,pickorb),pcos(pick,pickorb),pphi(pick,pickorb),pprev_erg)
+                                !$omp target update from(psin,pcos,pphi,pprev_erg)
                                 if(lralt_zs(pick,pickorb).gt.0)then 
                                     lralt_zs(pick,pickorb)=lralt_zs(pick,pickorb)-1
                                 end if
@@ -2096,7 +2094,8 @@ MODULE gradient_descent
         real(kind=8),dimension(norb)::gradient_norm
         real(kind=8),dimension(ndet)::mmntm,mmntma
         integer,dimension(ndet-1)::rsrtpass
-        DOUBLE PRECISION, external::ZBQLU01
+        ! DOUBLE PRECISION, external::ZBQLU01
+        real::r
         logical::nanchk
         character(len=4)::ergerr
         integer::j,k,l
@@ -2215,7 +2214,7 @@ MODULE gradient_descent
                             mmntma(pick)=t
                             mmntm(pick)=mmnmtb
                             loop_dwn=loop_dwn+1
-                            !$omp target update from(psin(pick,:),pcos(pick,:),pphi(pick,:),pprev_erg)
+                            !$omp target update from(psin,pcos,pphi,pprev_erg)
                             zstore(pick)%update_num=zstore(pick)%update_num+1
                             call zombiewriter(zstore(pick),pick,rsrtpass(pick))
                             if(orbitcnt.lt.0)then
@@ -2284,7 +2283,9 @@ MODULE gradient_descent
                     d_diff_flg=1 
                 else 
                     d_diff_flg=0
-                    if(ZBQLU01(1).lt.0.3)then 
+                    call random_number(r)
+                    if(r.lt.0.3)then 
+                    ! if(ZBQLU01(1).lt.0.3)then 
                         d_diff_flg=1
                     end if
                 end if
@@ -2565,14 +2566,16 @@ MODULE gradient_descent
         integer,intent(in)::number_of_values
         integer,allocatable::out(:),array(:)
         integer::n,m,k,j,l,jtemp
-        DOUBLE PRECISION, external::ZBQLU01
+        real::r
+        !DOUBLE PRECISION, external::ZBQLU01
 
         out=[(j,j=1,number_of_values)]
         array=[(j,j=1,number_of_values+1)]
         n=1; m=number_of_values
         do k=1,2
             do j=1,m+1
-                l = n + FLOOR((m+1-n)*ZBQLU01(1))
+                call random_number(r)
+                l = n + FLOOR((m+1-n)*r) !ZBQLU01(1))
                 jtemp=array(l)
                 array(l)=array(j)
                 array(j)=jtemp
@@ -2597,13 +2600,15 @@ MODULE gradient_descent
         integer,intent(in)::number_of_values
         integer,allocatable::out(:)
         integer::n,m,k,j,l,jtemp
-        DOUBLE PRECISION, external::ZBQLU01
+        !DOUBLE PRECISION, external::ZBQLU01
+        real::r
 
         out=[(j,j=1,number_of_values)]
         n=1; m=number_of_values
         do k=1,2
             do j=1,m
-                l = n + FLOOR((m-n)*ZBQLU01(1))
+                call random_number(r)
+                l = n + FLOOR((m-n)*r) !ZBQLU01(1))
                 jtemp=out(l)
                 out(l)=out(j)
                 out(j)=jtemp

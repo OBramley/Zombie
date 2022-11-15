@@ -13,8 +13,9 @@ MODULE zom
         type(zombiest),dimension(:),intent(inout)::zstore
         integer, intent(in)::num
         integer::j,k
-        DOUBLE PRECISION, external::ZBQLU01
+        ! DOUBLE PRECISION, external::ZBQLU01
         real(kind=8)::dummy
+        real::r
         ! real(kind=8),dimension(norb)::rands
         ! complex(kind=8)::ctemp
         if (errorflag .ne. 0) return
@@ -27,7 +28,8 @@ MODULE zom
                     dummy=-1
                     !$omp critical
                     do while((dummy.lt.0))
-                       dummy=2*pirl*ZBQLU01(1)
+                        call random_number(r)
+                       dummy=2*pirl*r   !ZBQLU01(1)
                     !    if((dummy.gt.0.5*pirl))then
                     !         dummy=-1
                     !    end if
@@ -49,8 +51,10 @@ MODULE zom
         else if(imagflg=='y')then
             do j=1,num
                 do k=1,norb
-                    zstore(j)%phi(k)=2*pirl*ZBQLU01(1)
-                    zstore(j)%img=2*pirl*ZBQLU01(1)
+                    call random_number(r)
+                    zstore(j)%phi(k)=2*pirl*r   !ZBQLU01(1)
+                    call random_number(r)
+                    zstore(j)%img=2*pirl*r  !ZBQLU01(1)
                 end do
                 zstore(j)%sin=sin(zstore(j)%phi*exp(i*zstore(j)%img))
                 zstore(j)%cos=cos(cmplx(zstore(j)%phi,0.0d0,kind=8))
@@ -257,10 +261,11 @@ MODULE zom
 
         implicit none
         type(zombiest),dimension(:),intent(inout)::zstore
-        DOUBLE PRECISION, external::ZBQLNOR,ZBQLUAB,ZBQLU01
+        !DOUBLE PRECISION, external::ZBQLNOR,ZBQLUAB,ZBQLU01
         real(kind=8)::mu((norb/2)),sig(norb/2)
         real(kind=8)::val
         integer::j,k
+        real::r
 
         if (errorflag .ne. 0) return
         ! mu and sigma values for Li2 10 spin orbitals used in OG paper
@@ -282,8 +287,9 @@ MODULE zom
                 do k=1,norb/2
                     val=-1
                     do while(val.lt.0)
+        
                         ! val=2*pirl*mu(k)*ZBQLU01(1)    ! 
-                        val=2*pirl*ZBQLNOR(mu(k),sig(k))
+                        val=2*pirl*random_normal(mu(k),sig(k)) !ZBQLNOR(mu(k),sig(k))
                         ! if((val.gt.0.5*pirl))then
                         !     val=-1
                         ! end if
@@ -292,7 +298,7 @@ MODULE zom
                     val=-1
                     do while(val.lt.0)
                         ! val=2*pirl*mu(k)*ZBQLU01(1)
-                        val=2*pirl*ZBQLNOR(mu(k),sig(k))
+                        val=2*pirl*random_normal(mu(k),sig(k))
                     
                         ! if((val.gt.0.5*pirl))then
                         !     val=-1
@@ -386,5 +392,43 @@ MODULE zom
         return
     
     end subroutine genzf
+
+    FUNCTION random_normal(MU,SIGMA)
+        !
+        !       Returns a random number Normally distributed with mean
+        !       MU and standard deviation |SIGMA|, using the Box-Muller
+        !       algorithm
+        !
+              DOUBLE PRECISION THETA,R,ZBQLNOR,random_normal,PI,MU,SIGMA
+              DOUBLE PRECISION SPARE
+              INTEGER STATUS
+              SAVE STATUS,SPARE,PI
+              DOUBLE PRECISION p
+              DATA STATUS /-1/
+              
+        !      write (*,*) 'ZBQLNOR started'
+        
+              IF (STATUS.EQ.-1) PI = 4.0D0*DATAN(1.0D0)
+        
+              IF (STATUS.LE.0) THEN
+                call random_number(p)
+               THETA = 2.0D0*PI*p 
+               call random_number(p)
+        !       write (*,*) 'first call to ZQBLU01 completed'
+               R = DSQRT( -2.0D0*DLOG(p) )
+        !       write (*,*) 'second call to ZQBLU01 completed'
+               ZBQLNOR = (R*DCOS(THETA))
+               SPARE = (R*DSIN(THETA))
+               STATUS = 1
+              ELSE
+               ZBQLNOR = SPARE
+               STATUS = 0
+              ENDIF
+        !      write(*,*) 'ready to return. ZBQLNOR = ', ZBQLNOR, 'MU = ', MU
+        !      write(*,*) 'SIGMA = ', SIGMA
+              ZBQLNOR = MU + (SIGMA*ZBQLNOR)
+              random_normal=ZBQLNOR
+        !      write(*,*) 'about to return. ZBQLNOR = ', ZBQLNOR
+              END
 
 END MODULE zom
