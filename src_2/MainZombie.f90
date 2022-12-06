@@ -12,7 +12,6 @@ program MainZombie
     use zom
     use grad_d
     use gradient_descent
-    use gradient_descent_gpu
     use omp_lib
 
     implicit none
@@ -111,23 +110,10 @@ program MainZombie
      
         
         if(hamgflg=='y')then
-            if(GPUflg.eq.'n')then
-                call hamgen(haml,zstore,elect,ndet,1)
-            else if(GPUflg.eq.'y')then
-            !      num_devices = omp_get_num_devices()
-            !     ! !print*,num_devices
-            !     if(num_devices.eq.0)then 
-            !         max_threads=omp_get_max_threads()
-            !         !print*,max_threads
-            !         max_teams=max_threads
-            !         threadpteam=1
-            !         max_teams=1 !max_threads
-            !         threadpteam=max_threads
-                    
-            !      end if
-            !     ! call omp_set_dynamic(.true.)
-                call hamgen_gpu(haml,zstore,elect,ndet,1)
+            if(GPUflg.eq.'y')then
+                ! Maybe specificy conditons but maybe not needed?!
             end if
+            call hamgen(haml,zstore,elect,ndet,1)
             call matrixwriter(haml%hjk,ndet,"data/ham.csv")
             call matrixwriter(haml%ovrlp,ndet,"data/ovlp.csv")
             write(6,"(a)") "Hamiltonian successfully generated"
@@ -171,11 +157,9 @@ program MainZombie
             call final_grad(dvecs(1),haml,gradients,2,0)
             ! print*,gradients%vars(2,:)
             
-            if(GPUflg.eq.'n')then
-                call zombie_alter(zstore,gradients,haml,elect,en,dvecs,chng_trk)
-            else if(GPUflg.eq.'y')then
-                call zombie_alter_gpu(zstore,gradients,haml,elect,en,dvecs,chng_trk)
-            end if
+          
+            call zombie_alter_gpu(zstore,gradients,haml,elect,en,dvecs,chng_trk)
+            
             GDflg='n'
             do j=1,ndet
                 call zombiewriter(zstore(j),j,0)
