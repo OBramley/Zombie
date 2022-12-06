@@ -19,14 +19,14 @@ run={
     'language':'fortran',
 
     # What is the name of the run
-    'runfolder':'Li2_test',
+    'runfolder':'Li2_GPU',
 
     # Amount of time to request on HPC 
     'runtime': "48:00:00",
 
     'nodes':1,
 
-    'cores':8,
+    'cores':2,
 
     # Set the numpy random seed for Zombie state generation
     'seed':1,
@@ -86,7 +86,7 @@ run={
     'grad':'y',
 
     #GPU flag
-    'GPU':'n'
+    'GPU':'y'
 }
 
 

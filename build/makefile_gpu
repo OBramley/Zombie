@@ -5,7 +5,7 @@
 
 F90= nvfortran 
 # F90= gfortran 
-FFLags = -mp -g #=gpu # -gpu=cc70 #-O3 #-Minfo
+FFLAGS = -mp=gpu -gpu=cc70 -Minfo 
 # FFLAGS= #-fopenmp -fbacktrace -fno-unsafe-math-optimizations -frounding-math -fsignaling-nans -foffload=-lgfortran 
 FLINKS=$(ARC_LINALG_FFLAGS)
 # FLINKS=	-llapack -lblas 

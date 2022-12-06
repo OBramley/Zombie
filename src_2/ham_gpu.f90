@@ -56,7 +56,7 @@ MODULE ham
                 z2l(l,2,l)=z2l(l,1,l)
                 z2l(l,1,l)=cmplx(0.0,0.0)
             end do
-            !$omp end do simd
+            !!$omp end do simd
            
         else
             z2l=passback
@@ -70,7 +70,7 @@ MODULE ham
                 z1jk(j,k,1,k)=cmplx(0.0,0.0)
             end do
         end do
-        !$omp end do simd
+        !!$omp end do simd
         !$omp end parallel
         z1jk=z1jk*occupancy_2an
 
@@ -100,7 +100,7 @@ MODULE ham
                     z2l(l,2,l)=z2l(l,1,l)
                     z2l(l,1,l)=cmplx(0.0,0.0)
                 end do
-                !$omp end do simd
+                !!$omp end do simd
                 !$omp end parallel
                 if(m.eq.row+1)then 
                     passback=z2l
@@ -192,7 +192,7 @@ MODULE ham
         integer,intent(in)::equal
         real(kind=8),dimension(norb,norb,norb)::h1etot_diff
         complex(kind=8),dimension(norb,norb)::temp
-        integer::j,k
+        integer::j,k,len
 
         if (errorflag .ne. 0) return
         h1etot=(0.0,0.0)
@@ -200,31 +200,32 @@ MODULE ham
         h1etot_diff_ket=0.0
         h1etot_diff=0.0
         temp=cmplx(0.0,0.0)
-        !$omp target map(to:h1ei,occupancy,z2l,zs1sin,zs1cos,zs2sin,zs2cos,equal) map(tofrom:temp,h1etot_diff)
-        !$omp teams distribute parallel do simd collapse(2) &
+        len=norb
+        !$omp target teams map(to:h1ei,occupancy,z2l,zs1sin,zs1cos,zs2sin,zs2cos,equal,len) map(tofrom:temp,h1etot_diff)
+        !$omp distribute parallel do simd collapse(2) &
         !$omp & private(j,k) shared(h1ei,occupancy,z2l,zs1sin,temp)
-        do j=1, norb
-            do k=1, norb
+        do j=1, len
+            do k=1, len
                 if(h1ei(j,k).ne.(0.0)) then 
-                    temp(j,k)=one_elec_body_gpu(zs1sin,zs1cos,z2l(j,:,:),occupancy(j,k,:,:),h1ei(j,k),k)
+                    temp(j,k)=one_elec_body_gpu(len,zs1sin,zs1cos,z2l(j,:,:),occupancy(j,k,:,:),h1ei(j,k),k)
                 end if
             end do
         end do
-        !$omp end teams distribute parallel do simd
+        !$omp end distribute parallel do simd
         if(equal.lt.4)then 
-            !$omp teams distribute parallel do simd collapse(2) &
+            !$omp distribute parallel do simd collapse(2) &
             !$omp & private(j,k) shared(h1ei,occupancy,z2l,zs1sin,zs1cos,zs2sin,zs2cos,equal,h1etot_diff)
-            do j=1, norb
-                do k=1, norb
+            do j=1, len
+                do k=1, len
                     if(h1ei(j,k).ne.(0.0)) then 
-                        h1etot_diff(j,k,:)=one_elec_body_grad_gpu(zs1sin,zs1cos,zs2sin,zs2cos,z2l(j,:,:),&
+                        h1etot_diff(j,k,:)=one_elec_body_grad_gpu(len,zs1sin,zs1cos,zs2sin,zs2cos,z2l(j,:,:),&
                         occupancy(j,k,:,:),h1ei(j,k),k,j,equal)
                     end if
                 end do
             end do
-            !$omp end teams distribute parallel do simd
+            !$omp end distribute parallel do simd
         end if
-        !$omp end target
+        !$omp end target teams
        
         do j=1, norb
             do k=1, norb
@@ -249,7 +250,7 @@ MODULE ham
 
     end subroutine one_elec_part_gpu
 
-    complex(kind=8) function one_elec_body_gpu(zs1sin,zs1cos,z2l,occupancy,h1ei,k)
+    complex(kind=8) function one_elec_body_gpu(len,zs1sin,zs1cos,z2l,occupancy,h1ei,k)
 
         implicit none
         !$omp declare target
@@ -257,8 +258,8 @@ MODULE ham
         integer,dimension(:,:),intent(in)::occupancy
         complex(kind=8),dimension(:,:),intent(in)::z2l
         real(kind=8), intent(in)::h1ei
-        integer,intent(in)::k
-        complex(kind=8),dimension(2,norb)::zomt
+        integer,intent(in)::k,len
+        complex(kind=8),dimension(2,len)::zomt
 
         zomt=z2l
         zomt(1,k)=zomt(2,k)
@@ -270,23 +271,23 @@ MODULE ham
 
     end function one_elec_body_gpu
 
-    function one_elec_body_grad_gpu(zs1sin,zs1cos,zs2sin,zs2cos,z2l,occupancy,h1ei,k,j,equal)
+    function one_elec_body_grad_gpu(len,zs1sin,zs1cos,zs2sin,zs2cos,z2l,occupancy,h1ei,k,j,equal)
 
         implicit none
         !$omp declare target
         complex(kind=8),dimension(:)::zs1sin,zs1cos,zs2sin,zs2cos
-        real(kind=8),dimension(norb)::one_elec_body_grad_gpu
         integer,dimension(:,:),intent(in)::occupancy
         complex(kind=8),dimension(:,:),intent(in)::z2l
         real(kind=8), intent(in)::h1ei
-        integer,intent(in)::k,j,equal
-        complex(kind=8),dimension(2,norb)::zomt
+        integer,intent(in)::k,j,equal,len
+        real(kind=8),dimension(len)::one_elec_body_grad_gpu
+        complex(kind=8),dimension(2,len)::zomt
 
         zomt=z2l
         zomt(1,k)=zomt(2,k)
         zomt(2,k)=cmplx(0.0,0.0)
         zomt=zomt*occupancy
-        one_elec_body_grad_gpu = diff_overlap_cran_gpu(zs1sin,zs1cos,zs2sin,zs2cos,equal,zomt,j,k,occupancy)*h1ei
+        one_elec_body_grad_gpu = diff_overlap_cran_gpu(len,zs1sin,zs1cos,zs2sin,zs2cos,equal,zomt,j,k,occupancy)*h1ei
         
         return
 
@@ -322,9 +323,9 @@ MODULE ham
         !$omp parallel shared(z1jk,z2l,zs1sin,zs1cos,zs2sin,zs2cos,tot,occupancy_2an,occupancy_an,h2ei,equal,h2etot_diff) private(j)
         !$omp do
         do j=1, norb
-            tot(j,:,:) = two_elec_part_body_gpu(zs1sin,zs2sin,z2l,z1jk(j,:,:,:),h2ei(j,:,:,:),j)
+            tot(j,:,:) = two_elec_part_body_gpu(norb,zs1sin,zs2sin,z2l,z1jk(j,:,:,:),h2ei(j,:,:,:),j)
             if(equal.lt.4)then
-                h2etot_diff(j,:,:,:) = two_elec_part_grad_gpu(zs1sin,zs1cos,zs2sin,zs2cos,z2l,z1jk(j,:,:,:),&
+                h2etot_diff(j,:,:,:) = two_elec_part_grad_gpu(norb,zs1sin,zs1cos,zs2sin,zs2cos,z2l,z1jk(j,:,:,:),&
                 h2ei(j,:,:,:),occupancy_2an(j,:,:,:),occupancy_an(:,:,:),j,equal)
             end if
         end do
@@ -360,7 +361,7 @@ MODULE ham
 
     end subroutine two_elec_part_gpu
 
-    function two_elec_part_body_gpu(zs1sin,zs2sin,z2l,z1jk,h2ei,j)
+    function two_elec_part_body_gpu(len,zs1sin,zs2sin,z2l,z1jk,h2ei,j)
 
         implicit none
 
@@ -368,7 +369,7 @@ MODULE ham
         complex(kind=8),dimension(:,:,:),intent(in)::z2l
         complex(kind=8),dimension(:,:,:),intent(in)::z1jk
         real(kind=8), dimension(:,:,:), intent(in)::h2ei
-        integer,intent(in)::j
+        integer,intent(in)::j,len
         complex(kind=8),dimension(norb,norb)::tot,two_elec_part_body_gpu
         integer::k,l,jspin
 
@@ -383,19 +384,19 @@ MODULE ham
         else
             jspin=1
         end if
-        do k=1, norb
+        do k=1, len
             if(j.eq.k) cycle
             if(occ_iszero(z1jk(k,:,:)).eqv..true.)then
                 CYCLE
             end if
-            !$omp target teams distribute parallel do simd 
-            do l=jspin, norb, 2
+    
+            do l=jspin, len, 2
                 if(zs2sin(l)==(0.0,0.0))then
                     CYCLE
                 end if
-                tot(k,l) = z_an_z3_gpu(z1jk(k,:,:),z2l(l,:,:),h2ei(k,l,:))
+                tot(k,l) = z_an_z3_gpu(len,z1jk(k,:,:),z2l(l,:,:),h2ei(k,l,:))
             end do
-            !$omp end target teams distribute parallel do simd 
+    
         end do
 
         two_elec_part_body_gpu=tot
@@ -404,7 +405,7 @@ MODULE ham
 
     end function two_elec_part_body_gpu
 
-    function two_elec_part_grad_gpu(zs1sin,zs1cos,zs2sin,zs2cos,z2l,z1jk,h2ei,occupancy_2an,occupancy_an,j,equal)
+    function two_elec_part_grad_gpu(len,zs1sin,zs1cos,zs2sin,zs2cos,z2l,z1jk,h2ei,occupancy_2an,occupancy_an,j,equal)
 
         implicit none
 
@@ -414,9 +415,9 @@ MODULE ham
         real(kind=8), dimension(:,:,:), intent(in)::h2ei
         integer,dimension(:,:,:),intent(in)::occupancy_2an
         integer,dimension(:,:,:),intent(in)::occupancy_an
-        integer,intent(in)::j,equal
-        real(kind=8),dimension(norb,norb,norb)::two_elec_part_grad_gpu
-        integer,dimension(2,norb)::occupancy
+        integer,intent(in)::j,equal,len
+        real(kind=8),dimension(len,len,len)::two_elec_part_grad_gpu
+        integer,dimension(2,len)::occupancy
         integer::k,l,jspin
 
         two_elec_part_grad_gpu=0.0
@@ -426,13 +427,13 @@ MODULE ham
         else
             jspin=1
         end if
-        do k=1, norb
+        do k=1, len
             if(j.eq.k)then
                 cycle
             end if
-            do l=jspin, norb, 2
+            do l=jspin, len, 2
                 occupancy=occupancy_2an(k,:,:)*occupancy_an(l,:,:)
-                two_elec_part_grad_gpu(k,l,:) = z_an_z3_diff_gpu(z1jk(k,:,:),z2l(l,:,:),h2ei(k,l,:),&
+                two_elec_part_grad_gpu(k,l,:) = z_an_z3_diff_gpu(len,z1jk(k,:,:),z2l(l,:,:),h2ei(k,l,:),&
                 equal,occupancy,j,k,l,zs1sin,zs1cos,zs2sin,zs2cos)
             end do
         end do
@@ -474,6 +475,7 @@ MODULE ham
         ! real(kind=8), dimension(ndet,ndet,norb)::pdiff_hjk
         ! real(kind=8), dimension(ndet,ndet,norb)::pdiff_ovrlp
         ! real(kind=8), dimension(ndet,ndet,ndet,norb)::pdiff_invh
+     
 
         if (errorflag .ne. 0) return
         
@@ -522,7 +524,7 @@ MODULE ham
                 occupancy_an(j,1,l)=-1
             end do
         end do
-        !$omp end do
+        !!$omp end do
         !$omp barrier
         !$omp do simd collapse(2)
         do j=1,norb
@@ -539,7 +541,7 @@ MODULE ham
                 end do
             end do
         end do
-        !$omp end do simd
+        !!$omp end do simd
         !$omp end parallel
     
        
@@ -619,20 +621,21 @@ MODULE ham
         
     end subroutine hamgen
 
-    function diff_overlap_cran_gpu(zs1sin,zs1cos,zs2sin,zs2cos,dtype,zomt,annihilate2,create2,occupancy)
+    function diff_overlap_cran_gpu(len,zs1sin,zs1cos,zs2sin,zs2cos,dtype,zomt,annihilate2,create2,occupancy)
 
         implicit none
         !$omp declare target
+        integer,intent(in)::len
         complex(kind=8),dimension(:)::zs1sin,zs1cos,zs2sin,zs2cos
-        real(kind=8),dimension(norb)::diff_overlap_cran_gpu
+        real(kind=8),dimension(len)::diff_overlap_cran_gpu
         complex(kind=8),dimension(:,:)::zomt
         integer,intent(in)::dtype,annihilate2,create2
         integer,dimension(:,:),intent(in)::occupancy
-        real(kind=8),dimension(norb)::bra_prod,ket_prod,prod
+        real(kind=8),dimension(len)::bra_prod,ket_prod,prod
         integer::j
-        real(kind=8),dimension(norb)::temp,temp2
+        real(kind=8),dimension(len)::temp,temp2
 
-        if (errorflag .ne. 0) return
+        !if (errorflag .ne. 0) return
 
         prod=real(((conjg(zs1sin)*zomt(1,:)))+((conjg(zs1cos)*zomt(2,:))))
         diff_overlap_cran_gpu=0
@@ -674,13 +677,13 @@ MODULE ham
                 bra_prod(annihilate2)=-real(zs1sin(annihilate2)*zs2sin(annihilate2))*occupancy(2,annihilate2)
                 bra_prod(create2)=real(zs1cos(create2)*zs2cos(create2))*occupancy(1,create2) 
             end if
-            !$omp parallel do simd shared(prod,bra_prod) private(temp,j)
-            do j=1,norb
+            !!$omp parallel do simd shared(prod,bra_prod) private(temp,j)
+            do j=1,len
                 temp=prod
                 temp(j)=bra_prod(j)
                 diff_overlap_cran_gpu(j)=product(temp)
             end do 
-            !$omp end parallel do simd 
+            !!$omp end parallel do simd 
         else if(dtype.eq.3)then
             ket_prod=real(zs1sin*zs2cos*occupancy(1,:)-zs1cos*zs2sin*occupancy(2,:))                  
             if(annihilate2.eq.create2)then  !dead amplitude is zero
@@ -689,13 +692,13 @@ MODULE ham
                 ket_prod(annihilate2)=real(zs1cos(annihilate2)*zs2cos(annihilate2))*occupancy(2,annihilate2)!alive amplitude is zero
                 ket_prod(create2)=-real(zs1sin(create2)*zs2sin(create2))*occupancy(1,create2) !dead amplitude is zero
             end if
-            !$omp parallel do simd  shared(prod,ket_prod) private(temp2,j)
-            do j=1,norb
+            !!$omp parallel do simd  shared(prod,ket_prod) private(temp2,j)
+            do j=1,len
                 temp2=prod
                 temp2(j)=ket_prod(j)
                 diff_overlap_cran_gpu(j)=product(temp2)
             end do
-            !$omp end parallel do simd   
+            !!$omp end parallel do simd   
         end if
         
         RETURN
@@ -708,7 +711,7 @@ MODULE ham
     function diff_overlap_gpu(zs1sin,zs1cos,zs2sin,zs2cos,dtype)
     
         implicit none
-        !$omp declare target
+      
         complex(kind=8),dimension(:)::zs1sin,zs1cos,zs2sin,zs2cos
         integer,intent(in)::dtype
         real(kind=8),dimension(norb)::diff_overlap_gpu
@@ -716,40 +719,47 @@ MODULE ham
         integer::j
         real(kind=8),dimension(norb)::temp,temp2
 
-        if (errorflag .ne. 0) return
+        ! if (errorflag .ne. 0) return
         prod=real((conjg(zs1sin)*zs2sin)+(conjg(zs1cos)*zs2cos))
         if(dtype.eq.2)then
             bra_prod=real(conjg(zs1cos)*zs2sin)-real(conjg(zs1sin)*zs2cos)
-            !$omp parallel do simd  shared(prod,bra_prod) private(temp,j)
+            !!$omp target teams distribute parallel do simd &
+            !!$omp map(to:prod,bra_prod) map(tofrom:diff_overlap_gpu) map(alloc:temp(norb)) &
+            !$omp parallel do simd shared(prod,bra_prod) private(temp,j)
             do j=1,norb
                 temp=prod
                 temp(j)=bra_prod(j)
                 diff_overlap_gpu(j)=product(temp)
             end do
             !$omp end parallel do simd  
+            !!$omp end target teams distribute parallel do simd  
         else if(dtype.eq.3)then
             ket_prod=real(conjg(zs1sin)*zs2cos)-real(conjg(zs1cos)*zs2sin)
-            !$omp parallel do simd  shared(prod,ket_prod) private(temp2,j)
+            !!$omp target teams distribute parallel do simd &
+            !!$omp map(to:prod,ket_prod) map(tofrom:diff_overlap_gpu) map(alloc:temp2(norb)) &
+            !$omp parallel do simd shared(prod,ket_prod) private(temp2,j)
             do j=1,norb
                 temp2=prod
                 temp2(j)=ket_prod(j)
                 diff_overlap_gpu(j)=product(temp2)
             end do
             !$omp end parallel do simd  
+            !!$omp end target teams distribute parallel do simd  
         end if
 
         return
         
     end function diff_overlap_gpu
 
-    complex(kind=8) function z_an_z3_gpu(z1,z2,vec)
+    complex(kind=8) function z_an_z3_gpu(len,z1,z2,vec)
 
         implicit none
-        !$omp declare target
+        !!$omp declare target
+        integer, intent(in)::len
         complex(kind=8),dimension(:,:),intent(in)::z1,z2
         complex(kind=8),dimension(:,:),allocatable::vmult
-        real(kind=8),dimension(norb),intent(in)::vec
-        complex(kind=8),dimension(norb)::gg,hh
+        real(kind=8),dimension(len),intent(in)::vec
+        complex(kind=8),dimension(len)::gg,hh
         complex(kind=8)::tot
         integer::j,gmax,hmin,ierr
 
@@ -757,7 +767,7 @@ MODULE ham
         ierr=0
 
       
-        allocate(vmult(2,norb),stat=ierr)
+        allocate(vmult(2,len),stat=ierr)
         if (ierr/=0) then
             write(0,"(a,i0)") "Error in vmult allocation . ierr had value ", ierr
             errorflag=1
@@ -767,12 +777,12 @@ MODULE ham
         vmult=conjg(z1)*(z2)
         
     
-        gg(1:norb)=(0.0,0.0)
-        hh(1:norb)=(0.0,0.0)
-        gmax=norb
+        gg(1:len)=(0.0,0.0)
+        hh(1:len)=(0.0,0.0)
+        gmax=len
         gg(1)=vmult(2,1)-vmult(1,1)
 
-        do j=2, norb
+        do j=2, len
             gg(j)=gg(j-1)*(vmult(2,j)-vmult(1,j))
             if(gg(j)==(0.0,0.0))then
                 gmax=j
@@ -781,8 +791,8 @@ MODULE ham
         end do
         
         hmin=0
-        hh(norb) = vmult(2,norb)+vmult(1,norb)
-        do j=(norb-1),1,-(1)
+        hh(len) = vmult(2,len)+vmult(1,len)
+        do j=(len-1),1,-(1)
             hh(j)=hh(j+1)*(vmult(2,j)+vmult(1,j))
             if(hh(j)==(0.0,0.0))then
                 hmin=j
@@ -801,15 +811,16 @@ MODULE ham
             tot = tot+(conjg(z1(2,1))*z2(1,1)*hh(2)*vec(1))
         end if
 
-      
-        do j=2,norb-1
+        !$omp parallel do simd reduction(+:tot) shared(hh,vec,gg,z1,z2)  
+        do j=2,len-1
             if(vec(j).ne.0.0) then
                 tot = tot+ (gg(j-1)*conjg(z1(2,j))*z2(1,j)*hh(j+1)*vec(j))
             end if
         end do
+        !$omp end parallel do simd 
 
-        if(vec(norb).ne.0) then
-            tot = tot +(gg(norb-1)*conjg(z1(2,norb))*z2(1,norb)*vec(norb))
+        if(vec(len).ne.0) then
+            tot = tot +(gg(len-1)*conjg(z1(2,len))*z2(1,len)*vec(len))
         end if
 
         deallocate(vmult)
@@ -820,25 +831,26 @@ MODULE ham
 
     end function z_an_z3_gpu
 
-    function z_an_z3_diff_gpu(z1,z2,vec,dtype,occupancy,annihilate1,annihilate1_2,annihilate2,zs1sin,zs1cos,zs2sin,zs2cos)
+    function z_an_z3_diff_gpu(len,z1,z2,vec,dtype,occupancy,annihilate1,annihilate1_2,annihilate2,zs1sin,zs1cos,zs2sin,zs2cos)
 
         implicit none
+        integer, intent(in)::len
         complex(kind=8),dimension(:,:),intent(in)::z1,z2
         real(kind=8),dimension(:,:),allocatable::vmult_dd,vmult_1d, vmult_2d,vmult
-        real(kind=8),dimension(norb),intent(in)::vec
+        real(kind=8),dimension(len),intent(in)::vec
         integer,dimension(:,:),intent(in)::occupancy
         integer, intent(in)::dtype,annihilate1,annihilate1_2,annihilate2
         complex(kind=8),dimension(:)::zs1sin,zs1cos,zs2sin,zs2cos
-        real(kind=8),dimension(norb)::z_an_z3_diff_gpu
-        real(kind=8),dimension(norb)::temp,temp2,temp0
-        real(kind=8),dimension(norb)::gg_1,hh_1,gg_2,hh_2,gg_0,hh_0
+        real(kind=8),dimension(len)::z_an_z3_diff_gpu
+        real(kind=8),dimension(len)::temp,temp2,temp0
+        real(kind=8),dimension(len)::gg_1,hh_1,gg_2,hh_2,gg_0,hh_0
         real(kind=8)::tot1, tot2,tot0
         integer::j,k,gmax1,hmin1,gmax2,hmin2,ierr,breakflag,gmax0,hmin0
 
         if (errorflag .ne. 0) return
         ierr=0
 
-        allocate(vmult(2,norb),stat=ierr)
+        allocate(vmult(2,len),stat=ierr)
         if (ierr/=0) then
             write(0,"(a,i0)") "Error in vmult allocation . ierr had value ", ierr
             errorflag=1
@@ -848,7 +860,7 @@ MODULE ham
         
         z_an_z3_diff_gpu=0
         if(dtype.eq.1) then !Differentiation when zombie states are the same
-            allocate(vmult_dd(2,norb),stat=ierr)
+            allocate(vmult_dd(2,len),stat=ierr)
             if (ierr/=0) then
                 write(0,"(a,i0)") "Error in vmult_dd allocation . ierr had value ", ierr
                 errorflag=1
@@ -856,9 +868,12 @@ MODULE ham
             end if 
             temp0=0
             !$omp target teams distribute parallel do &
+            !$omp map(to:vmult,vec,occupancy,zs1cos,zs1sin,z2,hh_0,z1,gg_0,annihilate1,annihilate1_2,annihilate2,&
+            !$omp & breakflag,tot0,gmax0,hmin0,len) &
+            !$omp & map(tofrom:temp0) map(alloc:vmult_dd(2,len)) &
             !$omp & private(vmult_dd,gmax0,hmin0,breakflag,tot0,j,k) &
-            !$omp shared(annihilate1,annihilate1_2,annihilate2,temp0,zs1sin,zs1cos,zs2sin,zs2cos,vmult,occupancy,vec,z1,z2)
-            do j=1, norb    !Differentiating w.r.t to orbital j
+            !$omp shared(annihilate1,annihilate1_2,annihilate2,temp0,zs1sin,zs1cos,vmult,occupancy,vec,z1,z2)
+            do j=1, len    !Differentiating w.r.t to orbital j
                 breakflag=0
                 vmult_dd=vmult
                 if(annihilate1.eq.annihilate1_2)then
@@ -881,12 +896,12 @@ MODULE ham
                     end if          !Unless an opeator acts at position j this evaluates to 0
                 end if
             
-                gg_0(1:norb)=(0.0,0.0)
-                hh_0(1:norb)=(0.0,0.0)
-                gmax0=norb
+                gg_0(1:len)=(0.0,0.0)
+                hh_0(1:len)=(0.0,0.0)
+                gmax0=len
                 gg_0(1)=vmult_dd(2,1)-vmult_dd(1,1)
 
-                do k=2, norb
+                do k=2, len
                     gg_0(k)=gg_0(k-1)*(vmult_dd(2,k)-vmult_dd(1,k))
                     if(gg_0(k)==(0.0))then
                         gmax0=k
@@ -895,8 +910,8 @@ MODULE ham
                 end do
                 
                 hmin0=0
-                hh_0(norb) = vmult_dd(2,norb)+vmult_dd(1,norb)
-                do k=(norb-1),1,-(1)
+                hh_0(len) = vmult_dd(2,len)+vmult_dd(1,len)
+                do k=(len-1),1,-(1)
                     hh_0(k)=hh_0(k+1)*(vmult_dd(2,k)+vmult_dd(1,k))
                     if(hh_0(k)==(0.0))then
                         hmin0=k
@@ -930,21 +945,21 @@ MODULE ham
                             tot0 = tot0+(REAL(conjg(z1(2,1))*z2(1,1))*hh_0(2)*vec(1))
                         end if
                     end if
-                else if((breakflag.lt.norb))then
+                else if((breakflag.lt.len))then
                     if(breakflag.ne.0)then
                         temp0(j)=(gg_0(j-1)*((1.0-2*((real(zs1sin(j)))**2))*occupancy(2,j))*hh_0(j+1)*vec(j))
                         cycle
                     end if
-                    do k=2,norb-1
+                    do k=2,len-1
                         if(vec(k).ne.0.0) then
                             if(k.eq.j)then
                                 if((annihilate1.eq.k).or.(annihilate1_2.eq.k))then
                                     if(annihilate2.ne.k)then
-                                        tot0 = tot0+(gg_1(k-1)*(2*real(zs1sin(k)*zs1cos(k))*occupancy(2,k))*hh_0(k+1)*vec(k))
+                                        tot0 = tot0+(gg_0(k-1)*(2*real(zs1sin(k)*zs1cos(k))*occupancy(2,k))*hh_0(k+1)*vec(k))
                                     end if
                                 else
                                     if(annihilate2.ne.k)then
-                                        tot0 = tot0+(gg_1(k-1)*((1.0-2*((real(zs1sin(k)))**2))*occupancy(2,k))*hh_0(k+1)*vec(k))
+                                        tot0 = tot0+(gg_0(k-1)*((1.0-2*((real(zs1sin(k)))**2))*occupancy(2,k))*hh_0(k+1)*vec(k))
                                     end if 
                                 end if
                             else
@@ -953,23 +968,23 @@ MODULE ham
                         end if
                     end do
                 else
-                    if(breakflag.eq.norb)then
-                        temp0(j)=(gg_0(norb-1)*((1.0-2*((real(zs1sin(norb)))**2))*occupancy(2,norb))*vec(norb))
+                    if(breakflag.eq.len)then
+                        temp0(j)=(gg_0(len-1)*((1.0-2*((real(zs1sin(len)))**2))*occupancy(2,len))*vec(len))
                         cycle
                     end if
-                    if(vec(norb).ne.0) then
-                        if(norb.eq.j)then
-                            if((annihilate1.eq.norb).or.(annihilate1_2.eq.norb))then
-                                if(annihilate2.ne.norb)then
-                                    tot0 = tot0 +(gg_0(norb-1)*(2*real(zs1sin(norb)*zs1cos(norb))*occupancy(2,norb))*vec(norb))
+                    if(vec(len).ne.0) then
+                        if(len.eq.j)then
+                            if((annihilate1.eq.len).or.(annihilate1_2.eq.len))then
+                                if(annihilate2.ne.len)then
+                                    tot0 = tot0 +(gg_0(len-1)*(2*real(zs1sin(len)*zs1cos(len))*occupancy(2,len))*vec(len))
                                 end if
                             else
-                                if(annihilate2.ne.norb)then
-                                    tot0 = tot0+ (gg_0(norb-1)*((1.0-2*((real(zs1sin(norb)))**2))*occupancy(2,norb))*vec(norb))
+                                if(annihilate2.ne.len)then
+                                    tot0 = tot0+ (gg_0(len-1)*((1.0-2*((real(zs1sin(len)))**2))*occupancy(2,len))*vec(len))
                                 end if    
                             end if
                         else
-                            tot0 = tot0 +(gg_0(norb-1)*REAL(conjg(z1(2,norb))*z2(1,norb))*vec(norb))
+                            tot0 = tot0 +(gg_0(len-1)*REAL(conjg(z1(2,len))*z2(1,len))*vec(len))
                         end if
                     end if
                 end if
@@ -989,7 +1004,7 @@ MODULE ham
             end if 
         
         else if(dtype.eq.2)then !Differentiation when zombie states are not the same
-            allocate(vmult_1d(2,norb),stat=ierr)
+            allocate(vmult_1d(2,len),stat=ierr)
             if (ierr/=0) then
                 write(0,"(a,i0)") "Error in vmult_1d/vmult_2d allocation . ierr had value ", ierr
                 errorflag=1
@@ -997,9 +1012,12 @@ MODULE ham
             end if 
             temp=0
             !$omp target teams distribute parallel do &
+            !$omp map(to:vmult,vec,occupancy,zs1cos,zs1sin,zs2sin,zs2cos,z2,hh_1,gg_1,z1,annihilate1,annihilate1_2,&
+            !$omp & annihilate2,tot1,gmax1,hmin1,len) &
+            !$omp & map(tofrom:temp) map(alloc:vmult_1d(2,len)) &
             !$omp & private(vmult_1d,gmax1,hmin1,tot1,j,k) shared(annihilate1,&
-            !$omp annihilate1_2,annihilate2,temp,zs1sin,zs1cos,zs2sin,zs2cos,vmult,occupancy,vec,z1,z2,norb)
-            do j=1, norb
+            !$omp annihilate1_2,annihilate2,temp,zs1sin,zs1cos,zs2sin,zs2cos,vmult,occupancy,vec,z1,z2,len)
+            do j=1, len
                 vmult_1d=vmult
                 if(annihilate1.eq.annihilate1_2)then
                     temp(j)=0
@@ -1022,12 +1040,12 @@ MODULE ham
                     end if
                 end if
 
-                gg_1(1:norb)=(0.0,0.0)
-                hh_1(1:norb)=(0.0,0.0)
-                gmax1=norb
+                gg_1(1:len)=(0.0,0.0)
+                hh_1(1:len)=(0.0,0.0)
+                gmax1=len
                 gg_1(1)=(vmult_1d(2,1))-(vmult_1d(1,1))
 
-                do k=2, norb
+                do k=2, len
                     gg_1(k)=gg_1(k-1)*((vmult_1d(2,k)-vmult_1d(1,k)))
                     if(gg_1(k)==(0.0,0.0))then
                         gmax1=k
@@ -1037,9 +1055,9 @@ MODULE ham
                 
                 hmin1=0
                
-                hh_1(norb) = (vmult_1d(2,norb)+vmult_1d(1,norb))
+                hh_1(len) = (vmult_1d(2,len)+vmult_1d(1,len))
               
-                do k=(norb-1),1,-(1)
+                do k=(len-1),1,-(1)
                     hh_1(k)=hh_1(k+1)*(vmult_1d(2,k)+vmult_1d(1,k))
                     if(hh_1(k)==(0.0,0.0))then
                         hmin1=k
@@ -1069,7 +1087,7 @@ MODULE ham
                         tot1 = tot1+(REAL(conjg(z1(2,1))*z2(1,1))*hh_1(2)*vec(1))
                     end if
                 end if
-                do k=2,norb-1
+                do k=2,len-1
                     if(vec(k).ne.0.0) then
                         if(k.eq.j)then
                             if((annihilate1.eq.k).or.(annihilate1_2.eq.k))then
@@ -1087,19 +1105,19 @@ MODULE ham
                     end if
                 end do
 
-                if(vec(norb).ne.0) then
-                    if(norb.eq.j)then
-                        if((annihilate1.eq.norb).or.(annihilate1_2.eq.norb))then
-                            if(annihilate2.ne.norb)then !before diff alive:0 dead:a^(a)_(1j)*a^(b)_(1j)
-                                tot1 = tot1+(gg_1(norb-1)*(REAL(zs1cos(norb)*zs2sin(norb))*occupancy(2,norb))*vec(norb))
+                if(vec(len).ne.0) then
+                    if(len.eq.j)then
+                        if((annihilate1.eq.len).or.(annihilate1_2.eq.len))then
+                            if(annihilate2.ne.len)then !before diff alive:0 dead:a^(a)_(1j)*a^(b)_(1j)
+                                tot1 = tot1+(gg_1(len-1)*(REAL(zs1cos(len)*zs2sin(len))*occupancy(2,len))*vec(len))
                             end if
                         else
                             if(annihilate2.ne.k)then    !before diff alive:0 dead:a^(a)_(0j)*a^(b)_(1j)
-                                tot1 = tot1+(gg_1(norb-1)*(REAL(-zs1sin(norb)*zs2sin(norb))*occupancy(2,norb))*vec(norb))
+                                tot1 = tot1+(gg_1(len-1)*(REAL(-zs1sin(len)*zs2sin(len))*occupancy(2,len))*vec(len))
                             end if 
                         end if
                     else
-                        tot1 = tot1 +(gg_1(norb-1)*REAL(conjg(z1(2,norb))*z2(1,norb))*vec(norb))
+                        tot1 = tot1 +(gg_1(len-1)*REAL(conjg(z1(2,len))*z2(1,len))*vec(len))
                     end if
                 end if
 
@@ -1115,7 +1133,7 @@ MODULE ham
                 return
             end if 
         else if(dtype.eq.3)then
-            allocate(vmult_2d(2,norb),stat=ierr)
+            allocate(vmult_2d(2,len),stat=ierr)
             if (ierr/=0) then
                 write(0,"(a,i0)") "Error in vmult_1d/vmult_2d allocation . ierr had value ", ierr
                 errorflag=1
@@ -1123,12 +1141,15 @@ MODULE ham
             end if 
             temp2=0
             !$omp target teams distribute parallel do &
+            !$omp map(to:vmult,vec,occupancy,zs1cos,zs1sin,zs2sin,zs2cos,z2,hh_2,gg_2,z1,annihilate1,annihilate1_2,&
+            !$omp & annihilate2,tot2,gmax2,hmin2,len) &
+            !$omp & map(tofrom:temp2) map(alloc:vmult_2d(2,len)) &
             !$omp & private(vmult_2d,gmax2,hmin2,tot2,j,k) shared(annihilate1,&
             !$omp annihilate1_2,annihilate2,temp2,zs1sin,zs1cos,zs2sin,zs2cos,vmult,occupancy,vec,z1,z2)
-            do j=1, norb
+            do j=1, len
                 vmult_2d=vmult
                 if(annihilate1.eq.annihilate1_2)then
-                    temp(j)=0
+                    temp2(j)=0
                     cycle
                 else if((annihilate1.eq.j).or.(annihilate1_2.eq.j))then
                     if(annihilate2.eq.j)then !before diff alive:0 dead:a^(a)_(1j)*a^(b)_(1j)
@@ -1148,12 +1169,12 @@ MODULE ham
                     end if
                 end if
 
-                gg_2(1:norb)=(0.0,0.0)
-                hh_2(1:norb)=(0.0,0.0)
-                gmax2=norb
+                gg_2(1:len)=(0.0,0.0)
+                hh_2(1:len)=(0.0,0.0)
+                gmax2=len
                 gg_2(1)=(vmult_2d(2,1))-(vmult_2d(1,1))
 
-                do k=2, norb
+                do k=2, len
                     gg_2(k)=gg_2(k-1)*((vmult_2d(2,k)-vmult_2d(1,k)))
                     if(gg_2(k)==(0.0,0.0))then
                         gmax2=k
@@ -1163,9 +1184,9 @@ MODULE ham
                 
 
                 hmin2=0
-                hh_2(norb) = (vmult_2d(2,norb)+vmult_2d(1,norb))
+                hh_2(len) = (vmult_2d(2,len)+vmult_2d(1,len))
         
-                do k=(norb-1),1,-(1)
+                do k=(len-1),1,-(1)
                     hh_2(k)=hh_2(k+1)*(vmult_2d(2,k)+vmult_2d(1,k))
                     if(hh_2(k)==(0.0,0.0))then
                         hmin2=k
@@ -1195,7 +1216,7 @@ MODULE ham
                         tot2 = tot2+(REAL(conjg(z1(2,1))*z2(1,1))*hh_2(2)*vec(1))
                     end if
                 end if
-                do k=2,norb-1
+                do k=2,len-1
                     if(vec(k).ne.0.0) then
                         if(k.eq.j)then
                             if((annihilate1.eq.k).or.(annihilate1_2.eq.k))then
@@ -1213,19 +1234,19 @@ MODULE ham
                     end if
                 end do
 
-                if(vec(norb).ne.0) then
-                    if(norb.eq.j)then
-                        if((annihilate1.eq.norb).or.(annihilate1_2.eq.norb))then
-                            if(annihilate2.ne.norb)then !before diff alive:0 dead:a^(a)_(1j)*a^(b)_(1j)
-                                tot2 = tot2 +(gg_2(norb-1)*(REAL(zs2sin(norb)*zs1cos(norb))*occupancy(2,norb))*vec(norb))
+                if(vec(len).ne.0) then
+                    if(len.eq.j)then
+                        if((annihilate1.eq.len).or.(annihilate1_2.eq.len))then
+                            if(annihilate2.ne.len)then !before diff alive:0 dead:a^(a)_(1j)*a^(b)_(1j)
+                                tot2 = tot2 +(gg_2(len-1)*(REAL(zs2sin(len)*zs1cos(len))*occupancy(2,len))*vec(len))
                             end if
                         else
                             if(annihilate2.ne.k)then    !before diff alive:0 dead:a^(a)_(0j)*a^(b)_(1j)
-                                tot2 = tot2 +(gg_2(norb-1)*(REAL(zs2cos(norb)*zs1cos(norb))*occupancy(2,norb))*vec(norb))
+                                tot2 = tot2 +(gg_2(len-1)*(REAL(zs2cos(len)*zs1cos(len))*occupancy(2,len))*vec(len))
                             end if 
                         end if
                     else
-                        tot2 = tot2 +(gg_2(norb-1)*REAL(conjg(z1(2,norb))*z2(1,norb))*vec(norb))
+                        tot2 = tot2 +(gg_2(len-1)*REAL(conjg(z1(2,len))*z2(1,len))*vec(len))
                     end if
                 end if
 

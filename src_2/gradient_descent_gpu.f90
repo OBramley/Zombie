@@ -55,7 +55,7 @@ MODULE gradient_descent
             z2l(l,2,l)=z2l(l,1,l)
             z2l(l,1,l)=cmplx(0.0,0.0)
         end do
-        !$omp end do simd
+
 
         !$omp do simd collapse(2)
         do j=1, norb
@@ -65,7 +65,7 @@ MODULE gradient_descent
                 z1jk(j,k,1,k)=cmplx(0.0,0.0)
             end do
         end do
-        !$omp end do simd
+
         !$omp end parallel
         z1jk=z1jk*occupancy_2an
 
@@ -84,7 +84,7 @@ MODULE gradient_descent
                 z2l(l,2,l)=z2l(l,1,l)
                 z2l(l,1,l)=cmplx(0.0,0.0)
             end do
-            !$omp end do simd
+     
             !$omp end parallel         
 
             call one_elec_intfc_gpu(zstore(diff_state)%sin,zstore(diff_state)%cos,z2l,elecs%h1ei,temp,occupancy_an_cr)
@@ -175,21 +175,21 @@ MODULE gradient_descent
         integer,dimension(:,:,:,:),intent(in)::occupancy
         real(kind=8), dimension(:,:), intent(in)::h1ei
         complex(kind=8),dimension(:,:),intent(inout)::temp
-        integer::j,k
+        integer::j,k,len
 
         if (errorflag .ne. 0) return
 
         temp=cmplx(0.0,0.0)
 
 
-       
+       len=norb
         !$omp target teams distribute parallel do simd collapse(2) &
-        !$omp & map(to:h1ei,occupancy,z2l,zs1sin,zs1cos) map(tofrom:temp) &
+        !$omp & map(to:h1ei,occupancy,z2l,zs1sin,zs1cos,len) map(tofrom:temp) &
         !$omp & private(j,k) shared(h1ei,occupancy,z2l,zs1sin,temp)
         do j=1, norb
             do k=1, norb
                 if(h1ei(j,k).ne.(0.0)) then 
-                    temp(j,k)=one_elec_body_gpu(zs1sin,zs1cos,z2l(j,:,:),occupancy(j,k,:,:),h1ei(j,k),k)
+                    temp(j,k)=one_elec_body_gpu(len,zs1sin,zs1cos,z2l(j,:,:),occupancy(j,k,:,:),h1ei(j,k),k)
                 end if
             end do
         end do
@@ -208,16 +208,16 @@ MODULE gradient_descent
         complex(kind=8),dimension(:,:,:,:),intent(in)::z1jk
         real(kind=8), dimension(:,:,:,:),intent(in)::h2ei
         complex(kind=8),dimension(:,:,:),intent(inout)::tot
-        integer::j
+        integer::j,len
     
         if (errorflag .ne. 0) return
 
         tot=cmplx(0.0,0.0)
-
+        len=norb
         !$omp parallel shared(z1jk,z2l,zs1sin,zs2sin,tot,h2ei) private(j)
         !$omp do
         do j=1, norb
-            tot(j,:,:) = two_elec_part_body_gpu(zs1sin,zs2sin,z2l,z1jk(j,:,:,:),h2ei(j,:,:,:),j)
+            tot(j,:,:) = two_elec_part_body_gpu(len,zs1sin,zs2sin,z2l,z1jk(j,:,:,:),h2ei(j,:,:,:),j)
         end do
         !$omp end  do
         !$omp end parallel
@@ -269,8 +269,7 @@ MODULE gradient_descent
             z2l(l,2,l)=z2l(l,1,l)
             z2l(l,1,l)=cmplx(0.0,0.0)
         end do
-        !$omp end do simd
-
+   
         !$omp do simd collapse(2)
         do j=1, norb
             do k=1, norb
@@ -279,7 +278,7 @@ MODULE gradient_descent
                 z1jk(j,k,1,k)=cmplx(0.0,0.0)
             end do
         end do
-        !$omp end do simd
+
         !$omp end parallel
         z1jk=z1jk*occupancy_2an
 
@@ -303,7 +302,6 @@ MODULE gradient_descent
                 z2l(l,2,l)=z2l(l,1,l)
                 z2l(l,1,l)=cmplx(0.0,0.0)
             end do
-            !$omp end do simd
             !$omp end parallel      
 
             call one_elec_intfc_grad_gpu(zstore(diff_state)%sin,zstore(diff_state)%cos,&
@@ -330,7 +328,7 @@ MODULE gradient_descent
             if(m.eq.diff_state)then
                 haml%diff_ovrlp(diff_state,m,:) = 0
             else
-                overlap_diff = diff_overlap(zstore(diff_state),zstore(m),2)
+                overlap_diff = diff_overlap_gpu(zstore(diff_state)%sin,zstore(diff_state)%cos,zstore(m)%sin,zstore(m)%cos,2) 
                 haml%diff_ovrlp(diff_state,m,:) = overlap_diff
             end if
 
@@ -354,15 +352,14 @@ MODULE gradient_descent
                 end if
             end do
         end do
-        !$omp end do simd
-
+       
         !$omp do simd collapse(2)
         do k=1, ndet
             do l=1, ndet
                 haml%diff_invh(diff_state,k,l,:)=matmul(transpose(temp2(k,:,:)),real(haml%kinvh(:,l)))*(-1)
             end do
         end do
-        !$omp end do simd
+      
         !$omp end parallel
         return
 
@@ -379,20 +376,21 @@ MODULE gradient_descent
         real(kind=8), dimension(:,:), intent(in)::h1ei
         integer,intent(in)::equal
         real(kind=8),dimension(:,:,:),intent(inout)::h1etot_diff
-        integer::j,k
+        integer::j,k,len
 
         if (errorflag .ne. 0) return
 
         h1etot_diff=0.0
 
+       len=norb
        
         !$omp target teams distribute parallel do simd collapse(2) &
-        !$omp & map(to:h1ei,occupancy,z2l,zs1sin,zs1cos,zs2sin,zs2cos,equal) map(tofrom:h1etot_diff) &
+        !$omp & map(to:h1ei,occupancy,z2l,zs1sin,zs1cos,zs2sin,zs2cos,equal,len) map(tofrom:h1etot_diff) &
         !$omp & private(j,k) shared(h1ei,occupancy,z2l,zs1sin,zs1cos,zs2sin,zs2cos,equal,h1etot_diff)
         do j=1, norb
             do k=1, norb
                 if(h1ei(j,k).ne.(0.0)) then 
-                    h1etot_diff(j,k,:)=one_elec_body_grad_gpu(zs1sin,zs1cos,zs2sin,zs2cos,z2l(j,:,:),&
+                    h1etot_diff(j,k,:)=one_elec_body_grad_gpu(len,zs1sin,zs1cos,zs2sin,zs2cos,z2l(j,:,:),&
                     occupancy(j,k,:,:),h1ei(j,k),k,j,equal)
                 end if
             end do
@@ -417,17 +415,17 @@ MODULE gradient_descent
         real(kind=8), dimension(:,:,:,:), intent(in)::h2ei
         integer,intent(in)::equal
         real(kind=8),dimension(:,:,:,:),intent(inout)::h2etot_diff
-        integer::j
+        integer::j,len
         
 
         if (errorflag .ne. 0) return
         
         h2etot_diff=0.0
-    
+        len=norb
         !$omp parallel shared(z1jk,z2l,zs1sin,zs1cos,zs2sin,zs2cos,occupancy_2an,occupancy_an,h2ei,equal,h2etot_diff) private(j)
         !$omp do
         do j=1, norb
-            h2etot_diff(j,:,:,:) = two_elec_part_grad_gpu(zs1sin,zs1cos,zs2sin,zs2cos,z2l,z1jk(j,:,:,:),&
+            h2etot_diff(j,:,:,:) = two_elec_part_grad_gpu(len,zs1sin,zs1cos,zs2sin,zs2cos,z2l,z1jk(j,:,:,:),&
             h2ei(j,:,:,:),occupancy_2an(j,:,:,:),occupancy_an(:,:,:),j,equal)
         end do
         !$omp end  do

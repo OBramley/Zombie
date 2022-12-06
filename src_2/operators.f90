@@ -846,11 +846,11 @@ MODULE operators
                             if(k.eq.j)then
                                 if((annihilate1.eq.k).or.(annihilate1_2.eq.k))then
                                     if(annihilate2.ne.k)then
-                                        tot0 = tot0+(gg_1(k-1)*(2*real(zom1%sin(k)*zom1%cos(k))*occupancy(2,k))*hh_0(k+1)*vec(k))
+                                        tot0 = tot0+(gg_0(k-1)*(2*real(zom1%sin(k)*zom1%cos(k))*occupancy(2,k))*hh_0(k+1)*vec(k))
                                     end if
                                 else
                                     if(annihilate2.ne.k)then
-                                        tot0 = tot0+(gg_1(k-1)*((1.0-2*((real(zom1%sin(k)))**2))*occupancy(2,k))*hh_0(k+1)*vec(k))
+                                        tot0 = tot0+(gg_0(k-1)*((1.0-2*((real(zom1%sin(k)))**2))*occupancy(2,k))*hh_0(k+1)*vec(k))
                                     end if 
                                 end if
                             else
