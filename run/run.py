@@ -234,24 +234,24 @@ elif(inputs.run['language']=="fortran"):
     os.chdir("../build")
     if(inputs.run['cores']==1):
         if(HPCFLG==1):
-            # if(inputs.run['GPU']=='y'):
-            shutil.copy2("../build/makefile_gpu","../build/Makefile")
-            subprocess.run(["make"])
-            # shutil.copy2("../build/makefile_arc","../build/Makefile")
-            # subprocess.run(["make"])
+            if(inputs.run['GPU']=='y'):
+                shutil.copy2("../build/makefile_gpu","../build/Makefile")
+                subprocess.run(["make"])
+            else:
+                shutil.copy2("../build/makefile_arc","../build/Makefile")
+                subprocess.run(["make"])
         else:
-            
             shutil.copy2("../build/makefile_mac","../build/Makefile")
             subprocess.run(["make"])
     elif(inputs.run['cores']>1):
         if(HPCFLG==1):
-            shutil.copy2("../build/makefile_gpu","../build/Makefile")
-            subprocess.run(["make"])
-            # shutil.copy2("../build/makefile_arc_omp","../build/Makefile")
-            # subprocess.run(["make"])
+            if(inputs.run['GPU']=='y'):
+                shutil.copy2("../build/makefile_gpu","../build/Makefile")
+                subprocess.run(["make"])
+            else:
+                shutil.copy2("../build/makefile_arc_omp","../build/Makefile")
+                subprocess.run(["make"])
         else:
-            # shutil.copy2("../build/makefile_gpu","../build/Makefile")
-            # subprocess.run(["make"])
             shutil.copy2("../build/makefile_mac_omp","../build/Makefile")
             subprocess.run(["make"])
     

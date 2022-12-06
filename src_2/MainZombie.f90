@@ -12,7 +12,6 @@ program MainZombie
     use zom
     use grad_d
     use gradient_descent
-    use gradient_descent_gpu
     use omp_lib
 
     implicit none
@@ -64,7 +63,7 @@ program MainZombie
     write(6,"(a)") "Random seed set"
 
    
-    GPUflg='y'
+    GPUflg='n'
     print*,GPUflg
     diff_state=0
     if(GDflg=="y")then
