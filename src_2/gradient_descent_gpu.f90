@@ -1,8 +1,8 @@
-MODULE gradient_descent_gpu
+MODULE gradient_descent
 
     use globvars
     use alarrays
-    use ham_gpu
+    use ham
     use operators
     use grad_d
     use imgtp
@@ -455,7 +455,7 @@ MODULE gradient_descent_gpu
 
         if (errorflag .ne. 0) return
 
-        call gradient_row(haml,zstore,elect,pick,ndet,occupancy_2an,occupancy_an_cr,occupancy_an)
+        call gradient_row_gpu(haml,zstore,elect,pick,ndet,occupancy_2an,occupancy_an_cr,occupancy_an)
         nanchk=.false. 
         do k=1,norb
             if(is_nan(grad_fin%vars(pick,k)).eqv..true.)then
@@ -463,7 +463,7 @@ MODULE gradient_descent_gpu
                 grad_fin%vars=0 
                 grad_fin%grad_avlb=0
                 do l=1 ,10
-                    call gradient_row(haml,zstore,elect,pick,ndet,occupancy_2an,occupancy_an_cr,occupancy_an)
+                    call gradient_row_gpu(haml,zstore,elect,pick,ndet,occupancy_2an,occupancy_an_cr,occupancy_an)
                     do m=1,norb
                         if(is_nan(grad_fin%vars(pick,m)).eqv..true.)then 
                             exit 
@@ -1171,4 +1171,4 @@ MODULE gradient_descent_gpu
         return
     end function scramble_norb
 
-END MODULE gradient_descent_gpu
+END MODULE gradient_descent

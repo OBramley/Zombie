@@ -4,9 +4,9 @@
 # subsequent streamlining alterations have been made 
 
 F90= nvfortran 
-#F90= gfortran 
+# F90= gfortran 
 FFLags = -mp -g #=gpu # -gpu=cc70 #-O3 #-Minfo
-# FFLAGS= -fopenmp -fbacktrace -fno-unsafe-math-optimizations -frounding-math -fsignaling-nans -foffload=-lgfortran 
+# FFLAGS= #-fopenmp -fbacktrace -fno-unsafe-math-optimizations -frounding-math -fsignaling-nans -foffload=-lgfortran 
 FLINKS=$(ARC_LINALG_FFLAGS)
 # FLINKS=	-llapack -lblas 
 VPATH=../src_2
@@ -25,7 +25,7 @@ randgen.o:randgen.f
 	 $(F90) $(FFLAGS) -c $<
 
 infnan.o:infnan_gpu.f90 
-	 $(F90) $(FFLAGS) -c $<
+	$(F90) $(FFLAGS) -c -o infnan.o $<
 	 
 vars.o:vars.f90
 	 $(F90) $(FFLAGS) -c $<
@@ -46,7 +46,7 @@ zom.o:zom.f90 vars.o
 	 $(F90) $(FFLAGS) -c $<
 	 
 ham.o:ham_gpu.f90 vars.o alarrays.o operators.o
-	 $(F90) $(FFLAGS) -c $<
+	 $(F90) $(FFLAGS) -c -o ham.o $<
 
 outputs.o:outputs.f90 vars.o
 	 $(F90) $(FFLAGS) -c $<
@@ -57,8 +57,8 @@ grad_d.o:grad_d.f90 vars.o
 imgtp.o:imgtp.f90 vars.o alarrays.o grad_d.o
 	 $(F90) $(FFLAGS) -c $<
 
-gradient_descent.o:gradient_descent_gpu.f90 vars.o alarrays.o ham_gpu.o operators.o grad_d.o imgtp.o outputs.o
-	 $(F90) $(FFLAGS) -c $<
+gradient_descent.o:gradient_descent_gpu.f90 vars.o alarrays.o ham.o operators.o grad_d.o imgtp.o outputs.o
+	 $(F90) $(FFLAGS) -c -o gradient_descent.o $<
 
 clean.o:clean.f90 vars.o alarrays.o zom.o ham.o operators.o outputs.o readpars.o
 	 $(F90) $(FFLAGS) -c $<

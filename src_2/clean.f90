@@ -3,10 +3,10 @@ MODULE clean
     use globvars
     use alarrays
     use zom
-    use ham
     use outputs
     use operators
     use readpars
+    use ham
 
     contains
 

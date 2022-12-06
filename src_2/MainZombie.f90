@@ -158,7 +158,7 @@ program MainZombie
             ! print*,gradients%vars(2,:)
             
           
-            call zombie_alter_gpu(zstore,gradients,haml,elect,en,dvecs,chng_trk)
+            call zombie_alter(zstore,gradients,haml,elect,en,dvecs,chng_trk)
             
             GDflg='n'
             do j=1,ndet
