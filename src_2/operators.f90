@@ -102,7 +102,7 @@ MODULE operators
                 bra_prod(annihilate2)=-real(z1%sin(annihilate2)*z2%sin(annihilate2))*occupancy(2,annihilate2)
                 bra_prod(create2)=real(z1%cos(create2)*z2%cos(create2))*occupancy(1,create2) 
             end if
-            !$omp parallel do simd shared(prod,bra_prod) private(temp,j)
+            !$omp parallel do simd shared(prod,bra_prod) private(temp)
             do j=1,norb
                 temp=prod
                 temp(j)=bra_prod(j)
@@ -117,7 +117,7 @@ MODULE operators
                 ket_prod(annihilate2)=real(z1%cos(annihilate2)*z2%cos(annihilate2))*occupancy(2,annihilate2)!alive amplitude is zero
                 ket_prod(create2)=-real(z1%sin(create2)*z2%sin(create2))*occupancy(1,create2) !dead amplitude is zero
             end if
-            !$omp parallel do simd  shared(prod,ket_prod) private(temp2,j)
+            !$omp parallel do simd  shared(prod,ket_prod) private(temp2)
             do j=1,norb
                 temp2=prod
                 temp2(j)=ket_prod(j)
@@ -149,7 +149,7 @@ MODULE operators
         prod=real((conjg(z1%sin)*z2%sin)+(conjg(z1%cos)*z2%cos))
         if(dtype.eq.2)then
             bra_prod=real(conjg(z1%cos)*z2%sin)-real(conjg(z1%sin)*z2%cos)
-            !$omp parallel do simd  shared(prod,bra_prod) private(temp,j)
+            !$omp parallel do simd  shared(prod,bra_prod) private(temp)
             do j=1,norb
                 temp=prod
                 temp(j)=bra_prod(j)
@@ -158,7 +158,7 @@ MODULE operators
             !$omp end parallel do simd  
         else if(dtype.eq.3)then
             ket_prod=real(conjg(z1%sin)*z2%cos)-real(conjg(z1%cos)*z2%sin)
-            !$omp parallel do simd  shared(prod,ket_prod) private(temp2,j)
+            !$omp parallel do simd  shared(prod,ket_prod) private(temp2)
             do j=1,norb
                 temp2=prod
                 temp2(j)=ket_prod(j)

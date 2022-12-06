@@ -3,9 +3,12 @@
 # made with the aid of the fmkmf utility (Copyright (c) The University of Edinburgh)
 # subsequent streamlining alterations have been made 
 
-F90= gfortran #nvfortran #gfortran 
-FFLAGS= -fopenmp -fbacktrace -fno-unsafe-math-optimizations -frounding-math -fsignaling-nans -foffload=-lgfortran #-mp -g #=gpu # -gpu=cc70 #-O3 #-Minfo
-FLINKS=	-llapack -lblas #$(ARC_LINALG_FFLAGS)
+F90= nvfortran 
+#F90= gfortran 
+FFLags = -mp -g #=gpu # -gpu=cc70 #-O3 #-Minfo
+# FFLAGS= -fopenmp -fbacktrace -fno-unsafe-math-optimizations -frounding-math -fsignaling-nans -foffload=-lgfortran 
+FLINKS=$(ARC_LINALG_FFLAGS)
+# FLINKS=	-llapack -lblas 
 VPATH=../src_2
 
 # Link step
@@ -21,7 +24,7 @@ ZOMBIE.exe:randgen.o vars.o alarrays.o readpars.o operators.o electrons.o zom.o 
 randgen.o:randgen.f
 	 $(F90) $(FFLAGS) -c $<
 
-infnan.o:infnan.f90 
+infnan.o:infnan_gpu.f90 
 	 $(F90) $(FFLAGS) -c $<
 	 
 vars.o:vars.f90

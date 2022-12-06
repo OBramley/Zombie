@@ -63,7 +63,7 @@ program MainZombie
     write(6,"(a)") "Random seed set"
 
    
-    GPUflg='y'
+    GPUflg='n'
     print*,GPUflg
     diff_state=0
     if(GDflg=="y")then
