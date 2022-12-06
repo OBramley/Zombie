@@ -12,6 +12,7 @@ program MainZombie
     use zom
     use grad_d
     use gradient_descent
+    use gradient_descent_gpu
     use omp_lib
 
     implicit none
@@ -48,19 +49,19 @@ program MainZombie
     call initialise
     call readrunconds
 
-    ! open(unit=570, file="/dev/urandom", access="stream", &
-    ! form="unformatted", action="read", status="old", iostat=istat)
-    ! if (istat == 0) then
-    !     read(570) randseed    ! This takes the random seed from the true-random bin. If
-    !     close(570)           ! the urandom bin does not exist the random seed is set
-    ! else                   ! to zero which forces the date to be used
-    !     randseed=0
-    ! end if
+    open(unit=570, file="/dev/urandom", access="stream", &
+    form="unformatted", action="read", status="old", iostat=istat)
+    if (istat == 0) then
+        read(570) randseed    ! This takes the random seed from the true-random bin. If
+        close(570)           ! the urandom bin does not exist the random seed is set
+    else                   ! to zero which forces the date to be used
+        randseed=0
+    end if
 
-    ! randseed = abs(randseed)    ! Negative seed values seem to cause instability
+    randseed = abs(randseed)    ! Negative seed values seem to cause instability
 
-    ! call ZBQLINI(randseed,0)   ! Generates the seed value using the UCL random library
-    ! write(6,"(a)") "Random seed set"
+    call ZBQLINI(randseed,0)   ! Generates the seed value using the UCL random library
+    write(6,"(a)") "Random seed set"
 
    
     GPUflg='y'
@@ -113,16 +114,18 @@ program MainZombie
             if(GPUflg.eq.'n')then
                 call hamgen(haml,zstore,elect,ndet,1)
             else if(GPUflg.eq.'y')then
-                num_devices = omp_get_num_devices()
-                print*,num_devices
-                if(num_devices.eq.0)then 
-                    max_threads=omp_get_max_threads()
-                    print*,max_threads
-                    max_teams=1 !max_threads
-                    threadpteam=max_threads
-                    stop
-                end if
-                ! call omp_set_dynamic(.true.)
+            !      num_devices = omp_get_num_devices()
+            !     ! !print*,num_devices
+            !     if(num_devices.eq.0)then 
+            !         max_threads=omp_get_max_threads()
+            !         !print*,max_threads
+            !         max_teams=max_threads
+            !         threadpteam=1
+            !         max_teams=1 !max_threads
+            !         threadpteam=max_threads
+                    
+            !      end if
+            !     ! call omp_set_dynamic(.true.)
                 call hamgen_gpu(haml,zstore,elect,ndet,1)
             end if
             call matrixwriter(haml%hjk,ndet,"data/ham.csv")
@@ -164,8 +167,9 @@ program MainZombie
             if(rstrtflg.eq.'n')then 
                 call epoc_writer(gradients%prev_erg,0,chng_trk,0)
             end if
-           
+         
             call final_grad(dvecs(1),haml,gradients,2,0)
+            ! print*,gradients%vars(2,:)
             
             if(GPUflg.eq.'n')then
                 call zombie_alter(zstore,gradients,haml,elect,en,dvecs,chng_trk)

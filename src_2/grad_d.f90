@@ -292,9 +292,9 @@ Module grad_d
 
         implicit none
 
-        real(kind=8),dimension(:,:), pointer,intent(inout)::pvars
-        complex(kind=8), dimension(:,:), pointer,intent(inout)::phjk
-        real(kind=8), dimension(:,:,:), pointer,intent(inout)::pdiff_hjk
+        real(kind=8),dimension(:,:),intent(inout)::pvars
+        complex(kind=8), dimension(:,:),intent(inout)::phjk
+        real(kind=8), dimension(:,:,:),intent(inout)::pdiff_hjk
         complex(kind=8), dimension(:)::d
         real(kind=8), dimension(:,:,:)::d_diff
         integer,intent(in)::diff_state,d_diff_flg

@@ -102,7 +102,7 @@ print("Arguments checked")
 # Check if on HPC
 Hostname=socket.gethostname()
 if((Hostname==("login2.arc4.leeds.ac.uk"))or(Hostname==("login1.arc4.leeds.ac.uk"))):
-    HPCFLG=0
+    HPCFLG=1
 else:
     HPCFLG=0
 
@@ -250,22 +250,14 @@ elif(inputs.run['language']=="fortran"):
             # shutil.copy2("../build/makefile_arc_omp","../build/Makefile")
             # subprocess.run(["make"])
         else:
-            shutil.copy2("../build/makefile_gpu","../build/Makefile")
-            subprocess.run(["make"])
-            # shutil.copy2("../build/makefile_mac_omp","../build/Makefile")
+            # shutil.copy2("../build/makefile_gpu","../build/Makefile")
             # subprocess.run(["make"])
+            shutil.copy2("../build/makefile_mac_omp","../build/Makefile")
+            subprocess.run(["make"])
     
  
     shutil.copy2("ZOMBIE.exe",EXDIR1)
 
-    # if(HPCFLG==1):
-    #     shutil.copy2("../build/dmake_arc","../build/Makefile")
-    #     subprocess.run(["make"])
-    # else:
-    #     shutil.copy2("../build/dmake","../build/Makefile")
-    #     subprocess.run(["make"])
-
-    # shutil.copy2("d_check.exe",EXDIR1)
     
     os.chdir(EXDIR1)
    
@@ -281,7 +273,7 @@ elif(inputs.run['language']=="fortran"):
         if(inputs.run['GPU']=='y'):
             f.write("#$ -l coproc_v100=1 \n")
         f.write("#$ -l h_rt="+inputs.run['runtime']+"\n")
-        f.write("#$ -l h_vmem=2G \n")
+        f.write("#$ -l h_vmem=4G \n")
         f.write("module add mkl \n")
         # f.write('time ./d_check.exe')
         f.write('time ./ZOMBIE.exe')
