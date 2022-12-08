@@ -95,10 +95,11 @@ program MainZombie
     if(propflg=="y")then
         ! generate Hamiltonian and overlap
         call allocham(haml,ndet,norb)
-       
+        write(6,"(a)") "Hamiltonian allocated"
         if(gramflg.eq."n")then
             call allocdv(dvecs,1,ndet,norb)
             call allocerg(en,1)
+            write(6,"(a)") "d-vector and energy array allocated"
         else if(gramflg.eq."y")then
             ! write(0,"(a,i0)") "Gram  ", ierr
             call allocdv(dvecs,1+gramnum,ndet,norb)
@@ -113,6 +114,7 @@ program MainZombie
             if(GPUflg.eq.'y')then
                 ! Maybe specificy conditons but maybe not needed?!
             end if
+            write(6,"(a)") "To hamiltonian gen"
             call hamgen(haml,zstore,elect,ndet,1)
             call matrixwriter(haml%hjk,ndet,"data/ham.csv")
             call matrixwriter(haml%ovrlp,ndet,"data/ovlp.csv")

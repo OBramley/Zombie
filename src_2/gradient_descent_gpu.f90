@@ -28,12 +28,13 @@ MODULE gradient_descent
         complex(kind=8)::h1etot, h2etot
         integer, allocatable,dimension(:)::IPIV1
         complex(kind=8),allocatable,dimension(:)::WORK1
-        complex(kind=8),dimension(norb,norb,norb)::tot
-        complex(kind=8),dimension(norb,norb)::temp
+        complex(kind=8),allocatable,dimension(:,:,:)::tot
+        complex(kind=8),allocatable,dimension(:,:)::temp
 
         if (errorflag .ne. 0) return
         ierr = 0
-
+        allocate(tot(norb,norb,norb),stat=ierr)
+        allocate(temp(norb,norb),stat=ierr)
         allocate(z1jk(norb,norb,2,norb),stat=ierr)
         if(ierr==0) allocate(z2l(norb,2,norb),stat=ierr)
         if (ierr/=0) then
@@ -238,17 +239,29 @@ MODULE gradient_descent
         integer,dimension(:,:,:),intent(in)::occupancy_an
         complex(kind=8),allocatable, dimension(:,:,:,:)::z1jk
         complex(kind=8),allocatable, dimension(:,:,:)::z2l
-        real(kind=8),dimension(norb)::h1etot_diff_bra,h2etot_diff_bra
-        real(kind=8),dimension(ndet,ndet,norb)::temp2
-        real(kind=8),dimension(norb,norb,norb)::h1etot_diff
-        real(kind=8),dimension(norb,norb,norb,norb)::h2etot_diff
-        real(kind=8),dimension(norb)::overlap_diff
+        real(kind=8),allocatable,dimension(:)::h1etot_diff_bra,h2etot_diff_bra
+        real(kind=8),allocatable,dimension(:,:,:)::temp2
+        real(kind=8),allocatable,dimension(:,:,:)::h1etot_diff
+        real(kind=8),allocatable,dimension(:,:,:,:)::h2etot_diff
+        real(kind=8),allocatable,dimension(:)::overlap_diff
         integer::j,k,l,m,ierr, equal
         
 
 
         if (errorflag .ne. 0) return
         ierr = 0
+
+        allocate(h1etot_diff_bra(norb),stat=ierr)
+        if(ierr==0) allocate(h2etot_diff_bra(norb),stat=ierr)
+        if(ierr==0) allocate(temp2(ndet,ndet,norb),stat=ierr)
+        if(ierr==0) allocate(h1etot_diff(norb,norb,norb),stat=ierr)
+        if(ierr==0) allocate(h2etot_diff(norb,norb,norb,norb),stat=ierr)
+        if(ierr==0) allocate(overlap_diff(norb),stat=ierr)
+        if (ierr/=0) then
+            write(0,"(a,i0)") "Error in gradient array vector allocation . ierr had value ", ierr
+            errorflag=1
+            return
+        end if 
 
         allocate(z1jk(norb,norb,2,norb),stat=ierr)
         if(ierr==0) allocate(z2l(norb,2,norb),stat=ierr)

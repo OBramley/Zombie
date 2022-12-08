@@ -19,7 +19,7 @@ run={
     'language':'fortran',
 
     # What is the name of the run
-    'runfolder':'Li2_GPU',
+    'runfolder':'Li_gputests2',
 
     # Amount of time to request on HPC 
     'runtime': "48:00:00",
@@ -83,7 +83,7 @@ run={
     'gramnum':4,
 
     # Gradient descent flag takes input 'y' or 'n'. Only implemented in the fortran version 
-    'grad':'y',
+    'grad':'n',
 
     #GPU flag
     'GPU':'y'
@@ -102,7 +102,7 @@ zombs={
     'spin':0,
 
     # Number of Zombie states
-    'ndet':20, 
+    'ndet':10, 
 
     # Type of zombie states. Random (ran), Hartree Fock (HF) or biased (bb)
     'zomtyp':'bb',
