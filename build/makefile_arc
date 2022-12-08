@@ -45,8 +45,8 @@ electrons.o:electrons.f90 vars.o
 zom.o:zom.f90 vars.o
 	 $(F90) $(FFLAGS) -c $<
 	 
-ham.o:ham.f90 vars.o alarrays.o operators.o
-	 $(F90) $(FFLAGS) -c $<
+ham.o:ham_arc.f90 vars.o alarrays.o operators.o
+	 $(F90) $(FFLAGS) -c -o ham.o $<
 
 grad_d.o:grad_d.f90 vars.o
 	 $(F90) $(FFLAGS) -c $<
@@ -54,8 +54,8 @@ grad_d.o:grad_d.f90 vars.o
 imgtp.o:imgtp.f90 vars.o alarrays.o grad_d.o
 	 $(F90) $(FFLAGS) -c $<
 
-gradient_descent.o:gradient_descent.f90 vars.o alarrays.o ham.o operators.o grad_d.o imgtp.o outputs.o
-	 $(F90) $(FFLAGS) -c $<
+gradient_descent.o:gradient_descent_arc.f90 vars.o alarrays.o ham.o operators.o grad_d.o imgtp.o outputs.o
+	 $(F90) $(FFLAGS) -c -o gradient_descent.o $<
 
 clean.o:clean.f90 vars.o alarrays.o zom.o ham.o operators.o outputs.o readpars.o
 	 $(F90) $(FFLAGS) -c $<
