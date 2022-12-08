@@ -179,6 +179,7 @@ MODULE gradient_descent
         complex(kind=8),allocatable,dimension(:,:)::zomt
         integer::j,k,len,ierr
 
+       
         if (errorflag .ne. 0) return
 
         len=norb
@@ -208,7 +209,7 @@ MODULE gradient_descent
         !$omp end target teams distribute parallel do simd
 
         deallocate(zomt,stat=ierr)
-
+      
         return
 
     end subroutine one_elec_intfc_gpu
@@ -223,7 +224,7 @@ MODULE gradient_descent
         real(kind=8), dimension(:,:,:,:),intent(in)::h2ei
         complex(kind=8),dimension(:,:,:),intent(inout)::tot
         integer::j,len
-    
+        print*,'2bodys'
         if (errorflag .ne. 0) return
 
         tot=cmplx(0.0,0.0)
@@ -231,11 +232,12 @@ MODULE gradient_descent
         !$omp parallel shared(z1jk,z2l,zs1sin,zs2sin,tot,h2ei) private(j)
         !$omp do
         do j=1, norb
+            print*,j
             tot(j,:,:) = two_elec_part_body_gpu(len,zs1sin,zs2sin,z2l,z1jk(j,:,:,:),h2ei(j,:,:,:),j)
         end do
         !$omp end  do
         !$omp end parallel
-
+        print*,'2bodye'
         return
 
     end subroutine two_elec_intfc_gpu
@@ -260,7 +262,7 @@ MODULE gradient_descent
         integer::j,k,l,m,ierr, equal
         
 
-
+        
         if (errorflag .ne. 0) return
         ierr = 0
 
@@ -385,8 +387,17 @@ MODULE gradient_descent
                 haml%diff_invh(diff_state,k,l,:)=matmul(transpose(temp2(k,:,:)),real(haml%kinvh(:,l)))*(-1)
             end do
         end do
-      
         !$omp end parallel
+
+        deallocate(h1etot_diff_bra,stat=ierr)
+        if(ierr==0) deallocate(h2etot_diff_bra,stat=ierr)
+        if(ierr==0) deallocate(overlap_diff,stat=ierr)
+        if(ierr==0) deallocate(temp2,stat=ierr)
+        if (ierr/=0) then
+            write(0,"(a,i0)") "Error in gradient array vector dedeallocation . ierr had value ", ierr
+            errorflag=1
+            return
+        end if 
         return
 
     end subroutine gradient_row_gpu
@@ -406,6 +417,7 @@ MODULE gradient_descent
         complex(kind=8),allocatable,dimension(:,:)::zomt
         real(kind=8),allocatable,dimension(:)::chng_prod,temp_prod,prod
 
+       
         if (errorflag .ne. 0) return
 
         h1etot_diff=0.0
@@ -416,7 +428,7 @@ MODULE gradient_descent
         allocate(chng_prod(len))
         allocate(temp_prod(len))
         h1etot_diff=0.0
-
+      
 
         !$omp target teams distribute parallel do simd collapse(2) &
         !$omp & map(to:h1ei(:,:),occupancy(:,:,:,:),z2l(:,:,:),zs1sin(:),zs1cos(:),zs2sin(:),zs2cos(:),equal,len) &
@@ -505,7 +517,7 @@ MODULE gradient_descent
         deallocate(prod,stat=ierr)
         deallocate(chng_prod,stat=ierr)
         deallocate(temp_prod,stat=ierr)
-
+      
         return
 
 
@@ -525,7 +537,7 @@ MODULE gradient_descent
         real(kind=8),dimension(:,:,:,:),intent(inout)::h2etot_diff
         integer::j,len
         
-
+        
         if (errorflag .ne. 0) return
         
         h2etot_diff=0.0
@@ -538,7 +550,7 @@ MODULE gradient_descent
         end do
         !$omp end  do
         !$omp end parallel
-
+       
         return
 
     end subroutine two_elec_intfc_grad_gpu
@@ -651,6 +663,7 @@ MODULE gradient_descent
             write(6,"(a)") '    Zombie state    |     Previous Energy     |    Energy after Gradient Descent steps &
                         &   | Orbitals altered '
             do j=1,(ndet-1)
+               
                 grad_fin%current_erg=grad_fin%prev_erg
                 pick=picker(j)
                 pickerorb=scramble_norb(norb)
@@ -658,12 +671,14 @@ MODULE gradient_descent
                 chng_trk2=0
                 acpt_cnt=0
                 do n=1,norb
+                   
                     rjct_cnt=0
                     pickorb=pickerorb(n)
                     lralt_zs=0
                     t=b*(alphain**lralt_zs)
                     
                     do while(t.gt.(1.0d-13))
+                    
                         nanchk=.false.
                         if(is_nan(grad_fin%vars(pick,pickorb)).eqv..true.)then
                             call grad_calc_gpu(haml,zstore,elect,pick,occupancy_2an,occupancy_an_cr,&

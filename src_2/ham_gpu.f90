@@ -522,7 +522,7 @@ MODULE ham
         integer::j,k,l,p,jspin,gmax,hmin,ierr
 
         ierr=0
-
+        print*,'start'
         allocate(tot(len,len),stat=ierr)
         ! allocate(two_elec_part_body_gpu(len,len),stat=ierr)
         allocate(gg(len),stat=ierr)
@@ -611,14 +611,12 @@ MODULE ham
         end do
 
 
+        two_elec_part_body_gpu=tot
         deallocate(vmult)
         deallocate(gg,stat=ierr)
         deallocate(hh,stat=ierr)
-
-        two_elec_part_body_gpu=tot
-
         deallocate(tot,stat=ierr)
-        
+        print*,'end'
         return
 
     end function two_elec_part_body_gpu
