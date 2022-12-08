@@ -245,7 +245,7 @@ MODULE ham
             !$omp & map(to:h1ei(:,:),occupancy(:,:,:,:),z2l(:,:,:),zs1sin(:),zs1cos(:),zs2sin(:),zs2cos(:),equal,len) &
             !$omp & map(tofrom:temp(:,:),h1etot_diff(:,:,:)) map(alloc:prod(len),chng_prod(len),temp_prod(len),zomt(2,len)) &
             !$omp & private(j,k,l,prod,chng_prod,temp_prod,zomt) &
-            !$omp & shared(h1ei,occupancy,z2l,zs1sin,temp,zs2sin,zs2cos,equal,h1etot_diff)
+            !$omp & shared(h1ei,occupancy,z2l,zs1sin,zs1cos,temp,zs2sin,zs2cos,equal,h1etot_diff)
             do j=1, len
                 do k=1, len
                     if(h1ei(j,k).ne.(0.0)) then 
@@ -253,7 +253,6 @@ MODULE ham
                         zomt(1,k)=zomt(2,k)
                         zomt(2,k)=cmplx(0.0,0.0)
                         zomt=zomt*occupancy(j,k,:,:)
-                       
                         temp(j,k)=product((conjg(zs1sin)*zomt(1,:))+(conjg(zs1cos)*zomt(2,:)))*h1ei(j,k)
                         prod=real(((conjg(zs1sin)*zomt(1,:)))+((conjg(zs1cos)*zomt(2,:))))
                         if(equal.eq.1)then
@@ -323,8 +322,8 @@ MODULE ham
         else
             !$omp target teams distribute parallel do simd collapse(2) &
             !$omp & map(to:h1ei(:,:),occupancy(:,:,:,:),z2l(:,:,:),zs1sin(:),zs1cos(:),len) &
-            !$omp & map(tofrom:temp(:,:)) &
-            !$omp & private(j,k,zomt) shared(h1ei,occupancy,z2l,zs1sin,temp)
+            !$omp & map(tofrom:temp(:,:)) map(alloc:zomt(2,len)) &
+            !$omp & private(j,k,zomt) shared(h1ei,occupancy,z2l,zs1sin,zs1cos,temp)
             do j=1, len
                 do k=1, len
                     if(h1ei(j,k).ne.(0.0)) then 
@@ -333,7 +332,6 @@ MODULE ham
                         zomt(2,k)=cmplx(0.0,0.0)
                         zomt=zomt*occupancy(j,k,:,:)
                         temp(j,k)=product((conjg(zs1sin)*zomt(1,:))+(conjg(zs1cos)*zomt(2,:)))*h1ei(j,k)
-                        ! temp(j,k)=one_elec_body_gpu(len,zs1sin,zs1cos,z2l(j,:,:),occupancy(j,k,:,:),h1ei(j,k),k)
                     end if
                 end do
             end do
@@ -931,7 +929,7 @@ MODULE ham
             bra_prod=real(conjg(zs1cos)*zs2sin)-real(conjg(zs1sin)*zs2cos)
             !!$omp target teams distribute parallel do simd &
             !!$omp map(to:prod,bra_prod) map(tofrom:diff_overlap_gpu) map(alloc:temp(norb)) &
-            !$omp parallel do simd shared(prod,bra_prod) private(temp,j)
+            !$omp parallel do simd shared(prod,bra_prod) private(temp)
             do j=1,norb
                 temp=prod
                 temp(j)=bra_prod(j)
@@ -947,7 +945,7 @@ MODULE ham
             ket_prod=real(conjg(zs1sin)*zs2cos)-real(conjg(zs1cos)*zs2sin)
             !!$omp target teams distribute parallel do simd &
             !!$omp map(to:prod,ket_prod) map(tofrom:diff_overlap_gpu) map(alloc:temp2(norb)) &
-            !$omp parallel do simd shared(prod,ket_prod) private(temp2,j)
+            !$omp parallel do simd shared(prod,ket_prod) private(temp2)
             do j=1,norb
                 temp2=prod
                 temp2(j)=ket_prod(j)

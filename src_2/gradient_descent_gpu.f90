@@ -194,7 +194,7 @@ MODULE gradient_descent
         !$omp target teams distribute parallel do simd collapse(2) &
         !$omp & map(to:h1ei(:,:),occupancy(:,:,:,:),z2l(:,:,:),zs1sin(:),zs1cos(:),len) &
         !$omp & map(tofrom:temp(:,:)) map(alloc:zomt(2,len))&
-        !$omp & private(j,k,zomt) shared(h1ei,occupancy,z2l,zs1sin,temp)
+        !$omp & private(j,k,zomt) shared(h1ei,occupancy,z2l,zs1sin,zs1cos,temp)
         do j=1, len
             do k=1, len
                 if(h1ei(j,k).ne.(0.0)) then 
@@ -224,19 +224,20 @@ MODULE gradient_descent
         real(kind=8), dimension(:,:,:,:),intent(in)::h2ei
         complex(kind=8),dimension(:,:,:),intent(inout)::tot
         integer::j,len
-
+    
         if (errorflag .ne. 0) return
 
         tot=cmplx(0.0,0.0)
         len=norb
-        !$omp parallel shared(z1jk,z2l,zs1sin,zs2sin,tot,h2ei) private(j)
+        !$omp parallel shared(z1jk,z2l,zs1sin,zs2sin,tot,h2ei,len) private(j)
         !$omp do
         do j=1, norb
+           
             tot(j,:,:) = two_elec_part_body_gpu(len,zs1sin,zs2sin,z2l,z1jk(j,:,:,:),h2ei(j,:,:,:),j)
         end do
         !$omp end  do
         !$omp end parallel
-       
+     
         return
 
     end subroutine two_elec_intfc_gpu
