@@ -240,41 +240,23 @@ MODULE ham
   
         temp=cmplx(0.0,0.0)
         
-        
-        !$omp target teams &
-        !$omp & map(to:h1ei(:,:),occupancy(:,:,:,:),z2l(:,:,:),zs1sin(:),zs1cos(:),zs2sin(:),zs2cos(:),equal,len) &
-        !$omp & map(tofrom:temp(:,:),h1etot_diff(:,:,:)) map(alloc:prod(len),chng_prod(len),temp_prod(len),zomt(2,len)) 
-        !$omp distribute parallel do simd collapse(2) &
-        !$omp & private(j,k,zomt) shared(h1ei,occupancy,z2l,zs1sin,temp)
-        do j=1, len
-            do k=1, len
-                if(h1ei(j,k).ne.(0.0)) then 
-                    zomt=z2l(j,:,:)
-                    zomt(1,k)=zomt(2,k)
-                    zomt(2,k)=cmplx(0.0,0.0)
-                    zomt=zomt*occupancy(j,k,:,:)
-                    temp(j,k)=product((conjg(zs1sin)*zomt(1,:))+(conjg(zs1cos)*zomt(2,:)))*h1ei(j,k)
-                    ! temp(j,k)=one_elec_body_gpu(len,zs1sin,zs1cos,z2l(j,:,:),occupancy(j,k,:,:),h1ei(j,k),k)
-                end if
-            end do
-        end do
-        !$omp end distribute parallel do simd
-        if(equal.lt.4)then 
-            !$omp distribute parallel do simd collapse(2) &
+        if(equal.lt.4)then
+            !$omp target teams distribute parallel do simd collapse(2) &
+            !$omp & map(to:h1ei(:,:),occupancy(:,:,:,:),z2l(:,:,:),zs1sin(:),zs1cos(:),zs2sin(:),zs2cos(:),equal,len) &
+            !$omp & map(tofrom:temp(:,:),h1etot_diff(:,:,:)) map(alloc:prod(len),chng_prod(len),temp_prod(len),zomt(2,len)) &
             !$omp & private(j,k,l,prod,chng_prod,temp_prod,zomt) &
-            !$omp & shared(h1ei,occupancy,z2l,zs1sin,zs1cos,zs2sin,zs2cos,equal,h1etot_diff)
+            !$omp & shared(h1ei,occupancy,z2l,zs1sin,temp,zs2sin,zs2cos,equal,h1etot_diff)
             do j=1, len
                 do k=1, len
-                    if(h1ei(j,k).ne.(0.0)) then
+                    if(h1ei(j,k).ne.(0.0)) then 
                         zomt=z2l(j,:,:)
                         zomt(1,k)=zomt(2,k)
                         zomt(2,k)=cmplx(0.0,0.0)
                         zomt=zomt*occupancy(j,k,:,:)
-                        prod=real(((conjg(zs1sin)*zomt(1,:)))+((conjg(zs1cos)*zomt(2,:))))
                        
-                        ! Differntial of overlap of the same ZS 0 unless an operator has acted on ZS
+                        temp(j,k)=product((conjg(zs1sin)*zomt(1,:))+(conjg(zs1cos)*zomt(2,:)))*h1ei(j,k)
+                        prod=real(((conjg(zs1sin)*zomt(1,:)))+((conjg(zs1cos)*zomt(2,:))))
                         if(equal.eq.1)then
-                          
                             if(j.eq.k)then
                                 if((real(zs2cos(j)).eq.0).and.(real(zs2sin(j)).eq.1).or.(real(zs2sin(j)).eq.0))then
                                     h1etot_diff(j,k,j)=0.0
@@ -319,7 +301,6 @@ MODULE ham
                             end do
                             !!$omp end parallel do simd 
                         else if(equal.eq.3)then
-                           
                             chng_prod=real(zs1sin*zs2cos*occupancy(j,k,1,:)-zs1cos*zs2sin*occupancy(j,k,2,:))                  
                             if(j.eq.k)then  !dead amplitude is zero
                                 chng_prod(j)=real(zs1sin(j)*zs2cos(j)*occupancy(j,k,1,j))
@@ -338,10 +319,27 @@ MODULE ham
                     end if
                 end do
             end do
-            !$omp end distribute parallel do simd
+            !$omp end target teams distribute parallel do simd         
+        else
+            !$omp target teams distribute parallel do simd collapse(2) &
+            !$omp & map(to:h1ei(:,:),occupancy(:,:,:,:),z2l(:,:,:),zs1sin(:),zs1cos(:),len) &
+            !$omp & map(tofrom:temp(:,:)) &
+            !$omp & private(j,k,zomt) shared(h1ei,occupancy,z2l,zs1sin,temp)
+            do j=1, len
+                do k=1, len
+                    if(h1ei(j,k).ne.(0.0)) then 
+                        zomt=z2l(j,:,:)
+                        zomt(1,k)=zomt(2,k)
+                        zomt(2,k)=cmplx(0.0,0.0)
+                        zomt=zomt*occupancy(j,k,:,:)
+                        temp(j,k)=product((conjg(zs1sin)*zomt(1,:))+(conjg(zs1cos)*zomt(2,:)))*h1ei(j,k)
+                        ! temp(j,k)=one_elec_body_gpu(len,zs1sin,zs1cos,z2l(j,:,:),occupancy(j,k,:,:),h1ei(j,k),k)
+                    end if
+                end do
+            end do
+            !$omp end target teams distribute parallel do simd
         end if
-        !$omp end target teams
-       
+
         do j=1, norb
             do k=1, norb
                 h1etot=h1etot+temp(j,k)
@@ -522,7 +520,7 @@ MODULE ham
         integer::j,k,l,p,jspin,gmax,hmin,ierr
 
         ierr=0
-        print*,'start'
+
         allocate(tot(len,len),stat=ierr)
         ! allocate(two_elec_part_body_gpu(len,len),stat=ierr)
         allocate(gg(len),stat=ierr)
@@ -611,12 +609,14 @@ MODULE ham
         end do
 
 
-        two_elec_part_body_gpu=tot
         deallocate(vmult)
         deallocate(gg,stat=ierr)
         deallocate(hh,stat=ierr)
+
+        two_elec_part_body_gpu=tot
+
         deallocate(tot,stat=ierr)
-        print*,'end'
+        
         return
 
     end function two_elec_part_body_gpu
