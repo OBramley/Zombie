@@ -224,7 +224,7 @@ MODULE gradient_descent
         real(kind=8), dimension(:,:,:,:),intent(in)::h2ei
         complex(kind=8),dimension(:,:,:),intent(inout)::tot
         integer::j,len
-        print*,'2bodys'
+
         if (errorflag .ne. 0) return
 
         tot=cmplx(0.0,0.0)
@@ -232,12 +232,11 @@ MODULE gradient_descent
         !$omp parallel shared(z1jk,z2l,zs1sin,zs2sin,tot,h2ei) private(j)
         !$omp do
         do j=1, norb
-            print*,j
             tot(j,:,:) = two_elec_part_body_gpu(len,zs1sin,zs2sin,z2l,z1jk(j,:,:,:),h2ei(j,:,:,:),j)
         end do
         !$omp end  do
         !$omp end parallel
-        print*,'2bodye'
+       
         return
 
     end subroutine two_elec_intfc_gpu
@@ -1180,7 +1179,7 @@ MODULE gradient_descent
     
         chng_trk=0 !stores which if any ZS changed
         rsrtpass=0
-        epoc_max=30000
+        epoc_max=50000
 
         do j=1, ndet-1
             picker(j)=j+1
