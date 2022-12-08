@@ -82,11 +82,6 @@ MODULE ham
       
             h1etot=cmplx(0.0,0.0)
             h2etot=cmplx(0.0,0.0)
-            h1etot_diff_bra=0.0
-            h1etot_diff_ket=0.0
-            h2etot_diff_bra=0.0
-            h2etot_diff_ket=0.0
-    
           
             
             if(m.gt.row)then
@@ -108,31 +103,32 @@ MODULE ham
           
             h1etot=(0.0,0.0)
             h2etot=(0.0,0.0)
-            h1etot_diff_bra=0.0
-            h1etot_diff_ket=0.0
-            h2etot_diff_bra=0.0
-            h2etot_diff_ket=0.0
             
             equal=9
-            if(2.eq.row)then 
-                if(row.eq.m)then 
-                    equal=1
-                else if(row.ne.m)then 
-                    equal=2
+            if(GDflg.eq.'y')then
+                h1etot_diff_bra=0.0
+                h1etot_diff_ket=0.0
+                h2etot_diff_bra=0.0
+                h2etot_diff_ket=0.0
+                if(2.eq.row)then 
+                    if(row.eq.m)then 
+                        equal=1
+                    else if(row.ne.m)then 
+                        equal=2
+                    end if
+                else if(2.ne.row)then 
+                    if(m.eq.2)then 
+                        equal=3
+                    end if
+                else 
+                    equal = 9
                 end if
-            else if(2.ne.row)then 
-                if(m.eq.2)then 
-                    equal=3
-                end if
-            else 
-                equal = 9
             end if
         
             
             call one_elec_part(zstore(row),z2l,h1etot,occupancy_an_cr,&
                 elecs%h1ei,h1etot_diff_bra,h1etot_diff_ket,zstore(m),equal)
-            
-           
+                       
             z2l=z2l*occupancy_an
             !!$omp flush(z2l)
          

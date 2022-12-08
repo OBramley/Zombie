@@ -83,7 +83,7 @@ run={
     'gramnum':4,
 
     # Gradient descent flag takes input 'y' or 'n'. Only implemented in the fortran version 
-    'grad':'n',
+    'grad':'y',
 
     #GPU flag
     'GPU':'y'

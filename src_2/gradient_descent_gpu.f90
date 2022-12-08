@@ -176,25 +176,38 @@ MODULE gradient_descent
         integer,dimension(:,:,:,:),intent(in)::occupancy
         real(kind=8), dimension(:,:), intent(in)::h1ei
         complex(kind=8),dimension(:,:),intent(inout)::temp
-        integer::j,k,len
+        complex(kind=8),allocatable,dimension(:,:)::zomt
+        integer::j,k,len,ierr
 
         if (errorflag .ne. 0) return
 
+        len=norb
+       
+        allocate(zomt(2,len),stat=ierr)
+        
+        
+  
         temp=cmplx(0.0,0.0)
 
 
-       len=norb
         !$omp target teams distribute parallel do simd collapse(2) &
-        !$omp & map(to:h1ei,occupancy,z2l,zs1sin,zs1cos,len) map(tofrom:temp) &
-        !$omp & private(j,k) shared(h1ei,occupancy,z2l,zs1sin,temp)
-        do j=1, norb
-            do k=1, norb
+        !$omp & map(to:h1ei(:,:),occupancy(:,:,:,:),z2l(:,:,:),zs1sin(:),zs1cos(:),len) &
+        !$omp & map(tofrom:temp(:,:)) map(alloc:zomt(2,len))&
+        !$omp & private(j,k,zomt) shared(h1ei,occupancy,z2l,zs1sin,temp)
+        do j=1, len
+            do k=1, len
                 if(h1ei(j,k).ne.(0.0)) then 
-                    temp(j,k)=one_elec_body_gpu(len,zs1sin,zs1cos,z2l(j,:,:),occupancy(j,k,:,:),h1ei(j,k),k)
+                    zomt=z2l(j,:,:)
+                    zomt(1,k)=zomt(2,k)
+                    zomt(2,k)=cmplx(0.0,0.0)
+                    zomt=zomt*occupancy(j,k,:,:)
+                    temp(j,k)=product((conjg(zs1sin)*zomt(1,:))+(conjg(zs1cos)*zomt(2,:)))*h1ei(j,k)
                 end if
             end do
         end do
         !$omp end target teams distribute parallel do simd
+
+        deallocate(zomt,stat=ierr)
 
         return
 
@@ -389,27 +402,109 @@ MODULE gradient_descent
         real(kind=8), dimension(:,:), intent(in)::h1ei
         integer,intent(in)::equal
         real(kind=8),dimension(:,:,:),intent(inout)::h1etot_diff
-        integer::j,k,len
+        integer::j,k,l,len,ierr
+        complex(kind=8),allocatable,dimension(:,:)::zomt
+        real(kind=8),allocatable,dimension(:)::chng_prod,temp_prod,prod
 
         if (errorflag .ne. 0) return
 
         h1etot_diff=0.0
 
-       len=norb
-       
+        len=norb
+        allocate(zomt(2,len),stat=ierr)
+        allocate(prod(len))
+        allocate(chng_prod(len))
+        allocate(temp_prod(len))
+        h1etot_diff=0.0
+
+
         !$omp target teams distribute parallel do simd collapse(2) &
-        !$omp & map(to:h1ei,occupancy,z2l,zs1sin,zs1cos,zs2sin,zs2cos,equal,len) map(tofrom:h1etot_diff) &
-        !$omp & private(j,k) shared(h1ei,occupancy,z2l,zs1sin,zs1cos,zs2sin,zs2cos,equal,h1etot_diff)
-        do j=1, norb
-            do k=1, norb
-                if(h1ei(j,k).ne.(0.0)) then 
-                    h1etot_diff(j,k,:)=one_elec_body_grad_gpu(len,zs1sin,zs1cos,zs2sin,zs2cos,z2l(j,:,:),&
-                    occupancy(j,k,:,:),h1ei(j,k),k,j,equal)
+        !$omp & map(to:h1ei(:,:),occupancy(:,:,:,:),z2l(:,:,:),zs1sin(:),zs1cos(:),zs2sin(:),zs2cos(:),equal,len) &
+        !$omp & map(tofrom:h1etot_diff(:,:,:)) map(alloc:prod(len),chng_prod(len),temp_prod(len),zomt(2,len)) &
+        !$omp & private(j,k,l,prod,chng_prod,temp_prod,zomt) &
+        !$omp & shared(h1ei,occupancy,z2l,zs1sin,zs1cos,zs2sin,zs2cos,equal,h1etot_diff)
+        do j=1, len
+            do k=1, len
+                if(h1ei(j,k).ne.(0.0)) then
+                    zomt=z2l(j,:,:)
+                    zomt(1,k)=zomt(2,k)
+                    zomt(2,k)=cmplx(0.0,0.0)
+                    zomt=zomt*occupancy(j,k,:,:)
+                    prod=real(((conjg(zs1sin)*zomt(1,:)))+((conjg(zs1cos)*zomt(2,:))))
+                
+                    ! Differntial of overlap of the same ZS 0 unless an operator has acted on ZS
+                    if(equal.eq.1)then
+                    
+                        if(j.eq.k)then
+                            if((real(zs2cos(j)).eq.0).and.(real(zs2sin(j)).eq.1).or.(real(zs2sin(j)).eq.0))then
+                                h1etot_diff(j,k,j)=0.0
+                            else
+                                chng_prod=prod           !dead amplitude is zero
+                                chng_prod(j)=real(2*zs1sin(j)*zs1cos(j)*occupancy(j,k,1,j))
+                                h1etot_diff(j,k,j)=product(chng_prod)*h1ei(j,k)   
+                            end if 
+                        else if(j.ne.k)then
+                            chng_prod=prod
+                            if((real(zs2cos(j)).eq.0).and.(real(zs2sin(j)).eq.1)) then
+                                chng_prod(j)=-1*occupancy(j,k,2,j)
+                            else if((real(zs2sin(j)).eq.0).and.(real(zs2cos(j)).eq.1)) then
+                                chng_prod(j)=occupancy(j,k,2,j)
+                            else
+                                chng_prod(j)=real(((zs1cos(j)**2)-(zs1sin(j)**2))*occupancy(j,k,2,j))
+                            end if
+                            h1etot_diff(j,k,j)=product(chng_prod)*h1ei(j,k)
+                            chng_prod=prod
+                            if((real(zs2cos(k)).eq.0).and.(real(zs2sin(k)).eq.1)) then
+                                chng_prod(k)=-1*occupancy(j,k,1,k)
+                            else if((real(zs2sin(k)).eq.0).and.(real(zs2cos(k)).eq.1)) then
+                                chng_prod(k)=occupancy(j,k,1,k)
+                            else
+                                chng_prod(k)=real(((zs1cos(k)**2)-(zs1sin(k)**2))*occupancy(j,k,1,k))
+                            end if               !dead amplitude is zero
+                            h1etot_diff(j,k,k)=product(chng_prod)*h1ei(j,k)
+                        end if
+                    else if(equal.eq.2)then 
+                        chng_prod=real(zs1cos*zs2sin*occupancy(j,k,1,:)-zs1sin*zs2cos*occupancy(j,k,2,:))            
+                        if(j.eq.k)then  !dead amplitude is zero
+                            chng_prod(j)=real(zs1cos(j)*zs2sin(j)*occupancy(j,k,1,j))
+                        else                   
+                            chng_prod(j)=-real(zs1sin(j)*zs2sin(j))*occupancy(j,k,2,j)
+                            chng_prod(k)=real(zs1cos(k)*zs2cos(k))*occupancy(j,k,1,k) 
+                        end if
+                        !!$omp parallel do simd shared(prod,chng_prod) private(temp,j)
+                        do l=1,len
+                            temp_prod=prod
+                            temp_prod(l)=chng_prod(l)
+                            h1etot_diff(j,k,l)=product(temp_prod)*h1ei(j,k)
+                        end do
+                        !!$omp end parallel do simd 
+                    else if(equal.eq.3)then
+                    
+                        chng_prod=real(zs1sin*zs2cos*occupancy(j,k,1,:)-zs1cos*zs2sin*occupancy(j,k,2,:))                  
+                        if(j.eq.k)then  !dead amplitude is zero
+                            chng_prod(j)=real(zs1sin(j)*zs2cos(j)*occupancy(j,k,1,j))
+                        else                   
+                            chng_prod(j)=real(zs1cos(j)*zs2cos(j))*occupancy(j,k,2,j)!alive amplitude is zero
+                            chng_prod(k)=-real(zs1sin(k)*zs2sin(k))*occupancy(j,k,1,k) !dead amplitude is zero
+                        end if
+                        !!$omp parallel do simd  shared(prod,ket_prod) private(temp_prod,j)
+                        do l=1,len
+                            temp_prod=prod
+                            temp_prod(l)=chng_prod(l)
+                            h1etot_diff(j,k,l)=product(temp_prod)*h1ei(j,k)
+                        end do
+                        !!$omp end parallel do simd   
+                    end if
                 end if
             end do
         end do
         !$omp end target teams distribute parallel do simd
+       
      
+        deallocate(zomt,stat=ierr)
+        deallocate(prod,stat=ierr)
+        deallocate(chng_prod,stat=ierr)
+        deallocate(temp_prod,stat=ierr)
 
         return
 
