@@ -10,68 +10,97 @@ MODULE clean
 
     contains
 
-    ! subroutine sd_anal()
+    subroutine sd_anal(zstore,nume)
 
-    !     implicit none 
+        implicit none 
 
-    !     type(zombiest),dimension(:),allocatable,intent(inout)::cstore
-    !     type(hamiltonian), intent(inout)::cleanham
-    !     integer, intent(inout)::clean_ndet
-    !     type(elecintrgl),intent(in)::elecs 
-    !     type(zombiest),dimension(:),intent(in)::zstore
-    !     integer, intent(in)::nume
-    !     type(zombiest),dimension(:),allocatable::cstoretemp
-    !     integer, allocatable, dimension(:,:)::combs,combs2,combsfix
-    !     integer, allocatable, dimension(:)::magovrlp
-    !     integer::j,k,ierr,total,total2,total3,totalf,checker
-    !     complex(kind=8)::magnitude
+        type(zombiest),dimension(:),allocatable::cstore
+        integer::clean_ndet
+        type(zombiest),dimension(:),intent(in)::zstore
+        integer, intent(in)::nume
+        integer, allocatable, dimension(:,:)::combs,combs2
+        integer, allocatable, dimension(:)::position
+        real(kind=8), allocatable, dimension(:)::magovrlp
+        integer::j,k,ierr,total,total2,checker
+        logical,allocatable,dimension(:)::excld
 
-    !     total=choose(norb,nume)
-    !     allocate(combs(total,nume),stat=ierr)
-    !     if(ierr==0)  allocate (combs2(total,nume),stat=ierr)
-    !     if(ierr==0)  allocate (combsfix(total,nume),stat=ierr)
-    !     if(ierr/=0) then
-    !         write(0,"(a,i0)") "Error in combination matrix allocation. ierr had value ", ierr
-    !         errorflag=1
-    !         return
-    !     end if
-    !     write(6,"(a,i0)") 'Total combinations ',total
+        total=choose(norb,nume)
+        allocate(combs(total,nume),stat=ierr)
+        if(ierr==0)  allocate (combs2(total,nume),stat=ierr)
+        if(ierr/=0) then
+            write(0,"(a,i0)") "Error in combination matrix allocation. ierr had value ", ierr
+            errorflag=1
+            return
+        end if
+        write(6,"(a,i0)") 'Total combinations ',total
 
 
-    !     ! The occupational combiantions for the correct number of electrons are found 
-    !     call combinations(norb,nume,combs,total)
+        ! The occupational combiantions for the correct number of electrons are found 
+        call combinations(norb,nume,combs,total)
         
      
-    !     do j=1, total
-    !         checker=0
-    !         do k=1,nume
-    !             checker=checker+modulo(combs(j,k),2)
-    !         end do
-    !         if(checker==((nume/2)-spin))then
-    !             total2=total2+1
-    !             combs2(total2,:)=combsfix(j,:)
-    !         end if
-    !     end do
+        do j=1, total
+            checker=0
+            do k=1,nume
+                checker=checker+modulo(combs(j,k),2)
+            end do
+            if(checker==((nume/2)-spin))then
+                total2=total2+1
+                combs2(total2,:)=combs(j,:)
+            end if
+        end do
     
-    !     call alloczs(cstoretemp,total2)
+        call alloczs(cstore,total2)
 
-    !     allocate(magovrlp(total2),stat=ierr)
-    !     if(ierr/=0) then
-    !         write(0,"(a,i0)") "Error in magovrlp allocation. ierr had value ", ierr
-    !         errorflag=1
-    !         return
-    !     end if
+        allocate(magovrlp(total2),stat=ierr)
+        if(ierr==0) allocate(position(total2),stat=ierr)
+        if(ierr==0) allocate(excld(total2),stat=ierr)
+        if(ierr/=0) then
+            write(0,"(a,i0)") "Error in magovrlp allocation. ierr had value ", ierr
+            errorflag=1
+            return
+        end if
     
-    !     deallocate(combs,stat=ierr)
+        deallocate(combs,stat=ierr)
 
-    
-    !     do j=1, total2
-    !         call zomhfc(cstoretemp(j),combs2(j,:))
-    !     end do
- 
+        do j=1, total2
+            call zomhfc(cstore(j),combs2(j,:))
+        end do
+
+        magovrlp=(0.0,0.0)
+        excld=.TRUE.
+        do j=1,total2
+            do k=1,ndet 
+                magovrlp(j)=magovrlp(j)+real(overlap(cstore(j),zstore(k)))
+            end do
+        end do
+
+        do j=1, total2
+            position(j)=minloc(magovrlp,1,excld)
+            excld(position(j))=.FALSE.
+        end do
+
+        open(unit=9,file='slt_ovrlp.csv',iostat=ierr)
+        if(ierr/=0)then
+            write(0,"(a,i0)") "Error in opening slt_ovrlp.csv. ierr had value ", ierr
+            errorflag=1
+            return
+        end if
+
+        do j=1, total2
+            write(9,'(e25.17e3,*(i0 :", "))') magovrlp(position(j)),(combs2(position(j),k),k=1,nume)
+        end do
+
+        close(9)
+        call dealloczs(cstore)
+        deallocate(position,stat=ierr)
+        deallocate(excld,stat=ierr)
+        deallocate(magovrlp,stat=ierr)
+
+        return 
 
 
-    ! end subroutine sd_anal
+    end subroutine sd_anal
 
     subroutine clean_setup(cstore,nume,cleanham,elecs,clean_ndet,zstore)
 

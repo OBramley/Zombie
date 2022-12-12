@@ -177,6 +177,7 @@ program MainZombie
                 write(0,"(a,i0)") "Error in zombie change tracking array deallocation . ierr had value ", ierr
                 errorflag=1
             end if
+            call sd_anal(zstore,nel)
         end if
 
         call deallocerg(en)

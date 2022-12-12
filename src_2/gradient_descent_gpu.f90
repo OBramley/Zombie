@@ -1180,7 +1180,7 @@ MODULE gradient_descent
     
         chng_trk=0 !stores which if any ZS changed
         rsrtpass=0
-        epoc_max=50000
+        epoc_max=32000
 
         do j=1, ndet-1
             picker(j)=j+1
