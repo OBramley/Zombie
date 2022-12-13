@@ -105,7 +105,7 @@ MODULE clean
                 position(j)=minloc(magovrlp,1,excld)
                 excld(position(j))=.FALSE.
             end do
-            open(unit=9,file='slt_ovrlp.csv',status="olds",access='append',iostat=ierr)
+            open(unit=9,file='slt_ovrlp.csv',status="old",access='append',iostat=ierr)
             if(ierr/=0)then
                 write(0,"(a,i0)") "Error in opening slt_ovrlp.csv. ierr had value ", ierr
                 errorflag=1

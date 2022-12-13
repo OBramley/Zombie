@@ -132,13 +132,13 @@ program MainZombie
 
         if(gramflg.eq."n")then
             write(stateno,"(i4.4)")k
-            call dvec_writer(dvecs(1)%d,ndet,0,k)
-            call energywriter(en%t,en%erg(1,:),"energy.csv",0,k)
+            call dvec_writer(dvecs(1)%d,ndet,0)
+            call energywriter(en%t,en%erg(1,:),"energy.csv",0)
         else if(gramflg.eq."y")then
             do j=1, 1+gramnum
                 write(stateno,"(i4.4)")j
-                call dvec_writer(dvecs(j)%d,ndet,j,k)
-                call energywriter(en%t,en%erg(j,:),"energy_state_"//trim(stateno)//".csv",j,k)
+                call dvec_writer(dvecs(j)%d,ndet,j)
+                call energywriter(en%t,en%erg(j,:),"energy_state_"//trim(stateno)//".csv",j)
             end do
         end if
         print*,real(en%erg(1,timesteps+1))
@@ -168,7 +168,7 @@ program MainZombie
             dvecs(1)%d=(0.0,0.0)
             call imgtime_prop(dvecs,en,haml,0)
             write(6,"(a,f21.16)") "Final energy: ", real(en%erg(1,timesteps+1))
-            call energywriter(en%t,en%erg(1,:),"energy_final.csv",0,1)
+            call energywriter(en%t,en%erg(1,:),"energy_final.csv",0)
             call matrixwriter(haml%hjk,ndet,"data/ham_final.csv")
             call matrixwriter(haml%ovrlp,ndet,"data/ovlp_final.csv")
             deallocate(chng_trk,stat=ierr)
