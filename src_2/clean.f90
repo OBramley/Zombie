@@ -10,14 +10,14 @@ MODULE clean
 
     contains
 
-    subroutine sd_anal(zstore,nume,dvec)
+    subroutine sd_anal(zstore,nume,dvec,pass)
 
         implicit none 
 
         type(zombiest),dimension(:),allocatable::cstore
         type(zombiest),dimension(:),intent(in)::zstore
         type(dvector),intent(in)::dvec
-        integer, intent(in)::nume
+        integer, intent(in)::nume,pass
         integer, allocatable, dimension(:,:)::combs,combs2
         integer, allocatable, dimension(:)::position
         real(kind=8), allocatable, dimension(:)::magovrlp
@@ -74,6 +74,7 @@ MODULE clean
         magovrlp=(0.0,0.0)
         
         excld=.TRUE.
+        !$omp parallel do collapse(2) reduction(+:norm)
         do j=1,total2
             do k=1,ndet 
                 ovrlp1=overlap(cstore(j),zstore(k))
@@ -84,26 +85,40 @@ MODULE clean
                 end do
             end do
         end do
+        !$omp end parallel do 
         write(6,"(a,e25.17e3)") 'The norm for states with correct spin and electrons is ',real(norm)
         
-        do j=1, total2
-            position(j)=minloc(magovrlp,1,excld)
-            excld(position(j))=.FALSE.
-        end do
+ 
+        if(pass.eq.1)then 
+            open(unit=9,file='slt_ovrlp.csv',status="new", iostat=ierr)
+            if(ierr/=0)then
+                write(0,"(a,i0)") "Error in opening slt_ovrlp.csv. ierr had value ", ierr
+                errorflag=1
+                return
+            end if
 
-        open(unit=9,file='slt_ovrlp.csv',status="new", iostat=ierr)
-        if(ierr/=0)then
-            write(0,"(a,i0)") "Error in opening slt_ovrlp.csv. ierr had value ", ierr
-            errorflag=1
-            return
-        end if
+            write(9,'(a,e25.17e3)') 'Norm before gradient descent is : ', real(norm)
+            close(9)
+        else
+            
+            do j=1, total2
+                position(j)=minloc(magovrlp,1,excld)
+                excld(position(j))=.FALSE.
+            end do
+            open(unit=9,file='slt_ovrlp.csv',status="olds",access='append',iostat=ierr)
+            if(ierr/=0)then
+                write(0,"(a,i0)") "Error in opening slt_ovrlp.csv. ierr had value ", ierr
+                errorflag=1
+                return
+            end if
 
-        write(9,'(a,e25.17e3)') 'Norm is : ', real(norm)
-        do j=1, total2
-            write(9,'(e25.17e3,a,*(i0, :", "))') magovrlp(position(j)),' ', (combs2(position(j),k),k=nume,1,-1)
-        end do
+            write(9,'(a,e25.17e3)') 'Norm after gradient descent is : ', real(norm)
+            do j=total2, 1, -1 
+                write(9,'(e25.17e3,a,*(i0, :", "))') magovrlp(position(j)),' ', (combs2(position(j),k),k=nume,1,-1)
+            end do
 
-        close(9)
+            close(9)
+        end if 
         call dealloczs(cstore)
         deallocate(position,stat=ierr)
         deallocate(excld,stat=ierr)

@@ -144,6 +144,7 @@ program MainZombie
         print*,real(en%erg(1,timesteps+1))
         
         if(GDflg.eq."y")then
+            call sd_anal(zstore,nel,dvecs(1),1)
             gradients%prev_erg=real(en%erg(1,timesteps+1))
             write(6,"(a,f20.16)") "Initial energy: ", gradients%prev_erg
             allocate(chng_trk(ndet),stat=ierr)
@@ -175,7 +176,7 @@ program MainZombie
                 write(0,"(a,i0)") "Error in zombie change tracking array deallocation . ierr had value ", ierr
                 errorflag=1
             end if
-            call sd_anal(zstore,nel,dvecs(1))
+            call sd_anal(zstore,nel,dvecs(1),2)
         end if
 
         call deallocerg(en)
