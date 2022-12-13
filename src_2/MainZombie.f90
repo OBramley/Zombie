@@ -157,9 +157,7 @@ program MainZombie
             end if
          
             call final_grad(dvecs(1),haml,gradients,2,0)
-            ! print*,gradients%vars(2,:)
             
-          
             call zombie_alter(zstore,gradients,haml,elect,en,dvecs,chng_trk)
             
             GDflg='n'
@@ -177,7 +175,7 @@ program MainZombie
                 write(0,"(a,i0)") "Error in zombie change tracking array deallocation . ierr had value ", ierr
                 errorflag=1
             end if
-            call sd_anal(zstore,nel)
+            call sd_anal(zstore,nel,dvecs(1))
         end if
 
         call deallocerg(en)
