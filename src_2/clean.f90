@@ -3,12 +3,131 @@ MODULE clean
     use globvars
     use alarrays
     use zom
-    use ham
     use outputs
     use operators
     use readpars
+    use ham
 
     contains
+
+    subroutine sd_anal(zstore,nume,dvec,pass)
+
+        implicit none 
+
+        type(zombiest),dimension(:),allocatable::cstore
+        type(zombiest),dimension(:),intent(in)::zstore
+        type(dvector),intent(in)::dvec
+        integer, intent(in)::nume,pass
+        integer, allocatable, dimension(:,:)::combs,combs2
+        integer, allocatable, dimension(:)::position
+        real(kind=8), allocatable, dimension(:)::magovrlp
+        integer::j,k,l,ierr,total,total2,checker
+        complex(kind=8)::norm
+        logical,allocatable,dimension(:)::excld
+        complex(kind=8)::ovrlp1, ovrlp2
+
+        total=choose(norb,nume)
+        allocate(combs(total,nume),stat=ierr)
+        if(ierr==0)  allocate (combs2(total,nume),stat=ierr)
+        if(ierr/=0) then
+            write(0,"(a,i0)") "Error in combination matrix allocation. ierr had value ", ierr
+            errorflag=1
+            return
+        end if
+        write(6,"(a,i0)") 'Total combinations ',total
+
+
+        ! The occupational combiantions for the correct number of electrons are found 
+        call combinations(norb,nume,combs,total)
+    
+        
+        total2=0
+        do j=1, total
+            checker=0
+            do k=1,nume
+                checker=checker+modulo(combs(j,k),2)
+            end do
+            if(checker==((nume/2)-spin))then
+                total2=total2+1
+                combs2(total2,:)=combs(j,:)
+            end if
+        end do
+        write(6,"(a,i0)") 'Total combinations with correct spin ',total2
+        call alloczs(cstore,total2)
+
+        allocate(magovrlp(total2),stat=ierr)
+        if(ierr==0) allocate(position(total2),stat=ierr)
+        if(ierr==0) allocate(excld(total2),stat=ierr)
+        if(ierr/=0) then
+            write(0,"(a,i0)") "Error in magovrlp allocation. ierr had value ", ierr
+            errorflag=1
+            return
+        end if
+       
+        deallocate(combs,stat=ierr)
+   
+        do j=1, total2
+            call zomhfc(cstore(j),combs2(j,:))
+        end do
+
+        norm=(0.0d0,0.0d0)
+        magovrlp=(0.0,0.0)
+        
+        excld=.TRUE.
+        !$omp parallel do collapse(2) reduction(+:norm)
+        do j=1,total2
+            do k=1,ndet 
+                ovrlp1=overlap(cstore(j),zstore(k))
+                magovrlp(j)=magovrlp(j)+real(ovrlp1)
+                do l=1,ndet
+                    ovrlp2=overlap(zstore(l),cstore(j))
+                    norm=norm + (conjg(dvec%d(l))*dvec%d(k)*ovrlp1*ovrlp2)
+                end do
+            end do
+        end do
+        !$omp end parallel do 
+        write(6,"(a,e25.17e3)") 'The norm for states with correct spin and electrons is ',real(norm)
+        
+ 
+        if(pass.eq.1)then 
+            open(unit=9,file='slt_ovrlp.csv',status="new", iostat=ierr)
+            if(ierr/=0)then
+                write(0,"(a,i0)") "Error in opening slt_ovrlp.csv. ierr had value ", ierr
+                errorflag=1
+                return
+            end if
+
+            write(9,'(a,e25.17e3)') 'Norm before gradient descent is : ', real(norm)
+            close(9)
+        else
+            
+            do j=1, total2
+                position(j)=minloc(magovrlp,1,excld)
+                excld(position(j))=.FALSE.
+            end do
+            open(unit=9,file='slt_ovrlp.csv',status="old",access='append',iostat=ierr)
+            if(ierr/=0)then
+                write(0,"(a,i0)") "Error in opening slt_ovrlp.csv. ierr had value ", ierr
+                errorflag=1
+                return
+            end if
+
+            write(9,'(a,e25.17e3)') 'Norm after gradient descent is : ', real(norm)
+            do j=total2, 1, -1 
+                write(9,'(e25.17e3,a,*(i0, :", "))') magovrlp(position(j)),' ', (combs2(position(j),k),k=nume,1,-1)
+            end do
+
+            close(9)
+        end if 
+        call dealloczs(cstore)
+        deallocate(position,stat=ierr)
+        deallocate(excld,stat=ierr)
+        deallocate(magovrlp,stat=ierr)
+
+        return 
+
+
+    end subroutine sd_anal
 
     subroutine clean_setup(cstore,nume,cleanham,elecs,clean_ndet,zstore)
 
@@ -29,6 +148,9 @@ MODULE clean
 
         if (errorflag .ne. 0) return
 
+      
+        
+
         total=choose(norb,nume)
         allocate(combs(total,nume),stat=ierr)
         if(ierr==0)  allocate (combs2(total,nume),stat=ierr)
@@ -39,6 +161,7 @@ MODULE clean
             return
         end if
         write(6,"(a,i0)") 'Total combinations ',total
+
 
         ! The occupational combiantions for the correct number of electrons are found 
         call combinations(norb,nume,combs,total)
@@ -62,6 +185,8 @@ MODULE clean
         end do
         !$omp end do
 
+        ! This can be turn off by making combsfix=combs and totalf=total
+        ! totalf=total
         ! combsfix=combs
 
         !$OMP barrier
@@ -99,7 +224,7 @@ MODULE clean
             errorflag=1
             return
         end if
-      
+    
         deallocate(combs,stat=ierr)
         if(ierr==0)deallocate(combsfix,stat=ierr)
         if(ierr/=0) then
@@ -116,7 +241,7 @@ MODULE clean
             call zomhfc(cstoretemp(j),combs2(j,:))
         end do
         !$omp end do
-       
+    
         
         ! This section reduces the size of cleaning matrix further by finding the overlap between each cleaning 
         ! state and the biased basis. Only cleanign states with overlaps higher than the set threshold are accepted
@@ -141,7 +266,7 @@ MODULE clean
             write(6,"(a,i0)") 'Combinations with corect spin and enough contribution ',total3
             clean_ndet=total3
             !$omp end master
-              
+            
         else
             !$omp master
             clean_ndet=total2
@@ -161,7 +286,7 @@ MODULE clean
         end if
 
         call dealloczs(cstoretemp)
-     
+    
         deallocate(magovrlp,stat=ierr)
         if(ierr==0)deallocate(combs2,stat=ierr)
         if(ierr/=0) then
@@ -176,8 +301,8 @@ MODULE clean
         end do
        
         
-        call allocham(cleanham,clean_ndet)
-        call hamgen(cleanham,cstore,elecs,clean_ndet)
+        call allocham(cleanham,clean_ndet,1)
+        call hamgen(cleanham,cstore,elecs,clean_ndet,1)
         call matrixwriter(cleanham%hjk,clean_ndet,"data/clean_ham.csv")
         
         
@@ -196,10 +321,17 @@ MODULE clean
         if (errorflag .ne. 0) return
 
         zoms%dead(1:norb)=(1.0d0,0.0d0)
+        zoms%cos(1:norb)=(1.0d0,0.0d0)
+        zoms%sin(1:norb)=(0.0d0,0.0d0)
+        zoms%alive(1:norb)=(0.0d0,0.0d0)
+        zoms%phi(1:norb)=0.0
 
         do j=1, size(occ)
             zoms%alive(occ(j))=(1.0d0,0.0d0)
             zoms%dead(occ(j))=(0.0d0,0.0d0)
+            zoms%sin(occ(j))=(1.0d0,0.0d0)
+            zoms%cos(occ(j))=(0.0d0,0.0d0)
+            zoms%phi(occ(j))=0.5*pirl
         end do
 
         return
@@ -239,26 +371,35 @@ MODULE clean
 
     end subroutine cleaner
 
-    subroutine clean_read(cstore,cleanham,clean_ndet)
+    subroutine clean_read(cstore,cleanham,clean_ndet,elecs)
         
         implicit none
 
         type(zombiest),dimension(:),allocatable,intent(inout)::cstore
         type(hamiltonian), intent(inout)::cleanham
+        type(elecintrgl),intent(in)::elecs 
         integer, intent(inout):: clean_ndet
-    
+        integer::pyscfc
      
         if (errorflag .ne. 0) return
     
-
-        clean_ndet = lines_clean(clean_ndet)        
-        call alloczs(cstore,clean_ndet)
-        call read_zombie_c(cstore,clean_ndet)
-        call allocham(cleanham,clean_ndet)
-        call read_ham_c(cleanham,clean_ndet)
+        pyscfc=1
+   
+        if(pyscfc.eq.1)then
+            call pyscf_clean(cstore,clean_ndet,nel)
+            call allocham(cleanham,clean_ndet,1)
+            call hamgen(cleanham,cstore,elecs,clean_ndet,1)
+            call matrixwriter(cleanham%hjk,clean_ndet,"data/clean_ham.csv")
+        else
+            clean_ndet = lines_clean(clean_ndet)        
+            call alloczs(cstore,clean_ndet)
+            call read_zombie_c(cstore,clean_ndet)
+            call allocham(cleanham,clean_ndet,1)
+            call read_ham_c(cleanham,clean_ndet)
+        end if
 
     
-    return 
+        return 
 
     end subroutine clean_read
 
@@ -268,11 +409,13 @@ MODULE clean
         integer, intent(INOUT):: nlines
         integer:: ierr
         
+        if (errorflag .ne. 0) return
+
         ierr=0
         nlines=0
         open(unit=204, file='data/clean_ham.csv',status='old',iostat=ierr)
         if (ierr.ne.0) then
-            write(0,"(a,i0)") 'Error in opening h1ea.csv file',ierr
+            write(0,"(a,i0)") 'Error in opening clean_ham.csv file',ierr
             errorflag = 1
             return
         end if
@@ -295,6 +438,94 @@ MODULE clean
         return 
 
     end function lines_clean
+
+
+    subroutine pyscf_clean(cstore, clean_ndet,nume)
+
+        implicit none
+
+        type(zombiest),dimension(:),allocatable,intent(inout)::cstore
+        integer, intent(inout)::clean_ndet
+        integer, intent(in)::nume
+        integer, allocatable, dimension(:,:)::combs
+        integer::Line2, Line3, Line4, Line5, Line6,Line7
+        real::Line1
+        integer:: ierr, nlines,j
+
+        if (errorflag .ne. 0) return
+        ierr=0
+
+        open(unit=204, file='data/FCIconfigs_equilibrium.txt',status='old',iostat=ierr)
+        if (ierr.ne.0) then
+            write(0,"(a,i0)") 'Error in opening pyscf cleaning file ',ierr
+            errorflag = 1
+            return
+        end if
+
+        nlines=0
+        do 
+            read(204,*, iostat=ierr)
+            if(ierr<0)then
+                ! write(0,"(a,i0)") "nlines has value ", nlines
+                clean_ndet=nlines
+                close(204)
+                exit
+            else if (ierr/=0) then
+                write(0,"(a,i0)") "Error in counting pyscf cleaning file rows. ierr had value ", ierr
+                errorflag=1
+                return
+            end if
+            nlines=nlines+1
+        end do
+        ierr=0
+        print*, clean_ndet
+        call alloczs(cstore,clean_ndet)
+        allocate(combs(clean_ndet,nume),stat=ierr)
+        if (ierr.ne.0) then
+            write(0,"(a,i0)") 'Error in combination matrix allocation',ierr
+            errorflag = 1
+            return
+        end if
+      
+        open(unit=204, file='data/FCIconfigs_equilibrium.txt',status='old',iostat=ierr)
+        if (ierr.ne.0) then
+            write(0,"(a,i0)") 'Error in opening pyscf cleaning file',ierr
+            errorflag = 1
+            return
+        end if
+    
+        do j=1,clean_ndet
+            read(204,*, iostat=ierr) Line1, Line2, Line3, Line4, Line5, Line6,Line7
+            combs(j,1)=Line2
+            combs(j,2)=Line3
+            combs(j,3)=Line4
+            combs(j,4)=Line5
+            combs(j,5)=Line6
+            combs(j,6)=Line7
+        end do
+
+        close(204)
+     
+        !$omp parallel shared(combs,cstore) private(j)
+        !$omp do
+        do j=1,clean_ndet
+            combs(j,1:3)=(combs(j,1:3)*2)-1
+            combs(j,4:6)=(combs(j,4:6)*2)
+            ! print*, combs(j,:)
+        end do
+        !$omp end do
+
+        !$omp do
+        do j=1, clean_ndet
+            call zomhfc(cstore(j),combs(j,:)) 
+        end do
+        !$omp end do
+        !$omp end parallel
+   
+        return
+
+
+    end subroutine
 
 END MODULE clean
 

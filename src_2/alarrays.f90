@@ -5,6 +5,7 @@ MODULE alarrays
 
     contains
 
+
     ! Routine to allcoate 1&2 electron electron integral matrices
     subroutine allocintgrl(elecs)
 
@@ -101,15 +102,25 @@ MODULE alarrays
 
         allocate(zs%alive(norb),stat=ierr)
         if(ierr==0) allocate(zs%dead(norb), stat=ierr)
+        if(ierr==0) allocate(zs%sin(norb), stat=ierr)
+        if(ierr==0) allocate(zs%cos(norb), stat=ierr)
+        if(ierr==0) allocate(zs%phi(norb), stat=ierr)
+        if(imagflg=='y')then 
+            if(ierr==0) allocate(zs%img(norb), stat=ierr)
+            zs%img(1:norb)=0.0
+        end if
         if (ierr/=0) then
             write(0,"(a,i0)") "Error in Zombie state allocation. ierr had value ", ierr
             errorflag=1
             return
         end if
 
-        zs%alive(1:norb)=(0.0d0,0.0d0)
-        zs%dead(1:norb)=(0.0d0,0.0d0)
-
+        zs%alive(1:norb)=1
+        zs%dead(1:norb)=1
+        zs%phi(1:norb)=0.0d0
+        zs%cos(1:norb)=(0.0d0,0.0d0)
+        zs%sin(1:norb)=(0.0d0,0.0d0)
+        zs%update_num=0
         return
     end subroutine alloczf
 
@@ -136,8 +147,6 @@ MODULE alarrays
         end if
 
 
-        
-
         return 
 
     end subroutine dealloczs
@@ -153,6 +162,14 @@ MODULE alarrays
 
         deallocate(zs%alive,stat=ierr)
         if(ierr==0) deallocate(zs%dead, stat=ierr)
+        if(ierr==0) deallocate(zs%sin, stat=ierr)
+        if(ierr==0) deallocate(zs%cos, stat=ierr)
+        if(ierr==0) deallocate(zs%phi, stat=ierr)
+        if(imagflg=='y')then 
+            if(ierr==0) deallocate(zs%img, stat=ierr)
+            zs%img(1:norb)=0.0
+        end if
+
         if (ierr/=0) then
             write(0,"(a,i0)") "Error in Zombie state deallocation. ierr had value ", ierr
             errorflag=1
@@ -218,21 +235,19 @@ MODULE alarrays
             errorflag=1
             return
         end if
-  
 
-        
 
         return 
 
     end subroutine dealloczs2d
 
-    subroutine allocham(ham,size)
+    subroutine allocham(ham,size,diff_size)
 
         implicit none
 
         type(hamiltonian),intent(inout)::ham 
-
-        integer::ierr,size
+        integer,intent(in)::size,diff_size
+        integer::ierr
 
         if (errorflag .ne. 0) return
 
@@ -247,13 +262,27 @@ MODULE alarrays
             errorflag=1
             return
         end if
-
         ham%hjk(1:size,1:size)=(0.0d0,0.0d0)
         ham%ovrlp(1:size,1:size)=(0.0d0,0.0d0)
         ham%inv(1:size,1:size)=(0.0d0,0.0d0)
+        if(GDflg.eq.'y')then  
+            if(ierr==0) allocate(ham%diff_hjk(size,size,diff_size), stat=ierr)
+            if(ierr==0) allocate(ham%diff_ovrlp(size,size,diff_size), stat=ierr)
+            if(ierr==0) allocate(ham%diff_invh(size,size,size,diff_size), stat=ierr)
+            if (ierr/=0) then
+                write(0,"(a,i0)") "Error in GD Hamiltonian allocation. ierr had value ", ierr
+                errorflag=1
+                return
+            end if
+            ham%diff_hjk(1:size,1:size,1:diff_size)=0.0
+            ham%diff_ovrlp(1:size,1:size,1:diff_size)=0.0
+            ham%diff_invh(1:size,1:size,1:size,1:diff_size)=0.0
+        end if
 
-
+        return
     end subroutine allocham
+
+
 
     subroutine deallocham(ham)
 
@@ -277,14 +306,27 @@ MODULE alarrays
             return
         end if
 
+        if(GDflg.eq.'y')then  
+            if(ierr==0) deallocate(ham%diff_hjk, stat=ierr)
+            if(ierr==0) deallocate(ham%diff_ovrlp, stat=ierr)
+            if(ierr==0) deallocate(ham%diff_invh, stat=ierr)
+            if (ierr/=0) then
+                write(0,"(a,i0)") "Error in GD Hamiltonian deallocation. ierr had value ", ierr
+                errorflag=1
+                return
+            end if
+        end if
+
+        return
+
     end subroutine deallocham
 
-    subroutine allocdv(dvecs,x,length)
+    subroutine allocdv(dvecs,x,length,diff_length)
 
         implicit none
 
         type(dvector),intent(inout),allocatable,dimension(:)::dvecs
-        integer, intent(in)::x,length
+        integer, intent(in)::x,length,diff_length
         integer::j,ierr
 
         if (errorflag .ne. 0) return
@@ -307,7 +349,23 @@ MODULE alarrays
                 return
             end if
             dvecs(j)%d(1:length)=(0.0,0.0)
+            dvecs(j)%norm = 0.0d0
         end do
+
+        if(GDflg.eq.'y')then
+            allocate(dvecs(1)%d_diff(length,length,diff_length))
+            if (ierr/=0) then
+                write(0,"(a,i0)") "Error in d_diff allocation. ierr had value ", ierr
+                errorflag=1
+                return
+            end if
+            dvecs(1)%d_diff(1:length,1:length,1:diff_length)=0.0
+        end if
+
+        
+     
+        return
+
     end subroutine allocdv
 
     subroutine deallocdv(dvecs)
@@ -329,6 +387,14 @@ MODULE alarrays
             end if
         end do
 
+        if(GDflg.eq.'y')then
+            deallocate(dvecs(1)%d_diff)
+            if (ierr/=0) then
+                write(0,"(a,i0)") "Error in d_diff deallocation. ierr had value ", ierr
+                errorflag=1
+                return
+            end if
+        end if
     
         deallocate(dvecs,stat=ierr)
         if (ierr/=0) then
@@ -336,8 +402,10 @@ MODULE alarrays
             errorflag=1
             return
         end if
-  
 
+        
+        
+        return
        
     end subroutine deallocdv
 
@@ -362,7 +430,8 @@ MODULE alarrays
             errorflag=1
             return
         end if
-
+        en%erg=(0.0,0.0)
+        en%t=0.0
         return
      
     end subroutine allocerg
@@ -389,6 +458,95 @@ MODULE alarrays
         return
      
     end subroutine deallocerg
+
+    subroutine allocgrad(gradients,num,length)
+
+        implicit none
+
+        type(grad),intent(inout)::gradients
+        integer, intent(in)::num,length
+        integer::ierr
+
+        if (errorflag .ne. 0) return
+
+        ierr=0
+
+        
+        allocate(gradients%vars(num,length),stat=ierr)
+        if (ierr==0)allocate(gradients%grad_avlb(num),stat=ierr)
+        if (ierr==0)allocate(gradients%prev_mmntm(num,length),stat=ierr)
+        
+        if (ierr/=0) then
+            write(0,"(a,i0)") "Error in gradient matrix allocation. ierr had value ", ierr
+            errorflag=1
+            return
+        end if
+        gradients%prev_mmntm=0
+        gradients%vars=0
+        gradients%grad_avlb=0
+        return
+     
+    end subroutine allocgrad
+   
+    subroutine deallocgrad(gradients)
+
+        implicit none
+
+        type(grad),intent(inout)::gradients
+        integer::ierr
+
+        if (errorflag .ne. 0) return
+
+        ierr=0
+
+        
+        deallocate(gradients%vars,stat=ierr)
+        if (ierr==0)deallocate(gradients%grad_avlb,stat=ierr)
+        if (ierr==0)deallocate(gradients%prev_mmntm,stat=ierr)
+        if (ierr/=0) then
+            write(0,"(a,i0)") "Error in gradient matrix deallocation. ierr had value ", ierr
+            errorflag=1
+            return
+        end if
+
+        return
+     
+    end subroutine deallocgrad
+
+
+    subroutine value_reset(ham,dvecs,en,size,gradients)
+
+        implicit none
+        type(hamiltonian),intent(inout)::ham
+        type(dvector), dimension(:),intent(inout):: dvecs
+        type(energy),intent(inout):: en
+        type(grad),intent(inout)::gradients
+        integer,intent(in)::size
+        integer::j
+
+        ham%hjk(1:size,1:size)=(0.0d0,0.0d0)
+        ham%ovrlp(1:size,1:size)=(0.0d0,0.0d0)
+        ham%inv(1:size,1:size)=(0.0d0,0.0d0)
+        en%erg=(0.0,0.0)
+        if(gramflg.eq."n")then
+            dvecs(1)%d(1:size)=(0.0,0.0)
+            dvecs(1)%norm = 0.0d0
+        else
+            do j=1, 1+gramnum
+                dvecs(j)%d(1:size)=(0.0,0.0)
+                dvecs(j)%norm = 0.0d0
+            end do
+        end if
+        if(GDflg.eq.'y')then 
+            ham%diff_hjk(1:size,1:size,1:norb)=0.0
+            ham%diff_ovrlp(1:size,1:size,1:norb)=0.0
+            ham%diff_invh(1:size,1:size,1:size,1:norb)=0.0
+            dvecs(1)%d_diff(1:size,1:size,1:norb)=0.0
+            gradients%vars=0
+        end if 
+
+    end subroutine value_reset
+   
 
 
 

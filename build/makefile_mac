@@ -1,6 +1,7 @@
 # Makefile for use on chmlinxx computers.
 # Adapted from make file written by C. Symmonds for the MCE program which was inturn
 # made with the aid of the fmkmf utility (Copyright (c) The University of Edinburgh)
+# subsequent streamlining alterations have been made 
 
 F90=gfortran
 FFLAGS= #-fopenmp -O3
@@ -9,10 +10,10 @@ VPATH=../src_2
 
 # Link step
 
-all: Main
+all: ZOMBIE.exe
 
-Main:randgen.o vars.o alarrays.o readpars.o operators.o electrons.o zom.o ham.o outputs.o imgtp.o clean.o  MainZombie.o
-	 $(F90) $(FFLAGS) -o ZOMBIE.exe randgen.o vars.o alarrays.o readpars.o operators.o electrons.o zom.o ham.o outputs.o imgtp.o clean.o MainZombie.o $(FLINKS)
+ZOMBIE.exe:randgen.o vars.o alarrays.o readpars.o operators.o electrons.o zom.o ham.o outputs.o imgtp.o clean.o infnan.o grad_d.o gradient_descent.o MainZombie.o
+		 $(F90) $(FFLAGS) -o $@ $^ $(FLINKS)
 
 
 # Compile steps
@@ -20,6 +21,9 @@ Main:randgen.o vars.o alarrays.o readpars.o operators.o electrons.o zom.o ham.o 
 randgen.o:randgen.f
 	 $(F90) $(FFLAGS) -c $<
 
+infnan.o:infnan.f90 
+	 $(F90) $(FFLAGS) -c $<
+	 
 vars.o:vars.f90
 	 $(F90) $(FFLAGS) -c $<
 
@@ -44,13 +48,19 @@ ham.o:ham.f90 vars.o alarrays.o operators.o
 outputs.o:outputs.f90 vars.o
 	 $(F90) $(FFLAGS) -c $<
 
-imgtp.o:imgtp.f90 vars.o alarrays.o
+grad_d.o:grad_d.f90 vars.o
+	 $(F90) $(FFLAGS) -c $<
+
+imgtp.o:imgtp.f90 vars.o alarrays.o grad_d.o
+	 $(F90) $(FFLAGS) -c $<
+
+gradient_descent.o:gradient_descent.f90 vars.o alarrays.o ham.o operators.o grad_d.o imgtp.o outputs.o
 	 $(F90) $(FFLAGS) -c $<
 
 clean.o:clean.f90 vars.o alarrays.o zom.o ham.o operators.o outputs.o readpars.o
 	 $(F90) $(FFLAGS) -c $<
 
-MainZombie.o:MainZombie.f90 vars.o alarrays.o readpars.o operators.o electrons.o zom.o ham.o outputs.o imgtp.o clean.o
+MainZombie.o:MainZombie.f90 vars.o alarrays.o readpars.o operators.o electrons.o zom.o ham.o outputs.o imgtp.o clean.o infnan.o grad_d.o gradient_descent.o
 	 $(F90) $(FFLAGS) -c $<
 
 # This entry allows you to type " make clean " to get rid of

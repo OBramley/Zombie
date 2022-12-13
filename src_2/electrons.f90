@@ -119,6 +119,7 @@ subroutine spattospin1(elecs,nlines)
         do k=1, nspao
             jj=(j*2)-1
             kk=(k*2)-1
+            ! if(h1ea(j,k).ne.0) h1ea(j,k)=1
             elecs%h1ei(jj,kk)=h1ea(j,k)
             elecs%h1ei(jj+1,kk+1)=elecs%h1ei(jj,kk)
         end do
@@ -183,6 +184,7 @@ subroutine spattospin2(elecs,nlines)
                 ll=(2*l)-1
                 do m=1, nspao
                     mm=(2*m)-1
+                    ! if(h2ea(j,k,l,m).ne.0) h2ea(j,k,l,m)=1
                     elecs%h2ei(jj,ll,kk,mm)=h2ea(j,k,l,m)
                     elecs%h2ei(jj+1,ll,kk+1,mm)=h2ea(j,k,l,m)
                     elecs%h2ei(jj,ll+1,kk,mm+1)=h2ea(j,k,l,m)
@@ -194,6 +196,7 @@ subroutine spattospin2(elecs,nlines)
     !$omp end do
     !$omp end parallel
 
+    
     deallocate(h2ea, stat=ierr)
     if (ierr/=0) then
         write(0,"(a,i0)") "Error in h2ea deallocation. ierr had value ", ierr

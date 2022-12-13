@@ -29,14 +29,14 @@ elif(inputs.run['nodes']<1):
     sys.exit("Not enough nodes selected. Must be 1 or greater")
 elif(inputs.run['nodes']>100):
     sys.exit("Too many nodes. Maximum of 100 simultaneous submisions")
-elif(inputs.run['cores']>8):
-    sys.exit("Too many cores selected. Maximum of 8 available")
+elif(inputs.run['cores']>30):
+    sys.exit("Too many cores selected. Maximum of 20 available")
 elif(inputs.run['cores']<1):
     sys.exit("Not enough cores selected. Must be 1 or greater")
 elif(inputs.zombs['norb']<1):
     sys.exit("Not enough orbitals. Must be 1 or greater")
-elif(inputs.zombs['ndet']<2):
-    sys.exit("Not enough zombie states. Must be 2 or greater")
+# elif(inputs.zombs['ndet']<2):
+    # sys.exit("Not enough zombie states. Must be 2 or greater")
 elif(inputs.zombs['zomtyp'] not in {'ran','HF','bb','hf'}):
     sys.exit("Type of zombie state must be ran, HF or bb")
 elif(inputs.run['elecs'] not in {'pyscf','mol','no'}):
@@ -59,14 +59,13 @@ elif(isinstance(inputs.run['gramnum'],int)==False):
     sys.exit("Number of states to be investiated must be an integer")
 elif(inputs.run['clean'] not in {'y','n','f'}):
     sys.exit("Setting cleaning on or off must be 'y' or 'n' or 'f' (to clean from a previously generated file)")
-elif(isinstance(inputs.zombs['bb_imprv'],int)==False):
-    sys.exit("bb_imprv must be an integer 0 for no improvement loops or greater if wanting to improve the bias")
+
 
 if(inputs.zombs['zomtyp']=='HF'):
     ndetcheck=0
-    for i in range(inputs.zombs['norb']+1):
-        ndetcheck=ndetcheck+math.comb(inputs.zombs['norb'],i)
-    if(inputs.zombs['zomtyp']!=ndetcheck):
+    for i in range((inputs.zombs['norb']*2)+1):
+        ndetcheck=ndetcheck+math.comb(inputs.zombs['norb']*2,i)
+    if(inputs.zombs['ndet']!=ndetcheck):
         sys.exit('A Hartree Fock Basis for',inputs.zombs['norb'], 'orbitals should have', ndetcheck, 'basis functions')
 
 if(inputs.run['elecs']=='mol'):
@@ -98,14 +97,12 @@ if(inputs.run['gram']=='y'):
     elif(inputs.run['gramnum']<2):
         sys.exit("If using Gram Schmidt more than one state must investigated")
 
-if((inputs.zombs['bb_imprv']>=1)and(inputs.zombs['zomtyp']!='bb')):
-    sys.exit('Biased basis improvement can only be used when the basis type is set to bb')
 
 print("Arguments checked")
 # Check if on HPC
 Hostname=socket.gethostname()
 if((Hostname==("login2.arc4.leeds.ac.uk"))or(Hostname==("login1.arc4.leeds.ac.uk"))):
-    HPCFLG=1
+    HPCFLG=0
 else:
     HPCFLG=0
 
@@ -166,19 +163,12 @@ if(inputs.run['language']=="python"):
         f.close()
         subprocess.call(['qsub',file1])
     else:
-        # if(inputs.run['cores']!=1):
-        #     os.environ["OMP_NUM_THREADS"]=str(inputs.run['cores'])
-        # number=random.randint(99999,1000000)
-        # file1="zombie"+str(number)+".sh"
-        # f=open("../Run/"+file1,"w")
-        # f.write("python " + EXDIR1+"/main.py")
-        # f.close()
-        # subprocess.run(['chmod', 'u+x', '../Run/zombie'+str(number)+'.sh'])
         subprocess.run(['python', 'main.py'])
 
 elif(inputs.run['language']=="fortran"):
     shutil.copy2("inputs.py",EXDIR1)
     shutil.copy2("graph.py",EXDIR1)
+    shutil.copy2("restart.py",EXDIR1)
     if((inputs.run['elecs']=='no')):
         shutil.copytree('integrals',EXDIR1+"/integrals")
     elif((inputs.run['elecs']=='mol')):
@@ -235,7 +225,7 @@ elif(inputs.run['language']=="fortran"):
 
     with open(EXDIR1+'/rundata.csv','w',newline='')as file:
         writer = csv.writer(file)
-        writer.writerow([inputs.run['zomgen'],inputs.run['hamgen'],inputs.run['imagprop'],inputs.run['beta'],inputs.run['timesteps'],inputs.run['clean'],inputs.run['gram'],inputs.run['gramnum']])
+        writer.writerow([inputs.run['zomgen'],inputs.run['hamgen'],inputs.run['imagprop'],inputs.run['beta'],inputs.run['timesteps'],inputs.run['clean'],inputs.run['gram'],inputs.run['gramnum'],inputs.run['grad'],'n'])
         writer.writerow(inputs.zombs.values())
         writer.writerow([inputs.run['hamfile'],inputs.run['ovrlfile'],inputs.run['cleanham']])
 
@@ -244,33 +234,33 @@ elif(inputs.run['language']=="fortran"):
     os.chdir("../build")
     if(inputs.run['cores']==1):
         if(HPCFLG==1):
-            shutil.copy2("../build/makefile_arc","../build/Makefile")
-            subprocess.run(["make"])
+            if(inputs.run['GPU']=='y'):
+                shutil.copy2("../build/makefile_gpu","../build/Makefile")
+                subprocess.run(["make"])
+            else:
+                shutil.copy2("../build/makefile_arc","../build/Makefile")
+                subprocess.run(["make"])
         else:
             shutil.copy2("../build/makefile_mac","../build/Makefile")
             subprocess.run(["make"])
     elif(inputs.run['cores']>1):
         if(HPCFLG==1):
-            shutil.copy2("../build/makefile_arc_omp","../build/Makefile")
-            subprocess.run(["make"])
+            if(inputs.run['GPU']=='y'):
+                shutil.copy2("../build/makefile_gpu","../build/Makefile")
+                subprocess.run(["make"])
+            else:
+                shutil.copy2("../build/makefile_arc_omp","../build/Makefile")
+                subprocess.run(["make"])
         else:
             shutil.copy2("../build/makefile_mac_omp","../build/Makefile")
             subprocess.run(["make"])
     
-      
+ 
     shutil.copy2("ZOMBIE.exe",EXDIR1)
 
-    # if(HPCFLG==1):
-    #     shutil.copy2("../build/dmake_arc","../build/Makefile")
-    #     subprocess.run(["make"])
-    # else:
-    #     shutil.copy2("../build/dmake","../build/Makefile")
-    #     subprocess.run(["make"])
-
-    # shutil.copy2("d_check.exe",EXDIR1)
-
+    
     os.chdir(EXDIR1)
-
+   
     if(HPCFLG==1):
         if(inputs.run['cores']!=1):
             os.environ["OMP_NUM_THREADS"]=str(inputs.run['cores'])
@@ -280,8 +270,11 @@ elif(inputs.run['language']=="fortran"):
         f.write("#$ -cwd -V \n")
         if(inputs.run['cores']!=1):
             f.write("#$ -pe smp "+str(inputs.run['cores'])+" \n") #Use shared memory parallel environemnt 
+        if(inputs.run['GPU']=='y'):
+            f.write("#$ -l coproc_v100=1 \n")
+            f.write("#$ -P feps-gpu \n")
         f.write("#$ -l h_rt="+inputs.run['runtime']+"\n")
-        f.write("#$ -l h_vmem=12G \n")
+        f.write("#$ -l h_vmem=4G \n")
         f.write("module add mkl \n")
         # f.write('time ./d_check.exe')
         f.write('time ./ZOMBIE.exe')

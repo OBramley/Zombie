@@ -1,21 +1,22 @@
 MODULE imgtp
     use globvars
     use alarrays
-
+    use grad_d
     contains
 
     ! Routine for imaginary time propagation
-    subroutine imgtime_prop(dvecs,en,ham)
+    subroutine imgtime_prop(dvecs,en,haml,diff_state)
 
         implicit none
 
         type(dvector),dimension(:),intent(inout)::dvecs
         type(energy),intent(inout)::en
-        type(hamiltonian),intent(in)::ham
+        type(hamiltonian),intent(in)::haml
+        integer,intent(in)::diff_state
         integer::j,k,states
         real(kind=8)::p
-        real::db
-        DOUBLE PRECISION, external::ZBQLU01,ZBQLUAB
+        real::db,r
+        !DOUBLE PRECISION, external::ZBQLU01,ZBQLUAB
 
         if (errorflag .ne. 0) return
 
@@ -25,38 +26,44 @@ MODULE imgtp
                 if(zst=='HF') then
                     do k=1, ndet
                     ! k=int(ZBQLUAB(1,ndet))
-                        p=ZBQLU01(1)
+                        call random_number(r)
+                        p=r !ZBQLU01(1)
                         dvecs(j)%d(k)=cmplx(p,0.0,kind=8)
                     end do
                 end if
+                
             else if(imagflg=='y') then
                 dvecs(j)%d(j)=(1.0,1.0)
              end if
         end do
-
+       
+       
         states=1
         if(gramflg.eq."y")then
             states=gramnum+1
-            call gs(dvecs,ham%ovrlp)
-        end if
-
+            call gs(dvecs,haml,diff_state)
+        else
+            call d_norm(dvecs(1),haml,0,diff_state)
+        end if 
         db=beta/timesteps
-
-        dvecs(1)%d=(dvecs(1)%d)/sqrt(zabs(dot_product((dvecs(1)%d),matmul(ham%ovrlp,(dvecs(1)%d)))))
+       
     
         do j=1,timesteps+1
             en%t(j)=db*(j-1)
-            !$omp parallel shared(en,j,ham,dvecs) private(k)
+            !$omp parallel shared(en,j,haml,dvecs) private(k)
             !$omp do
             do k=1,states
-                en%erg(k,j)=ergcalc(ham%hjk,dvecs(k)%d)
-                call timestep(ham%kinvh,ham%ovrlp,dvecs(k),db)
+                en%erg(k,j)=ergcalc(haml%hjk,dvecs(k)%d)
+                call timestep(haml,dvecs(k),db,diff_state)
             end do
             !$omp end do
             !$omp end parallel
             if(gramflg.eq."y")then
-                call gs(dvecs,ham%ovrlp)
+                call gs(dvecs,haml,diff_state)
+            else
+                call d_norm(dvecs(1),haml,1,diff_state)
             end if
+   
         end do
 
         return
@@ -74,7 +81,6 @@ MODULE imgtp
       
         
         if (errorflag .ne. 0) return
-        
         !$omp parallel
         !$omp workshare
         result=dot_product(dvec,matmul(bham,dvec))
@@ -82,74 +88,102 @@ MODULE imgtp
         !$omp end workshare
         !$omp end parallel
         return
-
+       
     end function ergcalc
 
+    subroutine d_norm(dvec,haml,step,diff_state)
+
+        implicit none
+        type(dvector),intent(inout)::dvec
+        type(hamiltonian),intent(in)::haml
+        integer,intent(in)::step,diff_state
+        real(kind=8)::norm
+
+       
+        !$omp parallel 
+        !$omp workshare
+        norm=abs(dot_product((dvec%d),matmul(haml%ovrlp,(dvec%d))))
+        norm=sqrt(norm)
+        !$omp end workshare
+        !$omp end parallel
+       
+        dvec%norm=norm
+        if(GDflg.eq.'y')then
+            call d_normalise_diff(dvec,haml,step,diff_state)
+        end if
+        
+        dvec%d=dvec%d/norm
+        return
+    
+    end subroutine d_norm
+
+
     ! Takes one timestep
-    subroutine timestep(kinvh,kover,dvecs,db)
+    subroutine timestep(haml,dvec,db,diff_state) 
 
         implicit none
 
-        type(dvector),intent(inout)::dvecs
-        complex(kind=8),intent(in),dimension(:,:)::kinvh,kover
+        type(dvector),intent(inout)::dvec
+        type(hamiltonian),intent(in)::haml
         real,intent(in)::db
-        complex(kind=8),dimension(ndet)::ddot,temp
-        real(kind=8)::norm
+        integer,intent(in)::diff_state
+        complex(kind=8),dimension(ndet)::ddot
+   
 
         if (errorflag .ne. 0) return
-
+        if(GDflg.eq.'y')then
+            call timestep_diff(dvec,haml,db,diff_state)
+        end if
+   
         !$omp parallel 
         !$omp workshare
-        ddot= -matmul((kinvh),(dvecs%d))
-        dvecs%d=dvecs%d+(db*ddot)
-        temp=matmul(kover,(dvecs%d))
-        norm=zabs(dot_product((dvecs%d),temp))
-        norm=1/sqrt(norm)
-        dvecs%d=norm*dvecs%d
+        ddot= -matmul((haml%kinvh),(dvec%d))
+        dvec%d=dvec%d+(db*ddot)
         !$omp end workshare
         !$omp end parallel
-
+     
         return
 
     end subroutine timestep
 
     !Gram-Schmidt orthogonalisation 
-    subroutine gs(dvecs,kover)
+    subroutine gs(dvecs,haml,diff_state)
 
         implicit none
         type(dvector), intent(inout),dimension(:)::dvecs
-        complex(kind=8),intent(in),dimension(:,:)::kover
+        type(hamiltonian),intent(in)::haml
+        integer,intent(in)::diff_state
         type(dvector), allocatable,dimension(:)::dvecs_copy
-        complex(kind=8)::numer,den,norm
-        complex(kind=8),dimension(ndet)::temp
+        complex(kind=8)::numer,den
+        ! complex(kind=8),dimension(ndet)::temp
         integer::states,j,k
 
         if (errorflag .ne. 0) return
     
         states = gramnum+1
-        call allocdv(dvecs_copy,states,ndet)
+        call allocdv(dvecs_copy,states,ndet,norb)
         
-        do j=1, states
-            dvecs_copy(j)%d(:)=dvecs(j)%d(:)
-        end do
-
+        ! do j=1, states
+        !     dvecs_copy(j)%d(:)=dvecs(j)%d(:)
+        ! end do
+        dvecs_copy=dvecs
         do j=2,states
             do k=1, j-1
-                temp=matmul(kover,dvecs_copy(k)%d)
-                numer = dot_product(dvecs_copy(j)%d,temp)
-                den  = dot_product(dvecs_copy(k)%d,temp)
+                numer=dot_product(dvecs(j)%d,matmul(haml%ovrlp,dvecs_copy(k)%d))
+                den=dot_product(dvecs_copy(k)%d,matmul(haml%ovrlp,dvecs_copy(k)%d))
                 dvecs_copy(j)%d = dvecs_copy(j)%d - (dvecs_copy(k)%d*(numer/den))
             end do
         end do
 
         do j=1,states
-            temp=matmul(kover,dvecs_copy(j)%d)
-            norm = dot_product(dvecs_copy(j)%d,temp)
-            norm = 1/sqrt(norm)
-            dvecs_copy(j)%d = dvecs_copy(j)%d*norm
-            dvecs(j)%d(:)=dvecs_copy(j)%d(:)
+            call d_norm(dvecs_copy(j),haml,1,diff_state)
+            ! temp=matmul(kover,dvecs_copy(j)%d)
+            ! norm = dot_product(dvecs_copy(j)%d,temp)
+            ! norm = 1/sqrt(norm)
+            ! dvecs_copy(j)%d = dvecs_copy(j)%d*norm
+            
         end do
-
+        dvecs=dvecs_copy
         call deallocdv(dvecs_copy)
 
         return

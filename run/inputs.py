@@ -19,10 +19,9 @@ run={
     'language':'fortran',
 
     # What is the name of the run
-    'runfolder':'normalisation_d',
-
+    'runfolder':'li_newham',
     # Amount of time to request on HPC 
-    'runtime': "24:00:00",
+    'runtime': "48:00:00",
 
     'nodes':1,
 
@@ -33,7 +32,7 @@ run={
 
     # Name of file where any prior generated results are placed so the Fortran 
     # program can access them and continue a run
-    'datafile':'fix2',
+    'datafile':'data',
 
     # 1 and 2 electron integrals can be calcualted by PySCF by the program
     # or they can be inputed as a seperate file at the moment only from MOLPRO
@@ -60,9 +59,9 @@ run={
     # the Zombie state Hamiltonian. Takes input 'y' or 'n'.
     'imagprop':'y',
 
-    'beta':200,
+    'beta':500,
 
-    'timesteps':2000,
+    'timesteps':1000,
 
     # Do you want the starting energy to be the HF energy
     # Takes input 'y' or 'n' and then a number to defined the number of electrons
@@ -72,7 +71,7 @@ run={
     # Do you want to clean after propagation takes 'y', 'n' or 'f' to use a previosuly generated
     # cleaning hamiltonian and zombie state files
     'clean':'n',
-    'cleanham':'clean_ham.csv',
+    'cleanham':'FCIconfigs_equilibrium.txt',
     'cleanzom':'BH_clean_zombie_states.pkl', 
 
     # Do you want to find other energy states other than the ground state. If so turn on 
@@ -80,13 +79,19 @@ run={
     # 'y' or 'n' and an integer number note in the python code gramnum=1 will not find an excited state just a 
     # single ground state. But gramnum=1 will find a single excited state in the fortran code.
     'gram':'n',
-    'gramnum':4
+    'gramnum':4,
+
+    # Gradient descent flag takes input 'y' or 'n'. Only implemented in the fortran version 
+    'grad':'y',
+
+    #GPU flag
+    'GPU':'n'
 }
 
 
 zombs={
     # Number of orbitals
-    'norb':19,
+    'norb':5,
 
     # Number of electrons in the molecule
     'nel':6,
@@ -101,10 +106,6 @@ zombs={
     # Type of zombie states. Random (ran), Hartree Fock (HF) or biased (bb)
     'zomtyp':'bb',
     
-    # Biased basis improvement if 0 no loops to improve biased > 0 number of loops to improve the basis
-
-    'bb_imprv':0,
-
     # Make the first Zombie state the RHF det? Takes y or n
     'rhf_1':'y',
 
@@ -112,31 +113,41 @@ zombs={
     'imagflg':'n'
 }
 
-# Parameters for the biasing protocol
-# The biasing method uses sampling of a trasformation of tanh graph
-# Note no paramter chekcing has been implemented for these values yet
-zom_bias={
-    # Number of ocuupied spin orbitals
-    # THE NUMBER OF SPIN ORBITALS IS HALF THE NUMBER OF ELECTRONS
-    'alive':2,
-    # Alive aplitude of 1st spin orbital
-    'alive_start':0.999,
-    # Alive aplitude of last "alive" orbital
-    'alive_end':0.175,
-    # Number of spin orbitals approximately 50/50 alive/dead aplitudes
-    'mid':0,
-    # Alive aplitude of 1st dead spin orbtial
-    'dead_start':0.351,
-    # Alive aplitude of last spin orbital
-    'dead_end':0.120
+# pyscf={
+#      # The units the geometry of the molecule is set up in
+#     'units':'Angstrom',
+#      # The geometry of the molecule being investigated
+#     'atoms': 'B 0 0 0; H 0 0 4.0',
+#     # The type of basis used to generate the 1 and 2 electron integrals
+#     'bs' : '6-31g**',
+#     # How verbose do you want the PyScf output to be in your terminal?
+#     'verbosity' : 4,
+#     'symmetry' :True,
+#     'spin':0,
+#     'charge':0,
+#     'symmetry_subgroup' : 0 #0 is code for A1 point group
+# }
 
-}
+# pyscf={
+#      # The units the geometry of the molecule is set up in
+#     'units':'Angstrom',
+#      # The geometry of the molecule being investigated
+#     'atoms': 'B 0 0 0; H 0 0 1.2324',
+#     # The type of basis used to generate the 1 and 2 electron integrals
+#     'bs' : '6-31g**',
+#     # How verbose do you want the PyScf output to be in your terminal?
+#     'verbosity' : 4,
+#     'symmetry' :True,
+#     'spin':0,
+#     'charge':0,
+#     'symmetry_subgroup' : 0 #0 is code for A1 point group
+# }
 
 pyscf={
      # The units the geometry of the molecule is set up in
-    'units':'Angstrom',
+    'units':'Bohr',
      # The geometry of the molecule being investigated
-    'atoms': 'B 0 0 0; H 0 0 1.2324',
+    'atoms': 'Li 0 0 0; Li 0 0 6',
     # The type of basis used to generate the 1 and 2 electron integrals
     'bs' : '6-31g**',
     # How verbose do you want the PyScf output to be in your terminal?
@@ -149,11 +160,11 @@ pyscf={
 
 # pyscf={
 #      # The units the geometry of the molecule is set up in
-#     'units':'Bohr',
+#     'units':'Angstrom',
 #      # The geometry of the molecule being investigated
-#     'atoms': 'Li 0 0 0; Li 0 0 6',
+#     'atoms': 'N 0 0 0; N 0 0 1.094',
 #     # The type of basis used to generate the 1 and 2 electron integrals
-#     'bs' : '6-31g**',
+#     'bs' : 'cc-pVDZ',
 #     # How verbose do you want the PyScf output to be in your terminal?
 #     'verbosity' : 4,
 #     'symmetry' :True,

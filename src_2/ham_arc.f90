@@ -239,7 +239,7 @@ MODULE ham
         temp=cmplx(0.0,0.0)
         
         if(equal.lt.4)then
-            !$omp parallel do simd collapse(2) &
+            !$omp parallel do  collapse(2) &
             !$omp & private(j,k,l,prod,chng_prod,temp_prod,zomt) &
             !$omp & shared(h1ei,occupancy,z2l,zs1sin,zs1cos,temp,zs2sin,zs2cos,equal,h1etot_diff)
             do j=1, len
@@ -314,9 +314,9 @@ MODULE ham
                     end if
                 end do
             end do
-            !$omp end parallel do simd         
+            !$omp end parallel do          
         else
-            !$omp parallel do simd collapse(2) &
+            !$omp parallel do collapse(2) &
             !$omp & private(j,k,zomt) shared(h1ei,occupancy,z2l,zs1sin,zs1cos,temp)
             do j=1, len
                 do k=1, len
@@ -329,8 +329,8 @@ MODULE ham
                     end if
                 end do
             end do
-            !$omp end parallel do simd
-        end if
+            !$omp end parallel do 
+        end if 
 
         do j=1, norb
             do k=1, norb
@@ -486,7 +486,7 @@ MODULE ham
                 CYCLE 
             end if
             
-            !$omp parallel do simd &
+            !$omp parallel do  &
             !$omp & private(gmax,hmin,gg,hh,p,vmult) shared(z1jk,z2l,tot)
             do l=jspin, len, 2
                 if(zs2sin(l)==(0.0,0.0))then
@@ -539,7 +539,7 @@ MODULE ham
                     end if
                 end if
             end do
-            !$omp end parallel do simd
+            !$omp end parallel do
         end do
 
 
@@ -644,7 +644,7 @@ MODULE ham
         end do
         !!$omp end do
         !$omp barrier
-        !$omp do simd collapse(2)
+        !$omp do collapse(2)
         do j=1,norb
             do k=1, norb
                 occupancy_2an(j,k,:,:)=occupancy_an(j,:,:)
@@ -1215,32 +1215,30 @@ MODULE ham
             allocate(temp(norb))
             allocate(bra_prod(norb))
             bra_prod=real(conjg(zs1cos)*zs2sin)-real(conjg(zs1sin)*zs2cos)
-            !!$omp target teams distribute parallel do simd &
-            !!$omp map(to:prod,bra_prod) map(tofrom:diff_overlap_2) map(alloc:temp(norb)) &
-            !$omp parallel do simd shared(prod,bra_prod) private(temp)
+         
+            !$omp parallel do  shared(prod,bra_prod) private(temp)
             do j=1,norb
                 temp=prod
                 temp(j)=bra_prod(j)
                 diff_overlap_2(j)=product(temp)
             end do
-            !$omp end parallel do simd  
-            !!$omp end target teams distribute parallel do simd  
+            !$omp end parallel do   
+         
             deallocate(bra_prod)
             deallocate(temp)
         else if(dtype.eq.3)then
             allocate(ket_prod(norb))
             allocate(temp2(norb))
             ket_prod=real(conjg(zs1sin)*zs2cos)-real(conjg(zs1cos)*zs2sin)
-            !!$omp target teams distribute parallel do simd &
-            !!$omp map(to:prod,ket_prod) map(tofrom:diff_overlap_2) map(alloc:temp2(norb)) &
-            !$omp parallel do simd shared(prod,ket_prod) private(temp2)
+          
+            !$omp parallel do  shared(prod,ket_prod) private(temp2)
             do j=1,norb
                 temp2=prod
                 temp2(j)=ket_prod(j)
                 diff_overlap_2(j)=product(temp2)
             end do
-            !$omp end parallel do simd  
-            !!$omp end target teams distribute parallel do simd  
+            !$omp end parallel do   
+           
             deallocate(ket_prod)
             deallocate(temp2)
         end if
