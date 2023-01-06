@@ -77,11 +77,11 @@ MODULE clean
         !$omp parallel do collapse(2) reduction(+:norm)
         do j=1,total2
             do k=1,ndet 
-                ovrlp1=overlap(cstore(j),zstore(k))
+                ovrlp1=overlap(cstore(j),zstore(k))*dvec%d(k)
                 magovrlp(j)=magovrlp(j)+real(ovrlp1)
                 do l=1,ndet
                     ovrlp2=overlap(zstore(l),cstore(j))
-                    norm=norm + (conjg(dvec%d(l))*dvec%d(k)*ovrlp1*ovrlp2)
+                    norm=norm + (conjg(dvec%d(l))*ovrlp1*ovrlp2)
                 end do
             end do
         end do

@@ -19,13 +19,13 @@ run={
     'language':'fortran',
 
     # What is the name of the run
-    'runfolder':'li_newham',
+    'runfolder':'LI_complete',
     # Amount of time to request on HPC 
     'runtime': "48:00:00",
 
     'nodes':1,
 
-    'cores':4,
+    'cores':1,
 
     # Set the numpy random seed for Zombie state generation
     'seed':1,
@@ -82,7 +82,7 @@ run={
     'gramnum':4,
 
     # Gradient descent flag takes input 'y' or 'n'. Only implemented in the fortran version 
-    'grad':'y',
+    'grad':'n',
 
     #GPU flag
     'GPU':'n'
@@ -101,10 +101,10 @@ zombs={
     'spin':0,
 
     # Number of Zombie states
-    'ndet':10, 
+    'ndet':1024, 
 
     # Type of zombie states. Random (ran), Hartree Fock (HF) or biased (bb)
-    'zomtyp':'bb',
+    'zomtyp':'ran',
     
     # Make the first Zombie state the RHF det? Takes y or n
     'rhf_1':'y',
