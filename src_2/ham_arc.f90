@@ -316,7 +316,7 @@ MODULE ham
             end do
             !$omp end parallel do          
         else
-            !$omp parallel do  collapse(2) &
+            !$omp parallel do collapse(2) &
             !$omp & private(j,k,zomt) shared(h1ei,occupancy,z2l,zs1sin,zs1cos,temp)
             do j=1, len
                 do k=1, len
@@ -330,7 +330,7 @@ MODULE ham
                 end do
             end do
             !$omp end parallel do 
-        end if
+        end if 
 
         do j=1, norb
             do k=1, norb

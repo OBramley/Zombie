@@ -132,18 +132,19 @@ program MainZombie
 
         if(gramflg.eq."n")then
             write(stateno,"(i4.4)")k
-            call dvec_writer(dvecs(1)%d,ndet,0,k)
-            call energywriter(en%t,en%erg(1,:),"energy.csv",0,k)
+            call dvec_writer(dvecs(1)%d,ndet,0)
+            call energywriter(en%t,en%erg(1,:),"energy.csv",0)
         else if(gramflg.eq."y")then
             do j=1, 1+gramnum
                 write(stateno,"(i4.4)")j
-                call dvec_writer(dvecs(j)%d,ndet,j,k)
-                call energywriter(en%t,en%erg(j,:),"energy_state_"//trim(stateno)//".csv",j,k)
+                call dvec_writer(dvecs(j)%d,ndet,j)
+                call energywriter(en%t,en%erg(j,:),"energy_state_"//trim(stateno)//".csv",j)
             end do
         end if
         print*,real(en%erg(1,timesteps+1))
         
         if(GDflg.eq."y")then
+            call sd_anal(zstore,nel,dvecs(1),1)
             gradients%prev_erg=real(en%erg(1,timesteps+1))
             write(6,"(a,f20.16)") "Initial energy: ", gradients%prev_erg
             allocate(chng_trk(ndet),stat=ierr)
@@ -157,9 +158,7 @@ program MainZombie
             end if
          
             call final_grad(dvecs(1),haml,gradients,2,0)
-            ! print*,gradients%vars(2,:)
             
-          
             call zombie_alter(zstore,gradients,haml,elect,en,dvecs,chng_trk)
             
             GDflg='n'
@@ -169,7 +168,7 @@ program MainZombie
             dvecs(1)%d=(0.0,0.0)
             call imgtime_prop(dvecs,en,haml,0)
             write(6,"(a,f21.16)") "Final energy: ", real(en%erg(1,timesteps+1))
-            call energywriter(en%t,en%erg(1,:),"energy_final.csv",0,1)
+            call energywriter(en%t,en%erg(1,:),"energy_final.csv",0)
             call matrixwriter(haml%hjk,ndet,"data/ham_final.csv")
             call matrixwriter(haml%ovrlp,ndet,"data/ovlp_final.csv")
             deallocate(chng_trk,stat=ierr)
@@ -177,6 +176,7 @@ program MainZombie
                 write(0,"(a,i0)") "Error in zombie change tracking array deallocation . ierr had value ", ierr
                 errorflag=1
             end if
+            call sd_anal(zstore,nel,dvecs(1),2)
         end if
 
         call deallocerg(en)

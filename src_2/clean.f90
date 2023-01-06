@@ -10,68 +10,124 @@ MODULE clean
 
     contains
 
-    ! subroutine sd_anal()
+    subroutine sd_anal(zstore,nume,dvec,pass)
 
-    !     implicit none 
+        implicit none 
 
-    !     type(zombiest),dimension(:),allocatable,intent(inout)::cstore
-    !     type(hamiltonian), intent(inout)::cleanham
-    !     integer, intent(inout)::clean_ndet
-    !     type(elecintrgl),intent(in)::elecs 
-    !     type(zombiest),dimension(:),intent(in)::zstore
-    !     integer, intent(in)::nume
-    !     type(zombiest),dimension(:),allocatable::cstoretemp
-    !     integer, allocatable, dimension(:,:)::combs,combs2,combsfix
-    !     integer, allocatable, dimension(:)::magovrlp
-    !     integer::j,k,ierr,total,total2,total3,totalf,checker
-    !     complex(kind=8)::magnitude
+        type(zombiest),dimension(:),allocatable::cstore
+        type(zombiest),dimension(:),intent(in)::zstore
+        type(dvector),intent(in)::dvec
+        integer, intent(in)::nume,pass
+        integer, allocatable, dimension(:,:)::combs,combs2
+        integer, allocatable, dimension(:)::position
+        real(kind=8), allocatable, dimension(:)::magovrlp
+        integer::j,k,l,ierr,total,total2,checker
+        complex(kind=8)::norm
+        logical,allocatable,dimension(:)::excld
+        complex(kind=8)::ovrlp1, ovrlp2
 
-    !     total=choose(norb,nume)
-    !     allocate(combs(total,nume),stat=ierr)
-    !     if(ierr==0)  allocate (combs2(total,nume),stat=ierr)
-    !     if(ierr==0)  allocate (combsfix(total,nume),stat=ierr)
-    !     if(ierr/=0) then
-    !         write(0,"(a,i0)") "Error in combination matrix allocation. ierr had value ", ierr
-    !         errorflag=1
-    !         return
-    !     end if
-    !     write(6,"(a,i0)") 'Total combinations ',total
+        total=choose(norb,nume)
+        allocate(combs(total,nume),stat=ierr)
+        if(ierr==0)  allocate (combs2(total,nume),stat=ierr)
+        if(ierr/=0) then
+            write(0,"(a,i0)") "Error in combination matrix allocation. ierr had value ", ierr
+            errorflag=1
+            return
+        end if
+        write(6,"(a,i0)") 'Total combinations ',total
 
 
-    !     ! The occupational combiantions for the correct number of electrons are found 
-    !     call combinations(norb,nume,combs,total)
+        ! The occupational combiantions for the correct number of electrons are found 
+        call combinations(norb,nume,combs,total)
+    
         
-     
-    !     do j=1, total
-    !         checker=0
-    !         do k=1,nume
-    !             checker=checker+modulo(combs(j,k),2)
-    !         end do
-    !         if(checker==((nume/2)-spin))then
-    !             total2=total2+1
-    !             combs2(total2,:)=combsfix(j,:)
-    !         end if
-    !     end do
-    
-    !     call alloczs(cstoretemp,total2)
+        total2=0
+        do j=1, total
+            checker=0
+            do k=1,nume
+                checker=checker+modulo(combs(j,k),2)
+            end do
+            if(checker==((nume/2)-spin))then
+                total2=total2+1
+                combs2(total2,:)=combs(j,:)
+            end if
+        end do
+        write(6,"(a,i0)") 'Total combinations with correct spin ',total2
+        call alloczs(cstore,total2)
 
-    !     allocate(magovrlp(total2),stat=ierr)
-    !     if(ierr/=0) then
-    !         write(0,"(a,i0)") "Error in magovrlp allocation. ierr had value ", ierr
-    !         errorflag=1
-    !         return
-    !     end if
-    
-    !     deallocate(combs,stat=ierr)
+        allocate(magovrlp(total2),stat=ierr)
+        if(ierr==0) allocate(position(total2),stat=ierr)
+        if(ierr==0) allocate(excld(total2),stat=ierr)
+        if(ierr/=0) then
+            write(0,"(a,i0)") "Error in magovrlp allocation. ierr had value ", ierr
+            errorflag=1
+            return
+        end if
+       
+        deallocate(combs,stat=ierr)
+   
+        do j=1, total2
+            call zomhfc(cstore(j),combs2(j,:))
+        end do
 
-    
-    !     do j=1, total2
-    !         call zomhfc(cstoretemp(j),combs2(j,:))
-    !     end do
+        norm=(0.0d0,0.0d0)
+        magovrlp=(0.0,0.0)
+        
+        excld=.TRUE.
+        !$omp parallel do collapse(2) reduction(+:norm)
+        do j=1,total2
+            do k=1,ndet 
+                ovrlp1=overlap(cstore(j),zstore(k))
+                magovrlp(j)=magovrlp(j)+real(ovrlp1)
+                do l=1,ndet
+                    ovrlp2=overlap(zstore(l),cstore(j))
+                    norm=norm + (conjg(dvec%d(l))*dvec%d(k)*ovrlp1*ovrlp2)
+                end do
+            end do
+        end do
+        !$omp end parallel do 
+        write(6,"(a,e25.17e3)") 'The norm for states with correct spin and electrons is ',real(norm)
+        
  
+        if(pass.eq.1)then 
+            open(unit=9,file='slt_ovrlp.csv',status="new", iostat=ierr)
+            if(ierr/=0)then
+                write(0,"(a,i0)") "Error in opening slt_ovrlp.csv. ierr had value ", ierr
+                errorflag=1
+                return
+            end if
+
+            write(9,'(a,e25.17e3)') 'Norm before gradient descent is : ', real(norm)
+            close(9)
+        else
+            
+            do j=1, total2
+                position(j)=minloc(magovrlp,1,excld)
+                excld(position(j))=.FALSE.
+            end do
+            open(unit=9,file='slt_ovrlp.csv',status="old",access='append',iostat=ierr)
+            if(ierr/=0)then
+                write(0,"(a,i0)") "Error in opening slt_ovrlp.csv. ierr had value ", ierr
+                errorflag=1
+                return
+            end if
+
+            write(9,'(a,e25.17e3)') 'Norm after gradient descent is : ', real(norm)
+            do j=total2, 1, -1 
+                write(9,'(e25.17e3,a,*(i0, :", "))') magovrlp(position(j)),' ', (combs2(position(j),k),k=nume,1,-1)
+            end do
+
+            close(9)
+        end if 
+        call dealloczs(cstore)
+        deallocate(position,stat=ierr)
+        deallocate(excld,stat=ierr)
+        deallocate(magovrlp,stat=ierr)
+
+        return 
 
 
-    ! end subroutine sd_anal
+    end subroutine sd_anal
 
     subroutine clean_setup(cstore,nume,cleanham,elecs,clean_ndet,zstore)
 
@@ -394,7 +450,7 @@ MODULE clean
         integer, allocatable, dimension(:,:)::combs
         integer::Line2, Line3, Line4, Line5, Line6,Line7
         real::Line1
-        integer:: ierr, nlines,l,j
+        integer:: ierr, nlines,j
 
         if (errorflag .ne. 0) return
         ierr=0

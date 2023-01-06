@@ -179,6 +179,8 @@ MODULE zom
         integer,dimension(:,:),intent(inout)::final
         type(comb_result), dimension(:), pointer :: co
         integer :: j, k, s, jx, kx, t,ierr
+
+     
     
         allocate(co(0:tot-1),stat=ierr)
         do j = 0, tot-1

@@ -191,15 +191,15 @@ MODULE outputs
 
     end subroutine zombiewriter_c
 
-    subroutine energywriter(time,erg,filenm,j,loop)
+    subroutine energywriter(time,erg,filenm,j)
 
         implicit none
 
         real(kind=8), dimension(:),intent(in)::time
         complex(kind=8), dimension(:),intent(in)::erg 
         character(LEN=*),intent(in)::filenm
-        integer,intent(in)::j,loop
-        integer::ergnum,ierr,k,l
+        integer,intent(in)::j
+        integer::ergnum,ierr,k
         logical :: file_exists
 
         if (errorflag .ne. 0) return
@@ -282,12 +282,12 @@ MODULE outputs
     end subroutine epoc_writer
 
 
-    subroutine dvec_writer(d,size,p,loop)
+    subroutine dvec_writer(d,size,p)
 
         implicit none
         complex(kind=8),dimension(:),intent(in)::d
         character(LEN=4)::stateno
-        integer,intent(in)::size,p,loop
+        integer,intent(in)::size,p
         integer::ierr,j,vec
         logical :: file_exists
         if (errorflag .ne. 0) return

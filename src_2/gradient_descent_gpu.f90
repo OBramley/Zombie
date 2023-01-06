@@ -1180,7 +1180,7 @@ MODULE gradient_descent
     
         chng_trk=0 !stores which if any ZS changed
         rsrtpass=0
-        epoc_max=30000
+        epoc_max=32000
 
         do j=1, ndet-1
             picker(j)=j+1
@@ -1194,12 +1194,13 @@ MODULE gradient_descent
             call orbital_gd_gpu(zstore,grad_fin,elect,dvecs,temp_dvecs,en,haml,temp_ham,chng_trk,temp_zom,occupancy_an,&
             occupancy_an_cr,occupancy_2an,epoc_cnt,alpha,b,picker,1)
         end if 
-    
-        call full_zs_gd_gpu(zstore,grad_fin,elect,dvecs,temp_dvecs,en,haml,temp_ham,&
-        chng_trk,temp_zom,occupancy_an,occupancy_an_cr,occupancy_2an,epoc_cnt,alpha,b,picker) 
-        
-        call orbital_gd_gpu(zstore,grad_fin,elect,dvecs,temp_dvecs,en,haml,temp_ham,chng_trk,temp_zom,occupancy_an,&
-        occupancy_an_cr,occupancy_2an,epoc_cnt,alpha,b,picker,(epoc_max-epoc_cnt)) 
+        if(epoc_cnt.lt.epoc_max)then
+            call full_zs_gd_gpu(zstore,grad_fin,elect,dvecs,temp_dvecs,en,haml,temp_ham,&
+            chng_trk,temp_zom,occupancy_an,occupancy_an_cr,occupancy_2an,epoc_cnt,alpha,b,picker) 
+            
+            call orbital_gd_gpu(zstore,grad_fin,elect,dvecs,temp_dvecs,en,haml,temp_ham,chng_trk,temp_zom,occupancy_an,&
+            occupancy_an_cr,occupancy_2an,epoc_cnt,alpha,b,picker,(epoc_max-epoc_cnt)) 
+        end if
 
         !Brings phi values back within the normal 0-2pi range
         do k=2,ndet 
