@@ -330,7 +330,7 @@ MODULE ham
                 end do
             end do
             !$omp end parallel do 
-        end 
+        end if
 
         do j=1, norb
             do k=1, norb

@@ -191,7 +191,7 @@ MODULE gradient_descent
         temp=cmplx(0.0,0.0)
 
 
-        !$omp parallel do simd collapse(2) &
+        !$omp parallel do  collapse(2) &
         !$omp & private(j,k,zomt) shared(h1ei,occupancy,z2l,zs1sin,zs1cos,temp)
         do j=1, len
             do k=1, len
@@ -204,7 +204,7 @@ MODULE gradient_descent
                 end if
             end do
         end do
-        !$omp end parallel do simd
+        !$omp end parallel do 
 
         deallocate(zomt,stat=ierr)
       
@@ -368,7 +368,7 @@ MODULE gradient_descent
             return
         end if 
         !$omp parallel shared(temp2,haml) private(k,l)
-        !$omp do simd collapse(2)
+        !$omp do collapse(2)
         do k=1, ndet
             do l=1, ndet
                 if(l.eq.diff_state)then
@@ -379,7 +379,7 @@ MODULE gradient_descent
             end do
         end do
        
-        !$omp do simd collapse(2)
+        !$omp do collapse(2)
         do k=1, ndet
             do l=1, ndet
                 haml%diff_invh(diff_state,k,l,:)=matmul(transpose(temp2(k,:,:)),real(haml%kinvh(:,l)))*(-1)
@@ -428,7 +428,7 @@ MODULE gradient_descent
         h1etot_diff=0.0
       
 
-        !$omp parallel do simd collapse(2) &
+        !$omp parallel do  collapse(2) &
         !$omp & private(j,k,l,prod,chng_prod,temp_prod,zomt) &
         !$omp & shared(h1ei,occupancy,z2l,zs1sin,zs1cos,zs2sin,zs2cos,equal,h1etot_diff)
         do j=1, len
@@ -506,7 +506,7 @@ MODULE gradient_descent
                 end if
             end do
         end do
-        !$omp end parallel do simd
+        !$omp end parallel do 
        
      
         deallocate(zomt,stat=ierr)
@@ -1176,7 +1176,7 @@ MODULE gradient_descent
     
         chng_trk=0 !stores which if any ZS changed
         rsrtpass=0
-        epoc_max=30000
+        epoc_max=50000
 
         do j=1, ndet-1
             picker(j)=j+1

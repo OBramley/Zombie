@@ -29,8 +29,8 @@ elif(inputs.run['nodes']<1):
     sys.exit("Not enough nodes selected. Must be 1 or greater")
 elif(inputs.run['nodes']>100):
     sys.exit("Too many nodes. Maximum of 100 simultaneous submisions")
-elif(inputs.run['cores']>30):
-    sys.exit("Too many cores selected. Maximum of 20 available")
+elif(inputs.run['cores']>40):
+    sys.exit("Too many cores selected. Maximum of 40 available")
 elif(inputs.run['cores']<1):
     sys.exit("Not enough cores selected. Must be 1 or greater")
 elif(inputs.zombs['norb']<1):
@@ -102,7 +102,7 @@ print("Arguments checked")
 # Check if on HPC
 Hostname=socket.gethostname()
 if((Hostname==("login2.arc4.leeds.ac.uk"))or(Hostname==("login1.arc4.leeds.ac.uk"))):
-    HPCFLG=0
+    HPCFLG=1
 else:
     HPCFLG=0
 

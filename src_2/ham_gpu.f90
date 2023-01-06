@@ -91,11 +91,7 @@ MODULE ham
         !$omp end parallel
         z1jk=z1jk*occupancy_2an
      
-        !!$omp flush(z1jk)
-        !!$omp parallel private(j,k,l,z2l,h1etot,h2etot, &
-        !!$omp h1etot_diff_bra,h2etot_diff_bra, h1etot_diff_ket,h2etot_diff_ket,&
-        !!$omp  h1etot_diff,h2etot_diff,m) shared(z1jk,zstore,row,size,occupancy_2an,occupancy_an_cr,occupancy_an)
-        !!$omp do schedule(dynamic)
+
         do m=row,size
         
             h1etot=cmplx(0.0,0.0)
@@ -320,6 +316,7 @@ MODULE ham
             end do
             !$omp end target teams distribute parallel do simd         
         else
+            
             !$omp target teams distribute parallel do simd collapse(2) &
             !$omp & map(to:h1ei(:,:),occupancy(:,:,:,:),z2l(:,:,:),zs1sin(:),zs1cos(:),len) &
             !$omp & map(tofrom:temp(:,:)) map(alloc:zomt(2,len)) &
@@ -336,6 +333,7 @@ MODULE ham
                 end do
             end do
             !$omp end target teams distribute parallel do simd
+           
         end if
 
         do j=1, norb
@@ -444,6 +442,13 @@ MODULE ham
         integer::j,k,l,ierr,len
         complex(kind=8),allocatable,dimension(:,:,:)::tot
 
+
+        complex(kind=8),dimension(:,:),allocatable::vmult
+        complex(kind=8),allocatable,dimension(:)::gg,hh
+        complex(kind=8)::tt
+        integer::p,jspin,gmax,hmin,q
+        logical,dimension(:,:,:),allocatable::iszero
+        ierr=0
         if (errorflag .ne. 0) return
         len=norb
       
@@ -454,22 +459,139 @@ MODULE ham
             allocate(h2etot_diff(len,len,len,len),stat=ierr)
             h2etot_diff=0.0
         end if
-      
-       
-       
-    
-        !$omp parallel shared(z1jk,z2l,zs1sin,zs1cos,zs2sin,zs2cos,tot,occupancy_2an,occupancy_an,h2ei,equal,h2etot_diff) private(j)
-        !$omp do
-        do j=1, norb
-            tot(j,:,:) = two_elec_part_body_gpu(norb,zs1sin,zs2sin,z2l,z1jk(j,:,:,:),h2ei(j,:,:,:),j)
-            if(equal.lt.4)then
-                h2etot_diff(j,:,:,:) = two_elec_part_grad_gpu(norb,zs1sin,zs1cos,zs2sin,zs2cos,z2l,z1jk(j,:,:,:),&
-                h2ei(j,:,:,:),occupancy_2an(j,:,:,:),occupancy_an(:,:,:),j,equal)
+        allocate(gg(len),stat=ierr)
+        allocate(hh(len),stat=ierr)
+        allocate(vmult(2,len),stat=ierr)
+        allocate(iszero(norb,norb,(norb/2)),stat=ierr)
+        if (ierr/=0) then
+            write(0,"(a,i0)") "Error in vmult allocation . ierr had value ", ierr
+            errorflag=1
+            return
+        end if 
+
+        iszero=.true.
+        do j=1, norb 
+            if(zs1sin(j)==(0.0,0.0))then
+                iszero(j,:,:)=.false.
+                cycle
             end if
+            if(modulo(j,2)==0)then
+                jspin=2
+            else
+                jspin=1
+            end if
+            do k=1, norb
+                if(j.eq.k) then
+                    iszero(j,k,:)=.false.
+                    cycle
+                end if
+                if(occ_iszero(z1jk(j,k,:,:)).eqv..true.)then
+                    iszero(j,k,:)=.false.
+                    CYCLE 
+                end if
+                do q=1, norb/2
+                    if(zs2sin(jspin*q)==(0.0,0.0))then
+                        iszero(j,k,jspin*q)=.false.
+                    end if
+                end do 
+            end do 
         end do
-        !$omp end  do
-        !$omp end parallel
-      
+       
+       print*, 'starting cycle'
+        !!$omp parallel shared(z1jk,z2l,zs1sin,zs1cos,zs2sin,zs2cos,tot,occupancy_2an,occupancy_an,h2ei,equal,h2etot_diff) private(j)
+        !!$omp do
+        !$omp target teams distribute parallel do simd collapse(3) &
+        !$omp & map(alloc:hh(len),gg(len),vmult(2,len)) map(tofrom:tot) &
+        !$omp & map(to:h2ei,z1jk,z2l,zs2sin,gmax,hmin,len,jspin,iszero) &
+        !$omp & private(gmax,hmin,gg,hh,p,vmult,j,k,l,q,jspin) shared(z1jk,z2l,tot,iszero)
+        do j=1, norb
+            ! tot(j,:,:) = two_elec_part_body_gpu(norb,zs1sin,zs2sin,z2l,z1jk(j,:,:,:),h2ei(j,:,:,:),j)
+            ! if(zs1sin(j)==(0.0,0.0))then
+            !     cycle
+            ! end if
+
+            do k=1, len
+                ! if(j.eq.k) cycle
+    
+                ! if(occ_iszero(z1jk(j,k,:,:)).eqv..true.)then
+                !     CYCLE 
+                ! end if
+                ! print*,'before target',j,k
+                
+                do q=1, norb/2
+                    if(modulo(j,2)==0)then
+                        jspin=2
+                    else
+                        jspin=1
+                    end if
+                    
+                    l=jspin*q
+         
+                ! do l=jspin, len, 2
+                    if(iszero(j,k,q).eqv..false.)then
+                    ! if(zs2sin(l)==(0.0,0.0))then
+                        tot(j,k,l)=(0.0,0.0)
+                    else
+                        print*,j,k,l
+                        vmult=conjg(z1jk(j,k,:,:))*(z2l(l,:,:))
+                        
+                        gg(1:len)=(0.0,0.0)
+                        hh(1:len)=(0.0,0.0)
+                        gmax=len
+                        gg(1)=vmult(2,1)-vmult(1,1)
+    
+                        do p=2, len
+                            gg(p)=gg(p-1)*(vmult(2,p)-vmult(1,p))
+                            if(gg(p)==(0.0,0.0))then
+                                gmax=p
+                                EXIT 
+                            end if
+                        end do
+                        
+                        hmin=0
+                        hh(len) = vmult(2,len)+vmult(1,len)
+                        do p=(len-1),1,-(1)
+                            hh(p)=hh(p+1)*(vmult(2,p)+vmult(1,p))
+                            if(hh(p)==(0.0,0.0))then
+                                hmin=p
+                                EXIT 
+                            end if
+                        end do
+    
+                        tot(j,k,l)=(0.0,0.0)
+                        if (gmax < hmin) then
+                            tot(j,k,l)=(0.0,0.0)
+                            cycle
+                        end if
+    
+                        if(h2ei(j,k,l,1).ne.0) then
+                            tot(j,k,l) = tot(j,k,l)+(conjg(z1jk(j,k,2,1))*z2l(l,1,1)*hh(2)*h2ei(j,k,l,1))
+                        end if
+    
+                        do p=2,len-1
+                            if(h2ei(j,k,l,p).ne.0.0) then
+                                tot(j,k,l) = tot(j,k,l)+ (gg(p-1)*conjg(z1jk(j,k,2,p))*z2l(l,1,p)*hh(p+1)*h2ei(j,k,l,p))
+                            end if
+                        end do
+    
+                        if(h2ei(j,k,l,len).ne.0) then
+                            tot(j,k,l) = tot(j,k,l) +(gg(len-1)*conjg(z1jk(j,k,2,len))*z2l(l,1,len)*h2ei(j,k,l,len))
+                        end if
+                    end if
+                end do
+               
+            end do
+            ! if(equal.lt.4)then
+            !     h2etot_diff(j,:,:,:) = two_elec_part_grad_gpu(norb,zs1sin,zs1cos,zs2sin,zs2cos,z2l,z1jk(j,:,:,:),&
+            !     h2ei(j,:,:,:),occupancy_2an(j,:,:,:),occupancy_an(:,:,:),j,equal)
+            ! end if
+        end do
+        !$omp end target teams distribute parallel do simd
+        !!$omp end  do
+        !!$omp end parallel
+        print*,'end cycle'
+        
+        
         do j=1, norb
             do k=1,norb
                 do l=1, norb
@@ -497,8 +619,12 @@ MODULE ham
             h2etot_diff_ket = h2etot_diff_ket*0.5
            deallocate(h2etot_diff,stat=ierr)
         end if
+
         deallocate(tot,stat=ierr)
-     
+        deallocate(vmult,stat=ierr)
+        deallocate(gg,stat=ierr)
+        deallocate(hh,stat=ierr)
+        deallocate(iszero,stat=ierr)
         return
 
     end subroutine two_elec_part_gpu
@@ -547,14 +673,13 @@ MODULE ham
             if(occ_iszero(z1jk(k,:,:)).eqv..true.)then
                 CYCLE 
             end if
-          
+            ! print*,'before target',j,k
             !$omp target teams distribute parallel do simd &
             !$omp & map(alloc:hh(len),gg(len),vmult(2,len)) map(tofrom:tot(k,:)) &
             !$omp & map(to:h2ei,z1jk(k,:,:),z2l,zs2sin,gmax,hmin,len,jspin) &
             !$omp & private(gmax,hmin,gg,hh,p,vmult) shared(z1jk,z2l,tot)
             do l=jspin, len, 2
                 if(zs2sin(l)==(0.0,0.0))then
-
                     CYCLE
                 else
                     vmult=conjg(z1jk(k,:,:))*(z2l(l,:,:))
