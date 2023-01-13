@@ -74,7 +74,7 @@ MODULE clean
         magovrlp=(0.0,0.0)
         
         excld=.TRUE.
-        !$omp parallel do collapse(2) reduction(+:norm)
+        !!$omp parallel do collapse(2) reduction(+:norm)
         do j=1,total2
             do k=1,ndet 
                 ovrlp1=overlap(cstore(j),zstore(k))*dvec%d(k)
@@ -85,7 +85,7 @@ MODULE clean
                 end do
             end do
         end do
-        !$omp end parallel do 
+        !!$omp end parallel do 
         write(6,"(a,e25.17e3)") 'The norm for states with correct spin and electrons is ',real(norm)
         
  

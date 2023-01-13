@@ -89,7 +89,7 @@ MODULE gradient_descent
             !$omp end parallel         
 
             call one_elec_intfc_gpu(zstore(diff_state)%sin,zstore(diff_state)%cos,z2l,elecs%h1ei,temp,occupancy_an_cr)
-
+            
             z2l=z2l*occupancy_an
             !$omp flush(z2l)
         
@@ -106,6 +106,15 @@ MODULE gradient_descent
 
             h2etot=h2etot*0.5
 
+            if(is_nan(real(h1etot)).eqv..true.)then 
+                print*,zstore(diff_state)%phi
+                stop
+            end if 
+            if(is_nan(real(h2etot)).eqv..true.)then 
+                print*,zstore(diff_state)%phi
+                stop
+            end if 
+            !print*,h1etot,h2etot
             haml%ovrlp(diff_state,m)=overlap(zstore(diff_state),zstore(m))
             haml%ovrlp(m,diff_state)= haml%ovrlp(diff_state,m)
             haml%hjk(diff_state,m)=h1etot+h2etot+(elecs%hnuc*haml%ovrlp(diff_state,m))
@@ -160,7 +169,7 @@ MODULE gradient_descent
         haml%kinvh=matmul(haml%inv,haml%hjk)
         !$omp end workshare
         !$omp end parallel
-
+        
         return
 
     end subroutine he_full_row_gpu
@@ -185,7 +194,10 @@ MODULE gradient_descent
         len=norb
        
         allocate(zomt(2,len),stat=ierr)
-        
+        if (ierr/=0) then
+            write(0,"(a,i0)") "Error in zomt  allocation . ierr had value ", ierr
+            errorflag=1
+        end if
         
   
         temp=cmplx(0.0,0.0)
@@ -209,6 +221,10 @@ MODULE gradient_descent
         !$omp end target teams distribute parallel do simd
 
         deallocate(zomt,stat=ierr)
+        if (ierr/=0) then
+            write(0,"(a,i0)") "Error in zomt  deallocation . ierr had value ", ierr
+            errorflag=1
+        end if
       
         return
 
@@ -223,21 +239,120 @@ MODULE gradient_descent
         complex(kind=8),dimension(:,:,:,:),intent(in)::z1jk
         real(kind=8), dimension(:,:,:,:),intent(in)::h2ei
         complex(kind=8),dimension(:,:,:),intent(inout)::tot
-        integer::j,len
+        logical,dimension(:,:,:),allocatable::iszero
+        complex(kind=8),dimension(:,:),allocatable::vmult
+        complex(kind=8),allocatable,dimension(:)::gg,hh
+        integer::j,k,l,len,ierr,p,gmax,hmin,q
     
         if (errorflag .ne. 0) return
-
+        ierr=0
         tot=cmplx(0.0,0.0)
         len=norb
-        !$omp parallel shared(z1jk,z2l,zs1sin,zs2sin,tot,h2ei,len) private(j)
-        !$omp do
-        do j=1, norb
-           
-            tot(j,:,:) = two_elec_part_body_gpu(len,zs1sin,zs2sin,z2l,z1jk(j,:,:,:),h2ei(j,:,:,:),j)
-        end do
-        !$omp end  do
-        !$omp end parallel
+
+        allocate(gg(len),stat=ierr)
+        allocate(hh(len),stat=ierr)
+        allocate(vmult(2,len),stat=ierr)
+        allocate(iszero(norb,norb,(norb/2)),stat=ierr)
+        if (ierr/=0) then
+            write(0,"(a,i0)") "Error in vmult allocation . ierr had value ", ierr
+            errorflag=1
+            return
+        end if 
+
+        iszero=.true.
      
+        do j=1, norb 
+            if(zs1sin(j)==(0.0,0.0))then
+                iszero(j,:,:)=.false.
+                cycle
+            end if
+            do k=1, norb
+                if(j.eq.k) then
+                    iszero(j,k,:)=.false.
+                    cycle
+                end if
+                if(occ_iszero(z1jk(j,k,:,:)).eqv..true.)then
+                    iszero(j,k,:)=.false.
+                    CYCLE 
+                end if
+                do q=1, norb/2
+                    if(zs2sin(2*q-(modulo(j,2)) )==(0.0,0.0))then
+                        iszero(j,k,q)=.false.
+                    end if
+                end do 
+            end do 
+        end do
+    
+        !$omp target teams distribute parallel do simd collapse(3) &
+        !$omp & map(alloc:hh(len),gg(len),vmult(2,len)) map(tofrom:tot) &
+        !$omp & map(to:h2ei,z1jk,z2l,gmax,hmin,len,iszero) &
+        !$omp & private(gmax,hmin,gg,hh,p,vmult,j,k,l,q) shared(z1jk,z2l,tot,iszero)
+        do j=1, len
+            do k=1, len   
+                do q=1, len/2
+                    l=2*q-(modulo(j,2)) 
+                    if(iszero(j,k,q).eqv..false.)then
+                        tot(j,k,l)=(0.0,0.0)
+                    else
+                        vmult=conjg(z1jk(j,k,:,:))*(z2l(l,:,:))
+                        gg(1:len)=(0.0,0.0)
+                        hh(1:len)=(0.0,0.0)
+                        gmax=len
+                        gg(1)=vmult(2,1)-vmult(1,1)
+    
+                        do p=2, len
+                            gg(p)=gg(p-1)*(vmult(2,p)-vmult(1,p))
+                            if(gg(p)==(0.0,0.0))then
+                                gmax=p
+                                EXIT 
+                            end if
+                        end do
+                        
+                        hmin=0
+                        hh(len) = vmult(2,len)+vmult(1,len)
+                        do p=(len-1),1,-(1)
+                            hh(p)=hh(p+1)*(vmult(2,p)+vmult(1,p))
+                            if(hh(p)==(0.0,0.0))then
+                                hmin=p
+                                EXIT 
+                            end if
+                        end do
+    
+                        tot(j,k,l)=(0.0,0.0)
+                        if (gmax < hmin) then
+                            tot(j,k,l)=(0.0,0.0)
+                            cycle
+                        end if
+    
+                        if(h2ei(j,k,l,1).ne.0) then
+                            tot(j,k,l) = tot(j,k,l)+(conjg(z1jk(j,k,2,1))*z2l(l,1,1)*hh(2)*h2ei(j,k,l,1))
+                        end if
+    
+                        do p=2,len-1
+                            if(h2ei(j,k,l,p).ne.0.0) then
+                                tot(j,k,l) = tot(j,k,l)+ (gg(p-1)*conjg(z1jk(j,k,2,p))*z2l(l,1,p)*hh(p+1)*h2ei(j,k,l,p))
+                            end if
+                        end do
+    
+                        if(h2ei(j,k,l,len).ne.0) then
+                            tot(j,k,l) = tot(j,k,l) +(gg(len-1)*conjg(z1jk(j,k,2,len))*z2l(l,1,len)*h2ei(j,k,l,len))
+                        end if
+                    end if
+                end do
+            
+            end do
+        end do
+        !$omp end target teams distribute parallel do simd
+
+        deallocate(gg,stat=ierr)
+        deallocate(hh,stat=ierr)
+        deallocate(vmult,stat=ierr)
+        deallocate(iszero,stat=ierr)
+        if (ierr/=0) then
+            write(0,"(a,i0)") "Error in vmult allocation . ierr had value ", ierr
+            errorflag=1
+            return
+        end if 
         return
 
     end subroutine two_elec_intfc_gpu
@@ -334,13 +449,13 @@ MODULE gradient_descent
 
             call one_elec_intfc_grad_gpu(zstore(diff_state)%sin,zstore(diff_state)%cos,&
             zstore(m)%sin,zstore(m)%cos,z2l,occupancy_an_cr,elecs%h1ei,equal,h1etot_diff)
-    
+          
             z2l=z2l*occupancy_an
             !$omp flush(z2l) 
             
             call two_elec_intfc_grad_gpu(zstore(diff_state)%sin,zstore(diff_state)%cos,&
             zstore(m)%sin,zstore(m)%cos,z2l,z1jk,elecs%h2ei,occupancy_2an,occupancy_an,equal,h2etot_diff)
-
+            
             do j=1, norb
                 do k=1,norb
                     h1etot_diff_bra=h1etot_diff_bra+h1etot_diff(j,k,:)
@@ -349,10 +464,8 @@ MODULE gradient_descent
                     end do 
                 end do
             end do
-        
-            h2etot_diff_bra = h2etot_diff_bra*0.5
-            
-            haml%diff_hjk(diff_state,m,:)=h1etot_diff_bra+h2etot_diff_bra
+                    
+            haml%diff_hjk(diff_state,m,:)=h1etot_diff_bra+(h2etot_diff_bra*0.5)
             if(m.eq.diff_state)then
                 haml%diff_ovrlp(diff_state,m,:) = 0
             else
@@ -483,15 +596,12 @@ MODULE gradient_descent
                             chng_prod(j)=-real(zs1sin(j)*zs2sin(j))*occupancy(j,k,2,j)
                             chng_prod(k)=real(zs1cos(k)*zs2cos(k))*occupancy(j,k,1,k) 
                         end if
-                        !!$omp parallel do simd shared(prod,chng_prod) private(temp,j)
                         do l=1,len
                             temp_prod=prod
                             temp_prod(l)=chng_prod(l)
                             h1etot_diff(j,k,l)=product(temp_prod)*h1ei(j,k)
                         end do
-                        !!$omp end parallel do simd 
                     else if(equal.eq.3)then
-                    
                         chng_prod=real(zs1sin*zs2cos*occupancy(j,k,1,:)-zs1cos*zs2sin*occupancy(j,k,2,:))                  
                         if(j.eq.k)then  !dead amplitude is zero
                             chng_prod(j)=real(zs1sin(j)*zs2cos(j)*occupancy(j,k,1,j))
@@ -499,13 +609,13 @@ MODULE gradient_descent
                             chng_prod(j)=real(zs1cos(j)*zs2cos(j))*occupancy(j,k,2,j)!alive amplitude is zero
                             chng_prod(k)=-real(zs1sin(k)*zs2sin(k))*occupancy(j,k,1,k) !dead amplitude is zero
                         end if
-                        !!$omp parallel do simd  shared(prod,ket_prod) private(temp_prod,j)
+                     
                         do l=1,len
                             temp_prod=prod
                             temp_prod(l)=chng_prod(l)
                             h1etot_diff(j,k,l)=product(temp_prod)*h1ei(j,k)
                         end do
-                        !!$omp end parallel do simd   
+                      
                     end if
                 end if
             end do
@@ -523,7 +633,7 @@ MODULE gradient_descent
 
     end subroutine one_elec_intfc_grad_gpu
 
-    subroutine two_elec_intfc_grad_gpu(zs1sin,zs1cos,zs2sin,zs2cos,z2l,z1jk,h2ei,occupancy_2an,occupancy_an,equal,h2etot_diff)
+    subroutine two_elec_intfc_grad_gpu(zs1sin,zs1cos,zs2sin,zs2cos,z2l,z1jk,h2ei,occupancy_2an,occupancy_an,equal,h2etot_diff_in)
 
         implicit none
 
@@ -534,23 +644,99 @@ MODULE gradient_descent
         integer,dimension(:,:,:),intent(in)::occupancy_an
         real(kind=8), dimension(:,:,:,:), intent(in)::h2ei
         integer,intent(in)::equal
-        real(kind=8),dimension(:,:,:,:),intent(inout)::h2etot_diff
-        integer::j,len
+        real(kind=8),dimension(:,:,:,:),intent(inout)::h2etot_diff_in
+        real(kind=8),allocatable,dimension(:,:,:,:)::h2etot_diff
+        real(kind=8),allocatable,dimension(:)::gg_0,hh_0
+        real(kind=8),dimension(:,:),allocatable::vmult_dd
+        integer::j,k,l,len,ierr,q,p
+        logical,dimension(:,:,:),allocatable::iszero_grad
         
         
         if (errorflag .ne. 0) return
-        
-        h2etot_diff=0.0
+        ierr=0
         len=norb
-        !$omp parallel shared(z1jk,z2l,zs1sin,zs1cos,zs2sin,zs2cos,occupancy_2an,occupancy_an,h2ei,equal,h2etot_diff) private(j)
-        !$omp do
-        do j=1, norb
-            h2etot_diff(j,:,:,:) = two_elec_part_grad_gpu(len,zs1sin,zs1cos,zs2sin,zs2cos,z2l,z1jk(j,:,:,:),&
-            h2ei(j,:,:,:),occupancy_2an(j,:,:,:),occupancy_an(:,:,:),j,equal)
-        end do
-        !$omp end  do
-        !$omp end parallel
+        allocate(h2etot_diff(len,len,len,len),stat=ierr)
+        h2etot_diff=0.0
+        allocate(gg_0(len),stat=ierr)
+        allocate(hh_0(len),stat=ierr)
+        allocate(vmult_dd(2,len),stat=ierr)
+        allocate(iszero_grad(len,len,(len/2)),stat=ierr)
+        if (ierr/=0) then
+            write(0,"(a,i0)") "Error in vmult_dd allocation . ierr had value ", ierr
+            errorflag=1
+            return
+        end if 
+        
+
        
+
+        iszero_grad=.true.
+        do j=1, norb 
+            if(zs1sin(j)==(0.0,0.0))then
+                iszero_grad(j,:,:)=.false.
+                cycle
+            end if
+            do k=1, norb
+                if(j.eq.k) then
+                    iszero_grad(j,k,:)=.false.
+                    cycle
+                end if
+                do q=1, norb/2
+                    if(zs2sin((2*q-(modulo(j,2))))==(0.0,0.0))then
+                        iszero_grad(j,k,q)=.false.
+                    end if
+                end do 
+            end do 
+        end do
+       
+        !$omp target teams distribute parallel do simd collapse(4) &
+        !$omp & map(alloc:hh_0(len),gg_0(len),vmult_dd(2,len))&
+        !$omp & map(tofrom:h2etot_diff) &
+        !$omp & map(to:h2ei,z1jk,z2l,zs1sin,zs1cos,zs2sin,zs2cos,len,iszero_grad,equal,occupancy_2an,occupancy_an) &
+        !!$omp  parallel do  &
+        !$omp & private(gg_0,hh_0,vmult_dd,j,k,l,q,p) &
+        !$omp & shared(equal,z1jk,z2l,h2etot_diff,iszero_grad,zs1sin,zs1cos,zs2sin,zs2cos,occupancy_2an,occupancy_an)
+        do j=1, len
+            do k=1, len   
+                do q=1, len/2
+                    do p=1, len
+                        l=2*q-(modulo(j,2)) 
+                        if(iszero_grad(j,k,q).eqv..false.)then
+                            h2etot_diff(j,k,l,p)=0.0
+                        else
+                            vmult_dd=real(conjg(z1jk(j,k,:,:))*(z2l(l,:,:)))
+                            if(equal.eq.1)then
+                                h2etot_diff(j,k,l,p)=z_an_z3_diff_gpu_1(len,z1jk(j,k,:,:),z2l(l,:,:),&
+                                vmult_dd,h2ei(j,k,l,:),(occupancy_2an(j,k,:,:)*occupancy_an(l,:,:)),&
+                                j,k,l,zs1sin,zs1cos,gg_0,hh_0)
+                            else if(equal.eq.2)then
+                                h2etot_diff(j,k,l,p)=z_an_z3_diff_gpu_2(len,z1jk(j,k,:,:),z2l(l,:,:),&
+                                vmult_dd,h2ei(j,k,l,:),(occupancy_2an(j,k,:,:)*occupancy_an(l,:,:)),&
+                                j,k,l,zs1sin,zs1cos,zs2sin,zs2cos,gg_0,hh_0)
+                            else if(equal.eq.3)then
+                                h2etot_diff(j,k,l,p)=z_an_z3_diff_gpu_3(len,z1jk(j,k,:,:),z2l(l,:,:),&
+                                vmult_dd,h2ei(j,k,l,:),(occupancy_2an(j,k,:,:)*occupancy_an(l,:,:)),&
+                                j,k,l,zs1sin,zs1cos,zs2sin,zs2cos,gg_0,hh_0)
+                            end if 
+                        end if 
+                    end do
+                end do
+            end do
+        end do 
+        !!$omp end parallel do 
+        !$omp end target teams distribute parallel do simd 
+        
+        h2etot_diff_in=h2etot_diff
+        deallocate(h2etot_diff,stat=ierr)
+        deallocate(gg_0,stat=ierr)
+        deallocate(hh_0,stat=ierr)
+        deallocate(vmult_dd,stat=ierr)
+        deallocate(iszero_grad,stat=ierr)
+        if (ierr/=0) then
+            write(0,"(a,i0)") "Error in vmult_dd deallocation . ierr had value ", ierr
+            errorflag=1
+            return
+        end if 
         return
 
     end subroutine two_elec_intfc_grad_gpu
@@ -680,29 +866,49 @@ MODULE gradient_descent
                     do while(t.gt.(1.0d-13))
                     
                         nanchk=.false.
+                        do k=1,norb
+                            if(is_nan(grad_fin%vars(pick,k)).eqv..true.)then
+                                call grad_calc_gpu(haml,zstore,elect,pick,occupancy_2an,occupancy_an_cr,&
+                            occupancy_an,dvecs,grad_fin,en,d_diff_flg) 
+                                nanchk=.false. 
+                                exit 
+                            end if 
+                        end do
+
+
                         if(is_nan(grad_fin%vars(pick,pickorb)).eqv..true.)then
                             call grad_calc_gpu(haml,zstore,elect,pick,occupancy_2an,occupancy_an_cr,&
                             occupancy_an,dvecs,grad_fin,en,d_diff_flg) 
                         end if 
-                    
+                        
                         ! Setup temporary zombie state
                         temp_zom=zstore
                         temp_zom(pick)%phi(pickorb)=zstore(pick)%phi(pickorb)-(t*(grad_fin%vars(pick,pickorb)))
                         temp_zom(pick)%phi(pickorb)=temp_zom(pick)%phi(pickorb)+&
                                             l2_rglrstn*((grad_fin%vars(pick,pickorb))*grad_fin%vars(pick,pickorb))
-                        if(is_nan(temp_zom(pick)%phi(pickorb)).eqv..true.)then
-                            t=(1.0d-14)
+                        do k=1,norb
+                            if(is_nan(temp_zom(pick)%phi(k)).eqv..true.)then
+                                write(0,"(a,i0,a,i0,a)") "Error in Zombie state ", pick," in orbtial ", k, " which has value NaN"
+                                t=(1.0d-14)
+                                nanchk=.true.
+                                rjct_cnt=1
+                                fxtdk=0
+                                exit 
+                            end if 
+                        end do
+                  
+                        if(nanchk.eqv..false.)then
+                            temp_zom(pick)%sin(pickorb)=sin(cmplx(temp_zom(pick)%phi(pickorb),0.0d0,kind=8))
+                            temp_zom(pick)%cos(pickorb)=cos(cmplx(temp_zom(pick)%phi(pickorb),0.0d0,kind=8))
+                            temp_ham=haml
+                            call he_full_row_gpu(temp_ham,temp_zom,elect,pick,ndet,occupancy_2an,occupancy_an_cr,occupancy_an)
+                            ! Imaginary time propagation for back tracing
+                            
+                            en%erg=0
+                            en%t=0
+                            call imgtime_prop(temp_dvecs,en,temp_ham,0)
+                            fxtdk=real(en%erg(1,timesteps+1))
                         end if
-                        temp_zom(pick)%sin(pickorb)=sin(cmplx(temp_zom(pick)%phi(pickorb),0.0d0,kind=8))
-                        temp_zom(pick)%cos(pickorb)=cos(cmplx(temp_zom(pick)%phi(pickorb),0.0d0,kind=8))
-                        temp_ham=haml
-                        call he_full_row_gpu(temp_ham,temp_zom,elect,pick,ndet,occupancy_2an,occupancy_an_cr,occupancy_an)
-                        ! Imaginary time propagation for back tracing
-                        
-                        en%erg=0
-                        en%t=0
-                        call imgtime_prop(temp_dvecs,en,temp_ham,0)
-                        fxtdk=real(en%erg(1,timesteps+1))
                     
                 
                         if(is_nan(fxtdk).eqv..true.)then 
@@ -903,22 +1109,27 @@ MODULE gradient_descent
                 
                     do k=1,norb
                         if(is_nan(temp_zom(pick)%phi(k)).eqv..true.)then
-                            temp_zom(pick)%phi=zstore(pick)%phi
+                            write(0,"(a,i0,a,i0,a)") "Error in Zombie state ", pick," in orbtial ", k, " which has value NaN"
+                            t=(1.0d-14)
+                            nanchk=.true.
+                            rjct_cnt=1
+                            fxtdk=0
                             exit
                         end if
                     end do
-                    temp_zom(pick)%sin=sin(cmplx(temp_zom(pick)%phi,0.0d0,kind=8))
-                    temp_zom(pick)%cos=cos(cmplx(temp_zom(pick)%phi,0.0d0,kind=8))
-                    temp_ham=haml
-                    call he_full_row_gpu(temp_ham,temp_zom,elect,pick,ndet,occupancy_2an,occupancy_an_cr,occupancy_an)
-                    
-                    ! Imaginary time propagation for back tracing
-                    en%erg=0
-                    en%t=0
-                    call imgtime_prop(temp_dvecs,en,temp_ham,0)
-                
-                    fxtdk=real(en%erg(1,timesteps+1))
-                
+                    if(nanchk.eqv..false.)then
+                        temp_zom(pick)%sin=sin(cmplx(temp_zom(pick)%phi,0.0d0,kind=8))
+                        temp_zom(pick)%cos=cos(cmplx(temp_zom(pick)%phi,0.0d0,kind=8))
+                        temp_ham=haml
+                        call he_full_row_gpu(temp_ham,temp_zom,elect,pick,ndet,occupancy_2an,occupancy_an_cr,occupancy_an)
+                        
+                        ! Imaginary time propagation for back tracing
+                        en%erg=0
+                        en%t=0
+                        call imgtime_prop(temp_dvecs,en,temp_ham,0)
+                        fxtdk=real(en%erg(1,timesteps+1))
+                    end if
+
                     if(is_nan(fxtdk).eqv..true.)then 
                         nanchk=.true.
                         ergerr='NaN '
