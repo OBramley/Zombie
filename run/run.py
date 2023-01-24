@@ -241,7 +241,7 @@ elif(inputs.run['language']=="fortran"):
                 shutil.copy2("../build/makefile_arc","../build/Makefile")
                 subprocess.run(["make"])
         else:
-            shutil.copy2("../build/makefile_mac","../build/Makefile")
+            # shutil.copy2("../build/makefile_mac","../build/Makefile")
             subprocess.run(["make"])
     elif(inputs.run['cores']>1):
         if(HPCFLG==1):
@@ -252,7 +252,7 @@ elif(inputs.run['language']=="fortran"):
                 shutil.copy2("../build/makefile_arc_omp","../build/Makefile")
                 subprocess.run(["make"])
         else:
-            shutil.copy2("../build/makefile_mac_omp","../build/Makefile")
+            # shutil.copy2("../build/makefile_mac_omp","../build/Makefile")
             subprocess.run(["make"])
     
  

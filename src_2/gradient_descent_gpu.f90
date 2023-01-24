@@ -13,7 +13,8 @@ MODULE gradient_descent
 
     ! Subroutine to calcualte Hamiltonian elements combines 1st and 2nd electron integral calcualations so remove double 
     ! calcualiton of certain results. This minimises the (slow) applicaiton of the creation and annihilaiton operators
-    subroutine he_full_row_gpu(haml,zstore,elecs,diff_state,size,occupancy_2an,occupancy_an_cr,occupancy_an)
+    subroutine he_full_row_gpu(haml,zstore,elecs,diff_state,size,occupancy_2an,occupancy_an_cr,occupancy_an,&
+        z2l_all,z1jk,z2l_inout)
         
         implicit none
         type(hamiltonian), intent(inout)::haml
@@ -22,8 +23,12 @@ MODULE gradient_descent
         integer,intent(in)::size,diff_state
         integer,dimension(:,:,:,:),intent(in)::occupancy_2an,occupancy_an_cr
         integer,dimension(:,:,:),intent(in)::occupancy_an
-        complex(kind=8),allocatable, dimension(:,:,:,:)::z1jk
+        complex(kind=8),dimension(:,:,:,:),intent(inout)::z2l_all
+        complex(kind=8), dimension(:,:,:,:),intent(inout)::z1jk
+        complex(kind=8), dimension(:,:,:),intent(inout)::z2l_inout
+        ! complex(kind=8),allocatable, dimension(:,:,:,:)::z1jk
         complex(kind=8),allocatable, dimension(:,:,:)::z2l
+
         integer::j,k,l,m,ierr
         complex(kind=8)::h1etot, h2etot
         integer, allocatable,dimension(:)::IPIV1
@@ -35,7 +40,7 @@ MODULE gradient_descent
         ierr = 0
         allocate(tot(norb,norb,norb),stat=ierr)
         allocate(temp(norb,norb),stat=ierr)
-        allocate(z1jk(norb,norb,2,norb),stat=ierr)
+        ! allocate(z1jk(norb,norb,2,norb),stat=ierr)
         if(ierr==0) allocate(z2l(norb,2,norb),stat=ierr)
         if (ierr/=0) then
             write(0,"(a,i0)") "Error in annihilation and creation array vector allocation . ierr had value ", ierr
@@ -51,17 +56,17 @@ MODULE gradient_descent
     
         !$omp do simd
         do l=1, norb
-            z2l(l,1,:)=zstore(diff_state)%sin(:)
-            z2l(l,2,:)=zstore(diff_state)%cos(:)
-            z2l(l,2,l)=z2l(l,1,l)
-            z2l(l,1,l)=cmplx(0.0,0.0)
+            z2l_inout(l,1,:)=zstore(diff_state)%sin(:)
+            z2l_inout(l,2,:)=zstore(diff_state)%cos(:)
+            z2l_inout(l,2,l)=z2l_inout(l,1,l)
+            z2l_inout(l,1,l)=cmplx(0.0,0.0)
         end do
 
 
         !$omp do simd collapse(2)
         do j=1, norb
             do k=1, norb
-                z1jk(j,k,:,:)=z2l(j,:,:)
+                z1jk(j,k,:,:)=z2l_inout(j,:,:)
                 z1jk(j,k,2,k)=z1jk(j,k,1,k)
                 z1jk(j,k,1,k)=cmplx(0.0,0.0)
             end do
@@ -76,17 +81,22 @@ MODULE gradient_descent
             h2etot=cmplx(0.0,0.0)
             temp=cmplx(0.0,0.0)
             tot=cmplx(0.0,0.0)
+
+            if(m.eq.diff_state)then
+                z2l=z2l_inout
+            else 
+                z2l=z2l_all(m,:,:,:)
+            end if 
     
-            !$omp parallel shared(z2l)
-            !$omp do simd
-            do l=1, norb
-                z2l(l,1,:)=zstore(m)%sin(:)
-                z2l(l,2,:)=zstore(m)%cos(:)
-                z2l(l,2,l)=z2l(l,1,l)
-                z2l(l,1,l)=cmplx(0.0,0.0)
-            end do
-     
-            !$omp end parallel         
+            !!$omp parallel shared(z2l)
+            !!$omp do simd
+            ! do l=1, norb
+            !     z2l(l,1,:)=zstore(m)%sin(:)
+            !     z2l(l,2,:)=zstore(m)%cos(:)
+            !     z2l(l,2,l)=z2l(l,1,l)
+            !     z2l(l,1,l)=cmplx(0.0,0.0)
+            ! end do
+            !!$omp end parallel         
 
             call one_elec_intfc_gpu(zstore(diff_state)%sin,zstore(diff_state)%cos,z2l,elecs%h1ei,temp,occupancy_an_cr)
             
@@ -122,7 +132,7 @@ MODULE gradient_descent
         
         end do
     
-        deallocate(z1jk,stat=ierr)
+        ! deallocate(z1jk,stat=ierr)
         if(ierr==0) deallocate(z2l,stat=ierr)
         if (ierr/=0) then
             write(0,"(a,i0)") "Error in annihilation and creation array vector deallocation . ierr had value ", ierr
@@ -357,7 +367,7 @@ MODULE gradient_descent
 
     end subroutine two_elec_intfc_gpu
 
-    subroutine gradient_row_gpu(haml,zstore,elecs,diff_state,size,occupancy_2an,occupancy_an_cr,occupancy_an)
+    subroutine gradient_row_gpu(haml,zstore,elecs,diff_state,size,occupancy_2an,occupancy_an_cr,occupancy_an,z2l_all,z1jk_all)
 
         implicit none
 
@@ -367,7 +377,9 @@ MODULE gradient_descent
         integer,intent(in)::size,diff_state
         integer,dimension(:,:,:,:),intent(in)::occupancy_2an,occupancy_an_cr
         integer,dimension(:,:,:),intent(in)::occupancy_an
-        complex(kind=8),allocatable, dimension(:,:,:,:)::z1jk
+        complex(kind=8),dimension(:,:,:,:,:),intent(inout)::z1jk_all
+        complex(kind=8),dimension(:,:,:,:),intent(inout)::z2l_all
+        ! complex(kind=8),allocatable, dimension(:,:,:,:)::z1jk
         complex(kind=8),allocatable, dimension(:,:,:)::z2l
         real(kind=8),allocatable,dimension(:)::h1etot_diff_bra,h2etot_diff_bra
         real(kind=8),allocatable,dimension(:,:,:)::temp2
@@ -393,7 +405,7 @@ MODULE gradient_descent
             return
         end if 
 
-        allocate(z1jk(norb,norb,2,norb),stat=ierr)
+        ! allocate(z1jk(norb,norb,2,norb),stat=ierr)
         if(ierr==0) allocate(z2l(norb,2,norb),stat=ierr)
         if (ierr/=0) then
             write(0,"(a,i0)") "Error in annihilation and creation array vector allocation . ierr had value ", ierr
@@ -404,26 +416,26 @@ MODULE gradient_descent
         h1etot_diff_bra=0.0
         h2etot_diff_bra=0.0
     
-        !$omp parallel shared(zstore,z1jk, z2l) private(j,k,l)
-        !$omp do simd
-        do l=1, norb
-            z2l(l,1,:)=zstore(diff_state)%sin(:)
-            z2l(l,2,:)=zstore(diff_state)%cos(:)
-            z2l(l,2,l)=z2l(l,1,l)
-            z2l(l,1,l)=cmplx(0.0,0.0)
-        end do
+        ! !$omp parallel shared(zstore,z1jk, z2l) private(j,k,l)
+        ! !$omp do simd
+        ! do l=1, norb
+        !     z2l(l,1,:)=zstore(diff_state)%sin(:)
+        !     z2l(l,2,:)=zstore(diff_state)%cos(:)
+        !     z2l(l,2,l)=z2l(l,1,l)
+        !     z2l(l,1,l)=cmplx(0.0,0.0)
+        ! end do
    
-        !$omp do simd collapse(2)
-        do j=1, norb
-            do k=1, norb
-                z1jk(j,k,:,:)=z2l(j,:,:)
-                z1jk(j,k,2,k)=z1jk(j,k,1,k)
-                z1jk(j,k,1,k)=cmplx(0.0,0.0)
-            end do
-        end do
+        ! !$omp do simd collapse(2)
+        ! do j=1, norb
+        !     do k=1, norb
+        !         z1jk(j,k,:,:)=z2l(j,:,:)
+        !         z1jk(j,k,2,k)=z1jk(j,k,1,k)
+        !         z1jk(j,k,1,k)=cmplx(0.0,0.0)
+        !     end do
+        ! end do
 
-        !$omp end parallel
-        z1jk=z1jk*occupancy_2an
+        ! !$omp end parallel
+        ! z1jk=z1jk*occupancy_2an
 
         do m=1,size
 
@@ -437,24 +449,25 @@ MODULE gradient_descent
                 equal=2
             end if
             
-            !$omp parallel shared(z2l)
-            !$omp do simd
-            do l=1, norb
-                z2l(l,1,:)=zstore(m)%sin(:)
-                z2l(l,2,:)=zstore(m)%cos(:)
-                z2l(l,2,l)=z2l(l,1,l)
-                z2l(l,1,l)=cmplx(0.0,0.0)
-            end do
-            !$omp end parallel      
+            ! !$omp parallel shared(z2l)
+            ! !$omp do simd
+            ! do l=1, norb
+            !     z2l(l,1,:)=zstore(m)%sin(:)
+            !     z2l(l,2,:)=zstore(m)%cos(:)
+            !     z2l(l,2,l)=z2l(l,1,l)
+            !     z2l(l,1,l)=cmplx(0.0,0.0)
+            ! end do
+            ! !$omp end parallel      
 
             call one_elec_intfc_grad_gpu(zstore(diff_state)%sin,zstore(diff_state)%cos,&
-            zstore(m)%sin,zstore(m)%cos,z2l,occupancy_an_cr,elecs%h1ei,equal,h1etot_diff)
+            zstore(m)%sin,zstore(m)%cos,z2l_all(m,:,:,:),occupancy_an_cr,elecs%h1ei,equal,h1etot_diff)
           
-            z2l=z2l*occupancy_an
+            z2l=z2l_all(m,:,:,:)*occupancy_an
             !$omp flush(z2l) 
             
             call two_elec_intfc_grad_gpu(zstore(diff_state)%sin,zstore(diff_state)%cos,&
-            zstore(m)%sin,zstore(m)%cos,z2l,z1jk,elecs%h2ei,occupancy_2an,occupancy_an,equal,h2etot_diff)
+            zstore(m)%sin,zstore(m)%cos,z2l_all(m,:,:,:),z1jk_all(diff_state,:,:,:,:),&
+            elecs%h2ei,occupancy_2an,occupancy_an,equal,h2etot_diff)
             
             do j=1, norb
                 do k=1,norb
@@ -475,7 +488,7 @@ MODULE gradient_descent
 
         end do  
 
-        deallocate(z1jk,stat=ierr)
+        ! deallocate(z1jk,stat=ierr)
         if(ierr==0) deallocate(z2l,stat=ierr)
         if (ierr/=0) then
             write(0,"(a,i0)") "Error in annihilation and creation array vector deallocation . ierr had value ", ierr
@@ -741,7 +754,8 @@ MODULE gradient_descent
 
     end subroutine two_elec_intfc_grad_gpu
 
-    subroutine grad_calc_gpu(haml,zstore,elect,pick,occupancy_2an,occupancy_an_cr,occupancy_an,dvec,grad_fin,en,d_diff_flg)
+    subroutine grad_calc_gpu(haml,zstore,elect,pick,occupancy_2an,occupancy_an_cr,occupancy_an,&
+        dvec,grad_fin,en,d_diff_flg,z2l_all,z1jk_all)
 
         implicit none 
 
@@ -753,13 +767,15 @@ MODULE gradient_descent
         integer,dimension(:,:,:),intent(in)::occupancy_an
         integer,dimension(:,:,:,:),intent(in)::occupancy_an_cr,occupancy_2an
         integer,intent(in)::pick,d_diff_flg
+        complex(kind=8),dimension(:,:,:,:,:),intent(inout)::z1jk_all
+        complex(kind=8),dimension(:,:,:,:),intent(inout)::z2l_all
         integer::k,l,m
         logical::nanchk
         type(energy),intent(inout)::en
 
         if (errorflag .ne. 0) return
 
-        call gradient_row_gpu(haml,zstore,elect,pick,ndet,occupancy_2an,occupancy_an_cr,occupancy_an)
+        call gradient_row_gpu(haml,zstore,elect,pick,ndet,occupancy_2an,occupancy_an_cr,occupancy_an,z2l_all,z1jk_all)
         nanchk=.false. 
         do k=1,norb
             if(is_nan(grad_fin%vars(pick,k)).eqv..true.)then
@@ -767,7 +783,7 @@ MODULE gradient_descent
                 grad_fin%vars=0 
                 grad_fin%grad_avlb=0
                 do l=1 ,10
-                    call gradient_row_gpu(haml,zstore,elect,pick,ndet,occupancy_2an,occupancy_an_cr,occupancy_an)
+                    call gradient_row_gpu(haml,zstore,elect,pick,ndet,occupancy_2an,occupancy_an_cr,occupancy_an,z2l_all,z1jk_all)
                     do m=1,norb
                         if(is_nan(grad_fin%vars(pick,m)).eqv..true.)then 
                             exit 
@@ -807,7 +823,7 @@ MODULE gradient_descent
     end subroutine grad_calc_gpu
 
     subroutine orbital_gd_gpu(zstore,grad_fin,elect,dvecs,temp_dvecs,en,haml,temp_ham,chng_trk,temp_zom,occupancy_an,&
-        occupancy_an_cr,occupancy_2an,epoc_cnt,alphain,b,picker,maxloop) 
+        occupancy_an_cr,occupancy_2an,epoc_cnt,alphain,b,picker,maxloop,z2l_all,z1jk_all) 
 
         implicit none 
 
@@ -824,6 +840,10 @@ MODULE gradient_descent
         integer,dimension(:,:,:,:)::occupancy_an_cr,occupancy_2an
         real(kind=8),intent(in)::b,alphain
         integer,dimension(ndet-1),intent(inout)::picker
+        complex(kind=8),dimension(:,:,:,:,:),intent(inout)::z1jk_all
+        complex(kind=8),dimension(:,:,:,:),intent(inout)::z2l_all
+        complex(kind=8),allocatable, dimension(:,:,:,:)::z1jk
+        complex(kind=8),allocatable, dimension(:,:,:)::z2l
         integer::rjct_cnt,next,acpt_cnt,pick,pickorb,rjct_cnt2,loops,d_diff_flg,lralt_zs
         real(kind=8)::t,fxtdk,l2_rglrstn
         integer,dimension(ndet-1)::rsrtpass
@@ -831,7 +851,7 @@ MODULE gradient_descent
         integer,dimension(norb)::chng_trk2
         logical::nanchk
         character(len=4)::ergerr
-        integer::j,k,l,n
+        integer::j,k,l,n,ierr
         
     
         lralt_zs=0    ! power alpha is raised to 
@@ -843,6 +863,15 @@ MODULE gradient_descent
         rjct_cnt2=0
         loops=0
         d_diff_flg=1
+        ierr=0
+
+        allocate(z1jk(norb,norb,2,norb),stat=ierr)
+        if(ierr==0) allocate(z2l(norb,2,norb),stat=ierr)
+        if (ierr/=0) then
+            write(0,"(a,i0)") "Error in annihilation and creation array vector allocation . ierr had value ", ierr
+            errorflag=1
+            return
+        end if 
 
         do while(rjct_cnt2.lt.(norb*100))
             loops=loops+1
@@ -869,7 +898,7 @@ MODULE gradient_descent
                         do k=1,norb
                             if(is_nan(grad_fin%vars(pick,k)).eqv..true.)then
                                 call grad_calc_gpu(haml,zstore,elect,pick,occupancy_2an,occupancy_an_cr,&
-                            occupancy_an,dvecs,grad_fin,en,d_diff_flg) 
+                            occupancy_an,dvecs,grad_fin,en,d_diff_flg,z2l_all,z1jk_all) 
                                 nanchk=.false. 
                                 exit 
                             end if 
@@ -878,7 +907,7 @@ MODULE gradient_descent
 
                         if(is_nan(grad_fin%vars(pick,pickorb)).eqv..true.)then
                             call grad_calc_gpu(haml,zstore,elect,pick,occupancy_2an,occupancy_an_cr,&
-                            occupancy_an,dvecs,grad_fin,en,d_diff_flg) 
+                            occupancy_an,dvecs,grad_fin,en,d_diff_flg,z2l_all,z1jk_all) 
                         end if 
                         
                         ! Setup temporary zombie state
@@ -901,7 +930,8 @@ MODULE gradient_descent
                             temp_zom(pick)%sin(pickorb)=sin(cmplx(temp_zom(pick)%phi(pickorb),0.0d0,kind=8))
                             temp_zom(pick)%cos(pickorb)=cos(cmplx(temp_zom(pick)%phi(pickorb),0.0d0,kind=8))
                             temp_ham=haml
-                            call he_full_row_gpu(temp_ham,temp_zom,elect,pick,ndet,occupancy_2an,occupancy_an_cr,occupancy_an)
+                            call he_full_row_gpu(temp_ham,temp_zom,elect,pick,ndet,occupancy_2an,&
+                            occupancy_an_cr,occupancy_an,z2l_all,z1jk,z2l)
                             ! Imaginary time propagation for back tracing
                             
                             en%erg=0
@@ -953,6 +983,8 @@ MODULE gradient_descent
                                 haml%diff_ovrlp=0
                                 grad_fin%prev_erg=fxtdk
                                 grad_fin%prev_mmntm(pick,:)=zstore(pick)%phi(:)
+                                z1jk_all(pick,:,:,:,:)=z1jk
+                                z2l_all(pick,:,:,:)=z2l
                             else 
                                 lralt_zs=lralt_zs+1
                                 t=b*(alphain**lralt_zs)
@@ -963,7 +995,7 @@ MODULE gradient_descent
                     
                     if((rjct_cnt.eq.0).and.(n.ne.norb))then
                         call grad_calc_gpu(haml,zstore,elect,pick,occupancy_2an,&
-                        occupancy_an_cr,occupancy_an,dvecs,grad_fin,en,d_diff_flg) 
+                        occupancy_an_cr,occupancy_an,dvecs,grad_fin,en,d_diff_flg,z2l_all,z1jk_all) 
                     end if
                 end do
 
@@ -1003,7 +1035,7 @@ MODULE gradient_descent
                 !Set up gradients for next pass
                 if(grad_fin%grad_avlb(next).eq.0)then 
                     call grad_calc_gpu(haml,zstore,elect,next,occupancy_2an,occupancy_an_cr,&
-                    occupancy_an,dvecs,grad_fin,en,d_diff_flg) 
+                    occupancy_an,dvecs,grad_fin,en,d_diff_flg,z2l_all,z1jk_all) 
                 end if
                 if(acpt_cnt.gt.0)then
                     write(6,"(a,i0,a,f21.16,a,f21.16,a,*(i0:','))") '       ', pick,'              ', &
@@ -1028,11 +1060,21 @@ MODULE gradient_descent
             end if
         end do
 
+        deallocate(z1jk,stat=ierr)
+        if(ierr==0) deallocate(z2l,stat=ierr)
+        if (ierr/=0) then
+            write(0,"(a,i0)") "Error in annihilation and creation array vector deallocation . ierr had value ", ierr
+            errorflag=1
+            return
+        end if 
+
+        return
+
     end subroutine orbital_gd_gpu
 
 
     subroutine full_zs_gd_gpu(zstore,grad_fin,elect,dvecs,temp_dvecs,en,haml,temp_ham,chng_trk,temp_zom,occupancy_an,&
-        occupancy_an_cr,occupancy_2an,epoc_cnt,alphain,b,picker) 
+        occupancy_an_cr,occupancy_2an,epoc_cnt,alphain,b,picker,z2l_all,z1jk_all) 
 
         implicit none 
 
@@ -1049,16 +1091,19 @@ MODULE gradient_descent
         integer,intent(inout)::epoc_cnt
         real(kind=8),intent(in)::b,alphain
         integer,dimension(ndet-1),intent(inout)::picker
+        complex(kind=8),dimension(:,:,:,:,:),intent(inout)::z1jk_all
+        complex(kind=8),dimension(:,:,:,:),intent(inout)::z2l_all
+        complex(kind=8),allocatable, dimension(:,:,:,:)::z1jk
+        complex(kind=8),allocatable, dimension(:,:,:)::z2l
         integer::lralt,rjct_cnt,next,acpt_cnt,pick,orbitcnt,d_diff_flg,lralt_temp,mmntmflg,loop_max,loop_dwn
         real(kind=8)::newb,t,fxtdk,l2_rglrstn,alpha,mmnmtb
         real(kind=8),dimension(norb)::gradient_norm
         real(kind=8),dimension(ndet)::mmntm,mmntma
         integer,dimension(ndet-1)::rsrtpass
         DOUBLE PRECISION, external::ZBQLU01
-        ! real::r
         logical::nanchk
         character(len=4)::ergerr
-        integer::j,k,l
+        integer::j,k,l,ierr
 
     
         if (errorflag .ne. 0) return
@@ -1078,6 +1123,15 @@ MODULE gradient_descent
         mmntmflg=0
         loop_max=20
         loop_dwn=0 
+        ierr=0
+
+        allocate(z1jk(norb,norb,2,norb),stat=ierr)
+        if(ierr==0) allocate(z2l(norb,2,norb),stat=ierr)
+        if (ierr/=0) then
+            write(0,"(a,i0)") "Error in annihilation and creation array vector allocation . ierr had value ", ierr
+            errorflag=1
+            return
+        end if 
 
         do while(rjct_cnt.lt.200)
             t=newb*(alpha**lralt)
@@ -1091,7 +1145,7 @@ MODULE gradient_descent
                 do k=1,norb
                     if(is_nan(grad_fin%vars(pick,k)).eqv..true.)then
                         call grad_calc_gpu(haml,zstore,elect,pick,occupancy_2an,occupancy_an_cr,&
-                        occupancy_an,dvecs,grad_fin,en,d_diff_flg)
+                        occupancy_an,dvecs,grad_fin,en,d_diff_flg,z2l_all,z1jk_all)
                         nanchk=.false. 
                         exit 
                     end if 
@@ -1121,7 +1175,8 @@ MODULE gradient_descent
                         temp_zom(pick)%sin=sin(cmplx(temp_zom(pick)%phi,0.0d0,kind=8))
                         temp_zom(pick)%cos=cos(cmplx(temp_zom(pick)%phi,0.0d0,kind=8))
                         temp_ham=haml
-                        call he_full_row_gpu(temp_ham,temp_zom,elect,pick,ndet,occupancy_2an,occupancy_an_cr,occupancy_an)
+                        call he_full_row_gpu(temp_ham,temp_zom,elect,pick,ndet,occupancy_2an,&
+                        occupancy_an_cr,occupancy_an,z2l_all,z1jk,z2l)
                         
                         ! Imaginary time propagation for back tracing
                         en%erg=0
@@ -1170,6 +1225,8 @@ MODULE gradient_descent
                             mmntma(pick)=t
                             mmntm(pick)=mmnmtb
                             loop_dwn=loop_dwn+1
+                            z1jk_all(pick,:,:,:,:)=z1jk
+                            z2l_all(pick,:,:,:)=z2l
                             if(orbitcnt.lt.0)then
                                 orbitcnt=orbitcnt+1 
                             else
@@ -1245,7 +1302,7 @@ MODULE gradient_descent
                 !Set up gradients for next pass
                 if(grad_fin%grad_avlb(next).lt.2)then
                     call grad_calc_gpu(haml,zstore,elect,next,occupancy_2an,occupancy_an_cr,&
-                    occupancy_an,dvecs,grad_fin,en,d_diff_flg) 
+                    occupancy_an,dvecs,grad_fin,en,d_diff_flg,z2l_all,z1jk_all) 
                 end if
 
             end do
@@ -1259,21 +1316,21 @@ MODULE gradient_descent
             if(acpt_cnt.eq.1)then
                 if((orbitcnt.ge.0).and.(epoc_cnt.gt.100))then  
                     call orbital_gd_gpu(zstore,grad_fin,elect,dvecs,temp_dvecs,en,haml,temp_ham,chng_trk,temp_zom,occupancy_an,&
-                    occupancy_an_cr,occupancy_2an,epoc_cnt,alphain,b,picker,1)
+                    occupancy_an_cr,occupancy_2an,epoc_cnt,alphain,b,picker,1,z2l_all,z1jk_all)
                     orbitcnt=-(10*ndet)
                     lralt=0
                 end if   
             else if(acpt_cnt.eq.0)then
                 if((epoc_cnt.gt.50))then  
                     call orbital_gd_gpu(zstore,grad_fin,elect,dvecs,temp_dvecs,en,haml,temp_ham,chng_trk,temp_zom,occupancy_an,&
-                    occupancy_an_cr,occupancy_2an,epoc_cnt,alphain,b,picker,1)
+                    occupancy_an_cr,occupancy_2an,epoc_cnt,alphain,b,picker,1,z2l_all,z1jk_all)
                     orbitcnt=-(10*ndet)
                 end if
             end if
 
             if((epoc_cnt.gt.500).and.(orbitcnt.ge.0).and.(modulo(epoc_cnt,100).eq.0))then
                 call orbital_gd_gpu(zstore,grad_fin,elect,dvecs,temp_dvecs,en,haml,temp_ham,chng_trk,temp_zom,occupancy_an,&
-                occupancy_an_cr,occupancy_2an,epoc_cnt,alphain,b,picker,1)
+                occupancy_an_cr,occupancy_2an,epoc_cnt,alphain,b,picker,1,z2l_all,z1jk_all)
                 orbitcnt=-(10*ndet)
                 lralt=0
             end if
@@ -1289,6 +1346,16 @@ MODULE gradient_descent
                 exit 
             end if
         end do
+
+        deallocate(z1jk,stat=ierr)
+        if(ierr==0) deallocate(z2l,stat=ierr)
+        if (ierr/=0) then
+            write(0,"(a,i0)") "Error in annihilation and creation array vector deallocation . ierr had value ", ierr
+            errorflag=1
+            return
+        end if 
+
+        return
 
     end subroutine full_zs_gd_gpu
 
@@ -1308,12 +1375,13 @@ MODULE gradient_descent
         type(hamiltonian)::temp_ham
         integer,allocatable,dimension(:,:,:)::occupancy_an
         integer,allocatable,dimension(:,:,:,:)::occupancy_an_cr,occupancy_2an
+        complex(kind=8),allocatable,dimension(:,:,:,:,:)::z1jk_all
+        complex(kind=8),allocatable,dimension(:,:,:,:)::z2l_all
         integer::epoc_cnt,epoc_max
         real(kind=8)::alpha,b
         integer,dimension(ndet-1)::picker,rsrtpass
-
     
-        integer::ierr,j,k,l
+        integer::ierr,j,k,l,p
         
         if (errorflag .ne. 0) return
 
@@ -1357,7 +1425,32 @@ MODULE gradient_descent
         end do
         !$omp end do
         !$omp end parallel
-        
+
+        allocate(z1jk_all(ndet,norb,norb,2,norb),stat=ierr)
+        if(ierr==0) allocate(z2l_all(ndet,norb,2,norb),stat=ierr)
+        if (ierr/=0) then
+            write(0,"(a,i0)") "Error in annihilation and creation array vector allocation . ierr had value ", ierr
+            errorflag=1
+            return
+        end if 
+
+        !$omp parallel do simd collapse(2)
+        do p=1, ndet 
+            do l=1, norb
+                z2l_all(p,l,1,:)=zstore(p)%sin(:)
+                z2l_all(p,l,2,:)=zstore(p)%cos(:)
+                z2l_all(p,l,2,l)=z2l_all(p,l,1,l)
+                z2l_all(p,l,1,l)=cmplx(0.0,0.0)
+                do k=1, norb
+                    z1jk_all(p,l,k,:,:)=z2l_all(p,l,:,:)
+                    z1jk_all(p,l,k,2,k)=z1jk_all(p,l,k,1,k)
+                    z1jk_all(p,l,k,1,k)=cmplx(0.0,0.0)
+                end do
+                z1jk_all(p,:,:,:,:)=z1jk_all(p,:,:,:,:)*occupancy_2an
+            end do
+        end do
+        !$omp end parallel do simd 
+
         epoc_cnt=0 !epoc counter
         if(rstrtflg.eq.'y')then 
             open(unit=450,file='epoc.csv',status="old",iostat=ierr)
@@ -1403,14 +1496,14 @@ MODULE gradient_descent
 
         if(epoc_cnt.eq.0)then
             call orbital_gd_gpu(zstore,grad_fin,elect,dvecs,temp_dvecs,en,haml,temp_ham,chng_trk,temp_zom,occupancy_an,&
-            occupancy_an_cr,occupancy_2an,epoc_cnt,alpha,b,picker,1)
+            occupancy_an_cr,occupancy_2an,epoc_cnt,alpha,b,picker,1,z2l_all,z1jk_all)
         end if 
         if(epoc_cnt.lt.epoc_max)then
             call full_zs_gd_gpu(zstore,grad_fin,elect,dvecs,temp_dvecs,en,haml,temp_ham,&
-            chng_trk,temp_zom,occupancy_an,occupancy_an_cr,occupancy_2an,epoc_cnt,alpha,b,picker) 
+            chng_trk,temp_zom,occupancy_an,occupancy_an_cr,occupancy_2an,epoc_cnt,alpha,b,picker,z2l_all,z1jk_all) 
             
             call orbital_gd_gpu(zstore,grad_fin,elect,dvecs,temp_dvecs,en,haml,temp_ham,chng_trk,temp_zom,occupancy_an,&
-            occupancy_an_cr,occupancy_2an,epoc_cnt,alpha,b,picker,(epoc_max-epoc_cnt)) 
+            occupancy_an_cr,occupancy_2an,epoc_cnt,alpha,b,picker,(epoc_max-epoc_cnt),z2l_all,z1jk_all) 
         end if
 
         !Brings phi values back within the normal 0-2pi range
