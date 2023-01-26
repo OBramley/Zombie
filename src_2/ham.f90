@@ -525,16 +525,19 @@ MODULE ham
                     end if
 
                     if(h2ei(k,l,1).ne.0) then
+                        print*,j,k,l,1
                         tot(k,l) = tot(k,l)+(conjg(z1jk(k,2,1))*z2l(l,1,1)*hh(2)*h2ei(k,l,1))
                     end if
 
                     do p=2,len-1
                         if(h2ei(k,l,p).ne.0.0) then
+                            print*,j,k,l,p
                             tot(k,l) = tot(k,l)+ (gg(p-1)*conjg(z1jk(k,2,p))*z2l(l,1,p)*hh(p+1)*h2ei(k,l,p))
                         end if
                     end do
 
                     if(h2ei(k,l,len).ne.0) then
+                        print*,j,k,l,len
                         tot(k,l) = tot(k,l) +(gg(len-1)*conjg(z1jk(k,2,len))*z2l(l,1,len)*h2ei(k,l,len))
                     end if
                 end if
