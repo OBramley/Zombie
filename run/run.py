@@ -207,23 +207,26 @@ elif(inputs.run['language']=="fortran"):
             spamwriter=csv.writer(csvfile)
             spamwriter.writerow([Hnuc,0])
 
-        with open(EXDIR1+"/integrals/h1ea.csv",'w', newline='')as csvfile:
-            spamwriter=csv.writer(csvfile, delimiter=',')
-            spamwriter.writerows(h1e)
+        # with open(EXDIR1+"/integrals/h1ea.csv",'w', newline='')as csvfile:
+        #     spamwriter=csv.writer(csvfile, delimiter=',')
+        #     spamwriter.writerows(h1e)
 
-        for i in range(len(eri_full)):
-            for j in range(len(eri_full)):
-                obj=eri_full[i,j,:,:]
-                with open(EXDIR1+"/integrals/h2ea_"+str(i+1)+"_"+str(j+1)+".csv",'w', newline='')as csvfile:
-                    spamwriter=csv.writer(csvfile, delimiter=',')
-                    spamwriter.writerows(obj)
+        # for i in range(len(eri_full)):
+        #     for j in range(len(eri_full)):
+        #         obj=eri_full[i,j,:,:]
+        #         with open(EXDIR1+"/integrals/h2ea_"+str(i+1)+"_"+str(j+1)+".csv",'w', newline='')as csvfile:
+        #             spamwriter=csv.writer(csvfile, delimiter=',')
+        #             spamwriter.writerows(obj)
 
     if((inputs.run['zomgen']=='n')or(inputs.run['hamgen']=='n')or(inputs.run['imagprop']=='n')or(inputs.run['clean']=='f')):
         shutil.copytree(inputs.run['datafile'],EXDIR1+'/data')
     else:
         os.mkdir(EXDIR1+'/data')
-            
-    # gcw.ham_writer()
+     
+    gcw.ham_writer(h1e,eri_full,EXDIR1)
+    # shutil.copy2("ham_2.f90",EXDIR1+'/data')
+    # shutil.copy2("ham_2.f90",'../src_2')
+   
 
     with open(EXDIR1+'/rundata.csv','w',newline='')as file:
         writer = csv.writer(file)

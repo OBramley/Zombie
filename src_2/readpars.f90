@@ -267,10 +267,15 @@ MODULE readpars
                 read(zomnum,*) sin
                 do k=1,norb
                     zstore(j)%phi(k)=phi(k)
-                    zstore(j)%cos(k)=cmplx(cos(k),0.0,kind=8)
-                    zstore(j)%sin(k)=cmplx(sin(k),0.0,kind=8)
+                    ! zstore(j)%cos(k)=cmplx(cos(k),0.0,kind=8)
+                    ! zstore(j)%sin(k)=cmplx(sin(k),0.0,kind=8)
+                    zstore(j)%cos(k)=cos(k)
+                    zstore(j)%sin(k)=sin(k)
+                    
                 end do 
                 close(zomnum)
+                zstore(j)%val(1:norb)=zstore(j)%sin
+                zstore(j)%val(norb+1:2*norb)=zstore(j)%cos
                 zstore(j)%update_num=0
             end do
         else if(imagflg=='y')then
@@ -294,8 +299,8 @@ MODULE readpars
                     zstore(j)%img(k)=img(k)
                 end do
                 do k=1,(norb*2),2
-                    zstore(j)%cos((k+1)/2)=cmplx(ccos(k),ccos(k+1),kind=8)
-                    zstore(j)%sin((k+1)/2)=cmplx(csin(k),csin(k+1),kind=8)
+                    ! zstore(j)%cos((k+1)/2)=cmplx(ccos(k),ccos(k+1),kind=8)
+                    ! zstore(j)%sin((k+1)/2)=cmplx(csin(k),csin(k+1),kind=8)
                 end do
                 close(zomnum)
                 zstore(j)%update_num=0
@@ -385,7 +390,8 @@ MODULE readpars
         REAL(kind=8),dimension(size*2)::cline
         character(LEN=100)::hamnm,ovrlpnm
         integer, allocatable,dimension(:)::IPIV1
-        complex(kind=8),allocatable,dimension(:)::WORK1
+        real(kind=8),allocatable,dimension(:)::WORK1
+        ! complex(kind=8),allocatable,dimension(:)::WORK1
 
         if (errorflag .ne. 0) return
         ierr=0
@@ -420,7 +426,8 @@ MODULE readpars
             do j=1, size
                 read(200,*) line
                 do k=1, size
-                    ham%hjk(j,k)=cmplx(line(k),0.0,kind=8)
+                    ! ham%hjk(j,k)=cmplx(line(k),0.0,kind=8)
+                    ham%hjk(j,k)=line(k)
                 end do
             end do
             close(200)
@@ -435,7 +442,8 @@ MODULE readpars
             do j=1, size
                 read(201,*) line
                 do k=1, size
-                    ham%ovrlp(j,k)=cmplx(line(k),0.0,kind=8)
+                    ! ham%ovrlp(j,k)=cmplx(line(k),0.0,kind=8)
+                    ham%ovrlp(j,k)=line(k)
                 end do
             end do
             close(201)
@@ -450,7 +458,7 @@ MODULE readpars
             do j=1, size
                 read(200,*) cline
                 do k=1, (size*2),2
-                    ham%hjk(j,(k+1)/2)=cmplx(cline(k),cline(k+1),kind=8)
+                    ! ham%hjk(j,(k+1)/2)=cmplx(cline(k),cline(k+1),kind=8)
                 end do
             end do
             close(200)
@@ -465,7 +473,7 @@ MODULE readpars
             do j=1, size
                 read(201,*) line
                 do k=1, (size*2),2
-                    ham%ovrlp(j,(k+1)/2)=cmplx(cline(k),cline(k+1),kind=8)
+                    ! ham%ovrlp(j,(k+1)/2)=cmplx(cline(k),cline(k+1),kind=8)
                 end do
             end do
             close(201)
@@ -518,7 +526,8 @@ MODULE readpars
     subroutine dvec_read(d,size,p,filenm)
 
         implicit none
-        complex(kind=8),dimension(:),intent(inout)::d
+        ! complex(kind=8),dimension(:),intent(inout)::d
+        real(kind=8),dimension(:),intent(inout)::d
         character(LEN=13),intent(in)::filenm
         integer,intent(in)::size,p
         REAL(kind=8),dimension(size)::line
@@ -538,12 +547,13 @@ MODULE readpars
         if(imagflg=='n')then
             read(vec,*) line
             do j=1, size
-                d(j)=cmplx(line(j),0.0,kind=8)
+                ! d(j)=cmplx(line(j),0.0,kind=8)
+                d(j)=line(j)
             end do
         else if(imagflg=='y')then
             read(vec,*) cline
             do j=1, (size*2),2
-                d(j)=cmplx(cline(j),cline(j+1),kind=8)
+                ! d(j)=cmplx(cline(j),cline(j+1),kind=8)
             end do
         end if
         close(vec)
@@ -595,7 +605,8 @@ MODULE readpars
             do j=1, size
                 read(204,*) line
                 do k=1, size
-                    ham%hjk(j,k)=cmplx(line(k),0.0,kind=8)
+                    ! ham%hjk(j,k)=cmplx(line(k),0.0,kind=8)
+                    ham%hjk(j,k)=line(k)
                 end do
             end do
             close(204)
@@ -611,7 +622,7 @@ MODULE readpars
             do j=1, size
                 read(200,*) cline
                 do k=1, (size*2),2
-                    ham%hjk(j,(k+1)/2)=cmplx(cline(k),cline(k+1),kind=8)
+                    ! ham%hjk(j,(k+1)/2)=cmplx(cline(k),cline(k+1),kind=8)
                 end do
             end do
             close(204)

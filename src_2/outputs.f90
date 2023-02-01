@@ -39,7 +39,8 @@ MODULE outputs
 
         implicit none
 
-        complex(kind=8),dimension(:,:),intent(in)::out
+        ! complex(kind=8),dimension(:,:),intent(in)::out
+        real(kind=8),dimension(:,:),intent(in)::out
         integer,intent(in)::size
         character(LEN=*),intent(in)::filenm
         integer::ierr,j,k
@@ -196,7 +197,8 @@ MODULE outputs
         implicit none
 
         real(kind=8), dimension(:),intent(in)::time
-        complex(kind=8), dimension(:),intent(in)::erg 
+        ! complex(kind=8), dimension(:),intent(in)::erg 
+        real(kind=8), dimension(:),intent(in)::erg 
         character(LEN=*),intent(in)::filenm
         integer,intent(in)::j
         integer::ergnum,ierr,k
@@ -229,7 +231,7 @@ MODULE outputs
         
         write(ergnum,'(*(e25.17e3 :", "))') (REAL(erg(k)),k=1,timesteps+1)
         if(imagflg=='y')then
-            write(ergnum,'(*(e25.17e3 :", "))') (CMPLX(erg(k)),k=1,timesteps+1)
+            ! write(ergnum,'(*(e25.17e3 :", "))') (CMPLX(erg(k)),k=1,timesteps+1)
         end if
 
         close(ergnum)
@@ -285,7 +287,8 @@ MODULE outputs
     subroutine dvec_writer(d,size,p)
 
         implicit none
-        complex(kind=8),dimension(:),intent(in)::d
+        ! complex(kind=8),dimension(:),intent(in)::d
+        real(kind=8),dimension(:),intent(in)::d
         character(LEN=4)::stateno
         integer,intent(in)::size,p
         integer::ierr,j,vec
@@ -330,7 +333,8 @@ MODULE outputs
     subroutine dvec_writer_c(d,size,p)
 
         implicit none
-        complex(kind=8),dimension(:),intent(in)::d
+        ! complex(kind=8),dimension(:),intent(in)::d
+        real(kind=8),dimension(:),intent(in)::d
         character(LEN=4)::stateno
         integer,intent(in)::size,p
         integer::ierr,j,vec
@@ -361,7 +365,8 @@ MODULE outputs
 
         implicit none
         integer, intent(in)::clean_ndet,j
-        complex(kind=8),intent(in)::clean_erg,clean_norm
+        ! complex(kind=8),intent(in)::clean_erg,clean_norm
+        real(kind=8),intent(in)::clean_erg,clean_norm
         integer::cleane,ierr
 
         cleane=400+j

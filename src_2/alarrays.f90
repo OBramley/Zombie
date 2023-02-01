@@ -7,27 +7,40 @@ MODULE alarrays
 
 
     ! Routine to allcoate 1&2 electron electron integral matrices
-    subroutine allocintgrl(elecs)
+    subroutine allocintgrl(elecs,e1,e2)
 
         implicit none
 
         type(elecintrgl), intent(inout)::elecs
-        
+        integer,intent(in)::e1,e2
         integer::ierr
 
         if (errorflag .ne. 0) return
         
         ierr=0
-        allocate (elecs%h1ei(norb,norb), stat=ierr)
-        if(ierr==0) allocate (elecs%h2ei(norb,norb,norb,norb),stat=ierr)
+        elecs%h1_num=e1
+        elecs%h2_num=e2
+
+        allocate (elecs%h1ei(e1), stat=ierr)
+        if(ierr==0) allocate (elecs%h2ei(e2),stat=ierr)
         if (ierr/=0) then
             write(0,"(a,i0)") "Error in electron integral  allocation. ierr had value ", ierr
             errorflag=1
             return
         end if
+
+        ! allocate (elecs%h1ei(norb,norb), stat=ierr)
+        ! if(ierr==0) allocate (elecs%h2ei(norb,norb,norb,norb),stat=ierr)
+        ! if (ierr/=0) then
+        !     write(0,"(a,i0)") "Error in electron integral  allocation. ierr had value ", ierr
+        !     errorflag=1
+        !     return
+        ! end if
         
-        elecs%h1ei(1:norb,1:norb)=0.0d0
-        elecs%h2ei(1:norb,1:norb,1:norb,1:norb)=0.0d0
+        elecs%h1ei=0.0d0
+        elecs%h2ei=0.0d0
+        ! elecs%h1ei(1:norb,1:norb)=0.0d0
+        ! elecs%h2ei(1:norb,1:norb,1:norb,1:norb)=0.0d0
         elecs%hnuc= 0.0d0
         
         return
@@ -105,6 +118,7 @@ MODULE alarrays
         if(ierr==0) allocate(zs%sin(norb), stat=ierr)
         if(ierr==0) allocate(zs%cos(norb), stat=ierr)
         if(ierr==0) allocate(zs%phi(norb), stat=ierr)
+        if(ierr==0) allocate(zs%val(0:(2*norb)), stat=ierr)
         if(imagflg=='y')then 
             if(ierr==0) allocate(zs%img(norb), stat=ierr)
             zs%img(1:norb)=0.0
@@ -114,12 +128,14 @@ MODULE alarrays
             errorflag=1
             return
         end if
-
+        zs%val=0.0
         zs%alive(1:norb)=1
         zs%dead(1:norb)=1
         zs%phi(1:norb)=0.0d0
-        zs%cos(1:norb)=(0.0d0,0.0d0)
-        zs%sin(1:norb)=(0.0d0,0.0d0)
+        ! zs%cos(1:norb)=(0.0d0,0.0d0)
+        ! zs%sin(1:norb)=(0.0d0,0.0d0)
+        zs%cos(1:norb)=0.0d0
+        zs%sin(1:norb)=0.0d0
         zs%update_num=0
         return
     end subroutine alloczf
@@ -165,6 +181,7 @@ MODULE alarrays
         if(ierr==0) deallocate(zs%sin, stat=ierr)
         if(ierr==0) deallocate(zs%cos, stat=ierr)
         if(ierr==0) deallocate(zs%phi, stat=ierr)
+        if(ierr==0) deallocate(zs%val, stat=ierr)
         if(imagflg=='y')then 
             if(ierr==0) deallocate(zs%img, stat=ierr)
             zs%img(1:norb)=0.0
@@ -262,9 +279,12 @@ MODULE alarrays
             errorflag=1
             return
         end if
-        ham%hjk(1:size,1:size)=(0.0d0,0.0d0)
-        ham%ovrlp(1:size,1:size)=(0.0d0,0.0d0)
-        ham%inv(1:size,1:size)=(0.0d0,0.0d0)
+        ! ham%hjk(1:size,1:size)=(0.0d0,0.0d0)
+        ! ham%ovrlp(1:size,1:size)=(0.0d0,0.0d0)
+        ! ham%inv(1:size,1:size)=(0.0d0,0.0d0)
+        ham%hjk(1:size,1:size)=0.0d0
+        ham%ovrlp(1:size,1:size)=0.0d0
+        ham%inv(1:size,1:size)=0.0d0
         if(GDflg.eq.'y')then  
             if(ierr==0) allocate(ham%diff_hjk(size,size,diff_size), stat=ierr)
             if(ierr==0) allocate(ham%diff_ovrlp(size,size,diff_size), stat=ierr)
@@ -348,7 +368,8 @@ MODULE alarrays
                 errorflag=1
                 return
             end if
-            dvecs(j)%d(1:length)=(0.0,0.0)
+            ! dvecs(j)%d(1:length)=(0.0,0.0)
+            dvecs(j)%d(1:length)=0.0
             dvecs(j)%norm = 0.0d0
         end do
 
@@ -430,7 +451,8 @@ MODULE alarrays
             errorflag=1
             return
         end if
-        en%erg=(0.0,0.0)
+        ! en%erg=(0.0,0.0)
+        en%erg=0.0
         en%t=0.0
         return
      
@@ -546,7 +568,73 @@ MODULE alarrays
         end if 
 
     end subroutine value_reset
-   
+    
+    subroutine alloc_oprts(oper,n)
+
+        implicit none 
+        type(oprts),intent(inout)::oper 
+        integer,intent(in)::n 
+        integer::ierr,k
+        integer(kind=2)::j,norbs
+        if (errorflag .ne. 0) return
+
+        ierr=0
+        norbs=int(norb,kind=2)
+        allocate(oper%alive(norb,n),oper%dead(norb,n),oper%neg_alive(norb,n),oper%neg_dead(norb,n),stat=ierr)
+        if(GDflg.eq.'y')then 
+            if(ierr==0) allocate(oper%alive_diff(norb,norb,n),oper%dead_diff(norb,norb,n),stat=ierr)
+            if(ierr==0) allocate(oper%neg_alive_diff(norb,norb,n),oper%neg_dead_diff(norb,norb,n),stat=ierr)
+        end if
+        if (ierr/=0) then
+            write(0,"(a,i0)") "Error in operators allocation. ierr had value ", ierr
+            errorflag=1
+            return
+        end if
+
+        oper%neg_alive=1
+        oper%neg_dead=1
+        oper%alive=0
+        oper%dead=0
+        do k=1,n
+            oper%alive(:,k)=[integer(kind=2)::(j,j=1,norbs)]
+            oper%dead(:,k)=[integer(kind=2)::((j+norbs),j=1,norbs)]
+        end do
+        ! if(GDflg.eq.'y')then
+        !     oper%neg_alive_diff=1
+        !     oper%neg_dead_diff=1 
+        !     do k=1,norb
+        !         oper%alive_diff(k,:,:)=oper%alive
+        !         oper%dead_diff(k,:,:)=oper%dead
+        !     end do
+        ! end if 
+
+
+
+    end subroutine alloc_oprts
+
+    subroutine dealloc_oprts(oper)
+
+        implicit none 
+        type(oprts),intent(inout)::oper 
+        integer::ierr
+
+        if (errorflag .ne. 0) return
+
+        ierr=0
+
+        deallocate(oper%alive,oper%dead,oper%neg_alive,oper%neg_dead,stat=ierr)
+        if(GDflg.eq.'y')then 
+            if(ierr==0) deallocate(oper%alive_diff,oper%dead_diff,stat=ierr)
+            if(ierr==0) deallocate(oper%neg_alive_diff,oper%neg_dead_diff,stat=ierr)
+        end if
+        if (ierr/=0) then
+            write(0,"(a,i0)") "Error in operators deallocation. ierr had value ", ierr
+            errorflag=1
+            return
+        end if
+
+
+    end subroutine dealloc_oprts
 
 
 

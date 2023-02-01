@@ -27,13 +27,14 @@ MODULE imgtp
                     do k=1, ndet
                     ! k=int(ZBQLUAB(1,ndet))
                         call random_number(r)
-                        p=r !ZBQLU01(1)
-                        dvecs(j)%d(k)=cmplx(p,0.0,kind=8)
+                        ! dvecs(j)%d(k)=cmplx(p,0.0,kind=8)
+                        dvecs(j)%d(k)=r
                     end do
                 end if
                 
             else if(imagflg=='y') then
-                dvecs(j)%d(j)=(1.0,1.0)
+                dvecs(j)%d(j)=1.0
+                ! dvecs(j)%d(j)=(1.0,1.0)
              end if
         end do
        
@@ -71,13 +72,16 @@ MODULE imgtp
     end subroutine imgtime_prop
 
     ! Calculates the energy
-    complex(kind=8) function ergcalc(bham,dvec)
+    real(kind=8) function ergcalc(bham,dvec)
 
         implicit none
 
-        complex(kind=8),intent(in),dimension(:)::dvec
-        complex(kind=8),intent(in),dimension(:,:)::bham
-        complex(kind=8)::result
+        ! complex(kind=8),intent(in),dimension(:)::dvec
+        ! complex(kind=8),intent(in),dimension(:,:)::bham
+        real(kind=8),intent(in),dimension(:)::dvec
+        real(kind=8),intent(in),dimension(:,:)::bham
+        ! complex(kind=8)::result
+        real(kind=8)::result
       
         
         if (errorflag .ne. 0) return
@@ -127,7 +131,9 @@ MODULE imgtp
         type(hamiltonian),intent(in)::haml
         real,intent(in)::db
         integer,intent(in)::diff_state
-        complex(kind=8),dimension(ndet)::ddot
+        ! complex(kind=8),dimension(ndet)::ddot
+        real(kind=8),dimension(ndet)::ddot
+
    
 
         if (errorflag .ne. 0) return
@@ -154,7 +160,8 @@ MODULE imgtp
         type(hamiltonian),intent(in)::haml
         integer,intent(in)::diff_state
         type(dvector), allocatable,dimension(:)::dvecs_copy
-        complex(kind=8)::numer,den
+        ! complex(kind=8)::numer,den
+        real(kind=8)::numer,den
         ! complex(kind=8),dimension(ndet)::temp
         integer::states,j,k
 
@@ -176,12 +183,7 @@ MODULE imgtp
         end do
 
         do j=1,states
-            call d_norm(dvecs_copy(j),haml,1,diff_state)
-            ! temp=matmul(kover,dvecs_copy(j)%d)
-            ! norm = dot_product(dvecs_copy(j)%d,temp)
-            ! norm = 1/sqrt(norm)
-            ! dvecs_copy(j)%d = dvecs_copy(j)%d*norm
-            
+            call d_norm(dvecs_copy(j),haml,1,diff_state)  
         end do
         dvecs=dvecs_copy
         call deallocdv(dvecs_copy)

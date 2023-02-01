@@ -13,58 +13,61 @@ MODULE zom
         type(zombiest),dimension(:),intent(inout)::zstore
         integer, intent(in)::num
         integer::j,k
-        ! DOUBLE PRECISION, external::ZBQLU01
         real(kind=8)::dummy
         real::r
-        ! real(kind=8),dimension(norb)::rands
-        ! complex(kind=8)::ctemp
         if (errorflag .ne. 0) return
 
         
         if(imagflg=='n') then
             do j=1,num
-                ! call random_number(rands)
+    
                 do k=1,norb
                     dummy=-1
                     !$omp critical
                     do while((dummy.lt.0))
                         call random_number(r)
-                       dummy=2*pirl*r   !ZBQLU01(1)
-                    !    if((dummy.gt.0.5*pirl))then
-                    !         dummy=-1
-                    !    end if
+                       dummy=2*pirl*r 
                     end do
                     !$omp end critical
                     zstore(j)%phi(k)=dummy
                 end do 
-                zstore(j)%sin=sin(cmplx(zstore(j)%phi,0.0d0,kind=8))
-                zstore(j)%cos=cos(cmplx(zstore(j)%phi,0.0d0,kind=8))
+                ! zstore(j)%sin=sin(cmplx(zstore(j)%phi,0.0d0,kind=8))
+                ! zstore(j)%cos=cos(cmplx(zstore(j)%phi,0.0d0,kind=8))
+                zstore(j)%sin=sin(zstore(j)%phi)
+                zstore(j)%cos=cos(zstore(j)%phi)
+                zstore(j)%val(1:)=zstore(j)%sin
+                zstore(j)%val(norb+1:)=zstore(j)%cos
             end do
             if(rhf_1=='y') then
                 zstore(1)%phi(1:nel)=0.5*pirl
                 zstore(1)%phi(nel+1:)=0
                 zstore(1)%sin=0
                 zstore(1)%cos=1
-                zstore(1)%sin(1:nel)=cmplx(1,0.0d0,kind=8)
-                zstore(1)%cos(1:nel)=cmplx(0,0.0d0,kind=8)
+                zstore(1)%sin(1:nel)=1
+                zstore(1)%cos(1:nel)=0
+                zstore(1)%val(nel:norb)=zstore(1)%sin
+                zstore(1)%val(norb+1:)=zstore(1)%cos
+                ! zstore(1)%sin(1:nel)=cmplx(1,0.0d0,kind=8)
+                ! zstore(1)%cos(1:nel)=cmplx(0,0.0d0,kind=8)
             end if 
+            
         else if(imagflg=='y')then
-            do j=1,num
-                do k=1,norb
-                    call random_number(r)
-                    zstore(j)%phi(k)=2*pirl*r   !ZBQLU01(1)
-                    call random_number(r)
-                    zstore(j)%img=2*pirl*r  !ZBQLU01(1)
-                end do
-                zstore(j)%sin=sin(zstore(j)%phi*exp(i*zstore(j)%img))
-                zstore(j)%cos=cos(cmplx(zstore(j)%phi,0.0d0,kind=8))
-            end do
-            if(rhf_1=='y') then
-                zstore(1)%alive(1:nel)=(1.0d0,0.0d0)
-                zstore(1)%dead(1:nel)=(0.0d0,0.0d0)
-                zstore(1)%alive((nel+1):norb)=(0.0d0,0.0d0)
-                zstore(1)%dead((nel+1):norb)=(1.0d0,0.0d0)
-            end if 
+            ! do j=1,num
+            !     do k=1,norb
+            !         call random_number(r)
+            !         zstore(j)%phi(k)=2*pirl*r   !ZBQLU01(1)
+            !         call random_number(r)
+            !         zstore(j)%img=2*pirl*r  !ZBQLU01(1)
+            !     end do
+            !     zstore(j)%sin=sin(zstore(j)%phi*exp(i*zstore(j)%img))
+            !     zstore(j)%cos=cos(cmplx(zstore(j)%phi,0.0d0,kind=8))
+            ! end do
+            ! if(rhf_1=='y') then
+            !     zstore(1)%alive(1:nel)=(1.0d0,0.0d0)
+            !     zstore(1)%dead(1:nel)=(0.0d0,0.0d0)
+            !     zstore(1)%alive((nel+1):norb)=(0.0d0,0.0d0)
+            !     zstore(1)%dead((nel+1):norb)=(1.0d0,0.0d0)
+            ! end if 
         end if
 
         return
@@ -84,7 +87,7 @@ MODULE zom
 
         combs2(1:ndet,1:norb)=0
         
-        zstore(1)%dead(1:norb)=(1.0d0,0.0d0)
+        zstore(1)%dead(1:norb)=1.0d0
         count=2
         !$omp parallel shared(count,zstore,combs2,errorflag) private(combs,j,k,total,ierr)
         !$omp do
@@ -238,21 +241,30 @@ MODULE zom
 
         if (errorflag .ne. 0) return
 
-        zom%dead(1:norb)=(1.0d0,0.0d0)
-        zom%alive(1:norb)=(0.0d0,0.0d0)
-        zom%cos(1:norb)=(1.0d0,0.0d0)
-        zom%sin(1:norb)=(0.0d0,0.0d0)
+        ! zom%dead(1:norb)=(1.0d0,0.0d0)
+        ! zom%alive(1:norb)=(0.0d0,0.0d0)
+        ! zom%cos(1:norb)=(1.0d0,0.0d0)
+        ! zom%sin(1:norb)=(0.0d0,0.0d0)
+        zom%dead(1:norb)=1.0d0
+        zom%alive(1:norb)=0.0d0
+        zom%cos(1:norb)=1.0d0
+        zom%sin(1:norb)=0.0d0
         zom%phi(1:norb)=0.0
 
         do j=1, norb
             if(occ(j)==0)then
                 return
             end if
-            zom%sin(occ(j))=(1.0d0,0.0d0)
-            zom%cos(occ(j))=(0.0d0,0.0d0)
+            ! zom%sin(occ(j))=(1.0d0,0.0d0)
+            ! zom%cos(occ(j))=(0.0d0,0.0d0)
+            ! zom%phi(occ(j))=0.5*pirl
+            ! zom%alive(occ(j))=(1.0d0,0.0d0)
+            ! zom%dead(occ(j))=(0.0d0,0.0d0)
+            zom%sin(occ(j))=1.0d0
+            zom%cos(occ(j))=0.0d0
             zom%phi(occ(j))=0.5*pirl
-            zom%alive(occ(j))=(1.0d0,0.0d0)
-            zom%dead(occ(j))=(0.0d0,0.0d0)
+            zom%alive(occ(j))=1.0d0
+            zom%dead(occ(j))=0.0d0
         end do
 
         return
@@ -267,7 +279,7 @@ MODULE zom
         real(kind=8)::mu((norb/2)),sig(norb/2)
         real(kind=8)::val
         integer::j,k
-        real::r
+        ! real::r
 
         if (errorflag .ne. 0) return
         ! mu and sigma values for Li2 10 spin orbitals used in OG paper
@@ -302,9 +314,6 @@ MODULE zom
                         ! val=2*pirl*mu(k)*ZBQLU01(1)
                         val=2*pirl*random_normal(mu(k),sig(k))
                     
-                        ! if((val.gt.0.5*pirl))then
-                        !     val=-1
-                        ! end if
                     end do
                     zstore(j)%phi(2*k)=val
                     ! print*,val(2*k-1),val(2*k)
@@ -312,8 +321,12 @@ MODULE zom
                     ! val(2*k)=2*pirl*mu(k)*exp(-ZBQLUAB(0,0.1))
                 end do
                 !$omp end critical
-                zstore(j)%sin=sin(cmplx(zstore(j)%phi,0.0d0,kind=8))
-                zstore(j)%cos=cos(cmplx(zstore(j)%phi,0.0d0,kind=8))
+                zstore(j)%sin=sin(zstore(j)%phi)
+                zstore(j)%cos=cos(zstore(j)%phi)
+                zstore(j)%val(1:)=zstore(j)%sin
+                zstore(j)%val(norb+1:)=zstore(j)%cos
+                ! zstore(j)%sin=sin(cmplx(zstore(j)%phi,0.0d0,kind=8))
+                ! zstore(j)%cos=cos(cmplx(zstore(j)%phi,0.0d0,kind=8))
             end do
             !$omp end do
             !$omp end parallel
@@ -322,8 +335,13 @@ MODULE zom
                 zstore(1)%phi(nel+1:)=0
                 zstore(1)%sin=0
                 zstore(1)%cos=1
-                zstore(1)%sin(1:nel)=cmplx(1,0.0d0,kind=8)
-                zstore(1)%cos(1:nel)=cmplx(0,0.0d0,kind=8)
+                zstore(1)%sin(1:nel)=1
+                zstore(1)%cos(1:nel)=0
+                zstore(1)%val(1:)=zstore(1)%sin
+                zstore(1)%val(norb+1:)=zstore(1)%cos
+                
+                ! zstore(1)%sin(1:nel)=cmplx(1,0.0d0,kind=8)
+                ! zstore(1)%cos(1:nel)=cmplx(0,0.0d0,kind=8)
             end if 
             ! do j=1, ndet
             !     zstore(j)%sin(:)=zstore(j)%sin(:)*100

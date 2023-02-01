@@ -11,7 +11,7 @@ program MainZombie
     use clean
     use zom
     use grad_d
-    use gradient_descent
+    ! use gradient_descent
     use omp_lib
 
     implicit none
@@ -23,8 +23,10 @@ program MainZombie
     type(elecintrgl)::elect
     type(hamiltonian)::haml, clean_haml
     type(grad)::gradients
+    type(oprts)::an_cr,an2_cr2
     integer:: j,k, istat,clean_ndet,ierr,diff_state
-    complex(kind=8)::clean_norm, clean_erg
+    real(kind=8)::clean_norm, clean_erg
+    ! complex(kind=8)::clean_norm, clean_erg
     character(LEN=4)::stateno
     character(LEN=100) :: CWD
     integer,dimension(:),allocatable::chng_trk
@@ -72,12 +74,13 @@ program MainZombie
 
     ! generate 1 and 2 electron integrals
     if((cleanflg=="y").or.(cleanflg=="f").or.((hamgflg=='y')).or.(GDflg=='y'))then
-        if((cleanflg=="y").or.((hamgflg=='y')))then
-            call allocintgrl(elect)
-            call electronintegrals(elect)
-        end if
+        ! if((cleanflg=="y").or.((hamgflg=='y')))then
+            ! call allocintgrl(elect)
+        call electronintegrals(elect,an_cr,an2_cr2)
+        ! end if
         ! generate zombie states
         call alloczs(zstore,ndet)
+        write(6,"(a)") "Zombie states allocated"
         if(zomgflg=='y')then
             call genzf(zstore,ndet)
             do j=1,ndet
@@ -115,7 +118,7 @@ program MainZombie
                 ! Maybe specificy conditons but maybe not needed?!
             end if
             write(6,"(a)") "To hamiltonian gen"
-            call hamgen(haml,zstore,elect,ndet,1)
+            call hamgen(haml,zstore,elect,ndet,an_cr,an2_cr2,1)
             call matrixwriter(haml%hjk,ndet,"data/ham.csv")
             call matrixwriter(haml%ovrlp,ndet,"data/ovlp.csv")
             write(6,"(a)") "Hamiltonian successfully generated"
@@ -129,9 +132,7 @@ program MainZombie
         call imgtime_prop(dvecs,en,haml,0)
         write(6,"(a)") "Imaginary time propagation finished"
        
-
         if(gramflg.eq."n")then
-            write(stateno,"(i4.4)")k
             call dvec_writer(dvecs(1)%d,ndet,0)
             call energywriter(en%t,en%erg(1,:),"energy.csv",0)
         else if(gramflg.eq."y")then
@@ -141,11 +142,13 @@ program MainZombie
                 call energywriter(en%t,en%erg(j,:),"energy_state_"//trim(stateno)//".csv",j)
             end do
         end if
-        print*,real(en%erg(1,timesteps+1))
+        print*,en%erg(1,timesteps+1)
+        ! print*,real(en%erg(1,timesteps+1))
         
         if(GDflg.eq."y")then
             call sd_anal(zstore,nel,dvecs(1),1)
-            gradients%prev_erg=real(en%erg(1,timesteps+1))
+            ! gradients%prev_erg=real(en%erg(1,timesteps+1))
+            gradients%prev_erg=en%erg(1,timesteps+1)
             write(6,"(a,f20.16)") "Initial energy: ", gradients%prev_erg
             allocate(chng_trk(ndet),stat=ierr)
             if (ierr/=0) then
@@ -159,7 +162,7 @@ program MainZombie
          
             call final_grad(dvecs(1),haml,gradients,2,0)
             
-            call zombie_alter(zstore,gradients,haml,elect,en,dvecs,chng_trk)
+            ! call zombie_alter(zstore,gradients,haml,elect,en,dvecs,chng_trk)
             
             GDflg='n'
             do j=1,ndet
@@ -167,7 +170,9 @@ program MainZombie
             end do
             dvecs(1)%d=(0.0,0.0)
             call imgtime_prop(dvecs,en,haml,0)
-            write(6,"(a,f21.16)") "Final energy: ", real(en%erg(1,timesteps+1))
+            
+            write(6,"(a,f21.16)") "Final energy: ", en%erg(1,timesteps+1)
+            ! write(6,"(a,f21.16)") "Final energy: ", real(en%erg(1,timesteps+1))
             call energywriter(en%t,en%erg(1,:),"energy_final.csv",0)
             call matrixwriter(haml%hjk,ndet,"data/ham_final.csv")
             call matrixwriter(haml%ovrlp,ndet,"data/ovlp_final.csv")
@@ -186,12 +191,15 @@ program MainZombie
         if(cleanflg=="n")then
             call deallocdv(dvecs)
             write(6,"(a)") "d-vector deallocated"
-            if(hamgflg=='y')then
-                call dealloczs(zstore)
-                write(6,"(a)") "Zombie states deallocated"
-                call deallocintgrl(elect)
-                write(6,"(a)") "Electron integrals deallocated"
-            end if
+            !if(hamgflg=='y')then
+            call dealloczs(zstore)
+            write(6,"(a)") "Zombie states deallocated"
+            call deallocintgrl(elect)
+            write(6,"(a)") "Electron integrals deallocated"
+            call dealloc_oprts(an_cr)
+            call dealloc_oprts(an2_cr2)
+            write(6,"(a)") "creation and annihilation operators deallocated"
+            !end if
         end if
 
         call flush(6)
@@ -221,15 +229,18 @@ program MainZombie
             write(6,"(a)") "Zombie states deallocated"
             call deallocintgrl(elect)
             write(6,"(a)") "Electron integrals deallocated"
+            call dealloc_oprts(an_cr)
+            call dealloc_oprts(an2_cr2)
+            write(6,"(a)") "creation and annihilation operators deallocated"
         end if
     end if
     
     if((cleanflg=="y").or.(cleanflg=="f"))then
         if(cleanflg=="y")then
-            call clean_setup(cstore,nel,clean_haml,elect,clean_ndet,zstore)
+            call clean_setup(cstore,nel,clean_haml,elect,clean_ndet,zstore,an_cr,an2_cr2)
             write(6,"(a)") "Cleaning hamiltonian generated"
         else if(cleanflg=="f")then
-            call clean_read(cstore,clean_haml,clean_ndet,elect)
+            call clean_read(cstore,clean_haml,clean_ndet,elect,an_cr,an2_cr2)
             write(6,"(a)") "Cleaning hamiltonian read in"
         end if
         
@@ -250,10 +261,13 @@ program MainZombie
         write(6,"(a)") "d-vector deallocated"
         call dealloczs(zstore)
         write(6,"(a)") "Zombie states deallocated"
-        if((cleanflg=="y").or.((hamgflg=='y')))then
-            call deallocintgrl(elect)
-            write(6,"(a)") "Electron integrals deallocated"
-        end if
+        !if((cleanflg=="y").or.((hamgflg=='y')))then
+        call deallocintgrl(elect)
+        write(6,"(a)") "Electron integrals deallocated"
+        !end if
+        call dealloc_oprts(an_cr)
+        call dealloc_oprts(an2_cr2)
+        write(6,"(a)") "creation and annihilation operators deallocated"
     end if
 
     if(GDflg=="y")then

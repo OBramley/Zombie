@@ -1,9 +1,6 @@
 MODULE ham
 
     use globvars
-    use alarrays
-    use operators
-    use omp_lib
     use ham_2
     contains
 
@@ -46,8 +43,9 @@ MODULE ham
     subroutine arr_mult(a,b,c)
 
         implicit none
-        real(kind=8),dimension(:),intent(in)
-        real(kind=8),dimension(:),intent(out)
+        real(kind=8),dimension(:),intent(in)::a,b
+        real(kind=8),dimension(:),intent(out)::c
+        integer::j
 
         do j=1, size(a)
             c(j)=a(j)*b(j)
@@ -59,8 +57,9 @@ MODULE ham
     subroutine arr_sum(a,b,c)
 
         implicit none
-        real(kind=8),dimension(:),intent(in)
-        real(kind=8),dimension(:),intent(out)
+        real(kind=8),dimension(:),intent(in)::a,b
+        real(kind=8),dimension(:),intent(out)::c
+        integer::j
 
         do j=1, size(a)
             c(j)=a(j)+b(j)
@@ -172,7 +171,63 @@ MODULE ham
     
     end subroutine ovrlp_make
 
-    subroutine hamgen()
+    subroutine hamgen(ham,zstore,elecs,size,verb)
+
+        implicit none 
+
+        type(hamiltonian), intent(inout)::ham 
+        type(zombiest),dimension(:),intent(in)::zstore
+        type(elecintrgl),intent(in)::elecs
+        integer,intent(in)::size,verb
+
+        real(kind=8),allocatable,dimension(:,:)::ovrlp,temp_ham
+        real(kind=8),allocatable,dimension(:,:)::alive,dead
+        integer, allocatable,dimension(:)::IPIV1
+        real(kind=8),allocatable,dimension(:)::WORK1
+        
+        integer::j,ierr
+
+
+        if (errorflag .ne. 0) return
+
+        allocate(alive(size,norb),dead(size,norb),stat=ierr)
+        if(ierr==0) allocate(ovrlp(size,size),temp_ham(size,size),stat=ierr)
+        if (ierr/=0) then
+            write(0,"(a,i0)") "Error in dead and alive vector allocation . ierr had value ", ierr
+            errorflag=1
+            return
+        end if 
+
+        do j=1,size
+            alive(:,j)=zstore(j)%sin
+            dead(:,j)=zstore(j)%cos
+        end do
+
+        call ovrlp_make(ovrlp,alive,dead) 
+        call ham_make(temp_ham,ovrlp,alive,dead,elecs%h1ei,elecs%h2ei,elecs%hnuc)
+        ham%ovrlp=ovrlp
+        ham%hjk=temp_ham
+        ham%inv=ovrlp
+        allocate(WORK1(size),IPIV1(size))
+        if (ierr/=0) then
+            write(0,"(a,i0)") "Error in IPIV or WORK1 vector allocation . ierr had value ", ierr
+            errorflag=1
+        end if 
+
+        Call dgetrf(size, size, ham%inv, size, IPIV1, ierr)
+        if (ierr/=0) then
+            write(0,"(a,i0)")"Error in DGETRF",ierr
+        end if
+        if (ierr==0) call dgetri(size,ham%inv,size,IPIV1,WORK1,size,ierr)
+        if (ierr/=0) then
+            write(0,"(a,i0)")"Error in DGETRF",ierr
+        end if
+
+        deallocate(WORK1,IPIV1)
+
+        call DGEMM("N","N",size,size,size,1.d0,ham%inv,size,ham%hjk,size,0.d0,ham%kinvh,size)
+
+        deallocate(alive,dead,ovrlp,temp_ham,stat=ierr)
 
     end subroutine hamgen
 

@@ -4,21 +4,28 @@ MODULE globvars
 
     ! Type defining the zombie state
     type zombiest
-        complex(kind=8), dimension(:), allocatable::sin
-        complex(kind=8), dimension(:), allocatable::cos
+        ! complex(kind=8), dimension(:), allocatable::sin
+        ! complex(kind=8), dimension(:), allocatable::cos
+        real(kind=8), dimension(:), allocatable::sin
+        real(kind=8), dimension(:), allocatable::cos
         real(kind=8),dimension(:),allocatable::phi
         real(kind=8),dimension(:),allocatable::img
-        integer,dimension(:),allocatable::dead
-        integer,dimension(:),allocatable::alive
+        real(kind=8),dimension(:),allocatable::val
+        integer(kind=1),dimension(:),allocatable::dead
+        integer(kind=1),dimension(:),allocatable::alive
         integer::update_num
     end type zombiest
 
     ! Type defining the Hamiltonian matrix and the overlap matrix
     type hamiltonian
-        complex(kind=8), dimension(:,:), allocatable::hjk
-        complex(kind=8), dimension(:,:), allocatable::ovrlp
-        complex(kind=8), dimension(:,:), allocatable::inv
-        complex(kind=8), dimension(:,:), allocatable::kinvh
+        real(kind=8), dimension(:,:), allocatable::hjk
+        real(kind=8), dimension(:,:), allocatable::ovrlp
+        real(kind=8), dimension(:,:), allocatable::inv
+        real(kind=8), dimension(:,:), allocatable::kinvh
+        ! complex(kind=8), dimension(:,:), allocatable::hjk
+        ! complex(kind=8), dimension(:,:), allocatable::ovrlp
+        ! complex(kind=8), dimension(:,:), allocatable::inv
+        ! complex(kind=8), dimension(:,:), allocatable::kinvh
 
         real(kind=8), dimension(:,:,:), allocatable::diff_hjk
         real(kind=8), dimension(:,:,:), allocatable::diff_ovrlp
@@ -28,7 +35,8 @@ MODULE globvars
     end type hamiltonian
 
     type dvector
-        complex(kind=8), dimension(:), allocatable::d
+        !complex(kind=8), dimension(:), allocatable::d
+        real(kind=8), dimension(:), allocatable::d
         real(kind=8), dimension(:,:,:),allocatable::d_diff
         ! d_diff(k,j,m) strucutred k specifies the position in the vector d
         ! j specifies the dependence on ZS j. m corresponds to the coeffcient m within 
@@ -38,15 +46,32 @@ MODULE globvars
 
     type energy
         real(kind=8), dimension(:),allocatable::t
-        complex(kind=8), dimension(:,:),allocatable::erg 
+        real(kind=8), dimension(:,:),allocatable::erg 
+        ! complex(kind=8), dimension(:,:),allocatable::erg 
     end type energy
 
     ! Type defining the 1&2 electron integrals
     type elecintrgl
-        real(kind=8), dimension(:,:), allocatable::h1ei
-        real(kind=8), dimension(:,:,:,:), allocatable::h2ei
+        integer::h1_num
+        integer::h2_num
+        ! real(kind=8), dimension(:,:), allocatable::h1ei
+        ! real(kind=8), dimension(:,:,:,:), allocatable::h2ei
+        real(kind=8), dimension(:), allocatable::h1ei
+        real(kind=8), dimension(:), allocatable::h2ei
         real(kind=8) :: hnuc
+        
     end type elecintrgl
+
+    type oprts
+        integer(kind=2),dimension(:,:), allocatable::alive,dead
+        integer(kind=1),dimension(:,:), allocatable::neg_alive,neg_dead
+
+        integer(kind=2),dimension(:,:,:), allocatable::alive_diff,dead_diff
+        integer(kind=1),dimension(:,:,:), allocatable::neg_alive_diff,neg_dead_diff
+
+    end type oprts
+
+    
 
     type grad 
         real(kind=8),dimension(:,:), allocatable::vars
