@@ -584,6 +584,7 @@ MODULE alarrays
         if(GDflg.eq.'y')then 
             if(ierr==0) allocate(oper%alive_diff(norb,norb,n),oper%dead_diff(norb,norb,n),stat=ierr)
             if(ierr==0) allocate(oper%neg_alive_diff(norb,norb,n),oper%neg_dead_diff(norb,norb,n),stat=ierr)
+            if(ierr==0) allocate(oper%dcnt(0:n,norb),stat=ierr)
         end if
         if (ierr/=0) then
             write(0,"(a,i0)") "Error in operators allocation. ierr had value ", ierr
@@ -599,14 +600,15 @@ MODULE alarrays
             oper%alive(:,k)=[integer(kind=2)::(j,j=1,norbs)]
             oper%dead(:,k)=[integer(kind=2)::((j+norbs),j=1,norbs)]
         end do
-        ! if(GDflg.eq.'y')then
-        !     oper%neg_alive_diff=1
-        !     oper%neg_dead_diff=1 
-        !     do k=1,norb
-        !         oper%alive_diff(k,:,:)=oper%alive
-        !         oper%dead_diff(k,:,:)=oper%dead
-        !     end do
-        ! end if 
+        if(GDflg.eq.'y')then
+            oper%dcnt=0
+            oper%neg_alive_diff=1
+            oper%neg_dead_diff=1
+            do j=1,norbs
+                oper%alive_diff(j,:,:)=oper%alive
+                oper%dead_diff(j,:,:)=oper%dead
+            end do
+        end if 
 
 
 
@@ -626,6 +628,7 @@ MODULE alarrays
         if(GDflg.eq.'y')then 
             if(ierr==0) deallocate(oper%alive_diff,oper%dead_diff,stat=ierr)
             if(ierr==0) deallocate(oper%neg_alive_diff,oper%neg_dead_diff,stat=ierr)
+            if(ierr==0) deallocate(oper%dcnt,stat=ierr)
         end if
         if (ierr/=0) then
             write(0,"(a,i0)") "Error in operators deallocation. ierr had value ", ierr

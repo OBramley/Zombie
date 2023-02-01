@@ -3,7 +3,6 @@ MODULE gradient_descent
     use globvars
     use alarrays
     use ham
-    use operators
     use grad_d
     use imgtp
     use outputs
@@ -13,545 +12,58 @@ MODULE gradient_descent
 
     ! Subroutine to calcualte Hamiltonian elements combines 1st and 2nd electron integral calcualations so remove double 
     ! calcualiton of certain results. This minimises the (slow) applicaiton of the creation and annihilaiton operators
-    subroutine he_full_row(haml,zstore,elecs,diff_state,size,occupancy_2an,occupancy_an_cr,occupancy_an)
-        
-        implicit none
+
+    ! Subroutine that controls and calcualtes all of the hamiltonian variables 
+    subroutine he_full_row(haml,zstore,elecs,size,an_cr,an2_cr2,diff_state)
+
+        implicit none 
+
         type(hamiltonian), intent(inout)::haml
         type(zombiest),dimension(:),intent(in)::zstore
         type(elecintrgl),intent(in)::elecs
+        type(oprts),intent(in)::an_cr,an2_cr2
         integer,intent(in)::size,diff_state
-        integer,dimension(:,:,:,:),intent(in)::occupancy_2an,occupancy_an_cr
-        integer,dimension(:,:,:),intent(in)::occupancy_an
-        complex(kind=8),allocatable, dimension(:,:,:,:)::z1jk
-        complex(kind=8),allocatable, dimension(:,:,:)::z2l
-        integer::j,k,l,m,ierr
-        complex(kind=8)::h1etot, h2etot
         integer, allocatable,dimension(:)::IPIV1
-        complex(kind=8),allocatable,dimension(:)::WORK1
-        complex(kind=8),allocatable,dimension(:,:,:)::tot
-        complex(kind=8),allocatable,dimension(:,:)::temp
+        real(kind=8),allocatable,dimension(:)::WORK1
+        
+        integer::ierr
+
 
         if (errorflag .ne. 0) return
-        ierr = 0
-        allocate(tot(norb,norb,norb),stat=ierr)
-        allocate(temp(norb,norb),stat=ierr)
-        allocate(z1jk(norb,norb,2,norb),stat=ierr)
-        if(ierr==0) allocate(z2l(norb,2,norb),stat=ierr)
-        if (ierr/=0) then
-            write(0,"(a,i0)") "Error in annihilation and creation array vector allocation . ierr had value ", ierr
-            errorflag=1
-            return
-        end if 
-
-        h1etot=cmplx(0.0,0.0)
-        h2etot=cmplx(0.0,0.0)
-
-
-        !$omp parallel shared(zstore, z1jk, z2l) private(j,k,l)
-    
-        !$omp do simd
-        do l=1, norb
-            z2l(l,1,:)=zstore(diff_state)%sin(:)
-            z2l(l,2,:)=zstore(diff_state)%cos(:)
-            z2l(l,2,l)=z2l(l,1,l)
-            z2l(l,1,l)=cmplx(0.0,0.0)
-        end do
-
-
-        !$omp do simd collapse(2)
-        do j=1, norb
-            do k=1, norb
-                z1jk(j,k,:,:)=z2l(j,:,:)
-                z1jk(j,k,2,k)=z1jk(j,k,1,k)
-                z1jk(j,k,1,k)=cmplx(0.0,0.0)
-            end do
-        end do
-
-        !$omp end parallel
-        z1jk=z1jk*occupancy_2an
-
-        do m=1,size
-    
-            h1etot=cmplx(0.0,0.0)
-            h2etot=cmplx(0.0,0.0)
-            temp=cmplx(0.0,0.0)
-            tot=cmplx(0.0,0.0)
-    
-            !$omp parallel shared(z2l)
-            !$omp do simd
-            do l=1, norb
-                z2l(l,1,:)=zstore(m)%sin(:)
-                z2l(l,2,:)=zstore(m)%cos(:)
-                z2l(l,2,l)=z2l(l,1,l)
-                z2l(l,1,l)=cmplx(0.0,0.0)
-            end do
-     
-            !$omp end parallel         
-
-            call one_elec_intfc(zstore(diff_state)%sin,zstore(diff_state)%cos,z2l,elecs%h1ei,temp,occupancy_an_cr)
-
-            z2l=z2l*occupancy_an
-            !$omp flush(z2l)
+        ierr=0
+        print*,haml%ovrlp(:,diff_state)
+        haml%ovrlp(:,diff_state)=ovrlp_column(zstore(diff_state)%val,zstore,diff_state)
+        haml%ovrlp(diff_state,:)=haml%ovrlp(:,diff_state)
+        print*,haml%ovrlp(:,diff_state)
+        stop
+        haml%hjk(:,diff_state)=haml%ovrlp(:,diff_state)*elecs%hnuc 
+        call haml_column(haml%hjk(:,diff_state),zstore(diff_state)%val,zstore,an_cr,an2_cr2,elecs,1)
         
-            call two_elec_intfc(zstore(diff_state)%sin,zstore(m)%sin,z2l,z1jk,elecs%h2ei,tot)
-                 
-            do j=1, norb
-                do k=1, norb
-                    h1etot=h1etot+temp(j,k)
-                    do l=1, norb
-                        h2etot=h2etot+tot(j,k,l)
-                    end do
-                end do
-            end do
-
-            h2etot=h2etot*0.5
-
-            haml%ovrlp(diff_state,m)=overlap(zstore(diff_state),zstore(m))
-            haml%ovrlp(m,diff_state)= haml%ovrlp(diff_state,m)
-            haml%hjk(diff_state,m)=h1etot+h2etot+(elecs%hnuc*haml%ovrlp(diff_state,m))
-            haml%hjk(m,diff_state)=haml%hjk(diff_state,m)
-        
-        end do
-    
-        deallocate(z1jk,stat=ierr)
-        if(ierr==0) deallocate(z2l,stat=ierr)
-        if (ierr/=0) then
-            write(0,"(a,i0)") "Error in annihilation and creation array vector deallocation . ierr had value ", ierr
-            errorflag=1
-            return
-        end if 
-
         haml%inv=haml%ovrlp
-        allocate(IPIV1(size),stat=ierr)
+        allocate(WORK1(size),IPIV1(size),stat=ierr)
         if (ierr/=0) then
-            write(0,"(a,i0)") "Error in IPIV vector allocation . ierr had value ", ierr
+            write(0,"(a,i0)") "Error in IPIV or WORK1 vector allocation . ierr had value ", ierr
             errorflag=1
         end if 
-        
-        if (ierr==0) allocate(WORK1(size),stat=ierr)
-        if (ierr/=0) then
-            write(0,"(a,i0)") "Error in WORK vector allocation . ierr had value ", ierr
-            errorflag=1
-        end if   
 
-        if (ierr==0) call ZGETRF(size,size,haml%inv,size,IPIV1,ierr)
+        Call dgetrf(size, size, haml%inv, size, IPIV1, ierr)
         if (ierr/=0) then
-            write(0,"(a,i0)")"Error in ZGETRF",ierr
+            write(0,"(a,i0)")"Error in DGETRF",ierr
         end if
-        if (ierr==0) call ZGETRI(size,haml%inv,size,IPIV1,WORK1,size,ierr)
+        if (ierr==0) call dgetri(size,haml%inv,size,IPIV1,WORK1,size,ierr)
         if (ierr/=0) then
-            write(0,"(a,i0)")"Error in ZGETRF",ierr
+            write(0,"(a,i0)")"Error in DGETRF",ierr
         end if
 
-        if (ierr==0) deallocate(IPIV1,stat=ierr)
-        if (ierr/=0) then
-            write(0,"(a,i0)") "Error in IPIV vector deallocation . ierr had value ", ierr
-            errorflag=1
-        end if
+        deallocate(WORK1,IPIV1)
 
-        if (ierr==0) deallocate(WORK1,stat=ierr)
-        if (ierr/=0) then
-            write(0,"(a,i0)") "Error in WORK vector deallocation . ierr had value ", ierr
-            errorflag=1
-        end if
+        call DGEMM("N","N",size,size,size,1.d0,haml%inv,size,haml%hjk,size,0.d0,haml%kinvh,size)
 
-        !$omp parallel
-        !$omp workshare
-        haml%kinvh=matmul(haml%inv,haml%hjk)
-        !$omp end workshare
-        !$omp end parallel
-
-        return
 
     end subroutine he_full_row
 
 
-
-    subroutine one_elec_intfc(zs1sin,zs1cos,z2l,h1ei,temp,occupancy)
-
-        implicit none
-
-        complex(kind=8),dimension(:)::zs1sin,zs1cos
-        complex(kind=8),dimension(:,:,:),intent(in)::z2l
-        integer,dimension(:,:,:,:),intent(in)::occupancy
-        real(kind=8), dimension(:,:), intent(in)::h1ei
-        complex(kind=8),dimension(:,:),intent(inout)::temp
-        complex(kind=8),allocatable,dimension(:,:)::zomt
-        integer::j,k,len,ierr
-
-       
-        if (errorflag .ne. 0) return
-
-        len=norb
-       
-        allocate(zomt(2,len),stat=ierr)
-        
-        
-  
-        temp=cmplx(0.0,0.0)
-
-
-        !$omp parallel do simd collapse(2) &
-        !$omp & private(j,k,zomt) shared(h1ei,occupancy,z2l,zs1sin,zs1cos,temp)
-        do j=1, len
-            do k=1, len
-                if(h1ei(j,k).ne.(0.0)) then 
-                    zomt=z2l(j,:,:)
-                    zomt(1,k)=zomt(2,k)
-                    zomt(2,k)=cmplx(0.0,0.0)
-                    zomt=zomt*occupancy(j,k,:,:)
-                    temp(j,k)=product((conjg(zs1sin)*zomt(1,:))+(conjg(zs1cos)*zomt(2,:)))*h1ei(j,k)
-                end if
-            end do
-        end do
-        !$omp end parallel do simd
-
-        deallocate(zomt,stat=ierr)
-      
-        return
-
-    end subroutine one_elec_intfc
-
-    subroutine two_elec_intfc(zs1sin,zs2sin,z2l,z1jk,h2ei,tot)
-
-        implicit none
-
-        complex(kind=8),dimension(:)::zs1sin,zs2sin
-        complex(kind=8),dimension(:,:,:),intent(in)::z2l
-        complex(kind=8),dimension(:,:,:,:),intent(in)::z1jk
-        real(kind=8), dimension(:,:,:,:),intent(in)::h2ei
-        complex(kind=8),dimension(:,:,:),intent(inout)::tot
-        integer::j,len
-    
-        if (errorflag .ne. 0) return
-
-        tot=cmplx(0.0,0.0)
-        len=norb
-        !$omp parallel shared(z1jk,z2l,zs1sin,zs2sin,tot,h2ei,len) private(j)
-        !$omp do
-        do j=1, norb
-           
-            tot(j,:,:) = two_elec_part_body(len,zs1sin,zs2sin,z2l,z1jk(j,:,:,:),h2ei(j,:,:,:),j)
-        end do
-        !$omp end  do
-        !$omp end parallel
-     
-        return
-
-    end subroutine two_elec_intfc
-
-    subroutine gradient_row(haml,zstore,elecs,diff_state,size,occupancy_2an,occupancy_an_cr,occupancy_an)
-
-        implicit none
-
-        type(hamiltonian), intent(inout)::haml
-        type(zombiest),dimension(:),intent(in)::zstore
-        type(elecintrgl),intent(in)::elecs
-        integer,intent(in)::size,diff_state
-        integer,dimension(:,:,:,:),intent(in)::occupancy_2an,occupancy_an_cr
-        integer,dimension(:,:,:),intent(in)::occupancy_an
-        complex(kind=8),allocatable, dimension(:,:,:,:)::z1jk
-        complex(kind=8),allocatable, dimension(:,:,:)::z2l
-        real(kind=8),allocatable,dimension(:)::h1etot_diff_bra,h2etot_diff_bra
-        real(kind=8),allocatable,dimension(:,:,:)::temp2
-        real(kind=8),allocatable,dimension(:,:,:)::h1etot_diff
-        real(kind=8),allocatable,dimension(:,:,:,:)::h2etot_diff
-        real(kind=8),allocatable,dimension(:)::overlap_diff
-        integer::j,k,l,m,ierr, equal
-        
-
-        
-        if (errorflag .ne. 0) return
-        ierr = 0
-
-        allocate(h1etot_diff_bra(norb),stat=ierr)
-        if(ierr==0) allocate(h2etot_diff_bra(norb),stat=ierr)
-        if(ierr==0) allocate(temp2(ndet,ndet,norb),stat=ierr)
-        if(ierr==0) allocate(h1etot_diff(norb,norb,norb),stat=ierr)
-        if(ierr==0) allocate(h2etot_diff(norb,norb,norb,norb),stat=ierr)
-        if(ierr==0) allocate(overlap_diff(norb),stat=ierr)
-        if (ierr/=0) then
-            write(0,"(a,i0)") "Error in gradient array vector allocation . ierr had value ", ierr
-            errorflag=1
-            return
-        end if 
-
-        allocate(z1jk(norb,norb,2,norb),stat=ierr)
-        if(ierr==0) allocate(z2l(norb,2,norb),stat=ierr)
-        if (ierr/=0) then
-            write(0,"(a,i0)") "Error in annihilation and creation array vector allocation . ierr had value ", ierr
-            errorflag=1
-            return
-        end if 
-
-        h1etot_diff_bra=0.0
-        h2etot_diff_bra=0.0
-    
-        !$omp parallel shared(zstore,z1jk, z2l) private(j,k,l)
-        !$omp do simd
-        do l=1, norb
-            z2l(l,1,:)=zstore(diff_state)%sin(:)
-            z2l(l,2,:)=zstore(diff_state)%cos(:)
-            z2l(l,2,l)=z2l(l,1,l)
-            z2l(l,1,l)=cmplx(0.0,0.0)
-        end do
-   
-        !$omp do simd collapse(2)
-        do j=1, norb
-            do k=1, norb
-                z1jk(j,k,:,:)=z2l(j,:,:)
-                z1jk(j,k,2,k)=z1jk(j,k,1,k)
-                z1jk(j,k,1,k)=cmplx(0.0,0.0)
-            end do
-        end do
-
-        !$omp end parallel
-        z1jk=z1jk*occupancy_2an
-
-        do m=1,size
-
-            h1etot_diff_bra=0.0
-            h2etot_diff_bra=0.0
-            h1etot_diff=0.0
-            h2etot_diff=0.0
-            if(diff_state.eq.m)then 
-                equal=1
-            else
-                equal=2
-            end if
-            
-            !$omp parallel shared(z2l)
-            !$omp do simd
-            do l=1, norb
-                z2l(l,1,:)=zstore(m)%sin(:)
-                z2l(l,2,:)=zstore(m)%cos(:)
-                z2l(l,2,l)=z2l(l,1,l)
-                z2l(l,1,l)=cmplx(0.0,0.0)
-            end do
-            !$omp end parallel      
-
-            call one_elec_intfc_grad(zstore(diff_state)%sin,zstore(diff_state)%cos,&
-            zstore(m)%sin,zstore(m)%cos,z2l,occupancy_an_cr,elecs%h1ei,equal,h1etot_diff)
-    
-            z2l=z2l*occupancy_an
-            !$omp flush(z2l) 
-            
-            call two_elec_intfc_grad(zstore(diff_state)%sin,zstore(diff_state)%cos,&
-            zstore(m)%sin,zstore(m)%cos,z2l,z1jk,elecs%h2ei,occupancy_2an,occupancy_an,equal,h2etot_diff)
-
-            do j=1, norb
-                do k=1,norb
-                    h1etot_diff_bra=h1etot_diff_bra+h1etot_diff(j,k,:)
-                    do l=1, norb
-                        h2etot_diff_bra=h2etot_diff_bra+h2etot_diff(j,k,l,:)
-                    end do 
-                end do
-            end do
-        
-            h2etot_diff_bra = h2etot_diff_bra*0.5
-            
-            haml%diff_hjk(diff_state,m,:)=h1etot_diff_bra+h2etot_diff_bra
-            if(m.eq.diff_state)then
-                haml%diff_ovrlp(diff_state,m,:) = 0
-            else
-                overlap_diff = diff_overlap_2(zstore(diff_state)%sin,zstore(diff_state)%cos,zstore(m)%sin,zstore(m)%cos,2) 
-                haml%diff_ovrlp(diff_state,m,:) = overlap_diff
-            end if
-
-        end do  
-
-        deallocate(z1jk,stat=ierr)
-        if(ierr==0) deallocate(z2l,stat=ierr)
-        if (ierr/=0) then
-            write(0,"(a,i0)") "Error in annihilation and creation array vector deallocation . ierr had value ", ierr
-            errorflag=1
-            return
-        end if 
-        !$omp parallel shared(temp2,haml) private(k,l)
-        !$omp do simd collapse(2)
-        do k=1, ndet
-            do l=1, ndet
-                if(l.eq.diff_state)then
-                    temp2(k,diff_state,:)=matmul(REAL(haml%inv(k,:)),haml%diff_ovrlp(diff_state,:,:))
-                else
-                    temp2(k,l,:)=real(haml%inv(k,l))*haml%diff_ovrlp(diff_state,l,:)
-                end if
-            end do
-        end do
-       
-        !$omp do simd collapse(2)
-        do k=1, ndet
-            do l=1, ndet
-                haml%diff_invh(diff_state,k,l,:)=matmul(transpose(temp2(k,:,:)),real(haml%kinvh(:,l)))*(-1)
-            end do
-        end do
-        !$omp end parallel
-
-        deallocate(h1etot_diff_bra,stat=ierr)
-        if(ierr==0) deallocate(h2etot_diff_bra,stat=ierr)
-        if(ierr==0) deallocate(overlap_diff,stat=ierr)
-        if(ierr==0) deallocate(temp2,stat=ierr)
-        if (ierr/=0) then
-            write(0,"(a,i0)") "Error in gradient array vector dedeallocation . ierr had value ", ierr
-            errorflag=1
-            return
-        end if 
-        return
-
-    end subroutine gradient_row
-
-
-    subroutine one_elec_intfc_grad(zs1sin,zs1cos,zs2sin,zs2cos,z2l,occupancy,h1ei,equal,h1etot_diff)
-
-        implicit none
-
-        complex(kind=8),dimension(:)::zs1sin,zs1cos,zs2sin,zs2cos
-        complex(kind=8),dimension(:,:,:),intent(in)::z2l
-        integer,dimension(:,:,:,:),intent(in)::occupancy
-        real(kind=8), dimension(:,:), intent(in)::h1ei
-        integer,intent(in)::equal
-        real(kind=8),dimension(:,:,:),intent(inout)::h1etot_diff
-        integer::j,k,l,len,ierr
-        complex(kind=8),allocatable,dimension(:,:)::zomt
-        real(kind=8),allocatable,dimension(:)::chng_prod,temp_prod,prod
-
-       
-        if (errorflag .ne. 0) return
-
-        h1etot_diff=0.0
-
-        len=norb
-        allocate(zomt(2,len),stat=ierr)
-        allocate(prod(len))
-        allocate(chng_prod(len))
-        allocate(temp_prod(len))
-        h1etot_diff=0.0
-      
-
-        !$omp parallel do simd collapse(2) &
-        !$omp & private(j,k,l,prod,chng_prod,temp_prod,zomt) &
-        !$omp & shared(h1ei,occupancy,z2l,zs1sin,zs1cos,zs2sin,zs2cos,equal,h1etot_diff)
-        do j=1, len
-            do k=1, len
-                if(h1ei(j,k).ne.(0.0)) then
-                    zomt=z2l(j,:,:)
-                    zomt(1,k)=zomt(2,k)
-                    zomt(2,k)=cmplx(0.0,0.0)
-                    zomt=zomt*occupancy(j,k,:,:)
-                    prod=real(((conjg(zs1sin)*zomt(1,:)))+((conjg(zs1cos)*zomt(2,:))))
-                
-                    ! Differntial of overlap of the same ZS 0 unless an operator has acted on ZS
-                    if(equal.eq.1)then
-                    
-                        if(j.eq.k)then
-                            if((real(zs2cos(j)).eq.0).and.(real(zs2sin(j)).eq.1).or.(real(zs2sin(j)).eq.0))then
-                                h1etot_diff(j,k,j)=0.0
-                            else
-                                chng_prod=prod           !dead amplitude is zero
-                                chng_prod(j)=real(2*zs1sin(j)*zs1cos(j)*occupancy(j,k,1,j))
-                                h1etot_diff(j,k,j)=product(chng_prod)*h1ei(j,k)   
-                            end if 
-                        else if(j.ne.k)then
-                            chng_prod=prod
-                            if((real(zs2cos(j)).eq.0).and.(real(zs2sin(j)).eq.1)) then
-                                chng_prod(j)=-1*occupancy(j,k,2,j)
-                            else if((real(zs2sin(j)).eq.0).and.(real(zs2cos(j)).eq.1)) then
-                                chng_prod(j)=occupancy(j,k,2,j)
-                            else
-                                chng_prod(j)=real(((zs1cos(j)**2)-(zs1sin(j)**2))*occupancy(j,k,2,j))
-                            end if
-                            h1etot_diff(j,k,j)=product(chng_prod)*h1ei(j,k)
-                            chng_prod=prod
-                            if((real(zs2cos(k)).eq.0).and.(real(zs2sin(k)).eq.1)) then
-                                chng_prod(k)=-1*occupancy(j,k,1,k)
-                            else if((real(zs2sin(k)).eq.0).and.(real(zs2cos(k)).eq.1)) then
-                                chng_prod(k)=occupancy(j,k,1,k)
-                            else
-                                chng_prod(k)=real(((zs1cos(k)**2)-(zs1sin(k)**2))*occupancy(j,k,1,k))
-                            end if               !dead amplitude is zero
-                            h1etot_diff(j,k,k)=product(chng_prod)*h1ei(j,k)
-                        end if
-                    else if(equal.eq.2)then 
-                        chng_prod=real(zs1cos*zs2sin*occupancy(j,k,1,:)-zs1sin*zs2cos*occupancy(j,k,2,:))            
-                        if(j.eq.k)then  !dead amplitude is zero
-                            chng_prod(j)=real(zs1cos(j)*zs2sin(j)*occupancy(j,k,1,j))
-                        else                   
-                            chng_prod(j)=-real(zs1sin(j)*zs2sin(j))*occupancy(j,k,2,j)
-                            chng_prod(k)=real(zs1cos(k)*zs2cos(k))*occupancy(j,k,1,k) 
-                        end if
-                        !!$omp parallel do simd shared(prod,chng_prod) private(temp,j)
-                        do l=1,len
-                            temp_prod=prod
-                            temp_prod(l)=chng_prod(l)
-                            h1etot_diff(j,k,l)=product(temp_prod)*h1ei(j,k)
-                        end do
-                        !!$omp end parallel do simd 
-                    else if(equal.eq.3)then
-                    
-                        chng_prod=real(zs1sin*zs2cos*occupancy(j,k,1,:)-zs1cos*zs2sin*occupancy(j,k,2,:))                  
-                        if(j.eq.k)then  !dead amplitude is zero
-                            chng_prod(j)=real(zs1sin(j)*zs2cos(j)*occupancy(j,k,1,j))
-                        else                   
-                            chng_prod(j)=real(zs1cos(j)*zs2cos(j))*occupancy(j,k,2,j)!alive amplitude is zero
-                            chng_prod(k)=-real(zs1sin(k)*zs2sin(k))*occupancy(j,k,1,k) !dead amplitude is zero
-                        end if
-                        !!$omp parallel do simd  shared(prod,ket_prod) private(temp_prod,j)
-                        do l=1,len
-                            temp_prod=prod
-                            temp_prod(l)=chng_prod(l)
-                            h1etot_diff(j,k,l)=product(temp_prod)*h1ei(j,k)
-                        end do
-                        !!$omp end parallel do simd   
-                    end if
-                end if
-            end do
-        end do
-        !$omp end parallel do simd
-       
-     
-        deallocate(zomt,stat=ierr)
-        deallocate(prod,stat=ierr)
-        deallocate(chng_prod,stat=ierr)
-        deallocate(temp_prod,stat=ierr)
-      
-        return
-
-
-    end subroutine one_elec_intfc_grad
-
-    subroutine two_elec_intfc_grad(zs1sin,zs1cos,zs2sin,zs2cos,z2l,z1jk,h2ei,occupancy_2an,occupancy_an,equal,h2etot_diff)
-
-        implicit none
-
-        complex(kind=8),dimension(:)::zs1sin,zs1cos,zs2sin,zs2cos
-        complex(kind=8),dimension(:,:,:),intent(in)::z2l
-        complex(kind=8),dimension(:,:,:,:),intent(in)::z1jk
-        integer,dimension(:,:,:,:),intent(in)::occupancy_2an
-        integer,dimension(:,:,:),intent(in)::occupancy_an
-        real(kind=8), dimension(:,:,:,:), intent(in)::h2ei
-        integer,intent(in)::equal
-        real(kind=8),dimension(:,:,:,:),intent(inout)::h2etot_diff
-        integer::j,len
-        
-        
-        if (errorflag .ne. 0) return
-        
-        h2etot_diff=0.0
-        len=norb
-        !$omp parallel shared(z1jk,z2l,zs1sin,zs1cos,zs2sin,zs2cos,occupancy_2an,occupancy_an,h2ei,equal,h2etot_diff) private(j)
-        !$omp do
-        do j=1, norb
-            h2etot_diff(j,:,:,:) = two_elec_part_grad(len,zs1sin,zs1cos,zs2sin,zs2cos,z2l,z1jk(j,:,:,:),&
-            h2ei(j,:,:,:),occupancy_2an(j,:,:,:),occupancy_an(:,:,:),j,equal)
-        end do
-        !$omp end  do
-        !$omp end parallel
-       
-        return
-
-    end subroutine two_elec_intfc_grad
-
-    subroutine grad_calc(haml,zstore,elect,pick,occupancy_2an,occupancy_an_cr,occupancy_an,dvec,grad_fin,en,d_diff_flg)
+    subroutine grad_calc(haml,zstore,elect,an_cr,an2_cr2,pick,dvec,grad_fin,en,d_diff_flg)
 
         implicit none 
 
@@ -560,16 +72,21 @@ MODULE gradient_descent
         type(elecintrgl),intent(in)::elect
         type(dvector),dimension(:),intent(inout)::dvec
         type(hamiltonian),intent(inout)::haml
-        integer,dimension(:,:,:),intent(in)::occupancy_an
-        integer,dimension(:,:,:,:),intent(in)::occupancy_an_cr,occupancy_2an
+        type(oprts),intent(in)::an_cr,an2_cr2
         integer,intent(in)::pick,d_diff_flg
         integer::k,l,m
         logical::nanchk
         type(energy),intent(inout)::en
 
         if (errorflag .ne. 0) return
+        call gradient_zs(haml,zstore,elect,an_cr,an2_cr2,pick)
+        
+        if(d_diff_flg.eq.1)then
+            call imgtime_prop(dvec,en,haml,pick)
+        end if
 
-        call gradient_row(haml,zstore,elect,pick,ndet,occupancy_2an,occupancy_an_cr,occupancy_an)
+        call final_grad(dvec(1),haml,grad_fin,pick,d_diff_flg)
+        
         nanchk=.false. 
         do k=1,norb
             if(is_nan(grad_fin%vars(pick,k)).eqv..true.)then
@@ -577,7 +94,7 @@ MODULE gradient_descent
                 grad_fin%vars=0 
                 grad_fin%grad_avlb=0
                 do l=1 ,10
-                    call gradient_row(haml,zstore,elect,pick,ndet,occupancy_2an,occupancy_an_cr,occupancy_an)
+                    call gradient_zs(haml,zstore,elect,an_cr,an2_cr2,pick)
                     do m=1,norb
                         if(is_nan(grad_fin%vars(pick,m)).eqv..true.)then 
                             exit 
@@ -599,25 +116,19 @@ MODULE gradient_descent
         end do
         en%erg=0
         en%t=0
-
-        if(d_diff_flg.eq.1)then
-            call imgtime_prop(dvec,en,haml,pick)
-        end if
-
-        call final_grad(dvec(1),haml,grad_fin,pick,d_diff_flg)
-
     
         if(d_diff_flg.eq.0)then
             grad_fin%grad_avlb(pick)=1
         else if(d_diff_flg.eq.1)then 
             grad_fin%grad_avlb(pick)=2
         end if
+
         return
 
     end subroutine grad_calc
 
-    subroutine orbital_gd(zstore,grad_fin,elect,dvecs,temp_dvecs,en,haml,temp_ham,chng_trk,temp_zom,occupancy_an,&
-        occupancy_an_cr,occupancy_2an,epoc_cnt,alphain,b,picker,maxloop) 
+    subroutine orbital_gd(zstore,grad_fin,elect,dvecs,temp_dvecs,an_cr,an2_cr2,en,haml,temp_ham,chng_trk,temp_zom,&
+        epoc_cnt,alphain,b,picker,maxloop) 
 
         implicit none 
 
@@ -627,11 +138,10 @@ MODULE gradient_descent
         type(dvector),dimension(:),intent(inout)::dvecs,temp_dvecs
         type(energy),intent(inout)::en
         type(hamiltonian),intent(inout)::haml,temp_ham
+        type(oprts),intent(in)::an_cr,an2_cr2
         integer,dimension(:),intent(inout)::chng_trk
         integer,intent(inout)::epoc_cnt
         integer,intent(in)::maxloop
-        integer,dimension(:,:,:)::occupancy_an
-        integer,dimension(:,:,:,:)::occupancy_an_cr,occupancy_2an
         real(kind=8),intent(in)::b,alphain
         integer,dimension(ndet-1),intent(inout)::picker
         integer::rjct_cnt,next,acpt_cnt,pick,pickorb,rjct_cnt2,loops,d_diff_flg,lralt_zs
@@ -676,12 +186,9 @@ MODULE gradient_descent
                     do while(t.gt.(1.0d-13))
                     
                         nanchk=.false.
-                        if(is_nan(grad_fin%vars(pick,pickorb)).eqv..true.)then
-                            call grad_calc(haml,zstore,elect,pick,occupancy_2an,occupancy_an_cr,&
-                            occupancy_an,dvecs,grad_fin,en,d_diff_flg) 
-                        end if 
-                    
+                       
                         ! Setup temporary zombie state
+                        
                         temp_zom=zstore
                         temp_zom(pick)%phi(pickorb)=zstore(pick)%phi(pickorb)-(t*(grad_fin%vars(pick,pickorb)))
                         temp_zom(pick)%phi(pickorb)=temp_zom(pick)%phi(pickorb)+&
@@ -689,18 +196,23 @@ MODULE gradient_descent
                         if(is_nan(temp_zom(pick)%phi(pickorb)).eqv..true.)then
                             t=(1.0d-14)
                         end if
-                        temp_zom(pick)%sin(pickorb)=sin(cmplx(temp_zom(pick)%phi(pickorb),0.0d0,kind=8))
-                        temp_zom(pick)%cos(pickorb)=cos(cmplx(temp_zom(pick)%phi(pickorb),0.0d0,kind=8))
+                        
+                        print*,temp_zom(pick)%sin(pickorb),temp_zom(pick)%cos(pickorb),temp_zom(pick)%phi(pickorb)
+                        print*,zstore(pick)%sin(pickorb),zstore(pick)%cos(pickorb),zstore(pick)%phi(pickorb)
+                        temp_zom(pick)%sin(pickorb)=sin(temp_zom(pick)%phi(pickorb))
+                        temp_zom(pick)%cos(pickorb)=cos(temp_zom(pick)%phi(pickorb))
+
                         temp_ham=haml
-                        call he_full_row(temp_ham,temp_zom,elect,pick,ndet,occupancy_2an,occupancy_an_cr,occupancy_an)
+                        call he_full_row(temp_ham,temp_zom,elect,ndet,an_cr,an2_cr2,pick)
+        
                         ! Imaginary time propagation for back tracing
                         
                         en%erg=0
                         en%t=0
                         call imgtime_prop(temp_dvecs,en,temp_ham,0)
-                        fxtdk=real(en%erg(1,timesteps+1))
+                        fxtdk=en%erg(1,timesteps+1)
                     
-                
+                        
                         if(is_nan(fxtdk).eqv..true.)then 
                             ergerr='NaN ' 
                             write(0,"(a,a,a,i0,a,i0)") "Error in energy calculation which took value ",ergerr, &
@@ -752,8 +264,7 @@ MODULE gradient_descent
                     end do
                     
                     if((rjct_cnt.eq.0).and.(n.ne.norb))then
-                        call grad_calc(haml,zstore,elect,pick,occupancy_2an,&
-                        occupancy_an_cr,occupancy_an,dvecs,grad_fin,en,d_diff_flg) 
+                        call grad_calc(haml,zstore,elect,an_cr,an2_cr2,pick,dvecs,grad_fin,en,d_diff_flg)
                     end if
                 end do
 
@@ -791,9 +302,8 @@ MODULE gradient_descent
                 end if
 
                 !Set up gradients for next pass
-                if(grad_fin%grad_avlb(next).eq.0)then 
-                    call grad_calc(haml,zstore,elect,next,occupancy_2an,occupancy_an_cr,&
-                    occupancy_an,dvecs,grad_fin,en,d_diff_flg) 
+                if(grad_fin%grad_avlb(next).eq.0)then
+                    call grad_calc(haml,zstore,elect,an_cr,an2_cr2,next,dvecs,grad_fin,en,d_diff_flg) 
                 end if
                 if(acpt_cnt.gt.0)then
                     write(6,"(a,i0,a,f21.16,a,f21.16,a,*(i0:','))") '       ', pick,'              ', &
@@ -821,8 +331,8 @@ MODULE gradient_descent
     end subroutine orbital_gd
 
 
-    subroutine full_zs_gd(zstore,grad_fin,elect,dvecs,temp_dvecs,en,haml,temp_ham,chng_trk,temp_zom,occupancy_an,&
-        occupancy_an_cr,occupancy_2an,epoc_cnt,alphain,b,picker) 
+    subroutine full_zs_gd(zstore,grad_fin,elect,dvecs,temp_dvecs,an_cr,an2_cr2,en,&
+        haml,temp_ham,chng_trk,temp_zom,epoc_cnt,alphain,b,picker) 
 
         implicit none 
 
@@ -833,9 +343,8 @@ MODULE gradient_descent
         type(dvector), dimension(:), allocatable:: temp_dvecs
         type(energy),intent(inout)::en
         type(hamiltonian),intent(inout)::haml,temp_ham
+        type(oprts),intent(in)::an_cr,an2_cr2
         integer,dimension(:),intent(inout)::chng_trk
-        integer,dimension(:,:,:),intent(in)::occupancy_an
-        integer,dimension(:,:,:,:),intent(in)::occupancy_an_cr,occupancy_2an
         integer,intent(inout)::epoc_cnt
         real(kind=8),intent(in)::b,alphain
         integer,dimension(ndet-1),intent(inout)::picker
@@ -845,7 +354,6 @@ MODULE gradient_descent
         real(kind=8),dimension(ndet)::mmntm,mmntma
         integer,dimension(ndet-1)::rsrtpass
         DOUBLE PRECISION, external::ZBQLU01
-        ! real::r
         logical::nanchk
         character(len=4)::ergerr
         integer::j,k,l
@@ -878,14 +386,7 @@ MODULE gradient_descent
                 
                 pick=picker(j)
                 lralt_temp=lralt
-                do k=1,norb
-                    if(is_nan(grad_fin%vars(pick,k)).eqv..true.)then
-                        call grad_calc(haml,zstore,elect,pick,occupancy_2an,occupancy_an_cr,&
-                        occupancy_an,dvecs,grad_fin,en,d_diff_flg)
-                        nanchk=.false. 
-                        exit 
-                    end if 
-                end do
+              
                 gradient_norm=((grad_fin%vars(pick,:))*grad_fin%vars(pick,:))
                 do while(lralt_temp.lt.(loop_max))
                     t=newb*(alpha**lralt_temp)
@@ -903,18 +404,19 @@ MODULE gradient_descent
                             exit
                         end if
                     end do
-                    temp_zom(pick)%sin=sin(cmplx(temp_zom(pick)%phi,0.0d0,kind=8))
-                    temp_zom(pick)%cos=cos(cmplx(temp_zom(pick)%phi,0.0d0,kind=8))
+                    temp_zom(pick)%sin=sin(temp_zom(pick)%phi)
+                    temp_zom(pick)%cos=cos(temp_zom(pick)%phi)
                     temp_ham=haml
-                    call he_full_row(temp_ham,temp_zom,elect,pick,ndet,occupancy_2an,occupancy_an_cr,occupancy_an)
+                    call he_full_row(temp_ham,temp_zom,elect,ndet,an_cr,an2_cr2,pick)
+        
                     
                     ! Imaginary time propagation for back tracing
                     en%erg=0
                     en%t=0
                     call imgtime_prop(temp_dvecs,en,temp_ham,0)
                 
-                    fxtdk=real(en%erg(1,timesteps+1))
-                
+                    fxtdk=en%erg(1,timesteps+1)
+                  
                     if(is_nan(fxtdk).eqv..true.)then 
                         nanchk=.true.
                         ergerr='NaN '
@@ -1029,8 +531,7 @@ MODULE gradient_descent
 
                 !Set up gradients for next pass
                 if(grad_fin%grad_avlb(next).lt.2)then
-                    call grad_calc(haml,zstore,elect,next,occupancy_2an,occupancy_an_cr,&
-                    occupancy_an,dvecs,grad_fin,en,d_diff_flg) 
+                    call grad_calc(haml,zstore,elect,an_cr,an2_cr2,next,dvecs,grad_fin,en,d_diff_flg)
                 end if
 
             end do
@@ -1043,22 +544,22 @@ MODULE gradient_descent
             ! If only a single ZS is being altered the learning rate is lowered to allow others to be changed
             if(acpt_cnt.eq.1)then
                 if((orbitcnt.ge.0).and.(epoc_cnt.gt.100))then  
-                    call orbital_gd(zstore,grad_fin,elect,dvecs,temp_dvecs,en,haml,temp_ham,chng_trk,temp_zom,occupancy_an,&
-                    occupancy_an_cr,occupancy_2an,epoc_cnt,alphain,b,picker,1)
+                    call orbital_gd(zstore,grad_fin,elect,dvecs,temp_dvecs,an_cr,an2_cr2,&
+                    en,haml,temp_ham,chng_trk,temp_zom,epoc_cnt,alphain,b,picker,1)
                     orbitcnt=-(10*ndet)
                     lralt=0
                 end if   
             else if(acpt_cnt.eq.0)then
                 if((epoc_cnt.gt.50))then  
-                    call orbital_gd(zstore,grad_fin,elect,dvecs,temp_dvecs,en,haml,temp_ham,chng_trk,temp_zom,occupancy_an,&
-                    occupancy_an_cr,occupancy_2an,epoc_cnt,alphain,b,picker,1)
+                    call orbital_gd(zstore,grad_fin,elect,dvecs,temp_dvecs,an_cr,an2_cr2,&
+                    en,haml,temp_ham,chng_trk,temp_zom,epoc_cnt,alphain,b,picker,1)
                     orbitcnt=-(10*ndet)
                 end if
             end if
 
             if((epoc_cnt.gt.500).and.(orbitcnt.ge.0).and.(modulo(epoc_cnt,100).eq.0))then
-                call orbital_gd(zstore,grad_fin,elect,dvecs,temp_dvecs,en,haml,temp_ham,chng_trk,temp_zom,occupancy_an,&
-                occupancy_an_cr,occupancy_2an,epoc_cnt,alphain,b,picker,1)
+                call orbital_gd(zstore,grad_fin,elect,dvecs,temp_dvecs,an_cr,an2_cr2,en,&
+                haml,temp_ham,chng_trk,temp_zom,epoc_cnt,alphain,b,picker,1)
                 orbitcnt=-(10*ndet)
                 lralt=0
             end if
@@ -1077,13 +578,14 @@ MODULE gradient_descent
 
     end subroutine full_zs_gd
 
-    subroutine zombie_alter(zstore,grad_fin,haml,elect,en,dvecs,chng_trk)
+    subroutine zombie_alter(zstore,grad_fin,haml,elect,en,dvecs,chng_trk,an_cr,an2_cr2)
 
         implicit none
 
         type(zombiest),dimension(:),intent(inout)::zstore
         type(grad),intent(inout)::grad_fin
         type(elecintrgl),intent(in)::elect
+        type(oprts),intent(in)::an_cr,an2_cr2
         type(dvector),dimension(:),intent(inout)::dvecs
         type(dvector), dimension(:), allocatable:: temp_dvecs
         type(energy),intent(inout)::en
@@ -1091,8 +593,6 @@ MODULE gradient_descent
         integer,dimension(:),intent(inout)::chng_trk
         type(zombiest),dimension(:),allocatable::temp_zom
         type(hamiltonian)::temp_ham
-        integer,allocatable,dimension(:,:,:)::occupancy_an
-        integer,allocatable,dimension(:,:,:,:)::occupancy_an_cr,occupancy_2an
         integer::epoc_cnt,epoc_max
         real(kind=8)::alpha,b
         integer,dimension(ndet-1)::picker,rsrtpass
@@ -1102,47 +602,6 @@ MODULE gradient_descent
         
         if (errorflag .ne. 0) return
 
-        allocate(occupancy_an(norb,2,norb),stat=ierr)
-        if(ierr==0) allocate(occupancy_2an(norb,norb,2,norb),stat=ierr)
-        if(ierr==0) allocate(occupancy_an_cr(norb,norb,2,norb),stat=ierr)
-        if (ierr/=0) then
-            write(0,"(a,i0)") "Error in occupancy vector allocation . ierr had value ", ierr
-            errorflag=1
-            return
-        end if 
-    
-        occupancy_an=1
-        occupancy_2an=1
-        occupancy_an_cr=1
-
-        !$omp parallel private(j,k,l) shared(occupancy_an,occupancy_2an,occupancy_an_cr)
-        !$omp do
-        do j=1,norb
-            occupancy_an(j,1,j)=0
-            do l=j-1, 1, -1
-                occupancy_an(j,1,l)=-1
-            end do
-        end do
-        !$omp end do
-        !$omp barrier
-        !$omp do
-        do j=1,norb
-            do k=1, norb
-                occupancy_2an(j,k,:,:)=occupancy_an(j,:,:)
-                occupancy_2an(j,k,2,k)=occupancy_2an(j,k,1,k)
-                occupancy_2an(j,k,1,k)=0
-                occupancy_an_cr(j,k,:,:)=occupancy_an(j,:,:)
-                occupancy_an_cr(j,k,1,k)=occupancy_an_cr(j,k,2,k)
-                occupancy_an_cr(j,k,2,k)=0
-                do l=k-1,1,-1
-                    occupancy_2an(j,k,1,l)=occupancy_2an(j,k,1,l)*(-1)
-                    occupancy_an_cr(j,k,1,l)=occupancy_an_cr(j,k,1,l)*(-1)
-                end do
-            end do
-        end do
-        !$omp end do
-        !$omp end parallel
-        
         epoc_cnt=0 !epoc counter
         if(rstrtflg.eq.'y')then 
             open(unit=450,file='epoc.csv',status="old",iostat=ierr)
@@ -1187,15 +646,15 @@ MODULE gradient_descent
         call allocdv(temp_dvecs,1,ndet,norb)
 
         if(epoc_cnt.eq.0)then
-            call orbital_gd(zstore,grad_fin,elect,dvecs,temp_dvecs,en,haml,temp_ham,chng_trk,temp_zom,occupancy_an,&
-            occupancy_an_cr,occupancy_2an,epoc_cnt,alpha,b,picker,1)
+            call orbital_gd(zstore,grad_fin,elect,dvecs,temp_dvecs,an_cr,an2_cr2,en,&
+            haml,temp_ham,chng_trk,temp_zom,epoc_cnt,alpha,b,picker,1)
         end if 
         if(epoc_cnt.lt.epoc_max)then
-            call full_zs_gd(zstore,grad_fin,elect,dvecs,temp_dvecs,en,haml,temp_ham,&
-            chng_trk,temp_zom,occupancy_an,occupancy_an_cr,occupancy_2an,epoc_cnt,alpha,b,picker) 
+            call full_zs_gd(zstore,grad_fin,elect,dvecs,temp_dvecs,an_cr,an2_cr2,en,haml,temp_ham,&
+            chng_trk,temp_zom,epoc_cnt,alpha,b,picker) 
             
-            call orbital_gd(zstore,grad_fin,elect,dvecs,temp_dvecs,en,haml,temp_ham,chng_trk,temp_zom,occupancy_an,&
-            occupancy_an_cr,occupancy_2an,epoc_cnt,alpha,b,picker,(epoc_max-epoc_cnt))
+            call orbital_gd(zstore,grad_fin,elect,dvecs,temp_dvecs,an_cr,an2_cr2,en,&
+            haml,temp_ham,chng_trk,temp_zom,epoc_cnt,alpha,b,picker,(epoc_max-epoc_cnt))
         end if 
 
         !Brings phi values back within the normal 0-2pi range
@@ -1215,14 +674,8 @@ MODULE gradient_descent
         call deallocham(temp_ham) 
         call dealloczs(temp_zom)
         call deallocdv(temp_dvecs) 
-        deallocate(occupancy_an,stat=ierr)
-        if(ierr==0) deallocate(occupancy_2an,stat=ierr)
-        if(ierr==0) deallocate(occupancy_an_cr,stat=ierr)
-        if (ierr/=0) then
-            write(0,"(a,i0)") "Error in occupancy vector deallocation . ierr had value ", ierr
-            errorflag=1
-            return
-        end if 
+        
+        return
 
     end subroutine zombie_alter
 

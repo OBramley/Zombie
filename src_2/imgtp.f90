@@ -14,7 +14,7 @@ MODULE imgtp
         type(hamiltonian),intent(in)::haml
         integer,intent(in)::diff_state
         integer::j,k,states
-        real(kind=8)::p
+        ! real(kind=8)::p
         real::db,r
         !DOUBLE PRECISION, external::ZBQLU01,ZBQLUAB
 

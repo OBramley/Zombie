@@ -11,7 +11,7 @@ program MainZombie
     use clean
     use zom
     use grad_d
-    ! use gradient_descent
+    use gradient_descent
     use omp_lib
 
     implicit none
@@ -24,7 +24,7 @@ program MainZombie
     type(hamiltonian)::haml, clean_haml
     type(grad)::gradients
     type(oprts)::an_cr,an2_cr2
-    integer:: j,k, istat,clean_ndet,ierr,diff_state
+    integer:: j, istat,clean_ndet,ierr,diff_state
     real(kind=8)::clean_norm, clean_erg
     ! complex(kind=8)::clean_norm, clean_erg
     character(LEN=4)::stateno
@@ -161,8 +161,9 @@ program MainZombie
             end if
          
             call final_grad(dvecs(1),haml,gradients,2,0)
+            print*,gradients%vars(2,:)
             
-            ! call zombie_alter(zstore,gradients,haml,elect,en,dvecs,chng_trk)
+            call zombie_alter(zstore,gradients,haml,elect,en,dvecs,chng_trk,an_cr,an2_cr2)
             
             GDflg='n'
             do j=1,ndet
