@@ -104,10 +104,8 @@ def one_elec_setup(norb,H1ei,occupancy_an_cr,occupancy_an_cr_v,EXDIR1):
     g[0,0]=h1count
     with open(EXDIR1+"/integrals/h1e.csv",'w', newline='')as csvfile:
             spamwriter=csv.writer(csvfile, delimiter=',')
-            # spamwriter.writerow([h1count,' '])
             spamwriter.writerows(g[0:h1count+1,:])
-            # for j in range(h1count):
-            #     spamwriter.writerow([g[j],' '])
+           
         
     
     return h1
@@ -122,7 +120,11 @@ def two_elec_setup(norb,H2ei,occupancy_2cr_2an,occupancy_2cr_2an_v,EXDIR1):
     for i in range(norb):
         for j in range(norb):
             if(i!=j):
-                for k in range(norb):
+                if(i%2==0):
+                    jspin=0
+                else: 
+                    jspin=1
+                for k in range(jspin,norb,2):
                     for l in range(norb):
                         if(k!=l):
                             if(H2ei[i,j,k,l]!=0.0):
@@ -130,8 +132,8 @@ def two_elec_setup(norb,H2ei,occupancy_2cr_2an,occupancy_2cr_2an_v,EXDIR1):
                                 g[h2count,0]=H2ei[i,j,k,l]
                                 g[h2count,1]=i+1
                                 g[h2count,2]=j+1
-                                g[h2count,3]=k+1
-                                g[h2count,4]=l+1
+                                g[h2count,4]=k+1
+                                g[h2count,3]=l+1
                                 # a_string=""
                                 # d_string=""
                                 # negatives=("","","-")
@@ -156,6 +158,7 @@ def two_elec_setup(norb,H2ei,occupancy_2cr_2an,occupancy_2cr_2an_v,EXDIR1):
 
 
     g[0,0]=h2count
+    # with open(EXDIR1+"h2e.csv",'w', newline='')as csvfile:
     with open(EXDIR1+"/integrals/h2e.csv",'w', newline='')as csvfile:
         spamwriter=csv.writer(csvfile, delimiter=',')
         spamwriter.writerows(g[0:h2count+1,:])

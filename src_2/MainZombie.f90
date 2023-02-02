@@ -144,7 +144,7 @@ program MainZombie
         end if
         print*,en%erg(1,timesteps+1)
         ! print*,real(en%erg(1,timesteps+1))
-        
+        stop
         if(GDflg.eq."y")then
             call sd_anal(zstore,nel,dvecs(1),1)
             ! gradients%prev_erg=real(en%erg(1,timesteps+1))

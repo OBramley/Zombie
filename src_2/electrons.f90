@@ -115,38 +115,45 @@ subroutine two_electrons(elecs,an2_cr2,e2)
 
    
     do l=1,e2
+        ! cr1=int(read_in(l+1,2)) !3    1:cr1,2:cr2,3:an1,4:an2
+        ! cr2=int(read_in(l+1,3)) !4
+        ! an1=int(read_in(l+1,4)) !2
+        ! an2=int(read_in(l+1,5)) !1
         cr1=int(read_in(l+1,2)) !3
         cr2=int(read_in(l+1,3)) !4
-        an1=int(read_in(l+1,4)) !2
-        an2=int(read_in(l+1,5)) !1
-        !annihilation
-        an2_cr2%dead(an2,l)=an2_cr2%alive(an2,l)
-        an2_cr2%neg_dead(an2,l)=an2_cr2%neg_alive(an2,l)
-        an2_cr2%alive(an2,l)=0
-        an2_cr2%neg_alive(:an2-1,l)=int(an2_cr2%neg_alive(:an2-1,l)*(-1),kind=1)
+        an1=int(read_in(l+1,4)) 
+        an2=int(read_in(l+1,5)) 
         !annihilation
         an2_cr2%dead(an1,l)=an2_cr2%alive(an1,l)
         an2_cr2%neg_dead(an1,l)=an2_cr2%neg_alive(an1,l)
         an2_cr2%alive(an1,l)=0
         an2_cr2%neg_alive(:an1-1,l)=int(an2_cr2%neg_alive(:an1-1,l)*(-1),kind=1)
-        ! !creation 
+        !annihilation
+        an2_cr2%dead(an2,l)=an2_cr2%alive(an2,l)
+        an2_cr2%neg_dead(an2,l)=an2_cr2%neg_alive(an2,l)
+        an2_cr2%alive(an2,l)=0
+        an2_cr2%neg_alive(:an2-1,l)=int(an2_cr2%neg_alive(:an2-1,l)*(-1),kind=1) 
+        !creation 
         an2_cr2%alive(cr1,l)=an2_cr2%dead(cr1,l)
         an2_cr2%neg_alive(cr1,l)=an2_cr2%neg_dead(cr1,l)
         an2_cr2%dead(cr1,l)=0
         an2_cr2%neg_alive(:cr1-1,l)=int(an2_cr2%neg_alive(:cr1-1,l)*(-1),kind=1)
-        ! !creation 
+        !creation 
         an2_cr2%alive(cr2,l)=an2_cr2%dead(cr2,l)
         an2_cr2%neg_alive(cr2,l)=an2_cr2%neg_dead(cr2,l)
         an2_cr2%dead(cr2,l)=0
         an2_cr2%neg_alive(:cr2-1,l)=int(an2_cr2%neg_alive(:cr2-1,l)*(-1),kind=1)
+        
+        
+        
     end do 
 
     if(GDflg.eq.'y')then
         do l=1,e2
-            cr1=int(read_in(l+1,2))
-            cr2=int(read_in(l+1,3))
-            an1=int(read_in(l+1,4))
-            an2=int(read_in(l+1,5))
+            cr2=int(read_in(l+1,2))
+            cr1=int(read_in(l+1,3))
+            an2=int(read_in(l+1,4))
+            an1=int(read_in(l+1,5))
             ! print*,'*************************'
             ! print*,an2,an1,cr1,cr2
             do j=1,norb 
@@ -160,8 +167,8 @@ subroutine two_electrons(elecs,an2_cr2,e2)
                             an2_cr2%dead_diff(j,:,l)=an2_cr2%dead(:,l)
                             an2_cr2%neg_alive_diff(j,:,l)=an2_cr2%neg_alive(:,l)
                             an2_cr2%neg_dead_diff(j,:,l)=an2_cr2%neg_dead(:,l)
-                            ! an2_cr2%alive_diff(j,j,l)=int(j+norb,kind=2)
-                            ! an2_cr2%neg_alive_diff(j,j,l)=int(2*an2_cr2%neg_alive_diff(j,j,l),kind=1)
+                            an2_cr2%alive_diff(j,j,l)=int(j+norb,kind=2)
+                            an2_cr2%neg_alive_diff(j,j,l)=int(2*an2_cr2%neg_alive_diff(j,j,l),kind=1)
 
                         else 
                             ! print*,j,' equals ', an2,' or ',an1, ' but not ', cr2, cr1
@@ -169,79 +176,27 @@ subroutine two_electrons(elecs,an2_cr2,e2)
                             an2_cr2%dead_diff(j,:,l)=an2_cr2%dead(:,l)
                             an2_cr2%neg_alive_diff(j,:,l)=an2_cr2%neg_alive(:,l)
                             an2_cr2%neg_dead_diff(j,:,l)=an2_cr2%neg_dead(:,l)
-                            ! an2_cr2%alive_diff(j,j,l)=int(j,kind=2)
-                            ! an2_cr2%dead_diff(j,j,l)=int(j+norb,kind=2)
-                            ! an2_cr2%neg_alive_diff(j,j,l)=int(an2_cr2%neg_dead_diff(j,j,l)*(-1),kind=1)
+                            an2_cr2%alive_diff(j,j,l)=int(j,kind=2)
+                            an2_cr2%dead_diff(j,j,l)=int(j+norb,kind=2)
+                            an2_cr2%neg_alive_diff(j,j,l)=int(an2_cr2%neg_dead_diff(j,j,l)*(-1),kind=1)
                         end if
                     else
+                        an2_cr2%dcnt(0,j)=int(an2_cr2%dcnt(0,j)+1,kind=2)
                         ! print*,j,' equals ', cr2,' or ',cr1, ' but not ', an2, an1
                         an2_cr2%alive_diff(j,:,l)=an2_cr2%alive(:,l)
                         an2_cr2%dead_diff(j,:,l)=an2_cr2%dead(:,l)
                         an2_cr2%neg_alive_diff(j,:,l)=an2_cr2%neg_alive(:,l)
                         an2_cr2%neg_dead_diff(j,:,l)=an2_cr2%neg_dead(:,l)
-                        ! an2_cr2%alive_diff(j,j,l)=int(j,kind=2)
-                        ! an2_cr2%dead_diff(j,j,l)=int(j+norb,kind=2)
-                        ! an2_cr2%neg_dead_diff(j,j,l)=an2_cr2%neg_alive_diff(j,j,l)
-                        ! an2_cr2%neg_alive_diff(j,j,l)=int(an2_cr2%neg_alive_diff(j,j,l)*(-1),kind=1)
+                        an2_cr2%alive_diff(j,j,l)=int(j,kind=2)
+                        an2_cr2%dead_diff(j,j,l)=int(j+norb,kind=2)
+                        an2_cr2%neg_dead_diff(j,j,l)=an2_cr2%neg_alive_diff(j,j,l)
+                        an2_cr2%neg_alive_diff(j,j,l)=int(an2_cr2%neg_alive_diff(j,j,l)*(-1),kind=1)
                     end if
-
-                    ! if(an2.eq.j)then
-                    !     print*,j,'an2=j',cr2,an1,cr1,cr2
-                    !     if((an2.eq.cr1).or.(an2.eq.cr2))then
-                    !         print*,'an2=cr1 or an2=cr2j'
-                    !         an2_cr2%alive_diff(j,:,l)=an2_cr2%alive(:,l)
-                    !         an2_cr2%dead_diff(j,:,l)=an2_cr2%dead(:,l)
-                    !         an2_cr2%neg_alive_diff(j,:,l)=an2_cr2%neg_alive(:,l)
-                    !         an2_cr2%neg_dead_diff(j,:,l)=an2_cr2%neg_dead(:,l)
-                    !         an2_cr2%alive_diff(j,j,l)=int(j+norb,kind=2)
-                    !         an2_cr2%neg_alive_diff(j,j,l)=int(2*an2_cr2%neg_alive_diff(j,j,l),kind=1)
-                    !     else
-                    !         print*,j,'an2=j only',cr2,an1,cr1,cr2
-                    !         an2_cr2%alive_diff(j,:,l)=an2_cr2%alive(:,l)
-                    !         an2_cr2%dead_diff(j,:,l)=an2_cr2%dead(:,l)
-                    !         an2_cr2%neg_alive_diff(j,:,l)=an2_cr2%neg_alive(:,l)
-                    !         an2_cr2%neg_dead_diff(j,:,l)=an2_cr2%neg_dead(:,l)
-                    !         an2_cr2%alive_diff(j,j,l)=int(j,kind=2)
-                    !         an2_cr2%dead_diff(j,j,l)=int(j+norb,kind=2)
-                    !         an2_cr2%neg_alive_diff(j,j,l)=int(an2_cr2%neg_dead_diff(j,j,l)*(-1),kind=1)
-                    !     end if
-                    ! else if(an1.eq.j)then
-                    !     print*,j,'an1=j ',cr2,an1,cr1,cr2
-                    !     if((an1.eq.cr1).or.(an2.eq.cr2))then
-                    !         print*,'an1=cr1 or an1=cr2 = j',j
-                    !         an2_cr2%alive_diff(j,:,l)=an2_cr2%alive(:,l)
-                    !         an2_cr2%dead_diff(j,:,l)=an2_cr2%dead(:,l)
-                    !         an2_cr2%neg_alive_diff(j,:,l)=an2_cr2%neg_alive(:,l)
-                    !         an2_cr2%neg_dead_diff(j,:,l)=an2_cr2%neg_dead(:,l)
-                    !         an2_cr2%alive_diff(j,j,l)=int(j+norb,kind=2)
-                    !         an2_cr2%neg_alive_diff(j,j,l)=int(2*an2_cr2%neg_alive_diff(j,j,l),kind=1)
-                    !     else 
-                    !         print*,j,'an1=j only',cr2,an1,cr1,cr2
-                    !         an2_cr2%alive_diff(j,:,l)=an2_cr2%alive(:,l)
-                    !         an2_cr2%dead_diff(j,:,l)=an2_cr2%dead(:,l)
-                    !         an2_cr2%neg_alive_diff(j,:,l)=an2_cr2%neg_alive(:,l)
-                    !         an2_cr2%neg_dead_diff(j,:,l)=an2_cr2%neg_dead(:,l)
-                    !         an2_cr2%alive_diff(j,j,l)=int(j,kind=2)
-                    !         an2_cr2%dead_diff(j,j,l)=int(j+norb,kind=2)
-                    !         an2_cr2%neg_alive_diff(j,j,l)=int(an2_cr2%neg_dead_diff(j,j,l)*(-1),kind=1)
-                    !     end if
-                    ! else 
-                    !     print*,j,'cr2=j or cr1=j',cr2,an1,cr1,cr2
-                    !     an2_cr2%alive_diff(j,:,l)=an2_cr2%alive(:,l)
-                    !     an2_cr2%dead_diff(j,:,l)=an2_cr2%dead(:,l)
-                    !     an2_cr2%neg_alive_diff(j,:,l)=an2_cr2%neg_alive(:,l)
-                    !     an2_cr2%neg_dead_diff(j,:,l)=an2_cr2%neg_dead(:,l)
-                    !     an2_cr2%alive_diff(j,j,l)=int(j,kind=2)
-                    !     an2_cr2%dead_diff(j,j,l)=int(j+norb,kind=2)
-                    !     an2_cr2%neg_dead_diff(j,j,l)=an2_cr2%neg_alive_diff(j,j,l)
-                    !     an2_cr2%neg_alive_diff(j,j,l)=int(an2_cr2%neg_alive_diff(j,j,l)*(-1),kind=1)
-                    ! end if
-                    ! print*,'*************************'
                 end if 
                 
             end do
         end do
-       
+      
     end if
 
     return

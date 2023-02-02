@@ -26,6 +26,7 @@ MODULE ham
                 ov=ov*((z1d(k)*z2d(ops%alive(k,j))*ops%neg_alive(k,j))+(z1d(k+norb)*z2d(ops%dead(k,j))*ops%neg_dead(k,j))) 
             end do
             !!$omp end do simd
+            ! print*,(ov*ov*el(j))
             haml_vals=haml_vals+(ov*el(j))
         end do
         !$omp end do simd
@@ -189,29 +190,56 @@ MODULE ham
         ! real(kind=8),allocatable,dimension(:,:)::alive,dead
         integer, allocatable,dimension(:)::IPIV1
         real(kind=8),allocatable,dimension(:)::WORK1
-        
-        integer::ierr
+        real(kind=8),dimension(0:2*norb)::z1d,z2d
+        integer::ierr,j
 
 
         if (errorflag .ne. 0) return
         ierr=0
-        ! allocate(alive(size,norb),dead(size,norb),stat=ierr)
-        ! if (ierr/=0) then
-        !     write(0,"(a,i0)") "Error in dead and alive vector allocation . ierr had value ", ierr
-        !     errorflag=1
-        !     return
-        ! end if 
-        ! !$omp parallel do 
-        ! do j=1,size
-        !     alive(:,j)=zstore(j)%sin
-        !     dead(:,j)=zstore(j)%cos
-        ! end do
-        ! !$omp end parallel do
 
+       
+        z1d=zstore(7)%val
+        z2d=zstore(5)%val
+        print*, haml_vals(z1d,z2d,an_cr,elecs%h1ei,elecs%h1_num)
+        print*, haml_vals(z2d,z1d,an_cr,elecs%h1ei,elecs%h1_num)
+        print*, haml_vals(z1d,z2d,an2_cr2,elecs%h2ei,elecs%h2_num)
+        print*, haml_vals(z2d,z1d,an2_cr2,elecs%h2ei,elecs%h2_num)
+        print*,"********************"
+        do j=1,norb
+            z1d=zstore(7)%val
+            z1d(j)=zstore(7)%cos(j)
+            z1d(j+norb)=(-1)*zstore(7)%sin(j)
+            print*, haml_vals(z1d,z2d,an_cr,elecs%h1ei,elecs%h1_num)
+            print*, haml_vals(z2d,z1d,an_cr,elecs%h1ei,elecs%h1_num)
+            print*, haml_vals(z1d,z2d,an2_cr2,elecs%h2ei,elecs%h2_num)
+            print*, haml_vals(z2d,z1d,an2_cr2,elecs%h2ei,elecs%h2_num)
+        end do
+        print*,"********************"
+        z1d=zstore(7)%val
+        z2d=zstore(5)%val
+        print*, haml_vals(z1d,z2d,an_cr,elecs%h1ei,elecs%h1_num)
+        print*, haml_vals(z2d,z1d,an_cr,elecs%h1ei,elecs%h1_num)
+        print*, haml_vals(z1d,z2d,an2_cr2,elecs%h2ei,elecs%h2_num)
+        print*, haml_vals(z2d,z1d,an2_cr2,elecs%h2ei,elecs%h2_num)
+        print*,"********************"
+        do j=1,norb
+            z2d=zstore(5)%val
+            z2d(j)=zstore(5)%cos(j)
+            z2d(j+norb)=(-1)*zstore(5)%sin(j)
+            print*, haml_vals(z1d,z2d,an_cr,elecs%h1ei,elecs%h1_num)
+            print*, haml_vals(z2d,z1d,an_cr,elecs%h1ei,elecs%h1_num)
+            print*, haml_vals(z1d,z2d,an2_cr2,elecs%h2ei,elecs%h2_num)
+            print*, haml_vals(z2d,z1d,an2_cr2,elecs%h2ei,elecs%h2_num)
+        end do    
+
+
+        stop
+       
         call ovrlp_make(haml%ovrlp,zstore)
        
         haml%hjk=haml%ovrlp*elecs%hnuc 
         call haml_make(haml%hjk,zstore,elecs,an_cr,an2_cr2,verb)
+        
         haml%inv=haml%ovrlp
         allocate(WORK1(size),IPIV1(size),stat=ierr)
         if (ierr/=0) then
@@ -256,7 +284,7 @@ MODULE ham
             z1d=zstore(state)%val
             z1d(j)=zstore(state)%cos(j)
             z1d(j+norb)=(-1)*zstore(state)%sin(j)
-            ovrlp_grad(:,j)=ovrlp_column_grad(z1d,zstore,state)
+            ovrlp_grad(j,:)=ovrlp_column_grad(z1d,zstore,state)
         end do
         !$omp end parallel do 
 
@@ -309,11 +337,6 @@ MODULE ham
         !$omp parallel private(j,k,ov) shared(ops,z1d,z2d)
         !$omp do simd reduction(+:haml_val_grad) 
         do j=1,len
-            print*,el(ops%dcnt(j,orb))
-            print*,ops%alive_diff(orb,:,(ops%dcnt(j,orb)))
-            print*,ops%dead_diff(orb,:,(ops%dcnt(j,orb)))
-            print*,ops%neg_alive_diff(orb,:,(ops%dcnt(j,orb)))
-            print*,ops%neg_dead_diff(orb,:,(ops%dcnt(j,orb)))
             ov=1.0
             !!$omp do simd reduction(*:ov)
             do k=1, norb
@@ -343,37 +366,36 @@ MODULE ham
         integer,intent(in)::state,orb
         real(kind=8)::h1etot,h2etot
         integer::j
-        
-        print*,'the orb', orb
+       
         !$omp parallel 
         !$omp single
         do j=1,ndet
             if(j.ne.state)then
-                !$omp task firstprivate(h1etot,j) shared(hcol,zstore,an_cr,elecs,z1d)
-                h1etot = haml_vals(z1d,zstore(j)%val,an_cr,elecs%h1ei,elecs%h1_num)
-                !$omp atomic
-                hcol(j)=hcol(j)+h1etot
-                !$omp end atomic
-                !$omp end task
+                ! !$omp task firstprivate(h1etot,j) shared(hcol,zstore,an_cr,elecs,z1d)
+                ! h1etot = haml_vals(z1d,zstore(j)%val,an_cr,elecs%h1ei,elecs%h1_num)
+                ! !$omp atomic
+                ! hcol(j)=hcol(j)+h1etot
+                ! !$omp end atomic
+                ! !$omp end task
                 !$omp task firstprivate(h2etot,j) shared(hcol,zstore,an2_cr2,elecs,z1d)
                 h2etot = haml_vals(z1d,zstore(j)%val,an2_cr2,elecs%h2ei,elecs%h2_num)
-                !$omp atomic
-                 hcol(j)=hcol(j)+(0.5*h2etot)
-                !$omp end atomic
-                !$omp end task
-            else 
-                !$omp task firstprivate(h1etot,j) shared(hcol,zstore,an_cr,elecs)
-                h1etot = haml_val_grad(zstore(j)%val,zstore(j)%val,an_cr,elecs%h1ei,orb)
-                !$omp atomic
-                hcol(j)=hcol(j)+h1etot
-                !$omp end atomic
-                !$omp end task
-                !$omp task firstprivate(h2etot,j) shared(hcol,zstore,an2_cr2,elecs)
-                h2etot = haml_val_grad(zstore(j)%val,zstore(j)%val,an2_cr2,elecs%h2ei,orb)
                 !$omp atomic
                 hcol(j)=hcol(j)+(0.5*h2etot)
                 !$omp end atomic
                 !$omp end task
+            else 
+                ! !$omp task firstprivate(h1etot,j) shared(hcol,zstore,an_cr,elecs)
+                ! h1etot = haml_val_grad(zstore(state)%val,zstore(state)%val,an_cr,elecs%h1ei,orb)
+                ! !$omp atomic
+                ! hcol(j)=hcol(j)+h1etot
+                ! !$omp end atomic
+                ! !$omp end task
+                ! !$omp task firstprivate(h2etot,j) shared(hcol,zstore,an2_cr2,elecs)
+                ! h2etot = haml_val_grad(zstore(state)%val,zstore(state)%val,an2_cr2,elecs%h2ei,orb)
+                ! !$omp atomic
+                ! hcol(j)=hcol(j)+(0.5*h2etot)
+                ! !$omp end atomic
+                ! !$omp end task
             end if
         end do 
         !$omp end single
@@ -405,8 +427,8 @@ MODULE ham
         do j=1,norb
             z1d=zstore(state)%val
             z1d(j)=zstore(state)%cos(j)
-            z1d(j+norb)=(-1)*zstore(state)%sin(j)
-            call haml_column_grad(haml_diff(:,j),z1d,zstore,an_cr,an2_cr2,elecs,state,j)
+            z1d(j+norb)=zstore(state)%sin(j)*(-1)
+            call haml_column_grad(haml_diff(j,:),z1d,zstore,an_cr,an2_cr2,elecs,state,j)
         end do
         !$omp end parallel do
 
@@ -426,35 +448,48 @@ MODULE ham
         type(oprts),intent(in)::an_cr,an2_cr2
         integer,intent(in)::state
         real(kind=8),allocatable,dimension(:,:,:)::temp2 
-        integer::ierr,k,l
+        integer::ierr,k,l,j,p
         ierr=0
 
         call ovrlp_make_grad(zstore,state,haml%diff_ovrlp(state,:,:))
-       
-       
-        ! haml%diff_hjk(state,:,:)=0
-        haml%diff_hjk(state,:,:)=haml%diff_ovrlp(state,:,:)*elecs%hnuc 
+        
+        haml%diff_hjk(state,:,:)=0
+        ! haml%diff_hjk(state,:,:)=haml%diff_ovrlp(state,:,:)*elecs%hnuc 
         call haml_grad(haml%diff_hjk(state,:,:),zstore,elecs,an_cr,an2_cr2,state)
-        ! print*,haml%diff_hjk(state,:,:)
-        allocate(temp2(ndet,ndet,norb),stat=ierr)
+        do j=1, ndet
+        print*,haml%diff_hjk(state,:,j)
+        end do
+        
+        allocate(temp2(ndet,norb,ndet),stat=ierr)
         if (ierr/=0) then
             write(0,"(a,i0)") "Error in occupancy diff_inverse temp array allocation . ierr had value ", ierr
             errorflag=1
             return
         end if
-
+        temp2=0
+        
         do k=1, ndet
             do l=1, ndet
                 if(l.eq.state)then
-                    temp2(k,state,:)=matmul(REAL(haml%inv(k,:)),haml%diff_ovrlp(state,:,:))
+                    do j=1,norb
+                        do p=1,ndet
+                            temp2(k,j,state)= temp2(k,p,state)+(haml%inv(k,p)*haml%diff_ovrlp(state,j,p))
+                        end do 
+                    end do
                 else
-                    temp2(k,l,:)=real(haml%inv(k,l))*haml%diff_ovrlp(state,l,:)
+                    temp2(k,:,l)=(haml%inv(k,l))*haml%diff_ovrlp(state,:,l)
                 end if
             end do
         end do
+
         do k=1, ndet
             do l=1, ndet
-                haml%diff_invh(state,k,l,:)=matmul(transpose(temp2(k,:,:)),real(haml%kinvh(:,l)))*(-1)
+                do j=1,norb
+                    do p=1,ndet
+                        haml%diff_invh(state,k,j,l)=haml%diff_invh(state,k,j,l)+(temp2(k,j,p)*haml%kinvh(p,l))
+                    end do 
+                    haml%diff_invh(state,k,j,l)=haml%diff_invh(state,k,j,l)*(-1)
+                end do  
             end do
         end do
 

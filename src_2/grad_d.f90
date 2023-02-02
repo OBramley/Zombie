@@ -28,16 +28,16 @@ Module grad_d
 
         if(step.eq.0)then
             do k=1, ndet
-                factor=(Real(dvec%d(k)))/(2*((dvec%norm)**3))
+                factor=(dvec%d(k))/(2*((dvec%norm)**3))
                 j=diff_state!do j=1,ndet
-                    dvec%d_diff(k,j,:)=factor*diff_ovrlp_cmpnt
+                dvec%d_diff(k,j,:)=factor*diff_ovrlp_cmpnt
             end do
         else
             call diff_of_norm_d_cmpndt(dvec,haml,diff_d_cmpnt,diff_state)
             total=(diff_d_cmpnt+diff_ovrlp_cmpnt)/(2*(dvec%norm))
             do k=1, ndet !for each d component
                 j=diff_state!do j=1,ndet !fir differentiation w.r.t to each ZS
-                    dvec%d_diff(k,j,:)=(((dvec%norm)*dvec%d_diff(k,j,:))-(REAL(dvec%d(k))*total))/((dvec%norm)**2)    
+                dvec%d_diff(k,j,:)=(((dvec%norm)*dvec%d_diff(k,j,:))-((dvec%d(k))*total))/((dvec%norm)**2)    
                 ! end do
             end do
         end if
@@ -58,23 +58,31 @@ Module grad_d
         integer,intent(in)::diff_state
         real(kind=8),dimension(norb),intent(inout)::diff_norm_cmpndt
         real(kind=8),dimension(norb)::temp
-        integer::j,k
+        real(kind=8),dimension(ndet)::dovrl
+        integer::j,k,p
 
         if (errorflag .ne. 0) return
 
-        
-        j=diff_state!do j=1, ndet !Each derivative
-        temp(1:norb)=0.0
+        dovrl=dvec%d*haml%ovrlp(:,diff_state)/(abs(haml%ovrlp(:,diff_state)))
+        !do j=1, ndet !Each derivative
+        temp=0.0
         do k=1, ndet !Over d_{k}
             ! do k=1,ndet
-            if(k.eq.j)then
-                temp=temp+real(dvec%d(k))*matmul(real(dvec%d*(haml%ovrlp(j,:)/abs(haml%ovrlp(j,:)))),haml%diff_ovrlp(j,:,:))
+            if(k.eq.diff_state)then
+                do j=1,norb
+                    do p=1,ndet
+                        temp(j)=temp(j)+(dovrl(p)*haml%diff_ovrlp(diff_state,j,p))
+                    end do 
+                    temp(j)=temp(j)*dvec%d(k)
+                end do 
             else 
-                temp=temp+real((dvec%d(k)*dvec%d(j)*haml%ovrlp(j,k))/abs(haml%ovrlp(j,k)))*haml%diff_ovrlp(j,k,:)
+                do j=1,norb
+                    temp(j)=temp(j)+(dvec%d(k)*dovrl(diff_state)*haml%diff_ovrlp(diff_state,j,k))      
+                end do 
             end if                
         end do
              
-            diff_norm_cmpndt=temp
+        diff_norm_cmpndt=temp
             
         !end do
 
@@ -103,13 +111,13 @@ Module grad_d
         if (errorflag .ne. 0) return
 
         j=diff_state !do j=1,ndet !over each derivative j
-            temp(1:norb)=0.0
-            do l=1,ndet !over each d_{l}
-                do k=1,ndet !over each d_{k}
-                    temp = temp + ((dvec%d_diff(l,j,:)*REAL(dvec%d(l)*abs(dvec%d(k)*haml%ovrlp(l,k))))/abs(REAL(dvec%d(l))))
-                end do
+        temp(1:norb)=0.0
+        do l=1,ndet !over each d_{l}
+            do k=1,ndet !over each d_{k}
+                temp = temp + ((dvec%d_diff(l,j,:)*(dvec%d(l)*abs(dvec%d(k)*haml%ovrlp(l,k))))/abs((dvec%d(l))))
             end do
-            diff_norm_cmpndt=2*temp
+        end do
+        diff_norm_cmpndt=2*temp
         !end do
             
 
@@ -148,7 +156,7 @@ Module grad_d
         call timestep_diff_d_cmpnt(dvec,haml,diff_ts_d,diff_state)
         do k=1,ndet !Over each d_{k}
             j=diff_state!do j=1,ndet !Differentiate with respect to each ZS_{j}
-                dvec%d_diff(k,j,:)=dvec%d_diff(k,j,:)-(diff_ts_invo(k,j,:)+diff_ts_ham(k,j,:)+diff_ts_d(k,j,:))*db
+            dvec%d_diff(k,j,:)=dvec%d_diff(k,j,:)-(diff_ts_invo(k,j,:)+diff_ts_ham(k,j,:)+diff_ts_d(k,j,:))*db
          
             !end do
         end do
@@ -178,7 +186,7 @@ Module grad_d
         do k=1, ndet !d_{k}
             j=diff_state!do j=1, ndet !Find dependence on jth ZS
                 do l=1, ndet
-                    ts_diff_cmpnt(k,j,:)= ts_diff_cmpnt(k,j,:)+ (haml%diff_invh(j,k,l,:)*REAL(dvec%d(l)))
+                    ts_diff_cmpnt(k,j,:)= ts_diff_cmpnt(k,j,:)+ (haml%diff_invh(j,k,l,:)*(dvec%d(l)))
                 end do
             !end do
         end do
@@ -203,17 +211,24 @@ Module grad_d
         type(hamiltonian),intent(in)::haml
         integer,intent(in)::diff_state
         real(kind=8),dimension(ndet,ndet,norb),intent(inout)::ts_diff_cmpnt
-        integer::j,k
+        integer::j,k,p
+        real(kind=8),dimension(ndet)::dinv
 
         if (errorflag .ne. 0) return
-
+        dinv=haml%inv(:,diff_state)*dvec%d
         do k=1, ndet !d_{k}
-            j=diff_state!do j=1,ndet ! Find dependence on jth zs
-                if(k.eq.j)then !if j==k there's a complete row in diff_ham
-                    ts_diff_cmpnt(k,j,:)=ts_diff_cmpnt(k,j,:)+matmul(real(haml%inv(j,:)*dvec%d),haml%diff_hjk(j,:,:))
-                else 
-                    ts_diff_cmpnt(k,j,:)=ts_diff_cmpnt(k,j,:)+(real(haml%inv(j,k)*dvec%d(j))*haml%diff_hjk(j,k,:))
-                end if
+            !do j=1,ndet ! Find dependence on jth zs
+            if(k.eq.diff_state)then !if j==k there's a complete row in diff_ham
+                do j=1,norb
+                    do p=1,ndet
+                        ts_diff_cmpnt(k,diff_state,j)=ts_diff_cmpnt(k,diff_state,j)+(dinv(p)*haml%diff_hjk(diff_state,j,p))
+                    end do
+                end do
+            else 
+                do j=1,norb
+                    ts_diff_cmpnt(k,diff_state,j)=ts_diff_cmpnt(k,diff_state,j)+(dinv(diff_state)*haml%diff_hjk(diff_state,j,k))
+                end do
+            end if
             !end do
         end do
     
@@ -241,7 +256,7 @@ Module grad_d
         do k=1,ndet !Extracting compondent for d_{k}
             j=diff_state!do j=1, ndet !Sort dependence 
                 do l=1,ndet !Sum over all compondents of d
-                    ts_diff_cmpnt(k,j,:)= ts_diff_cmpnt(k,j,:) + (REAL(haml%kinvh(k,l))*dvec%d_diff(l,j,:))
+                    ts_diff_cmpnt(k,j,:)= ts_diff_cmpnt(k,j,:) + ((haml%kinvh(k,l))*dvec%d_diff(l,j,:))
                 end do
             !end do
         end do
@@ -258,30 +273,40 @@ Module grad_d
         type(hamiltonian),intent(in)::haml
         type(grad),intent(inout)::grad_fin
         integer,intent(in)::diff_state,d_diff_flg
-        integer::j,l
+        integer::j,l,k
         real(kind=8),dimension(norb)::temp1,temp2
-        real(kind=8),dimension(ndet)::dham
+        real(kind=8),dimension(ndet)::dham,dd
 
         if (errorflag .ne. 0) return
 
         dham=matmul(REAL(dvec%d),REAL(haml%hjk))
-        j=diff_state !do j=1, ndet !Each ZS{j} dependence
+        dd=dvec%d*dvec%d(diff_state)
+        
         temp1(:)=0
         temp2(:)=0
         do l=1, ndet
-            temp1 = temp1 + dham(l)*dvec%d_diff(l,diff_state,:)
+            do j=1, norb 
+                temp1(j) = temp1(j) + dham(l)*dvec%d_diff(l,diff_state,j)
+            end do
             ! print*,temp1
             if(l.eq.diff_state)then
-                temp2=temp2+(real(dvec%d(l))*matmul(real(dvec%d),haml%diff_hjk(diff_state,:,:)))
-            else 
-                temp2=temp2+(real(dvec%d(l)*dvec%d(diff_state))*haml%diff_hjk(diff_state,l,:))
+                do j=1, norb
+                    do k=1,ndet
+                        temp2(j)=temp2(j)+dvec%d(k)*haml%diff_hjk(diff_state,j,k)
+                    end do
+                    temp2(j)=temp2(j)*dvec%d(l)
+                end do
+            else
+                do j=1, norb 
+                    temp2(j)=temp2(j)+(dd(l)*haml%diff_hjk(diff_state,j,l))
+                end do 
             end if
             ! print*,temp2
         end do
         
-        if(d_diff_flg.eq.0)then 
-            temp1=0 
-        end if
+        ! if(d_diff_flg.eq.0)then 
+        !     temp1=0 
+        ! end if
         grad_fin%vars(diff_state,:)=(2*temp1)+temp2
         
 

@@ -95,7 +95,7 @@ zombs={
     'norb':5,
 
     # Number of electrons in the molecule
-    'nel':6,
+    'nel':5,
 
     # Spin of the moleucle 
 

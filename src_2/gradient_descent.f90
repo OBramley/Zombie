@@ -31,14 +31,16 @@ MODULE gradient_descent
 
         if (errorflag .ne. 0) return
         ierr=0
-        print*,haml%ovrlp(:,diff_state)
+        !print*,haml%ovrlp(:,diff_state)
         haml%ovrlp(:,diff_state)=ovrlp_column(zstore(diff_state)%val,zstore,diff_state)
         haml%ovrlp(diff_state,:)=haml%ovrlp(:,diff_state)
-        print*,haml%ovrlp(:,diff_state)
-        stop
+        !print*,haml%ovrlp(:,diff_state)
+        !Stop
+        ! print*, haml%hjk(:,diff_state)
         haml%hjk(:,diff_state)=haml%ovrlp(:,diff_state)*elecs%hnuc 
         call haml_column(haml%hjk(:,diff_state),zstore(diff_state)%val,zstore,an_cr,an2_cr2,elecs,1)
-        
+        ! print*,haml%hjk(:,diff_state)
+        !stop
         haml%inv=haml%ovrlp
         allocate(WORK1(size),IPIV1(size),stat=ierr)
         if (ierr/=0) then
@@ -197,11 +199,14 @@ MODULE gradient_descent
                             t=(1.0d-14)
                         end if
                         
-                        print*,temp_zom(pick)%sin(pickorb),temp_zom(pick)%cos(pickorb),temp_zom(pick)%phi(pickorb)
-                        print*,zstore(pick)%sin(pickorb),zstore(pick)%cos(pickorb),zstore(pick)%phi(pickorb)
+                        ! print*,temp_zom(pick)%sin(pickorb),temp_zom(pick)%cos(pickorb),temp_zom(pick)%phi(pickorb)
+                        ! print*,zstore(pick)%sin(pickorb),zstore(pick)%cos(pickorb),zstore(pick)%phi(pickorb)
                         temp_zom(pick)%sin(pickorb)=sin(temp_zom(pick)%phi(pickorb))
                         temp_zom(pick)%cos(pickorb)=cos(temp_zom(pick)%phi(pickorb))
-
+                        temp_zom(j)%val(1:)=temp_zom(j)%sin
+                        temp_zom(j)%val(norb+1:)=temp_zom(j)%cos
+                        ! print*,temp_zom(pick)%sin(pickorb),temp_zom(pick)%cos(pickorb),temp_zom(pick)%phi(pickorb)
+                        ! print*,zstore(pick)%sin(pickorb),zstore(pick)%cos(pickorb),zstore(pick)%phi(pickorb)
                         temp_ham=haml
                         call he_full_row(temp_ham,temp_zom,elect,ndet,an_cr,an2_cr2,pick)
         
@@ -211,7 +216,7 @@ MODULE gradient_descent
                         en%t=0
                         call imgtime_prop(temp_dvecs,en,temp_ham,0)
                         fxtdk=en%erg(1,timesteps+1)
-                    
+                        ! print*,fxtdk
                         
                         if(is_nan(fxtdk).eqv..true.)then 
                             ergerr='NaN ' 
@@ -241,7 +246,7 @@ MODULE gradient_descent
                             if(fxtdk.lt.grad_fin%prev_erg)then
                                 t=(1.0d-14)
                                 acpt_cnt=acpt_cnt+1
-                                zstore=temp_zom
+                                zstore(pick)=temp_zom(pick)
                                 dvecs=temp_dvecs
                                 chng_trk(j)=pick
                                 chng_trk2(acpt_cnt)=pickorb
@@ -318,7 +323,7 @@ MODULE gradient_descent
                 end if
                 
             end do
-
+           
             call epoc_writer(grad_fin%prev_erg,epoc_cnt,chng_trk,0)
             write(6,"(a,i0,a,f21.16)") "Energy after epoch no. ",epoc_cnt,": ",grad_fin%prev_erg
             acpt_cnt=0
@@ -406,6 +411,14 @@ MODULE gradient_descent
                     end do
                     temp_zom(pick)%sin=sin(temp_zom(pick)%phi)
                     temp_zom(pick)%cos=cos(temp_zom(pick)%phi)
+                    temp_zom(j)%val(1:)=temp_zom(j)%sin
+                    temp_zom(j)%val(norb+1:)=temp_zom(j)%cos
+                    ! print*,temp_zom(pick)%sin
+                    ! print*,zstore(pick)%sin
+                    ! print*,temp_zom(pick)%cos
+                    ! print*,zstore(pick)%cos
+                    ! print*,temp_zom(pick)%phi
+                    ! print*,zstore(pick)%phi
                     temp_ham=haml
                     call he_full_row(temp_ham,temp_zom,elect,ndet,an_cr,an2_cr2,pick)
         
@@ -438,7 +451,7 @@ MODULE gradient_descent
                         ! Check if energy is lower and accept or reject
                         if(fxtdk.lt.grad_fin%prev_erg)then
                             acpt_cnt=acpt_cnt+1
-                            zstore=temp_zom
+                            zstore(pick)=temp_zom(pick)
                             zstore(pick)%update_num=zstore(pick)%update_num+1
                             call zombiewriter(zstore(pick),pick,rsrtpass(pick))
                             rsrtpass(pick)=0
@@ -523,7 +536,7 @@ MODULE gradient_descent
                 if(grad_fin%grad_avlb(next).eq.1)then 
                     d_diff_flg=1 
                 else 
-                    d_diff_flg=0
+                    d_diff_flg=0    
                     if(ZBQLU01(1).lt.0.3)then 
                         d_diff_flg=1
                     end if
@@ -645,10 +658,10 @@ MODULE gradient_descent
         call allocham(temp_ham,ndet,norb)
         call allocdv(temp_dvecs,1,ndet,norb)
 
-        if(epoc_cnt.eq.0)then
-            call orbital_gd(zstore,grad_fin,elect,dvecs,temp_dvecs,an_cr,an2_cr2,en,&
-            haml,temp_ham,chng_trk,temp_zom,epoc_cnt,alpha,b,picker,1)
-        end if 
+        ! if(epoc_cnt.eq.0)then
+        !     call orbital_gd(zstore,grad_fin,elect,dvecs,temp_dvecs,an_cr,an2_cr2,en,&
+        !     haml,temp_ham,chng_trk,temp_zom,epoc_cnt,alpha,b,picker,1)
+        ! end if 
         if(epoc_cnt.lt.epoc_max)then
             call full_zs_gd(zstore,grad_fin,elect,dvecs,temp_dvecs,an_cr,an2_cr2,en,haml,temp_ham,&
             chng_trk,temp_zom,epoc_cnt,alpha,b,picker) 
