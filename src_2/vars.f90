@@ -27,9 +27,11 @@ MODULE globvars
         ! complex(kind=8), dimension(:,:), allocatable::inv
         ! complex(kind=8), dimension(:,:), allocatable::kinvh
 
-        real(kind=8), dimension(:,:,:), allocatable::diff_hjk
-        real(kind=8), dimension(:,:,:), allocatable::diff_ovrlp
+        real(kind=8), dimension(:,:,:), allocatable::diff_hjk !ZS to be differentiated,zs is bra or ket, orbital, bra/ket pairing
+        real(kind=8), dimension(:,:,:), allocatable::diff_ovrlp!ZS to be differntiated, orbital, bra/ket pairing
         real(kind=8), dimension(:,:,:,:), allocatable::diff_invh
+        real(kind=8), dimension(:,:,:,:),allocatable::diff_ov_dov
+        real(kind=8), dimension(:,:,:,:),allocatable::diff_in_dhjk
         !The inverse of the overlap matrix multiplied by the hamiltonian
         !diff_invh(j,l,k,m) j specifies the dependnce on zs_j, l,k give the 
     end type hamiltonian
@@ -58,6 +60,7 @@ MODULE globvars
         ! real(kind=8), dimension(:,:,:,:), allocatable::h2ei
         real(kind=8), dimension(:), allocatable::h1ei
         real(kind=8), dimension(:), allocatable::h2ei
+        real(kind=8), dimension(:), allocatable::h2ei_grad
         real(kind=8) :: hnuc
         
     end type elecintrgl

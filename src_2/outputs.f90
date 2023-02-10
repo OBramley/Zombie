@@ -112,8 +112,10 @@ MODULE outputs
         
             if(imagflg=='n') then
                 write(zomnum,'(*(e25.17e3 :", "))') ((zom%phi(j)),j=1,norb)
-                write(zomnum,'(*(e25.17e3 :", "))') (REAL(zom%cos(j)),j=1,norb)
-                write(zomnum,'(*(e25.17e3 :", "))') (REAL(zom%sin(j)),j=1,norb)
+                ! write(zomnum,'(*(e25.17e3 :", "))') (REAL(zom%cos(j)),j=1,norb)
+                ! write(zomnum,'(*(e25.17e3 :", "))') (REAL(zom%sin(j)),j=1,norb)
+                write(zomnum,'(*(e25.17e3 :", "))') ((zom%cos(j)),j=1,norb)
+                write(zomnum,'(*(e25.17e3 :", "))') ((zom%sin(j)),j=1,norb)
             else if(imagflg=='y') then
                 write(zomnum,'(*(e25.17e3 :", ": ))') ((zom%phi(j)),j=1,norb)
                 write(zomnum,'(*(e25.17e3 :", ": ))') ((zom%img(j)),j=1,norb)
@@ -179,8 +181,10 @@ MODULE outputs
         end if
 
         if(imagflg=='n') then
-            write(zomnum,'(*(e25.17e3 :", "))') (REAL(zom%dead(j)),j=1,norb)
-            write(zomnum,'(*(e25.17e3 :", "))') (REAL(zom%alive(j)),j=1,norb)
+            write(zomnum,'(*(e25.17e3 :", "))') ((zom%dead(j)),j=1,norb)
+            write(zomnum,'(*(e25.17e3 :", "))') ((zom%alive(j)),j=1,norb)
+            ! write(zomnum,'(*(e25.17e3 :", "))') (REAL(zom%dead(j)),j=1,norb)
+            ! write(zomnum,'(*(e25.17e3 :", "))') (REAL(zom%alive(j)),j=1,norb)
         else if(imagflg=='y') then
             write(zomnum,'(*(1x,es25.17e3 :", "))') ((zom%dead(j)),j=1,norb)
             write(zomnum,'(*(1x,es25.17e3 :", "))') ((zom%alive(j)),j=1,norb)
@@ -229,7 +233,8 @@ MODULE outputs
             write(ergnum,*)' '
         end if
         
-        write(ergnum,'(*(e25.17e3 :", "))') (REAL(erg(k)),k=1,timesteps+1)
+        ! write(ergnum,'(*(e25.17e3 :", "))') (REAL(erg(k)),k=1,timesteps+1)
+        write(ergnum,'(*(e25.17e3 :", "))') ((erg(k)),k=1,timesteps+1)
         if(imagflg=='y')then
             ! write(ergnum,'(*(e25.17e3 :", "))') (CMPLX(erg(k)),k=1,timesteps+1)
         end if
@@ -245,7 +250,8 @@ MODULE outputs
         implicit none
         real(kind=8),intent(in)::erg 
         integer,intent(in)::step,pass
-        integer,dimension(:),intent(in)::chng_trk
+        ! integer,dimension(:),intent(in)::chng_trk
+        integer,intent(in)::chng_trk
         integer::epoc,ierr,k
         logical :: file_exists
 
@@ -262,7 +268,8 @@ MODULE outputs
                 errorflag=1
                 return
             end if
-            write(epoc,'(i0,",",e25.17e3,",",*(i0:", "))') step,erg,(chng_trk(k),k=1,ndet-1)
+            ! write(epoc,'(i0,",",e25.17e3,",",*(i0:", "))') step,erg,(chng_trk(k),k=1,ndet-1)
+            write(epoc,'(i0,",",e25.17e3,",",i0)') step,erg,chng_trk
             close(epoc)
         else if(file_exists.eqv..true.) then
             open(unit=epoc,file='epoc.csv',status="old",access='append',iostat=ierr)
@@ -273,9 +280,11 @@ MODULE outputs
             end if
             if(pass.eq.1)then
                 write(epoc,*)' '
-                write(epoc,'(i0,",",e25.17e3,",",*(i0:", "))') step,erg,(chng_trk(k),k=1,ndet-1)
+                write(epoc,'(i0,",",e25.17e3,",",i0)') step,erg,chng_trk
+                ! write(epoc,'(i0,",",e25.17e3,",",*(i0:", "))') step,erg,(chng_trk(k),k=1,ndet-1)
             else
-                write(epoc,'(i0,",",e25.17e3,",",*(i0:", "))') step,erg,(chng_trk(k),k=1,ndet-1)
+                write(epoc,'(i0,",",e25.17e3,",",i0)') step,erg,chng_trk
+                ! write(epoc,'(i0,",",e25.17e3,",",*(i0:", "))') step,erg,(chng_trk(k),k=1,ndet-1)
             end if
             close(epoc)
         end if

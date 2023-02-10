@@ -23,7 +23,7 @@ program MainZombie
     type(elecintrgl)::elect
     type(hamiltonian)::haml, clean_haml
     type(grad)::gradients
-    type(oprts)::an_cr,an2_cr2
+    type(oprts)::an_cr,an2_cr2,an2_cr2_diff
     integer:: j, istat,clean_ndet,ierr,diff_state
     real(kind=8)::clean_norm, clean_erg
     ! complex(kind=8)::clean_norm, clean_erg
@@ -60,23 +60,24 @@ program MainZombie
     end if
 
     randseed = abs(randseed)    ! Negative seed values seem to cause instability
-
+    randseed =783668805050586407
     call ZBQLINI(randseed,0)   ! Generates the seed value using the UCL random library
+   
     write(6,"(a)") "Random seed set"
 
    
-    GPUflg='n'
-    print*,GPUflg
+   
     diff_state=0
     if(GDflg=="y")then
         call allocgrad(gradients,ndet,norb)
+        diff_state=2!0
     end if
 
     ! generate 1 and 2 electron integrals
     if((cleanflg=="y").or.(cleanflg=="f").or.((hamgflg=='y')).or.(GDflg=='y'))then
         ! if((cleanflg=="y").or.((hamgflg=='y')))then
             ! call allocintgrl(elect)
-        call electronintegrals(elect,an_cr,an2_cr2)
+        call electronintegrals(elect,an_cr,an2_cr2,an2_cr2_diff)
         ! end if
         ! generate zombie states
         call alloczs(zstore,ndet)
@@ -118,7 +119,7 @@ program MainZombie
                 ! Maybe specificy conditons but maybe not needed?!
             end if
             write(6,"(a)") "To hamiltonian gen"
-            call hamgen(haml,zstore,elect,ndet,an_cr,an2_cr2,1)
+            call hamgen(haml,zstore,elect,ndet,an_cr,an2_cr2,an2_cr2_diff,1)
             call matrixwriter(haml%hjk,ndet,"data/ham.csv")
             call matrixwriter(haml%ovrlp,ndet,"data/ovlp.csv")
             write(6,"(a)") "Hamiltonian successfully generated"
@@ -129,7 +130,7 @@ program MainZombie
        
         ! Imaginary time propagation
         write(6,"(a)") "Imaginary time propagation started"
-        call imgtime_prop(dvecs,en,haml,0)
+        call imgtime_prop(dvecs,en,haml,diff_state)
         write(6,"(a)") "Imaginary time propagation finished"
        
         if(gramflg.eq."n")then
@@ -144,9 +145,9 @@ program MainZombie
         end if
         print*,en%erg(1,timesteps+1)
         ! print*,real(en%erg(1,timesteps+1))
-        stop
+        
         if(GDflg.eq."y")then
-            call sd_anal(zstore,nel,dvecs(1),1)
+            ! call sd_anal(zstore,nel,dvecs(1),1)
             ! gradients%prev_erg=real(en%erg(1,timesteps+1))
             gradients%prev_erg=en%erg(1,timesteps+1)
             write(6,"(a,f20.16)") "Initial energy: ", gradients%prev_erg
@@ -157,13 +158,16 @@ program MainZombie
             end if
             chng_trk=0
             if(rstrtflg.eq.'n')then 
-                call epoc_writer(gradients%prev_erg,0,chng_trk,0)
+                ! call epoc_writer(gradients%prev_erg,0,chng_trk,0)
+                call epoc_writer(gradients%prev_erg,0,0,0)
             end if
-         
-            call final_grad(dvecs(1),haml,gradients,2,0)
+            ! do j=2,ndet
+                ! call final_grad(dvecs(1),haml,gradients,j,0)
+                call final_grad(dvecs(1),haml,gradients,diff_state,1)
+            ! end do
             print*,gradients%vars(2,:)
             
-            call zombie_alter(zstore,gradients,haml,elect,en,dvecs,chng_trk,an_cr,an2_cr2)
+            call zombie_alter(zstore,gradients,haml,elect,en,dvecs,chng_trk,an_cr,an2_cr2,an2_cr2_diff)
             
             GDflg='n'
             do j=1,ndet
@@ -238,10 +242,10 @@ program MainZombie
     
     if((cleanflg=="y").or.(cleanflg=="f"))then
         if(cleanflg=="y")then
-            call clean_setup(cstore,nel,clean_haml,elect,clean_ndet,zstore,an_cr,an2_cr2)
+            call clean_setup(cstore,nel,clean_haml,elect,clean_ndet,zstore,an_cr,an2_cr2,an2_cr2_diff)
             write(6,"(a)") "Cleaning hamiltonian generated"
         else if(cleanflg=="f")then
-            call clean_read(cstore,clean_haml,clean_ndet,elect,an_cr,an2_cr2)
+            call clean_read(cstore,clean_haml,clean_ndet,elect,an_cr,an2_cr2,an2_cr2_diff)
             write(6,"(a)") "Cleaning hamiltonian read in"
         end if
         

@@ -7,12 +7,12 @@ contains
 
 ! Program to generate one and two electron integrals from PyScf
 ! Some of this code has been adapted from George Booth
-subroutine electronintegrals(elecs,an_cr,an2_cr2)
+subroutine electronintegrals(elecs,an_cr,an2_cr2,an2_cr2_diff)
 
     implicit none
 
     type(elecintrgl), intent(inout)::elecs
-    type(oprts),intent(inout)::an_cr,an2_cr2
+    type(oprts),intent(inout)::an_cr,an2_cr2,an2_cr2_diff
     real::e1in,e2in
     integer:: ierr,e1,e2
     
@@ -56,13 +56,8 @@ subroutine electronintegrals(elecs,an_cr,an2_cr2)
     call allocintgrl(elecs,e1,e2)
     
     call  one_electrons(elecs,an_cr,e1)
-    call  two_electrons(elecs,an2_cr2,e2)
+    call  two_electrons(elecs,an2_cr2,an2_cr2_diff,e2)
 
-    
-
-    ! nlines = lines(nlines)
-    ! call spattospin1(elecs,nlines)
-    ! call spattospin2(elecs,nlines)
 
     open(unit=128, file='integrals/hnuc.csv',status='old',iostat=ierr)
     if (ierr.ne.0) then
@@ -85,15 +80,16 @@ subroutine electronintegrals(elecs,an_cr,an2_cr2)
 end subroutine electronintegrals
 
 ! 
-subroutine two_electrons(elecs,an2_cr2,e2)
+subroutine two_electrons(elecs,an2_cr2,an2_cr2_diff,e2)
 
     implicit none 
     type(elecintrgl), intent(inout)::elecs
-    type(oprts),intent(inout)::an2_cr2
+    type(oprts),intent(inout)::an2_cr2,an2_cr2_diff
     integer,intent(in)::e2
     real(kind=8),dimension(e2+1,5)::read_in
     integer::ierr,l,k,an1,an2,cr1,cr2,j
-
+    
+    
     
     open(unit=131, file='integrals/h2e.csv',status='old',iostat=ierr)
     if (ierr.ne.0) then
@@ -115,14 +111,11 @@ subroutine two_electrons(elecs,an2_cr2,e2)
 
    
     do l=1,e2
-        ! cr1=int(read_in(l+1,2)) !3    1:cr1,2:cr2,3:an1,4:an2
-        ! cr2=int(read_in(l+1,3)) !4
-        ! an1=int(read_in(l+1,4)) !2
-        ! an2=int(read_in(l+1,5)) !1
-        cr1=int(read_in(l+1,2)) !3
-        cr2=int(read_in(l+1,3)) !4
-        an1=int(read_in(l+1,4)) 
-        an2=int(read_in(l+1,5)) 
+        cr1=int(read_in(l+1,2)) 
+        cr2=int(read_in(l+1,3)) 
+        an2=int(read_in(l+1,4)) 
+        an1=int(read_in(l+1,5))
+       
         !annihilation
         an2_cr2%dead(an1,l)=an2_cr2%alive(an1,l)
         an2_cr2%neg_dead(an1,l)=an2_cr2%neg_alive(an1,l)
@@ -142,20 +135,18 @@ subroutine two_electrons(elecs,an2_cr2,e2)
         an2_cr2%alive(cr2,l)=an2_cr2%dead(cr2,l)
         an2_cr2%neg_alive(cr2,l)=an2_cr2%neg_dead(cr2,l)
         an2_cr2%dead(cr2,l)=0
-        an2_cr2%neg_alive(:cr2-1,l)=int(an2_cr2%neg_alive(:cr2-1,l)*(-1),kind=1)
+        an2_cr2%neg_alive(:cr2-1,l)=int(an2_cr2%neg_alive(:cr2-1,l)*(-1),kind=1) 
         
-        
-        
-    end do 
-
+    end do
+    read_in=0
     if(GDflg.eq.'y')then
+        
         do l=1,e2
-            cr2=int(read_in(l+1,2))
-            cr1=int(read_in(l+1,3))
+            cr1=int(read_in(l+1,2))
+            cr2=int(read_in(l+1,3))
             an2=int(read_in(l+1,4))
             an1=int(read_in(l+1,5))
-            ! print*,'*************************'
-            ! print*,an2,an1,cr1,cr2
+           
             do j=1,norb 
                 if((an2.eq.j).or.(cr2.eq.j).or.(an1.eq.j).or.(cr1.eq.j))then
                     an2_cr2%dcnt(0,j)=int(an2_cr2%dcnt(0,j)+1,kind=2)

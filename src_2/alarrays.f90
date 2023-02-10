@@ -23,6 +23,7 @@ MODULE alarrays
 
         allocate (elecs%h1ei(e1), stat=ierr)
         if(ierr==0) allocate (elecs%h2ei(e2),stat=ierr)
+        if(ierr==0) allocate (elecs%h2ei_grad(e2),stat=ierr)
         if (ierr/=0) then
             write(0,"(a,i0)") "Error in electron integral  allocation. ierr had value ", ierr
             errorflag=1
@@ -289,14 +290,18 @@ MODULE alarrays
             if(ierr==0) allocate(ham%diff_hjk(size,diff_size,size), stat=ierr)
             if(ierr==0) allocate(ham%diff_ovrlp(size,diff_size,size), stat=ierr)
             if(ierr==0) allocate(ham%diff_invh(size,size,diff_size,size), stat=ierr)
+            if(ierr==0) allocate(ham%diff_ov_dov(size,size,diff_size,size), stat=ierr)
+            if(ierr==0) allocate(ham%diff_in_dhjk(size,size,diff_size,size), stat=ierr)
             if (ierr/=0) then
                 write(0,"(a,i0)") "Error in GD Hamiltonian allocation. ierr had value ", ierr
                 errorflag=1
                 return
             end if
-            ham%diff_hjk(1:size,1:size,1:diff_size)=0.0
-            ham%diff_ovrlp(1:size,1:size,1:diff_size)=0.0
-            ham%diff_invh(1:size,1:size,1:size,1:diff_size)=0.0
+            ham%diff_hjk=0.0
+            ham%diff_ovrlp=0.0
+            ham%diff_invh=0.0
+            ham%diff_ov_dov=0.0
+            ham%diff_in_dhjk=0.0
         end if
 
         return
@@ -560,10 +565,10 @@ MODULE alarrays
             end do
         end if
         if(GDflg.eq.'y')then 
-            ham%diff_hjk(1:size,1:size,1:norb)=0.0
-            ham%diff_ovrlp(1:size,1:size,1:norb)=0.0
-            ham%diff_invh(1:size,1:size,1:size,1:norb)=0.0
-            dvecs(1)%d_diff(1:size,1:size,1:norb)=0.0
+            ham%diff_hjk=0.0
+            ham%diff_ovrlp=0.0
+            ham%diff_invh=0.0
+            dvecs(1)%d_diff=0.0
             gradients%vars=0
         end if 
 

@@ -39,7 +39,7 @@ electrons.o:electrons.f90 vars.o alarrays.o
 zom.o:zom.f90 vars.o
 	 $(F90) $(FFLAGS) -c $<
 	 
-ham.o:ham.f90 vars.o
+ham.o:ham.f90 vars.o alarrays.o
 	 $(F90) $(FFLAGS) -c $<
 
 outputs.o:outputs.f90 vars.o
