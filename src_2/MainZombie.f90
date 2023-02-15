@@ -23,7 +23,8 @@ program MainZombie
     type(elecintrgl)::elect
     type(hamiltonian)::haml, clean_haml
     type(grad)::gradients
-    type(oprts)::an_cr,an2_cr2,an2_cr2_diff
+    type(oprts)::an_cr,an2_cr2
+    type(oprts),dimension(:),allocatable::an2_cr2_diff
     integer:: j, istat,clean_ndet,ierr,diff_state
     real(kind=8)::clean_norm, clean_erg
     ! complex(kind=8)::clean_norm, clean_erg
@@ -60,7 +61,7 @@ program MainZombie
     end if
 
     randseed = abs(randseed)    ! Negative seed values seem to cause instability
-    randseed =783668805050586407
+  
     call ZBQLINI(randseed,0)   ! Generates the seed value using the UCL random library
    
     write(6,"(a)") "Random seed set"
@@ -158,14 +159,14 @@ program MainZombie
             end if
             chng_trk=0
             if(rstrtflg.eq.'n')then 
-                ! call epoc_writer(gradients%prev_erg,0,chng_trk,0)
-                call epoc_writer(gradients%prev_erg,0,0,0)
+                call epoc_writer(gradients%prev_erg,0,chng_trk,0.0d0,0)
+                ! call epoc_writer(gradients%prev_erg,0,0,0)
             end if
-            ! do j=2,ndet
-                ! call final_grad(dvecs(1),haml,gradients,j,0)
-                call final_grad(dvecs(1),haml,gradients,diff_state,1)
-            ! end do
-            print*,gradients%vars(2,:)
+          
+            ! call final_grad(dvecs(1),haml,gradients,j,0)
+            call final_grad(dvecs(1),haml,gradients,diff_state,1)
+      
+          
             
             call zombie_alter(zstore,gradients,haml,elect,en,dvecs,chng_trk,an_cr,an2_cr2,an2_cr2_diff)
             

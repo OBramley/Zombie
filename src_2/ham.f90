@@ -185,11 +185,12 @@ MODULE ham
         type(hamiltonian), intent(inout)::haml 
         type(zombiest),dimension(:),intent(in)::zstore
         type(elecintrgl),intent(in)::elecs
-        type(oprts),intent(in)::an_cr,an2_cr2,an2_cr2_diff
+        type(oprts),intent(in)::an_cr,an2_cr2!,an2_cr2_diff
+        type(oprts),dimension(:)::an2_cr2_diff
         integer,intent(in)::size,verb
         integer, allocatable,dimension(:)::IPIV1
         real(kind=8),allocatable,dimension(:)::WORK1
-        integer::ierr,j
+        integer::ierr
        
         if (errorflag .ne. 0) return
         ierr=0
@@ -220,10 +221,7 @@ MODULE ham
         call DGEMM("N","N",size,size,size,1.d0,haml%inv,size,haml%hjk,size,0.d0,haml%kinvh,size)
 
         if(GDflg.eq.'y')then
-            ! do j=2,ndet
-                ! call gradient_zs(haml,zstore,elecs,an_cr,an2_cr2,j)
-                call gradient_zs(haml,zstore,elecs,an_cr,an2_cr2,an2_cr2_diff,2)
-            ! end do 
+            call gradient_zs(haml,zstore,elecs,an_cr,an2_cr2,an2_cr2_diff,2)
         end if
 
     end subroutine hamgen
@@ -314,55 +312,23 @@ MODULE ham
       
     end function haml_val_grad
 
-    real(kind=8) function haml_gvals(z1d,z2d,ops,ops2,el,len,orb)
-
-        implicit none 
-        real(kind=8),dimension(0:),intent(in)::z1d,z2d
-        real(kind=8),dimension(:),intent(in)::el
-        integer,intent(in)::len,orb
-        type(oprts),intent(in)::ops,ops2
-        real(kind=8)::ov
-        integer::j,k
-
-        
-        haml_gvals=0.0
-        !$omp parallel private(j,k,ov) shared(ops,z1d,z2d)
-        !$omp do simd reduction(+:haml_gvals) 
-        do j=1,len
-            ov=1.0
-            !!$omp do simd reduction(*:ov)
-            do k=1, norb
-                ov=ov*((z1d(ops2%alive(k,orb))*ops2%neg_alive(k,orb)*z2d(ops%alive(k,j))*&
-                ops%neg_alive(k,j))+(z1d(ops2%dead(k,orb))*ops2%neg_dead(k,orb)*z2d(ops%dead(k,j))*ops%neg_dead(k,j)))
-                
-                ! ov=ov*((z1d(ops%alive(k,j+len))*ops%neg_alive(k,j+len)*z2d(ops%alive(k,j))*&
-                ! ops%neg_alive(k,j))+(z1d(ops%dead(k,j+len))*ops%neg_dead(k,j+len)*z2d(ops%dead(k,j))*ops%neg_dead(k,j))) 
-            end do
-            
-            haml_gvals=haml_gvals+(ov*el(j))
-        end do
-        !$omp end do simd
-        !$omp end parallel 
-        
-        return 
-      
-    end function haml_gvals
+    
 
     ! Calcualates a column of a hamliltonian Start specifies the row the column
     ! is started to be calcualted 
-    subroutine haml_grad_rc(hcol,z1d,zstore,an_cr,an2_cr2,an2_cr2_diff,elecs,state,orb)
+    subroutine haml_grad_rc(hcol,z1d,zstore,an_cr,an2_cr2,elecs,state,orb)
 
         implicit none
         real(kind=8),dimension(:),intent(inout)::hcol 
         type(zombiest),dimension(:),intent(in)::zstore
         real(kind=8),dimension(0:),intent(in)::z1d
         type(elecintrgl),intent(in)::elecs
-        type(oprts),intent(in)::an_cr,an2_cr2,an2_cr2_diff
+        type(oprts),intent(in)::an_cr,an2_cr2!,an2_cr2_diff
         integer,intent(in)::state,orb
         real(kind=8)::h1etot,h2etot
         integer::j
         
-
+        
         !$omp parallel 
         !$omp single
         do j=1,ndet
@@ -413,7 +379,8 @@ MODULE ham
         real(kind=8),dimension(:,:),intent(inout)::haml_diff 
         type(zombiest),dimension(:),intent(in)::zstore
         type(elecintrgl),intent(in)::elecs
-        type(oprts),intent(in)::an_cr,an2_cr2,an2_cr2_diff
+        type(oprts),intent(in)::an_cr,an2_cr2!,an2_cr2_diff
+        type(oprts),dimension(:)::an2_cr2_diff
         integer,intent(in)::state
         real(kind=8),dimension(0:2*norb)::z1d
   
@@ -430,7 +397,8 @@ MODULE ham
             z1d(0:2*norb)=zstore(state)%val(0:2*norb)
             z1d(j)=zstore(state)%cos(j)
             z1d(j+norb)=zstore(state)%sin(j)*(-1)
-            call haml_grad_rc(haml_diff(:,j),z1d,zstore,an_cr,an2_cr2,an2_cr2_diff,elecs,state,j)
+            call haml_grad_rc(haml_diff(:,j),z1d,zstore,an_cr,an2_cr2,elecs,state,j)
+            ! call haml_grad_rc(haml_diff(:,j),z1d,zstore,an_cr,an2_cr2_diff(j),elecs,state,j)
         end do
         !$omp end parallel do
 
@@ -447,7 +415,8 @@ MODULE ham
         type(hamiltonian), intent(inout)::haml 
         type(zombiest),dimension(:),intent(in)::zstore
         type(elecintrgl),intent(in)::elecs
-        type(oprts),intent(in)::an_cr,an2_cr2,an2_cr2_diff
+        type(oprts),intent(in)::an_cr,an2_cr2!,an2_cr2_diff
+        type(oprts),dimension(:)::an2_cr2_diff
         integer,intent(in)::state
         real(kind=8),allocatable,dimension(:,:,:)::temp2 
         integer::ierr,k,l,j,p
@@ -458,12 +427,12 @@ MODULE ham
         ! haml%diff_hjk(state,:,:)=0
         haml%diff_hjk(state,:,:)=haml%diff_ovrlp(state,:,:)*elecs%hnuc  
         call haml_grad(haml%diff_hjk(state,:,:),zstore,elecs,an_cr,an2_cr2,an2_cr2_diff,state)
-      
-        ! do j=1,norb
-        !     print*,haml%diff_hjk(state,j,:)
-        ! end do 
-        ! print*,"***************************"
-       
+        
+    !     do j=1,norb
+    !         print*,haml%diff_hjk(state,j,:)
+    !     end do 
+    !     ! print*,"***************************"
+    !    stop
         
         allocate(temp2(ndet,norb,ndet),stat=ierr)
         if (ierr/=0) then
@@ -478,7 +447,7 @@ MODULE ham
                 do l=1, ndet
                     if(l.ne.state)then
                         haml%diff_ov_dov(state,k,j,l)=(haml%ovrlp(k,state)*&
-                        haml%diff_ovrlp(state,j,l))/abs(haml%ovrlp(k,state))
+                            haml%diff_ovrlp(state,j,l))/abs(haml%ovrlp(k,state))
 
                         haml%diff_in_dhjk(state,k,j,l)=(haml%inv(k,state)*haml%diff_hjk(state,j,l))
 
@@ -513,6 +482,43 @@ MODULE ham
         return
 
     end subroutine gradient_zs
+
+
+
+
+    ! real(kind=8) function haml_gvals(z1d,z2d,ops,ops2,el,len,orb)
+
+    !     implicit none 
+    !     real(kind=8),dimension(0:),intent(in)::z1d,z2d
+    !     real(kind=8),dimension(:),intent(in)::el
+    !     integer,intent(in)::len,orb
+    !     type(oprts),intent(in)::ops,ops2
+    !     real(kind=8)::ov
+    !     integer::j,k
+
+        
+    !     haml_gvals=0.0
+    !     !$omp parallel private(j,k,ov) shared(ops,z1d,z2d)
+    !     !$omp do simd reduction(+:haml_gvals) 
+    !     do j=1,len
+    !         ov=1.0
+    !         !!$omp do simd reduction(*:ov)
+    !         do k=1, norb
+    !             ov=ov*((z1d(ops2%alive(k,orb))*ops2%neg_alive(k,orb)*z2d(ops%alive(k,j))*&
+    !             ops%neg_alive(k,j))+(z1d(ops2%dead(k,orb))*ops2%neg_dead(k,orb)*z2d(ops%dead(k,j))*ops%neg_dead(k,j)))
+                
+    !             ! ov=ov*((z1d(ops%alive(k,j+len))*ops%neg_alive(k,j+len)*z2d(ops%alive(k,j))*&
+    !             ! ops%neg_alive(k,j))+(z1d(ops%dead(k,j+len))*ops%neg_dead(k,j+len)*z2d(ops%dead(k,j))*ops%neg_dead(k,j))) 
+    !         end do
+            
+    !         haml_gvals=haml_gvals+(ov*el(j))
+    !     end do
+    !     !$omp end do simd
+    !     !$omp end parallel 
+        
+    !     return 
+      
+    ! end function haml_gvals
 
 
 END MODULE ham

@@ -71,7 +71,7 @@ MODULE globvars
 
         integer(kind=2),dimension(:,:,:), allocatable::alive_diff,dead_diff
         integer(kind=1),dimension(:,:,:), allocatable::neg_alive_diff,neg_dead_diff
-        integer(kind=2),dimension(:,:), allocatable::dcnt
+        integer,dimension(:,:), allocatable::dcnt
     end type oprts
 
     

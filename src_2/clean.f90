@@ -147,7 +147,8 @@ MODULE clean
         type(hamiltonian), intent(inout)::cleanham
         integer, intent(inout)::clean_ndet
         type(elecintrgl),intent(in)::elecs 
-        type(oprts),intent(in)::an_cr,an2_cr2,an2_cr2_diff
+        type(oprts),intent(in)::an_cr,an2_cr2!,an2_cr2_diff
+        type(oprts),dimension(:)::an2_cr2_diff
         type(zombiest),dimension(:),intent(in)::zstore
         integer, intent(in)::nume
         type(zombiest),dimension(:),allocatable::cstoretemp
@@ -411,7 +412,8 @@ MODULE clean
         type(zombiest),dimension(:),allocatable,intent(inout)::cstore
         type(hamiltonian), intent(inout)::cleanham
         type(elecintrgl),intent(in)::elecs
-        type(oprts),intent(in)::an_cr,an2_cr2,an2_cr2_diff
+        type(oprts),intent(in)::an_cr,an2_cr2!,an2_cr2_diff
+        type(oprts),dimension(:)::an2_cr2_diff
         integer, intent(inout):: clean_ndet
         integer::pyscfc
      

@@ -46,7 +46,6 @@ def spatospin2(H2ea,norb):
 
 def one_elec_setup(norb,H1ei,EXDIR1):
 
-    h1=""
     h1count=0
     g=numpy.zeros(((norb*norb),3))
 
