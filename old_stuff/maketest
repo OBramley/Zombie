@@ -1,0 +1,61 @@
+# Makefile for use on chmlinxx computers.
+# Adapted from make file written by C. Symmonds for the MCE program which was inturn
+# made with the aid of the fmkmf utility (Copyright (c) The University of Edinburgh)
+
+F90=gfortran
+FFLAGS= -fopenmp -O3
+FLINKS= -llapack -lblas
+VPATH=../src_2
+
+# Link step
+
+all: test
+
+test:randgen.o vars.o alarrays.o readpars.o operators.o electrons.o zom.o ham.o outputs.o imgtp.o  grad_d.o test.o #comparison.o
+	 $(F90) $(FFLAGS) -o test.exe randgen.o vars.o alarrays.o readpars.o operators.o electrons.o zom.o ham.o outputs.o imgtp.o  grad_d.o test.o $(FLINKS)
+# Compile steps
+
+randgen.o:randgen.f
+	 $(F90) $(FFLAGS) -c $<
+
+vars.o:vars.f90
+	 $(F90) $(FFLAGS) -c $<
+
+alarrays.o:alarrays.f90 vars.o
+	 $(F90) $(FFLAGS) -c $<
+
+readpars.o:readpars.f90 vars.o
+	 $(F90) $(FFLAGS) -c $<
+
+outputs.o:outputs.f90 vars.o
+	 $(F90) $(FFLAGS) -c $<
+
+grad_d.o:grad_d.f90 vars.o
+	 $(F90) $(FFLAGS) -c $<
+
+operators.o:operators.f90 vars.o alarrays.o
+	 $(F90) $(FFLAGS) -c $<
+
+electrons.o:electrons.f90 vars.o
+	 $(F90) $(FFLAGS) -c $<
+
+zom.o:zom.f90 vars.o
+	 $(F90) $(FFLAGS) -c $<
+	 
+ham.o:ham.f90 vars.o alarrays.o operators.o
+	 $(F90) $(FFLAGS) -c $<
+
+imgtp.o:imgtp.f90 vars.o alarrays.o grad_d.o
+	 $(F90) $(FFLAGS) -c $<
+
+# comparison.o:comparison.f90 vars.o alarrays.o outputs.o ham.o imgtp.o 	#  $(F90) $(FFLAGS) -c $<
+
+test.o:test.f90 randgen.o vars.o alarrays.o readpars.o operators.o electrons.o zom.o ham.o outputs.o imgtp.o grad_d.o #comparison.o 
+	 $(F90) $(FFLAGS) -c $<
+
+# This entry allows you to type " make clean " to get rid of
+# all object and module files
+
+clean:
+	rm -rf f_{files,modd}* *.o *.mod *.exe *~ ../run/*.exe ../run/*~ ../utilities/*~
+
