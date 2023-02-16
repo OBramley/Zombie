@@ -37,6 +37,7 @@ MODULE gradient_descent
        
         haml%hjk(:,diff_state)=haml%ovrlp(:,diff_state)*elecs%hnuc 
         call haml_column(haml%hjk(:,diff_state),zstore(diff_state)%val,zstore,an_cr,an2_cr2,elecs,1)
+        haml%hjk(diff_state,:)=haml%hjk(:,diff_state)
         haml%inv=haml%ovrlp
         allocate(WORK1(size),IPIV1(size),stat=ierr)
         if (ierr/=0) then
@@ -638,9 +639,9 @@ MODULE gradient_descent
         mmntm=0
         mmntma=1
         mmntmflg=0
-        loop_max=10!40
+        loop_max=40
         loop_dwn=0
-        print*,'begin'
+       
         do while(rjct_cnt.lt.(norb-1)*2)
             t=newb*(alpha**lralt)
             ! t=(newb*(alpha)**floor(real((counter)/6)))*(alpha**lralt)
@@ -690,9 +691,7 @@ MODULE gradient_descent
                     fxtdk=en%erg(1,timesteps+1)
                     
                     if((fxtdk.lt.grad_fin%prev_erg))then!.and.(fxtdk.ge.-14.871913783299298))then
-                    if((abs(grad_fin%prev_erg-fxtdk).lt.0.05).and.((grad_fin%prev_erg-fxtdk)/abs(grad_fin%prev_erg)).lt.0.00003)then
-                    
-                  
+                    ! if((abs(grad_fin%prev_erg-fxtdk).lt.0.05).and.((grad_fin%prev_erg-fxtdk)/abs(grad_fin%prev_erg)).lt.0.00003)then
                                 acpt_cnt=acpt_cnt+1
                                 zstore=temp_zom
                                 haml=temp_ham
@@ -722,9 +721,9 @@ MODULE gradient_descent
                         else 
                             lralt_temp=lralt_temp+1
                         end if
-                    else 
-                        lralt_temp=lralt_temp+1
-                    end if
+                    ! else 
+                    !     lralt_temp=lralt_temp+1
+                    ! end if
         
                 end do
 
@@ -858,8 +857,8 @@ MODULE gradient_descent
             ierr=0
         end if
 
-        alpha=0.1  ! learning rate reduction
-        b=0.1D0 !starting learning rate
+        alpha=0.5  ! learning rate reduction
+        b=8.0D0 !starting learning rate
         
     
         chng_trk=0 !stores which if any ZS changed
@@ -930,9 +929,7 @@ MODULE gradient_descent
         n=1; m=number_of_values
         do k=1,2
             do j=1,m+1
-                !call random_number(r)
                 l = n + FLOOR((m+1-n)*ZBQLU01(1))
-                !l = n + FLOOR((m+1-n)*r) !ZBQLU01(1))
                 jtemp=array(l)
                 array(l)=array(j)
                 array(j)=jtemp
@@ -964,9 +961,7 @@ MODULE gradient_descent
         n=1; m=number_of_values
         do k=1,2
             do j=1,m
-                !call random_number(r)
                 l = n + FLOOR((m-n)*ZBQLU01(1))
-                !l = n + FLOOR((m-n)*r) 
                 jtemp=out(l)
                 out(l)=out(j)
                 out(j)=jtemp

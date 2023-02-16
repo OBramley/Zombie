@@ -4,7 +4,7 @@
 # subsequent streamlining alterations have been made 
 
 F90=gfortran
-FFLAGS= -fopenmp -O3 -fno-range-check
+FFLAGS= -fopenmp -O3
 FLINKS= -llapack -lblas
 VPATH=../src_2
 

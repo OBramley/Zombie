@@ -428,11 +428,7 @@ MODULE ham
         haml%diff_hjk(state,:,:)=haml%diff_ovrlp(state,:,:)*elecs%hnuc  
         call haml_grad(haml%diff_hjk(state,:,:),zstore,elecs,an_cr,an2_cr2,an2_cr2_diff,state)
         
-    !     do j=1,norb
-    !         print*,haml%diff_hjk(state,j,:)
-    !     end do 
-    !     ! print*,"***************************"
-    !    stop
+    
         
         allocate(temp2(ndet,norb,ndet),stat=ierr)
         if (ierr/=0) then

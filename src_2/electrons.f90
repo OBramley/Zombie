@@ -141,7 +141,7 @@ subroutine two_electrons(elecs,an2_cr2,an2_cr2_diff,e2)
     end do
   
     if(GDflg.eq.'y')then
-        do j=1,1!norb
+        do j=1,norb
             plc=0
             do l=1,e2
                 cr1=int(read_in(l+1,2))
