@@ -9,7 +9,7 @@ FFLAGS = -mp=gpu  -Minfo  #-gpu=cc70 #-gpu=managed #
 # FFLAGS= #-fopenmp -fbacktrace -fno-unsafe-math-optimizations -frounding-math -fsignaling-nans -foffload=-lgfortran 
 FLINKS=$(ARC_LINALG_FFLAGS)
 # FLINKS=	-llapack -lblas 
-VPATH=../src_2
+VPATH=../src
 
 # Link step
 

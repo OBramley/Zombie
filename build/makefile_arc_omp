@@ -6,7 +6,7 @@
 F90=gfortran
 FFLAGS= -fopenmp -O3
 FLINKS=$(ARC_LINALG_FFLAGS)
-VPATH=../src_2
+VPATH=../src
 
 # Link step
 
