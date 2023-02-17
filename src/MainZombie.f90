@@ -24,13 +24,11 @@ program MainZombie
     type(hamiltonian)::haml, clean_haml
     type(grad)::gradients
     type(oprts)::an_cr,an2_cr2
-    type(oprts),dimension(:),allocatable::an2_cr2_diff
     integer:: j, istat,clean_ndet,ierr,diff_state
     real(kind=8)::clean_norm, clean_erg
     ! complex(kind=8)::clean_norm, clean_erg
     character(LEN=4)::stateno
     character(LEN=100) :: CWD
-    integer,dimension(:),allocatable::chng_trk
     real(kind=8):: starttime, stoptime, runtime
     integer(kind=8):: randseed
     ! DOUBLE PRECISION, external::ZBQLU01
@@ -71,14 +69,14 @@ program MainZombie
     diff_state=0
     if(GDflg=="y")then
         call allocgrad(gradients,ndet,norb)
-        diff_state=2!0
+        diff_state=2
     end if
 
     ! generate 1 and 2 electron integrals
     if((cleanflg=="y").or.(cleanflg=="f").or.((hamgflg=='y')).or.(GDflg=='y'))then
         ! if((cleanflg=="y").or.((hamgflg=='y')))then
             ! call allocintgrl(elect)
-        call electronintegrals(elect,an_cr,an2_cr2,an2_cr2_diff)
+        call electronintegrals(elect,an_cr,an2_cr2)
         ! end if
         ! generate zombie states
         call alloczs(zstore,ndet)
@@ -120,7 +118,7 @@ program MainZombie
                 ! Maybe specificy conditons but maybe not needed?!
             end if
             write(6,"(a)") "To hamiltonian gen"
-            call hamgen(haml,zstore,elect,ndet,an_cr,an2_cr2,an2_cr2_diff,1)
+            call hamgen(haml,zstore,elect,ndet,an_cr,an2_cr2,1)
             call matrixwriter(haml%hjk,ndet,"data/ham.csv")
             call matrixwriter(haml%ovrlp,ndet,"data/ovlp.csv")
             write(6,"(a)") "Hamiltonian successfully generated"
@@ -131,7 +129,7 @@ program MainZombie
        
         ! Imaginary time propagation
         write(6,"(a)") "Imaginary time propagation started"
-        call imgtime_prop(dvecs,en,haml,diff_state)
+        call imgtime_prop(dvecs,en,haml,diff_state,0)
         write(6,"(a)") "Imaginary time propagation finished"
        
         if(gramflg.eq."n")then
@@ -148,45 +146,36 @@ program MainZombie
         ! print*,real(en%erg(1,timesteps+1))
         
         if(GDflg.eq."y")then
-            call sd_anal(zstore,nel,dvecs(1),1)
+            ! call sd_anal(zstore,nel,dvecs(1),1)
             ! gradients%prev_erg=real(en%erg(1,timesteps+1))
             gradients%prev_erg=en%erg(1,timesteps+1)
             write(6,"(a,f20.16)") "Initial energy: ", gradients%prev_erg
-            allocate(chng_trk(ndet),stat=ierr)
-            if (ierr/=0) then
-                write(0,"(a,i0)") "Error in zombie change tracking array allocation . ierr had value ", ierr
-                errorflag=1
-            end if
-            chng_trk=0
+           
             if(rstrtflg.eq.'n')then 
-                call epoc_writer(gradients%prev_erg,0,chng_trk,0.0d0,0)
-                ! call epoc_writer(gradients%prev_erg,0,0,0)
+                ! call epoc_writer(gradients%prev_erg,0,chng_trk,0.0d0,0)
+                call epoc_writer(gradients%prev_erg,0,0,0.0d0,0)
             end if
           
             ! call final_grad(dvecs(1),haml,gradients,j,0)
-            call final_grad(dvecs(1),haml,gradients,diff_state,1)
+            call final_grad(dvecs(1),haml,gradients,diff_state,0)
       
           
             
-            call zombie_alter(zstore,gradients,haml,elect,en,dvecs,chng_trk,an_cr,an2_cr2,an2_cr2_diff)
+            call zombie_alter(zstore,gradients,haml,elect,en,dvecs,an_cr,an2_cr2)
             
             GDflg='n'
             do j=1,ndet
                 call zombiewriter(zstore(j),j,0)
             end do
             dvecs(1)%d=(0.0,0.0)
-            call imgtime_prop(dvecs,en,haml,0)
+            call imgtime_prop(dvecs,en,haml,0,0)
             
             write(6,"(a,f21.16)") "Final energy: ", en%erg(1,timesteps+1)
             ! write(6,"(a,f21.16)") "Final energy: ", real(en%erg(1,timesteps+1))
             call energywriter(en%t,en%erg(1,:),"energy_final.csv",0)
             call matrixwriter(haml%hjk,ndet,"data/ham_final.csv")
             call matrixwriter(haml%ovrlp,ndet,"data/ovlp_final.csv")
-            deallocate(chng_trk,stat=ierr)
-            if (ierr/=0) then
-                write(0,"(a,i0)") "Error in zombie change tracking array deallocation . ierr had value ", ierr
-                errorflag=1
-            end if
+           
             call sd_anal(zstore,nel,dvecs(1),2)
         end if
 
@@ -243,10 +232,10 @@ program MainZombie
     
     if((cleanflg=="y").or.(cleanflg=="f"))then
         if(cleanflg=="y")then
-            call clean_setup(cstore,nel,clean_haml,elect,clean_ndet,zstore,an_cr,an2_cr2,an2_cr2_diff)
+            call clean_setup(cstore,nel,clean_haml,elect,clean_ndet,zstore,an_cr,an2_cr2)
             write(6,"(a)") "Cleaning hamiltonian generated"
         else if(cleanflg=="f")then
-            call clean_read(cstore,clean_haml,clean_ndet,elect,an_cr,an2_cr2,an2_cr2_diff)
+            call clean_read(cstore,clean_haml,clean_ndet,elect,an_cr,an2_cr2)
             write(6,"(a)") "Cleaning hamiltonian read in"
         end if
         

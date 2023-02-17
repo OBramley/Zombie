@@ -5,14 +5,14 @@ MODULE imgtp
     contains
 
     ! Routine for imaginary time propagation
-    subroutine imgtime_prop(dvecs,en,haml,diff_state)
+    subroutine imgtime_prop(dvecs,en,haml,diff_state,orb)
 
         implicit none
 
         type(dvector),dimension(:),intent(inout)::dvecs
         type(energy),intent(inout)::en
         type(hamiltonian),intent(in)::haml
-        integer,intent(in)::diff_state
+        integer,intent(in)::diff_state,orb
         integer::j,k,states
         ! real(kind=8)::p
         real::db,r
@@ -42,9 +42,9 @@ MODULE imgtp
         states=1
         if(gramflg.eq."y")then
             states=gramnum+1
-            call gs(dvecs,haml,diff_state)
+            call gs(dvecs,haml,diff_state,orb)
         else
-            call d_norm(dvecs(1),haml,0,diff_state)
+            call d_norm(dvecs(1),haml,0,diff_state,orb)
         end if 
         db=beta/timesteps
        
@@ -55,14 +55,14 @@ MODULE imgtp
             !$omp do
             do k=1,states
                 en%erg(k,j)=ergcalc(haml%hjk,dvecs(k)%d)
-                call timestep(haml,dvecs(k),db,diff_state)
+                call timestep(haml,dvecs(k),db,diff_state,orb)
             end do
             !$omp end do
             !$omp end parallel
             if(gramflg.eq."y")then
-                call gs(dvecs,haml,diff_state)
+                call gs(dvecs,haml,diff_state,orb)
             else
-                call d_norm(dvecs(1),haml,1,diff_state)
+                call d_norm(dvecs(1),haml,1,diff_state,orb)
             end if
    
         end do
@@ -95,12 +95,12 @@ MODULE imgtp
        
     end function ergcalc
 
-    subroutine d_norm(dvec,haml,step,diff_state)
+    subroutine d_norm(dvec,haml,step,diff_state,orb)
 
         implicit none
         type(dvector),intent(inout)::dvec
         type(hamiltonian),intent(in)::haml
-        integer,intent(in)::step,diff_state
+        integer,intent(in)::step,diff_state,orb
         real(kind=8)::norm
 
        
@@ -113,7 +113,7 @@ MODULE imgtp
        
         dvec%norm=norm
         if(GDflg.eq.'y')then
-            call d_normalise_diff(dvec,haml,step,diff_state)
+            call d_normalise_diff(dvec,haml,step,diff_state,orb)
         end if
         
         dvec%d=dvec%d/norm
@@ -123,14 +123,14 @@ MODULE imgtp
 
 
     ! Takes one timestep
-    subroutine timestep(haml,dvec,db,diff_state) 
+    subroutine timestep(haml,dvec,db,diff_state,orb) 
 
         implicit none
 
         type(dvector),intent(inout)::dvec
         type(hamiltonian),intent(in)::haml
         real,intent(in)::db
-        integer,intent(in)::diff_state
+        integer,intent(in)::diff_state,orb
         ! complex(kind=8),dimension(ndet)::ddot
         real(kind=8),dimension(ndet)::ddot
 
@@ -138,7 +138,7 @@ MODULE imgtp
 
         if (errorflag .ne. 0) return
         if(GDflg.eq.'y')then
-            call timestep_diff(dvec,haml,db,diff_state)
+            call timestep_diff(dvec,haml,db,diff_state,orb)
         end if
    
         !$omp parallel 
@@ -153,12 +153,12 @@ MODULE imgtp
     end subroutine timestep
 
     !Gram-Schmidt orthogonalisation 
-    subroutine gs(dvecs,haml,diff_state)
+    subroutine gs(dvecs,haml,diff_state,orb)
 
         implicit none
         type(dvector), intent(inout),dimension(:)::dvecs
         type(hamiltonian),intent(in)::haml
-        integer,intent(in)::diff_state
+        integer,intent(in)::diff_state,orb
         type(dvector), allocatable,dimension(:)::dvecs_copy
         ! complex(kind=8)::numer,den
         real(kind=8)::numer,den
@@ -183,7 +183,7 @@ MODULE imgtp
         end do
 
         do j=1,states
-            call d_norm(dvecs_copy(j),haml,1,diff_state)  
+            call d_norm(dvecs_copy(j),haml,1,diff_state,orb)  
         end do
         dvecs=dvecs_copy
         call deallocdv(dvecs_copy)

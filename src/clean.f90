@@ -139,7 +139,7 @@ MODULE clean
 
     end subroutine sd_anal
 
-    subroutine clean_setup(cstore,nume,cleanham,elecs,clean_ndet,zstore,an_cr,an2_cr2,an2_cr2_diff)
+    subroutine clean_setup(cstore,nume,cleanham,elecs,clean_ndet,zstore,an_cr,an2_cr2)
 
         implicit none
 
@@ -147,8 +147,7 @@ MODULE clean
         type(hamiltonian), intent(inout)::cleanham
         integer, intent(inout)::clean_ndet
         type(elecintrgl),intent(in)::elecs 
-        type(oprts),intent(in)::an_cr,an2_cr2!,an2_cr2_diff
-        type(oprts),dimension(:)::an2_cr2_diff
+        type(oprts),intent(in)::an_cr,an2_cr2
         type(zombiest),dimension(:),intent(in)::zstore
         integer, intent(in)::nume
         type(zombiest),dimension(:),allocatable::cstoretemp
@@ -318,7 +317,7 @@ MODULE clean
        
         
         call allocham(cleanham,clean_ndet,1)
-        call hamgen(cleanham,cstore,elecs,ndet,an_cr,an2_cr2,an2_cr2_diff,1)
+        call hamgen(cleanham,cstore,elecs,ndet,an_cr,an2_cr2,1)
         ! call hamgen(cleanham,cstore,elecs,clean_ndet,1)
         call matrixwriter(cleanham%hjk,clean_ndet,"data/clean_ham.csv")
         
@@ -405,15 +404,14 @@ MODULE clean
 
     end subroutine cleaner
 
-    subroutine clean_read(cstore,cleanham,clean_ndet,elecs,an_cr,an2_cr2,an2_cr2_diff)
+    subroutine clean_read(cstore,cleanham,clean_ndet,elecs,an_cr,an2_cr2)
         
         implicit none
 
         type(zombiest),dimension(:),allocatable,intent(inout)::cstore
         type(hamiltonian), intent(inout)::cleanham
         type(elecintrgl),intent(in)::elecs
-        type(oprts),intent(in)::an_cr,an2_cr2!,an2_cr2_diff
-        type(oprts),dimension(:)::an2_cr2_diff
+        type(oprts),intent(in)::an_cr,an2_cr2
         integer, intent(inout):: clean_ndet
         integer::pyscfc
      
@@ -424,7 +422,7 @@ MODULE clean
         if(pyscfc.eq.1)then
             call pyscf_clean(cstore,clean_ndet,nel)
             call allocham(cleanham,clean_ndet,1)
-            call hamgen(cleanham,cstore,elecs,ndet,an_cr,an2_cr2,an2_cr2_diff,1)
+            call hamgen(cleanham,cstore,elecs,ndet,an_cr,an2_cr2,1)
             ! call hamgen(cleanham,cstore,elecs,clean_ndet,1)
             call matrixwriter(cleanham%hjk,clean_ndet,"data/clean_ham.csv")
         else

@@ -178,15 +178,14 @@ MODULE ham
     end subroutine ovrlp_make
 
     ! Subroutine that controls and calcualtes all of the hamiltonian variables 
-    subroutine hamgen(haml,zstore,elecs,size,an_cr,an2_cr2,an2_cr2_diff,verb)
+    subroutine hamgen(haml,zstore,elecs,size,an_cr,an2_cr2,verb)
 
         implicit none 
 
         type(hamiltonian), intent(inout)::haml 
         type(zombiest),dimension(:),intent(in)::zstore
         type(elecintrgl),intent(in)::elecs
-        type(oprts),intent(in)::an_cr,an2_cr2!,an2_cr2_diff
-        type(oprts),dimension(:)::an2_cr2_diff
+        type(oprts),intent(in)::an_cr,an2_cr2
         integer,intent(in)::size,verb
         integer, allocatable,dimension(:)::IPIV1
         real(kind=8),allocatable,dimension(:)::WORK1
@@ -221,7 +220,7 @@ MODULE ham
         call DGEMM("N","N",size,size,size,1.d0,haml%inv,size,haml%hjk,size,0.d0,haml%kinvh,size)
 
         if(GDflg.eq.'y')then
-            call gradient_zs(haml,zstore,elecs,an_cr,an2_cr2,an2_cr2_diff,2)
+            call gradient_zs(haml,zstore,elecs,an_cr,an2_cr2,2,0)
         end if
 
     end subroutine hamgen
@@ -255,17 +254,17 @@ MODULE ham
     end function ovrlp_column_grad
 
     ! subroutine that finds the gradient of the overlap w.r.t a specified state
-    subroutine ovrlp_make_grad(zstore,state,ovrlp_grad)
+    subroutine ovrlp_make_grad(zstore,state,ovrlp_grad,orbsrt,orblim)
 
         implicit none 
         type(zombiest),dimension(:),intent(in)::zstore
         real(kind=8),dimension(:,:),intent(inout)::ovrlp_grad
-        integer,intent(in)::state
+        integer,intent(in)::state,orblim,orbsrt
         real(kind=8),dimension(0:2*norb)::z1d
         integer::j 
 
         !$omp parallel do shared(zstore,state,ovrlp_grad) private(z1d)
-        do j=1, norb
+        do j=orbsrt, orblim
             z1d=zstore(state)%val
             z1d(j)=zstore(state)%cos(j)
             z1d(j+norb)=(-1)*zstore(state)%sin(j)
@@ -372,16 +371,15 @@ MODULE ham
     end subroutine haml_grad_rc
 
     ! Hamiltonian calcualtion - calcualtes the gradient of ther hamliltonian w.r.t one zombie state 
-    subroutine haml_grad(haml_diff,zstore,elecs,an_cr,an2_cr2,an2_cr2_diff,state) 
+    subroutine haml_grad(haml_diff,zstore,elecs,an_cr,an2_cr2,state,orbsrt,orblim) 
 
         implicit none
         
         real(kind=8),dimension(:,:),intent(inout)::haml_diff 
         type(zombiest),dimension(:),intent(in)::zstore
         type(elecintrgl),intent(in)::elecs
-        type(oprts),intent(in)::an_cr,an2_cr2!,an2_cr2_diff
-        type(oprts),dimension(:)::an2_cr2_diff
-        integer,intent(in)::state
+        type(oprts),intent(in)::an_cr,an2_cr2
+        integer,intent(in)::state,orblim,orbsrt
         real(kind=8),dimension(0:2*norb)::z1d
   
         integer::j,ierr
@@ -393,7 +391,7 @@ MODULE ham
         !$omp parallel do &
         !$omp & private(j) &
         !$omp & shared(elecs,zstore,an_cr,an2_cr2,haml_diff)
-        do j=1,norb
+        do j=orbsrt,orblim
             z1d(0:2*norb)=zstore(state)%val(0:2*norb)
             z1d(j)=zstore(state)%cos(j)
             z1d(j+norb)=zstore(state)%sin(j)*(-1)
@@ -408,27 +406,33 @@ MODULE ham
 
 
     !subroutine to calcualte gradient of w.r.t to a specific zombie state
-    subroutine gradient_zs(haml,zstore,elecs,an_cr,an2_cr2,an2_cr2_diff,state)
+    subroutine gradient_zs(haml,zstore,elecs,an_cr,an2_cr2,state,orb)
 
         implicit none
 
         type(hamiltonian), intent(inout)::haml 
         type(zombiest),dimension(:),intent(in)::zstore
         type(elecintrgl),intent(in)::elecs
-        type(oprts),intent(in)::an_cr,an2_cr2!,an2_cr2_diff
-        type(oprts),dimension(:)::an2_cr2_diff
-        integer,intent(in)::state
+        type(oprts),intent(in)::an_cr,an2_cr2
+        integer,intent(in)::state,orb
         real(kind=8),allocatable,dimension(:,:,:)::temp2 
-        integer::ierr,k,l,j,p
+        integer::ierr,k,l,j,p,orblim,orbsrt
         ierr=0
 
-        call ovrlp_make_grad(zstore,state,haml%diff_ovrlp(state,:,:))
+        if(orb.eq.0)then
+            orbsrt=1
+            orblim=norb
+        else 
+            orbsrt=orb
+            orblim=orb
+        end if
+
+        call ovrlp_make_grad(zstore,state,haml%diff_ovrlp(state,:,:),orbsrt,orblim)
         
         ! haml%diff_hjk(state,:,:)=0
         haml%diff_hjk(state,:,:)=haml%diff_ovrlp(state,:,:)*elecs%hnuc  
-        call haml_grad(haml%diff_hjk(state,:,:),zstore,elecs,an_cr,an2_cr2,an2_cr2_diff,state)
+        call haml_grad(haml%diff_hjk(state,:,:),zstore,elecs,an_cr,an2_cr2,state,orbsrt,orblim)
         
-    
         
         allocate(temp2(ndet,norb,ndet),stat=ierr)
         if (ierr/=0) then

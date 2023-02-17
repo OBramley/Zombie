@@ -250,8 +250,8 @@ MODULE outputs
         implicit none
         real(kind=8),intent(in)::erg,lr 
         integer,intent(in)::step,pass
-        integer,dimension(:),intent(in)::chng_trk
-        ! integer,intent(in)::chng_trk
+        ! integer,dimension(:),intent(in)::chng_trk
+        integer,intent(in)::chng_trk
         integer::epoc,ierr,k
         logical :: file_exists
 
@@ -268,7 +268,9 @@ MODULE outputs
                 errorflag=1
                 return
             end if
-            write(epoc,'(i0,",",e25.17e3,",",e25.17e3,",",*(i0:", "))') step,erg,0.0,(chng_trk(k),k=1,ndet-1)
+            ! write(epoc,'(i0,",",e25.17e3,",",e25.17e3,",",*(i0:", "))') step,erg,0.0,(chng_trk(k),k=1,ndet-1)
+            write(epoc,'(a,",",a,",",a,","a)') "EPOC", "Energy", "Learning rate", "Zombie state altered"
+            write(epoc,'(i0,",",e25.17e3,",",e25.17e3,",",i0)') 0,erg,0.0,0
             ! write(epoc,'(i0,",",e25.17e3,",",i0)') step,erg,chng_trk
             close(epoc)
         else if(file_exists.eqv..true.) then
@@ -281,10 +283,12 @@ MODULE outputs
             if(pass.eq.1)then
                 write(epoc,*)' '
                 ! write(epoc,'(i0,",",e25.17e3,",",i0)') step,erg,chng_trk
-                write(epoc,'(i0,",",e25.17e3,",",e25.17e3,",",*(i0:", "))') step,erg,lr,(chng_trk(k),k=1,ndet-1)
+                ! write(epoc,'(i0,",",e25.17e3,",",e25.17e3,",",*(i0:", "))') step,erg,lr,(chng_trk(k),k=1,ndet-1)
+                write(epoc,'(i0,",",e25.17e3,",",e25.17e3,",",i0)') step,erg,lr,chng_trk
             else
                 ! write(epoc,'(i0,",",e25.17e3,",",i0)') step,erg,chng_trk
-                write(epoc,'(i0,",",e25.17e3,",",e25.17e3,",",*(i0:", "))') step,erg,lr,(chng_trk(k),k=1,ndet-1)
+                ! write(epoc,'(i0,",",e25.17e3,",",e25.17e3,",",*(i0:", "))') step,erg,lr,(chng_trk(k),k=1,ndet-1)
+                write(epoc,'(i0,",",e25.17e3,",",e25.17e3,",",i0)') step,erg,lr,chng_trk
             end if
             close(epoc)
         end if
