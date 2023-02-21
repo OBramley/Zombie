@@ -87,7 +87,7 @@ subroutine two_electrons(elecs,an2_cr2,e2)
     type(oprts),intent(inout)::an2_cr2
     integer,intent(in)::e2
     real(kind=8),dimension(e2+1,5)::read_in
-    integer::ierr,l,k,an1,an2,cr1,cr2,j,plc
+    integer::ierr,l,k,an1,an2,cr1,cr2,j
     
     
     
@@ -140,7 +140,6 @@ subroutine two_electrons(elecs,an2_cr2,e2)
   
     if(GDflg.eq.'y')then
         do j=1,norb
-            plc=0
             do l=1,e2
                 cr1=int(read_in(l+1,2))
                 cr2=int(read_in(l+1,3))

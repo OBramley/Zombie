@@ -298,8 +298,8 @@ Module grad_d
             orblim=orb
         end if
   
-        ! if(d_diff_flg.eq.0)then
-        !     do j=1, norb
+        ! ! if(orb.ne.0)then
+        !     do j=orbsrt, orblim
         !         dh_temp=dvec%d*haml%diff_hjk(diff_state,j,:)   
         !         dh_temp(diff_state)=0
         !         do p=1,ndet
