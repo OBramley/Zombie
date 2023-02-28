@@ -151,33 +151,61 @@ subroutine two_electrons(elecs,an2_cr2,e2)
                 if((an2.eq.j).or.(cr2.eq.j).or.(an1.eq.j).or.(cr1.eq.j))then
                     an2_cr2%dcnt(0,j)=int(an2_cr2%dcnt(0,j)+1,kind=2)
                     an2_cr2%dcnt(an2_cr2%dcnt(0,j),j)=l
+
                     if((an2.eq.j).or.(an1.eq.j))then
                         if((cr1.eq.j).or.(cr2.eq.j))then
                             an2_cr2%alive_diff(j,:,l)=an2_cr2%alive(:,l)
                             an2_cr2%dead_diff(j,:,l)=an2_cr2%dead(:,l)
                             an2_cr2%neg_alive_diff(j,:,l)=an2_cr2%neg_alive(:,l)
                             an2_cr2%neg_dead_diff(j,:,l)=an2_cr2%neg_dead(:,l)
+
+                            an2_cr2%alive_hess(j,:,l)=an2_cr2%alive(:,l)
+                            an2_cr2%dead_hess(j,:,l)=an2_cr2%dead(:,l)
+                            an2_cr2%neg_alive_hess(j,:,l)=an2_cr2%neg_alive(:,l)
+                            an2_cr2%neg_dead_hess(j,:,l)=an2_cr2%neg_dead(:,l)
+
                             an2_cr2%alive_diff(j,j,l)=int(j+norb,kind=2)
                             an2_cr2%neg_alive_diff(j,j,l)=int(2*an2_cr2%neg_alive_diff(j,j,l),kind=1)
 
+
+                            an2_cr2%alive_hess(j,j,l)=int(j,kind=2)
+                            an2_cr2%dead_hess(j,j,l)=int(j+norb,kind=2)
+                            an2_cr2%neg_alive_hess(j,j,l)=int(-2*an2_cr2%neg_alive_hess(j,j,l),kind=1)
+                            an2_cr2%neg_dead_hess(j,j,l)=int(2*an2_cr2%neg_alive_hess(j,j,l),kind=1)
                         else
                             an2_cr2%alive_diff(j,:,l)=an2_cr2%alive(:,l)
                             an2_cr2%dead_diff(j,:,l)=an2_cr2%dead(:,l)
                             an2_cr2%neg_alive_diff(j,:,l)=an2_cr2%neg_alive(:,l)
                             an2_cr2%neg_dead_diff(j,:,l)=an2_cr2%neg_dead(:,l)
+
+                            an2_cr2%alive_hess(j,:,l)=an2_cr2%alive(:,l)
+                            an2_cr2%dead_hess(j,:,l)=an2_cr2%dead(:,l)
+                            an2_cr2%neg_alive_hess(j,:,l)=an2_cr2%neg_alive(:,l)
+                            an2_cr2%neg_dead_hess(j,:,l)=an2_cr2%neg_dead(:,l)
+
                             an2_cr2%alive_diff(j,j,l)=int(j,kind=2)
                             an2_cr2%dead_diff(j,j,l)=int(j+norb,kind=2)
                             an2_cr2%neg_alive_diff(j,j,l)=int(an2_cr2%neg_dead_diff(j,j,l)*(-1),kind=1)
+
+                            an2_cr2%neg_dead_hess(j,j,l)=int(-4*an2_cr2%neg_dead_hess(j,j,l),kind=1)
                         end if
                     else
                         an2_cr2%alive_diff(j,:,l)=an2_cr2%alive(:,l)
                         an2_cr2%dead_diff(j,:,l)=an2_cr2%dead(:,l)
                         an2_cr2%neg_alive_diff(j,:,l)=an2_cr2%neg_alive(:,l)
                         an2_cr2%neg_dead_diff(j,:,l)=an2_cr2%neg_dead(:,l)
+
+                        an2_cr2%alive_hess(j,:,l)=an2_cr2%alive(:,l)
+                        an2_cr2%dead_hess(j,:,l)=an2_cr2%dead(:,l)
+                        an2_cr2%neg_alive_hess(j,:,l)=an2_cr2%neg_alive(:,l)
+                        an2_cr2%neg_dead_hess(j,:,l)=an2_cr2%neg_dead(:,l)
+
                         an2_cr2%alive_diff(j,j,l)=int(j,kind=2)
                         an2_cr2%dead_diff(j,j,l)=int(j+norb,kind=2)
                         an2_cr2%neg_dead_diff(j,j,l)=an2_cr2%neg_alive_diff(j,j,l)
                         an2_cr2%neg_alive_diff(j,j,l)=int(an2_cr2%neg_alive_diff(j,j,l)*(-1),kind=1)
+
+                        an2_cr2%neg_alive_hess(j,j,l)=int(-4*an2_cr2%neg_alive_hess(j,j,l),kind=1)
                     end if
                 end if 
             end do
@@ -246,25 +274,52 @@ subroutine one_electrons(elecs,an_cr,e1)
                         an_cr%dead_diff(j,:,l)=an_cr%dead(:,l)
                         an_cr%neg_alive_diff(j,:,l)=an_cr%neg_alive(:,l)
                         an_cr%neg_dead_diff(j,:,l)=an_cr%neg_dead(:,l)
+
+                        an_cr%alive_hess(j,:,l)=an_cr%alive(:,l)
+                        an_cr%dead_hess(j,:,l)=an_cr%dead(:,l)
+                        an_cr%neg_alive_hess(j,:,l)=an_cr%neg_alive(:,l)
+                        an_cr%neg_dead_hess(j,:,l)=an_cr%neg_dead(:,l)
+
                         an_cr%alive_diff(j,j,l)=int(j+norb,kind=2)
                         an_cr%neg_alive_diff(j,j,l)=int(2*an_cr%neg_alive_diff(j,j,l),kind=1)
+
+                        an_cr%alive_hess(j,j,l)=int(j,kind=2)
+                        an_cr%dead_hess(j,j,l)=int(j+norb,kind=2)
+                        an_cr%neg_alive_hess(j,j,l)=int(-2*an_cr%neg_alive_hess(j,j,l),kind=1)
+                        an_cr%neg_dead_hess(j,j,l)=int(2*an_cr%neg_alive_hess(j,j,l),kind=1)
                     else if(j.eq.an)then
                         an_cr%alive_diff(j,:,l)=an_cr%alive(:,l)
                         an_cr%dead_diff(j,:,l)=an_cr%dead(:,l)
                         an_cr%neg_alive_diff(j,:,l)=an_cr%neg_alive(:,l)
                         an_cr%neg_dead_diff(j,:,l)=an_cr%neg_dead(:,l)
+
+                        an_cr%alive_hess(j,:,l)=an_cr%alive(:,l)
+                        an_cr%dead_hess(j,:,l)=an_cr%dead(:,l)
+                        an_cr%neg_alive_hess(j,:,l)=an_cr%neg_alive(:,l)
+                        an_cr%neg_dead_hess(j,:,l)=an_cr%neg_dead(:,l)
+
                         an_cr%alive_diff(j,j,l)=int(j,kind=2)
                         an_cr%dead_diff(j,j,l)=int(j+norb,kind=2)
                         an_cr%neg_alive_diff(j,j,l)=int(an_cr%neg_dead_diff(j,j,l)*(-1),kind=1)
+
+                        an_cr%neg_dead_hess(j,j,l)=int(-4*an_cr%neg_dead_hess(j,j,l),kind=1)
                     else if(j.eq.cr)then
                         an_cr%alive_diff(j,:,l)=an_cr%alive(:,l)
                         an_cr%dead_diff(j,:,l)=an_cr%dead(:,l)
                         an_cr%neg_alive_diff(j,:,l)=an_cr%neg_alive(:,l)
                         an_cr%neg_dead_diff(j,:,l)=an_cr%neg_dead(:,l)
+
+                        an_cr%alive_hess(j,:,l)=an_cr%alive(:,l)
+                        an_cr%dead_hess(j,:,l)=an_cr%dead(:,l)
+                        an_cr%neg_alive_hess(j,:,l)=an_cr%neg_alive(:,l)
+                        an_cr%neg_dead_hess(j,:,l)=an_cr%neg_dead(:,l)
+
                         an_cr%alive_diff(j,j,l)=int(j,kind=2)
                         an_cr%dead_diff(j,j,l)=int(j+norb,kind=2)
                         an_cr%neg_dead_diff(j,j,l)=an_cr%neg_alive_diff(j,j,l)
                         an_cr%neg_alive_diff(j,j,l)=int(an_cr%neg_alive_diff(j,j,l)*(-1),kind=1)
+
+                        an_cr%neg_alive_hess(j,j,l)=int(-4*an_cr%neg_alive_hess(j,j,l),kind=1)
                     end if
                 end if 
             end do

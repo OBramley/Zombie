@@ -23,7 +23,6 @@ MODULE alarrays
 
         allocate (elecs%h1ei(e1), stat=ierr)
         if(ierr==0) allocate (elecs%h2ei(e2),stat=ierr)
-        if(ierr==0) allocate (elecs%h2ei_grad(e2),stat=ierr)
         if (ierr/=0) then
             write(0,"(a,i0)") "Error in electron integral  allocation. ierr had value ", ierr
             errorflag=1
@@ -289,6 +288,8 @@ MODULE alarrays
         if(GDflg.eq.'y')then  
             if(ierr==0) allocate(ham%diff_hjk(size,diff_size,size), stat=ierr)
             if(ierr==0) allocate(ham%diff_ovrlp(size,diff_size,size), stat=ierr)
+            if(ierr==0) allocate(ham%hess_hjk(size,diff_size,size), stat=ierr)
+            if(ierr==0) allocate(ham%hess_ovrlp(size,diff_size,size), stat=ierr)
             ! if(ierr==0) allocate(ham%diff_invh(size,size,diff_size,size), stat=ierr)
             ! if(ierr==0) allocate(ham%diff_ov_dov(size,size,diff_size,size), stat=ierr)
             ! if(ierr==0) allocate(ham%diff_in_dhjk(size,size,diff_size,size), stat=ierr)
@@ -299,9 +300,11 @@ MODULE alarrays
             end if
             ham%diff_hjk=0.0
             ham%diff_ovrlp=0.0
-            ham%diff_invh=0.0
-            ham%diff_ov_dov=0.0
-            ham%diff_in_dhjk=0.0
+            ham%hess_hjk=0.0
+            ham%hess_ovrlp=0.0
+            ! ham%diff_invh=0.0
+            ! ham%diff_ov_dov=0.0
+            ! ham%diff_in_dhjk=0.0
         end if
 
         return
@@ -334,7 +337,9 @@ MODULE alarrays
         if(GDflg.eq.'y')then  
             if(ierr==0) deallocate(ham%diff_hjk, stat=ierr)
             if(ierr==0) deallocate(ham%diff_ovrlp, stat=ierr)
-            if(ierr==0) deallocate(ham%diff_invh, stat=ierr)
+            if(ierr==0) deallocate(ham%hess_hjk, stat=ierr)
+            if(ierr==0) deallocate(ham%hess_ovrlp, stat=ierr)
+            ! if(ierr==0) deallocate(ham%diff_invh, stat=ierr)
             if (ierr/=0) then
                 write(0,"(a,i0)") "Error in GD Hamiltonian deallocation. ierr had value ", ierr
                 errorflag=1
@@ -500,6 +505,7 @@ MODULE alarrays
 
         
         allocate(gradients%vars(num,length),stat=ierr)
+        if (ierr==0) allocate(gradients%vars_hess(num,length),stat=ierr)
         if (ierr==0)allocate(gradients%grad_avlb(num),stat=ierr)
         if (ierr==0)allocate(gradients%prev_mmntm(num,length),stat=ierr)
         
@@ -529,6 +535,7 @@ MODULE alarrays
         
         deallocate(gradients%vars,stat=ierr)
         if (ierr==0)deallocate(gradients%grad_avlb,stat=ierr)
+        if (ierr==0) deallocate(gradients%vars_hess,stat=ierr)
         if (ierr==0)deallocate(gradients%prev_mmntm,stat=ierr)
         if (ierr/=0) then
             write(0,"(a,i0)") "Error in gradient matrix deallocation. ierr had value ", ierr
@@ -591,6 +598,9 @@ MODULE alarrays
             if(ierr==0) allocate(oper%alive_diff(norb,norb,n),oper%dead_diff(norb,norb,n),stat=ierr)
             if(ierr==0) allocate(oper%neg_alive_diff(norb,norb,n),oper%neg_dead_diff(norb,norb,n),stat=ierr)
             if(ierr==0) allocate(oper%dcnt(0:n,norb),stat=ierr)
+
+            if(ierr==0) allocate(oper%alive_hess(norb,norb,n),oper%dead_hess(norb,norb,n),stat=ierr)
+            if(ierr==0) allocate(oper%neg_alive_hess(norb,norb,n),oper%neg_dead_hess(norb,norb,n),stat=ierr)
         end if
         if (ierr/=0) then
             write(0,"(a,i0)") "Error in operators allocation. ierr had value ", ierr
@@ -614,10 +624,14 @@ MODULE alarrays
             oper%dcnt=0
             oper%neg_alive_diff=1
             oper%neg_dead_diff=1
+            oper%neg_alive_hess=1
+            oper%neg_dead_hess=1
             do j=1,norbs
                 do k=1,n
                     oper%alive_diff(j,:,k)=[integer(kind=2)::(l,l=1,norbs)]
                     oper%dead_diff(j,:,k)=[integer(kind=2)::((l+norbs),l=1,norbs)]
+                    oper%alive_hess(j,:,k)=[integer(kind=2)::(l,l=1,norbs)]
+                    oper%dead_hess(j,:,k)=[integer(kind=2)::((l+norbs),l=1,norbs)]
                 end do
                 
             end do
@@ -641,6 +655,8 @@ MODULE alarrays
         if(GDflg.eq.'y')then 
             if(ierr==0) deallocate(oper%alive_diff,oper%dead_diff,stat=ierr)
             if(ierr==0) deallocate(oper%neg_alive_diff,oper%neg_dead_diff,stat=ierr)
+            if(ierr==0) deallocate(oper%alive_hess,oper%dead_hess,stat=ierr)
+            if(ierr==0) deallocate(oper%neg_alive_hess,oper%neg_dead_hess,stat=ierr)
             if(ierr==0) deallocate(oper%dcnt,stat=ierr)
         end if
         if (ierr/=0) then

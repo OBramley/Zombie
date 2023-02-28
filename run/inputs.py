@@ -19,7 +19,7 @@ run={
     'language':'fortran',
 
     # What is the name of the run
-    'runfolder':'bh_20_5.0-10_good_beta_no_dgrad_all_or',
+    'runfolder':'bh_20_hessian_Multpily_5-9',
 
     # Amount of time to request on HPC 
     'runtime': "00:05:00",

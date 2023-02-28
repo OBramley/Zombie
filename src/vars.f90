@@ -29,6 +29,8 @@ MODULE globvars
 
         real(kind=8), dimension(:,:,:), allocatable::diff_hjk !ZS to be differentiated,zs is bra or ket, orbital, bra/ket pairing
         real(kind=8), dimension(:,:,:), allocatable::diff_ovrlp!ZS to be differntiated, orbital, bra/ket pairing
+        real(kind=8), dimension(:,:,:), allocatable::hess_hjk !ZS to be differentiated,zs is bra or ket, orbital, bra/ket pairing
+        real(kind=8), dimension(:,:,:), allocatable::hess_ovrlp!ZS to be differntiated, orbital, bra/ket pairing
         real(kind=8), dimension(:,:,:,:), allocatable::diff_invh
         real(kind=8), dimension(:,:,:,:),allocatable::diff_ov_dov
         real(kind=8), dimension(:,:,:,:),allocatable::diff_in_dhjk
@@ -60,7 +62,6 @@ MODULE globvars
         ! real(kind=8), dimension(:,:,:,:), allocatable::h2ei
         real(kind=8), dimension(:), allocatable::h1ei
         real(kind=8), dimension(:), allocatable::h2ei
-        real(kind=8), dimension(:), allocatable::h2ei_grad
         real(kind=8) :: hnuc
         
     end type elecintrgl
@@ -72,12 +73,16 @@ MODULE globvars
         integer(kind=2),dimension(:,:,:), allocatable::alive_diff,dead_diff
         integer(kind=1),dimension(:,:,:), allocatable::neg_alive_diff,neg_dead_diff
         integer,dimension(:,:), allocatable::dcnt
+
+        integer(kind=2),dimension(:,:,:), allocatable::alive_hess,dead_hess
+        integer(kind=1),dimension(:,:,:), allocatable::neg_alive_hess,neg_dead_hess
     end type oprts
 
     
 
     type grad 
         real(kind=8),dimension(:,:), allocatable::vars
+        real(kind=8),dimension(:,:), allocatable::vars_hess
         real(kind=8):: prev_erg
         real(kind=8):: current_erg
         integer,dimension(:),allocatable::grad_avlb

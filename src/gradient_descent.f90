@@ -314,7 +314,7 @@ MODULE gradient_descent
         btl_cnt=0
         ! btl=5.0d-7 !li2
         ! btl=5.0d-10 
-        btl=5.0d-10 
+        btl=5.0d-9 
         d_avrg_chk=5.0d-9 !Li2 
         ! d_avrg_chk=5.09d-20
         d_chck_num=5
@@ -343,7 +343,9 @@ MODULE gradient_descent
                     t=newb*(alpha**lralt_temp)
                     temp_zom=zstore
                    
-                    temp_zom(pick)%phi(:)=zstore(pick)%phi(:)-(t*(grad_fin%vars(pick,:)))
+                    ! temp_zom(pick)%phi(:)=zstore(pick)%phi(:)-(t*(grad_fin%vars(pick,:)))
+                    ! temp_zom(pick)%phi(:)=zstore(pick)%phi(:)-(t*(grad_fin%vars_hess(pick,:))*(grad_fin%vars(pick,:)))
+                    temp_zom(pick)%phi(:)=zstore(pick)%phi(:)-(t*(grad_fin%vars(pick,:))*(grad_fin%vars_hess(pick,:)))
                    
                     temp_zom(pick)%sin=sin(temp_zom(pick)%phi)
                     temp_zom(pick)%cos=cos(temp_zom(pick)%phi)
@@ -382,11 +384,16 @@ MODULE gradient_descent
                             rjct_cnt=0
                             grad_fin%grad_avlb=0
                             grad_fin%vars=0.0
+                            grad_fin%vars_hess=0.0
                             haml%diff_hjk=0
-                            haml%diff_invh=0
                             haml%diff_ovrlp=0
-                            haml%diff_ov_dov=0
-                            haml%diff_in_dhjk=0
+                            haml%hess_hjk=0
+                            haml%hess_ovrlp=0
+
+                            ! haml%diff_invh=0
+                           
+                            ! haml%diff_ov_dov=0
+                            ! haml%diff_in_dhjk=0
                             dvecs(1)%d_diff=0
                         
                             write(6,"(a,i0,a,f21.16,a,f21.16,a,f12.10,a,i0,a,i0,a,f21.16)") '       ', pick,'              ', &
@@ -414,12 +421,6 @@ MODULE gradient_descent
                     if(acpt_cnt.gt.0)then 
                         picker=scramble(ndet-1)
                     end if
-                    ! if(dvals.eq.0)then
-                    !     dvals=1
-                    ! else
-                    !     dvals=0
-                    !     dvecs(1)%d_diff=0
-                    ! end if
                     next=picker(1)
     
                     !Every 100 epoc brings phi values back within the normal 0-2pi range

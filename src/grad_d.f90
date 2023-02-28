@@ -283,8 +283,8 @@ Module grad_d
         type(grad),intent(inout)::grad_fin
         integer,intent(in)::diff_state,orb
         integer::j,p,orblim,orbsrt
-        real(kind=8),dimension(ndet)::dh_temp
-        real(kind=8),dimension(ndet)::dham
+        real(kind=8),dimension(ndet)::dh_temp,dh_temp_hess
+        ! real(kind=8),dimension(ndet)::dham
        
 
         if (errorflag .ne. 0) return
@@ -319,17 +319,23 @@ Module grad_d
 
             dh_temp=dvec%d*haml%diff_hjk(diff_state,j,:)   
             dh_temp(diff_state)=0
+
+            dh_temp_hess=dvec%d*haml%hess_hjk(diff_state,j,:)   
+            dh_temp_hess(diff_state)=0
             do p=1,ndet
                 dh_temp(diff_state)=dh_temp(diff_state)+(dvec%d(p)*haml%diff_hjk(diff_state,j,p))
+                dh_temp_hess(diff_state)=dh_temp_hess(diff_state)+(dvec%d(p)*haml%hess_hjk(diff_state,j,p))
             end do
                 
             do p=1,ndet
                 grad_fin%vars(diff_state,j)=grad_fin%vars(diff_state,j)+dvec%d(p)*dh_temp(p)
+                grad_fin%vars_hess(diff_state,j)=grad_fin%vars_hess(diff_state,j)+dvec%d(p)*dh_temp_hess(p)
             end do
 
             do p=1,ndet
                 grad_fin%vars(diff_state,j)=grad_fin%vars(diff_state,j)+(dvec%d(p)*dh_temp(p))!+&
                 ! (dham(p)*dvec%d_diff(p,diff_state,j))
+                grad_fin%vars_hess(diff_state,j)=grad_fin%vars_hess(diff_state,j)+(dvec%d(p)*dh_temp_hess(p))
             end do
         end do
 
