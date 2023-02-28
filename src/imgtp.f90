@@ -62,7 +62,7 @@ MODULE imgtp
             if(gramflg.eq."y")then
                 call gs(dvecs,haml,diff_state,orb)
             else
-                call d_norm(dvecs(1),haml,1,diff_state,orb)
+                call d_norm(dvecs(1),haml,j,diff_state,orb)
             end if
    
         end do

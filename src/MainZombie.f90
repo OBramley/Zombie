@@ -65,7 +65,6 @@ program MainZombie
     write(6,"(a)") "Random seed set"
 
    
-   
     diff_state=0
     if(GDflg=="y")then
         call allocgrad(gradients,ndet,norb)
@@ -74,9 +73,11 @@ program MainZombie
 
     ! generate 1 and 2 electron integrals
     if((cleanflg=="y").or.(cleanflg=="f").or.((hamgflg=='y')).or.(GDflg=='y'))then
+       
         ! if((cleanflg=="y").or.((hamgflg=='y')))then
             ! call allocintgrl(elect)
         call electronintegrals(elect,an_cr,an2_cr2)
+       
         ! end if
         ! generate zombie states
         call alloczs(zstore,ndet)
@@ -94,7 +95,7 @@ program MainZombie
         call flush(0)
     end if
 
-  
+   
     if(propflg=="y")then
         ! generate Hamiltonian and overlap
         call allocham(haml,ndet,norb)
@@ -129,7 +130,8 @@ program MainZombie
        
         ! Imaginary time propagation
         write(6,"(a)") "Imaginary time propagation started"
-        call imgtime_prop(dvecs,en,haml,diff_state,0)
+        ! call imgtime_prop(dvecs,en,haml,diff_state,0)
+        call imgtime_prop(dvecs,en,haml,0,0)
         write(6,"(a)") "Imaginary time propagation finished"
        
         if(gramflg.eq."n")then

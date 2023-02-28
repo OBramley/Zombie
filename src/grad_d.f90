@@ -21,7 +21,7 @@ Module grad_d
 
         if (errorflag .ne. 0) return
         if(diff_state.eq.0) return
-
+        
         diff_ovrlp_cmpnt(:)=0.0
 
         if(orb.eq.0)then
@@ -66,6 +66,7 @@ Module grad_d
         integer,intent(in)::diff_state,orbsrt,orblim
         real(kind=8),dimension(norb),intent(inout)::diff_norm_cmpndt
         real(kind=8),dimension(ndet)::temp
+        ! real(kind=8),dimension(norb)::temp
         integer::l,j,p
 
         if (errorflag .ne. 0) return
@@ -227,11 +228,11 @@ Module grad_d
         integer,intent(in)::diff_state,orbsrt,orblim
         real(kind=8),dimension(:,:),intent(inout)::ts_diff_cmpnt
         integer::j,k,p
-        real(kind=8),dimension(ndet)::temp
+        ! real(kind=8),dimension(ndet)::temp
 
         if (errorflag .ne. 0) return
 
-        temp=0
+        ! temp=0
         do j=orbsrt, orblim
             do k=1,ndet 
                 do p=1,ndet 
@@ -284,6 +285,7 @@ Module grad_d
         integer::j,p,orblim,orbsrt
         real(kind=8),dimension(ndet)::dh_temp
         real(kind=8),dimension(ndet)::dham
+       
 
         if (errorflag .ne. 0) return
 
@@ -311,7 +313,8 @@ Module grad_d
         !         end do
         !     end do
         ! else
-        dham=2*matmul(dvec%d,haml%hjk)
+
+        ! dham=2*matmul(dvec%d,haml%hjk)
         do j=orbsrt, orblim
 
             dh_temp=dvec%d*haml%diff_hjk(diff_state,j,:)   
@@ -325,8 +328,8 @@ Module grad_d
             end do
 
             do p=1,ndet
-                grad_fin%vars(diff_state,j)=grad_fin%vars(diff_state,j)+(dvec%d(p)*dh_temp(p))+&
-                (dham(p)*dvec%d_diff(p,diff_state,j))
+                grad_fin%vars(diff_state,j)=grad_fin%vars(diff_state,j)+(dvec%d(p)*dh_temp(p))!+&
+                ! (dham(p)*dvec%d_diff(p,diff_state,j))
             end do
         end do
 
@@ -335,45 +338,6 @@ Module grad_d
         return
     end subroutine final_grad
 
-    ! subroutine final_grad_gpu(pvars,phjk,pdiff_hjk,d_diff,d,diff_state,d_diff_flg)
-
-    !     implicit none
-
-    !     real(kind=8),dimension(:,:),intent(inout)::pvars
-    !     complex(kind=8), dimension(:,:),intent(inout)::phjk
-    !     real(kind=8), dimension(:,:,:),intent(inout)::pdiff_hjk
-    !     complex(kind=8), dimension(:)::d
-    !     real(kind=8), dimension(:,:,:)::d_diff
-    !     integer,intent(in)::diff_state,d_diff_flg
-    !     integer::j,l
-    !     real(kind=8),dimension(norb)::temp1,temp2
-    !     real(kind=8),dimension(ndet)::dham
-
-    !     if (errorflag .ne. 0) return
-    !     dham=matmul(REAL(d),REAL(phjk))
-    !     j=diff_state !do j=1, ndet !Each ZS{j} dependence
-
-    !     !!$omp target map(to:d,dham,j,d_diff) map(alloc:temp1(norb),temp2(norb))
-    !     temp1(:)=0
-    !     temp2(:)=0
-    !     !$omp parallel do
-    !     do l=1, ndet
-    !         temp1 = temp1 + dham(l)*d_diff(l,diff_state,:)
-    !         if(l.eq.diff_state)then
-    !             temp2=temp2+(real(d(l))*matmul(real(d),pdiff_hjk(diff_state,:,:)))
-    !         else 
-    !             temp2=temp2+(real(d(l)*d(diff_state))*pdiff_hjk(diff_state,l,:))
-    !         end if
-    !     end do
-    !     !$omp end parallel do
-    !     if(d_diff_flg.eq.0)then 
-    !         temp1=0 
-    !     end if
-    !     pvars(diff_state,:)=(2*temp1)+temp2
-    !     !$omp target update to(pvars)
-    !     !!$omp end target
-
-    !     return
-    ! end subroutine final_grad_gpu
+    
 
     END MODULE grad_d

@@ -4,7 +4,7 @@
 # subsequent streamlining alterations have been made
 
 F90=gfortran
-FFLAGS= -fopenmp -O3
+FFLAGS= -fopenmp -Ofast 
 FLINKS=$(ARC_LINALG_FFLAGS)
 VPATH=../src
 

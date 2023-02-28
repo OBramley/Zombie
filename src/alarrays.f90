@@ -289,9 +289,9 @@ MODULE alarrays
         if(GDflg.eq.'y')then  
             if(ierr==0) allocate(ham%diff_hjk(size,diff_size,size), stat=ierr)
             if(ierr==0) allocate(ham%diff_ovrlp(size,diff_size,size), stat=ierr)
-            if(ierr==0) allocate(ham%diff_invh(size,size,diff_size,size), stat=ierr)
-            if(ierr==0) allocate(ham%diff_ov_dov(size,size,diff_size,size), stat=ierr)
-            if(ierr==0) allocate(ham%diff_in_dhjk(size,size,diff_size,size), stat=ierr)
+            ! if(ierr==0) allocate(ham%diff_invh(size,size,diff_size,size), stat=ierr)
+            ! if(ierr==0) allocate(ham%diff_ov_dov(size,size,diff_size,size), stat=ierr)
+            ! if(ierr==0) allocate(ham%diff_in_dhjk(size,size,diff_size,size), stat=ierr)
             if (ierr/=0) then
                 write(0,"(a,i0)") "Error in GD Hamiltonian allocation. ierr had value ", ierr
                 errorflag=1
@@ -580,9 +580,10 @@ MODULE alarrays
         type(oprts),intent(inout)::oper 
         integer,intent(in)::n 
         integer::ierr,k
-        integer(kind=2)::j,norbs
-        if (errorflag .ne. 0) return
+        integer(kind=2)::j,norbs,l
 
+        if (errorflag .ne. 0) return
+      
         ierr=0
         norbs=int(norb,kind=2)
         allocate(oper%alive(norb,n),oper%dead(norb,n),oper%neg_alive(norb,n),oper%neg_dead(norb,n),stat=ierr)
@@ -596,26 +597,33 @@ MODULE alarrays
             errorflag=1
             return
         end if
-
+       
+       
         oper%neg_alive=1
         oper%neg_dead=1
         oper%alive=0
         oper%dead=0
+      
         do k=1,n
             oper%alive(:,k)=[integer(kind=2)::(j,j=1,norbs)]
             oper%dead(:,k)=[integer(kind=2)::((j+norbs),j=1,norbs)]
         end do
+      
         if(GDflg.eq.'y')then
+           
             oper%dcnt=0
             oper%neg_alive_diff=1
             oper%neg_dead_diff=1
             do j=1,norbs
-                oper%alive_diff(j,:,:)=oper%alive
-                oper%dead_diff(j,:,:)=oper%dead
+                do k=1,n
+                    oper%alive_diff(j,:,k)=[integer(kind=2)::(l,l=1,norbs)]
+                    oper%dead_diff(j,:,k)=[integer(kind=2)::((l+norbs),l=1,norbs)]
+                end do
+                
             end do
         end if 
-
-
+       
+        return 
 
     end subroutine alloc_oprts
 

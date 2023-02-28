@@ -434,50 +434,50 @@ MODULE ham
         call haml_grad(haml%diff_hjk(state,:,:),zstore,elecs,an_cr,an2_cr2,state,orbsrt,orblim)
         
         
-        allocate(temp2(ndet,norb,ndet),stat=ierr)
-        if (ierr/=0) then
-            write(0,"(a,i0)") "Error in occupancy diff_inverse temp array allocation . ierr had value ", ierr
-            errorflag=1
-            return
-        end if
-        temp2=0.0
+        ! allocate(temp2(ndet,norb,ndet),stat=ierr)
+        ! if (ierr/=0) then
+        !     write(0,"(a,i0)") "Error in occupancy diff_inverse temp array allocation . ierr had value ", ierr
+        !     errorflag=1
+        !     return
+        ! end if
+        ! temp2=0.0
     
-        do j=1,norb
-            do k=1,ndet
-                do l=1, ndet
-                    if(l.ne.state)then
-                        haml%diff_ov_dov(state,k,j,l)=(haml%ovrlp(k,state)*&
-                            haml%diff_ovrlp(state,j,l))/abs(haml%ovrlp(k,state))
+        ! do j=1,norb
+        !     do k=1,ndet
+        !         do l=1, ndet
+        !             if(l.ne.state)then
+        !                 haml%diff_ov_dov(state,k,j,l)=(haml%ovrlp(k,state)*&
+        !                     haml%diff_ovrlp(state,j,l))/abs(haml%ovrlp(k,state))
 
-                        haml%diff_in_dhjk(state,k,j,l)=(haml%inv(k,state)*haml%diff_hjk(state,j,l))
+        !                 haml%diff_in_dhjk(state,k,j,l)=(haml%inv(k,state)*haml%diff_hjk(state,j,l))
 
-                        temp2(k,j,l)=(haml%inv(k,l))*haml%diff_ovrlp(state,j,l)
-                    else
-                        do p=1,ndet
-                            haml%diff_ov_dov(state,k,j,l)=haml%diff_ov_dov(state,k,j,l)+&
-                            (haml%ovrlp(k,p)*haml%diff_ovrlp(state,j,p))/abs(haml%ovrlp(k,p))
+        !                 temp2(k,j,l)=(haml%inv(k,l))*haml%diff_ovrlp(state,j,l)
+        !             else
+        !                 do p=1,ndet
+        !                     haml%diff_ov_dov(state,k,j,l)=haml%diff_ov_dov(state,k,j,l)+&
+        !                     (haml%ovrlp(k,p)*haml%diff_ovrlp(state,j,p))/abs(haml%ovrlp(k,p))
 
-                            haml%diff_in_dhjk(state,k,j,l)=haml%diff_in_dhjk(state,k,j,l)+&
-                            (haml%inv(k,p)*haml%diff_hjk(state,j,p))
+        !                     haml%diff_in_dhjk(state,k,j,l)=haml%diff_in_dhjk(state,k,j,l)+&
+        !                     (haml%inv(k,p)*haml%diff_hjk(state,j,p))
 
-                            temp2(k,j,l)= temp2(k,p,l)+(haml%inv(k,p)*haml%diff_ovrlp(state,j,p))
-                        end do 
-                    end if 
-                end do
-            end do 
+        !                     temp2(k,j,l)= temp2(k,p,l)+(haml%inv(k,p)*haml%diff_ovrlp(state,j,p))
+        !                 end do 
+        !             end if 
+        !         end do
+        !     end do 
     
-            do k=1, ndet
-                do l=1, ndet
-                    do p=1,ndet
-                        haml%diff_invh(state,k,j,l)=haml%diff_invh(state,k,j,l)+(temp2(k,j,p)*haml%kinvh(p,l))
-                    end do 
-                    haml%diff_invh(state,k,j,l)=haml%diff_invh(state,k,j,l)*(-1)
-                end do  
-            end do
-        end do
+        !     do k=1, ndet
+        !         do l=1, ndet
+        !             do p=1,ndet
+        !                 haml%diff_invh(state,k,j,l)=haml%diff_invh(state,k,j,l)+(temp2(k,j,p)*haml%kinvh(p,l))
+        !             end do 
+        !             haml%diff_invh(state,k,j,l)=haml%diff_invh(state,k,j,l)*(-1)
+        !         end do  
+        !     end do
+        ! end do
 
 
-        deallocate(temp2)
+        ! deallocate(temp2)
         
         return
 

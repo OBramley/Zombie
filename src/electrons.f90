@@ -18,7 +18,7 @@ subroutine electronintegrals(elecs,an_cr,an2_cr2)
     
 
     if (errorflag .ne. 0) return
-
+   
 
     ierr = 0
     open(unit=129, file='integrals/h1e.csv',status='old',iostat=ierr)
@@ -52,12 +52,14 @@ subroutine electronintegrals(elecs,an_cr,an2_cr2)
     close(131)
 
     e2=int(e2in)
-
+   
     call allocintgrl(elecs,e1,e2)
-    
+  
     call  one_electrons(elecs,an_cr,e1)
+   
     call  two_electrons(elecs,an2_cr2,e2)
-
+   
+    
 
     open(unit=128, file='integrals/hnuc.csv',status='old',iostat=ierr)
     if (ierr.ne.0) then
@@ -90,6 +92,7 @@ subroutine two_electrons(elecs,an2_cr2,e2)
     integer::ierr,l,k,an1,an2,cr1,cr2,j
     
     
+    ierr=0
     
     open(unit=131, file='integrals/h2e.csv',status='old',iostat=ierr)
     if (ierr.ne.0) then
@@ -101,11 +104,11 @@ subroutine two_electrons(elecs,an2_cr2,e2)
     do j=1,e2+1
         read(131,*) (read_in(j,k),k=1,5)
     end do 
-    
-
+   
     close(131)
    
     elecs%h2ei=read_in(2:,1)
+   
     call alloc_oprts(an2_cr2,e2)
 
    
@@ -137,7 +140,7 @@ subroutine two_electrons(elecs,an2_cr2,e2)
         an2_cr2%neg_alive(:cr2-1,l)=int(an2_cr2%neg_alive(:cr2-1,l)*(-1),kind=1) 
         
     end do
-  
+   
     if(GDflg.eq.'y')then
         do j=1,norb
             do l=1,e2
@@ -180,6 +183,7 @@ subroutine two_electrons(elecs,an2_cr2,e2)
             end do
         end do 
     end if
+  
     return
 
 end subroutine two_electrons
@@ -195,6 +199,8 @@ subroutine one_electrons(elecs,an_cr,e1)
     integer::ierr,l,k,an,cr,j
 
     
+    ierr=0
+
     open(unit=129, file='integrals/h1e.csv',status='old',iostat=ierr)
     if (ierr.ne.0) then
         write(0,"(a)") 'Error in opening hnuc.csv file'
