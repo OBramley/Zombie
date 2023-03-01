@@ -130,8 +130,8 @@ program MainZombie
        
         ! Imaginary time propagation
         write(6,"(a)") "Imaginary time propagation started"
-        ! call imgtime_prop(dvecs,en,haml,diff_state,0)
-        call imgtime_prop(dvecs,en,haml,0,0)
+        call imgtime_prop(dvecs,en,haml,diff_state,0)
+        ! call imgtime_prop(dvecs,en,haml,0,0)
         write(6,"(a)") "Imaginary time propagation finished"
        
         if(gramflg.eq."n")then

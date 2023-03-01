@@ -288,11 +288,11 @@ MODULE alarrays
         if(GDflg.eq.'y')then  
             if(ierr==0) allocate(ham%diff_hjk(size,diff_size,size), stat=ierr)
             if(ierr==0) allocate(ham%diff_ovrlp(size,diff_size,size), stat=ierr)
-            if(ierr==0) allocate(ham%hess_hjk(size,diff_size,size), stat=ierr)
-            if(ierr==0) allocate(ham%hess_ovrlp(size,diff_size,size), stat=ierr)
-            ! if(ierr==0) allocate(ham%diff_invh(size,size,diff_size,size), stat=ierr)
-            ! if(ierr==0) allocate(ham%diff_ov_dov(size,size,diff_size,size), stat=ierr)
-            ! if(ierr==0) allocate(ham%diff_in_dhjk(size,size,diff_size,size), stat=ierr)
+            ! if(ierr==0) allocate(ham%hess_hjk(size,diff_size,size), stat=ierr)
+            ! if(ierr==0) allocate(ham%hess_ovrlp(size,diff_size,size), stat=ierr)
+            if(ierr==0) allocate(ham%diff_invh(size,size,diff_size,size), stat=ierr)
+            if(ierr==0) allocate(ham%diff_ov_dov(size,size,diff_size,size), stat=ierr)
+            if(ierr==0) allocate(ham%diff_in_dhjk(size,size,diff_size,size), stat=ierr)
             if (ierr/=0) then
                 write(0,"(a,i0)") "Error in GD Hamiltonian allocation. ierr had value ", ierr
                 errorflag=1
@@ -300,11 +300,11 @@ MODULE alarrays
             end if
             ham%diff_hjk=0.0
             ham%diff_ovrlp=0.0
-            ham%hess_hjk=0.0
-            ham%hess_ovrlp=0.0
-            ! ham%diff_invh=0.0
-            ! ham%diff_ov_dov=0.0
-            ! ham%diff_in_dhjk=0.0
+            ! ham%hess_hjk=0.0
+            ! ham%hess_ovrlp=0.0
+            ham%diff_invh=0.0
+            ham%diff_ov_dov=0.0
+            ham%diff_in_dhjk=0.0
         end if
 
         return
@@ -337,9 +337,9 @@ MODULE alarrays
         if(GDflg.eq.'y')then  
             if(ierr==0) deallocate(ham%diff_hjk, stat=ierr)
             if(ierr==0) deallocate(ham%diff_ovrlp, stat=ierr)
-            if(ierr==0) deallocate(ham%hess_hjk, stat=ierr)
-            if(ierr==0) deallocate(ham%hess_ovrlp, stat=ierr)
-            ! if(ierr==0) deallocate(ham%diff_invh, stat=ierr)
+            ! if(ierr==0) deallocate(ham%hess_hjk, stat=ierr)
+            ! if(ierr==0) deallocate(ham%hess_ovrlp, stat=ierr)
+            if(ierr==0) deallocate(ham%diff_invh, stat=ierr)
             if (ierr/=0) then
                 write(0,"(a,i0)") "Error in GD Hamiltonian deallocation. ierr had value ", ierr
                 errorflag=1
