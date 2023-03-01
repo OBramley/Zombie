@@ -19,7 +19,7 @@ run={
     'language':'fortran',
 
     # What is the name of the run
-    'runfolder':'li_20_5-9_hmmm_4',
+    'runfolder':'Li20_hess',
 
     # Amount of time to request on HPC 
     'runtime': "00:05:00",
@@ -60,9 +60,9 @@ run={
     # the Zombie state Hamiltonian. Takes input 'y' or 'n'.
     'imagprop':'y',
 
-    'beta':90,
+    'beta':500,
 
-    'timesteps':18,
+    'timesteps':1000,
 
     # Do you want the starting energy to be the HF energy
     # Takes input 'y' or 'n' and then a number to defined the number of electrons
@@ -102,7 +102,7 @@ zombs={
     'spin':0,
 
     # Number of Zombie states
-    'ndet':10, 
+    'ndet':20, 
 
     # Type of zombie states. Random (ran), Hartree Fock (HF) or biased (bb)
     'zomtyp':'bb',

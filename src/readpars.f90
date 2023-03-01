@@ -338,8 +338,8 @@ MODULE readpars
                 read(zomnum,*) dead
                 read(zomnum,*) alive
                 do k=1,norb
-                    cstore(j)%dead(k)=dead(k)
-                    cstore(j)%alive(k)=alive(k)
+                    cstore(j)%dead(k)=int(dead(k),kind=1)
+                    cstore(j)%alive(k)=int(alive(k),kind=1)
                 end do 
                 close(zomnum)
                 cstore(j)%cos=cstore(j)%dead

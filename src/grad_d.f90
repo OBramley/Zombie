@@ -282,10 +282,12 @@ Module grad_d
         type(hamiltonian),intent(in)::haml
         type(grad),intent(inout)::grad_fin
         integer,intent(in)::diff_state,orb
-        integer::j,p,orblim,orbsrt
+        integer::j,k,p,orblim,orbsrt,ierr
         real(kind=8),dimension(ndet)::dh_temp,dh_temp_hess
         real(kind=8),dimension(ndet)::dham
-       
+        real(kind=8),allocatable,dimension(:,:)::temp
+        integer, allocatable,dimension(:)::IPIV1
+        real(kind=8),allocatable,dimension(:)::WORK1
 
         if (errorflag .ne. 0) return
 
@@ -320,24 +322,66 @@ Module grad_d
             dh_temp=dvec%d*haml%diff_hjk(diff_state,j,:)   
             dh_temp(diff_state)=0
 
-            ! dh_temp_hess=dvec%d*haml%hess_hjk(diff_state,j,:)   
-            ! dh_temp_hess(diff_state)=0
             do p=1,ndet
                 dh_temp(diff_state)=dh_temp(diff_state)+(dvec%d(p)*haml%diff_hjk(diff_state,j,p))
-                ! dh_temp_hess(diff_state)=dh_temp_hess(diff_state)+(dvec%d(p)*haml%hess_hjk(diff_state,j,p))
             end do
                 
             do p=1,ndet
-                grad_fin%vars(diff_state,j)=grad_fin%vars(diff_state,j)+dvec%d(p)*dh_temp(p)
-                ! grad_fin%vars_hess(diff_state,j)=grad_fin%vars_hess(diff_state,j)+dvec%d(p)*dh_temp_hess(p)
+                grad_fin%vars(diff_state,j)=grad_fin%vars(diff_state,j)+dvec%d(p)*dh_temp(p)+&
+                    (dham(p)*dvec%d_diff(p,diff_state,j))
+                
             end do
 
-            do p=1,ndet
-                grad_fin%vars(diff_state,j)=grad_fin%vars(diff_state,j)+(dvec%d(p)*dh_temp(p))+&
-                (dham(p)*dvec%d_diff(p,diff_state,j))
-                ! grad_fin%vars_hess(diff_state,j)=grad_fin%vars_hess(diff_state,j)+(dvec%d(p)*dh_temp_hess(p))
-            end do
         end do
+        ierr=0
+        allocate(temp(norb,norb))
+        temp=0
+       
+        do j=1,norb
+            do k=j,norb
+                dh_temp_hess=dvec%d*haml%hess_hjk(diff_state,j,k,:)   
+                dh_temp_hess(diff_state)=0
+
+                do p=1,ndet
+                    dh_temp_hess(diff_state)=dh_temp_hess(diff_state)+(dvec%d(p)*haml%hess_hjk(diff_state,j,k,p))
+                end do
+
+                do p=1,ndet
+                    temp(j,k)=temp(j,k)+dvec%d(p)*dh_temp_hess(p)
+                end do
+                temp(k,j)=temp(j,k)
+            end do 
+            
+        end do
+
+        ierr=0
+       
+        allocate(WORK1(norb),IPIV1(norb),stat=ierr)
+        if (ierr/=0) then
+            write(0,"(a,i0)") "Error in IPIV or WORK1 vector allocation . ierr had value ", ierr
+            errorflag=1
+        end if 
+
+        Call dgetrf(norb, norb, temp, norb, IPIV1, ierr)
+        if (ierr/=0) then
+            write(0,"(a,i0)")"Error in DGETRF",ierr
+        end if
+        if (ierr==0) call dgetri(norb,temp,norb,IPIV1,WORK1,norb,ierr)
+        if (ierr/=0) then
+            write(0,"(a,i0)")"Error in DGETRF ",ierr
+        end if
+
+
+        do j=1,norb
+            do k=1,norb
+                grad_fin%vars_hess(diff_state,j)=grad_fin%vars_hess(diff_state,j)+temp(j,k)*grad_fin%vars(diff_state,k)
+            end do 
+        end do
+
+        ! grad_fin%hess_sum(diff_state)= sum(temp)
+        deallocate(WORK1,IPIV1,temp)
+
+        
 
         ! end if 
           

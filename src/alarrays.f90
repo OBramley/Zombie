@@ -288,8 +288,8 @@ MODULE alarrays
         if(GDflg.eq.'y')then  
             if(ierr==0) allocate(ham%diff_hjk(size,diff_size,size), stat=ierr)
             if(ierr==0) allocate(ham%diff_ovrlp(size,diff_size,size), stat=ierr)
-            ! if(ierr==0) allocate(ham%hess_hjk(size,diff_size,size), stat=ierr)
-            ! if(ierr==0) allocate(ham%hess_ovrlp(size,diff_size,size), stat=ierr)
+            if(ierr==0) allocate(ham%hess_hjk(size,diff_size,diff_size,size), stat=ierr)
+            if(ierr==0) allocate(ham%hess_ovrlp(size,diff_size,diff_size,size), stat=ierr)
             if(ierr==0) allocate(ham%diff_invh(size,size,diff_size,size), stat=ierr)
             if(ierr==0) allocate(ham%diff_ov_dov(size,size,diff_size,size), stat=ierr)
             if(ierr==0) allocate(ham%diff_in_dhjk(size,size,diff_size,size), stat=ierr)
@@ -300,8 +300,8 @@ MODULE alarrays
             end if
             ham%diff_hjk=0.0
             ham%diff_ovrlp=0.0
-            ! ham%hess_hjk=0.0
-            ! ham%hess_ovrlp=0.0
+            ham%hess_hjk=0.0
+            ham%hess_ovrlp=0.0
             ham%diff_invh=0.0
             ham%diff_ov_dov=0.0
             ham%diff_in_dhjk=0.0
@@ -337,8 +337,8 @@ MODULE alarrays
         if(GDflg.eq.'y')then  
             if(ierr==0) deallocate(ham%diff_hjk, stat=ierr)
             if(ierr==0) deallocate(ham%diff_ovrlp, stat=ierr)
-            ! if(ierr==0) deallocate(ham%hess_hjk, stat=ierr)
-            ! if(ierr==0) deallocate(ham%hess_ovrlp, stat=ierr)
+            if(ierr==0) deallocate(ham%hess_hjk, stat=ierr)
+            if(ierr==0) deallocate(ham%hess_ovrlp, stat=ierr)
             if(ierr==0) deallocate(ham%diff_invh, stat=ierr)
             if (ierr/=0) then
                 write(0,"(a,i0)") "Error in GD Hamiltonian deallocation. ierr had value ", ierr
@@ -508,6 +508,7 @@ MODULE alarrays
         if (ierr==0) allocate(gradients%vars_hess(num,length),stat=ierr)
         if (ierr==0)allocate(gradients%grad_avlb(num),stat=ierr)
         if (ierr==0)allocate(gradients%prev_mmntm(num,length),stat=ierr)
+        ! if (ierr==0)allocate(gradients%hess_sum(num),stat=ierr)
         
         if (ierr/=0) then
             write(0,"(a,i0)") "Error in gradient matrix allocation. ierr had value ", ierr
@@ -537,6 +538,7 @@ MODULE alarrays
         if (ierr==0)deallocate(gradients%grad_avlb,stat=ierr)
         if (ierr==0) deallocate(gradients%vars_hess,stat=ierr)
         if (ierr==0)deallocate(gradients%prev_mmntm,stat=ierr)
+        ! if (ierr==0)deallocate(gradients%hess_sum,stat=ierr)
         if (ierr/=0) then
             write(0,"(a,i0)") "Error in gradient matrix deallocation. ierr had value ", ierr
             errorflag=1
@@ -586,7 +588,7 @@ MODULE alarrays
         implicit none 
         type(oprts),intent(inout)::oper 
         integer,intent(in)::n 
-        integer::ierr,k
+        integer::ierr,k,p
         integer(kind=2)::j,norbs,l
 
         if (errorflag .ne. 0) return
@@ -599,8 +601,9 @@ MODULE alarrays
             if(ierr==0) allocate(oper%neg_alive_diff(norb,norb,n),oper%neg_dead_diff(norb,norb,n),stat=ierr)
             if(ierr==0) allocate(oper%dcnt(0:n,norb),stat=ierr)
 
-            if(ierr==0) allocate(oper%alive_hess(norb,norb,n),oper%dead_hess(norb,norb,n),stat=ierr)
-            if(ierr==0) allocate(oper%neg_alive_hess(norb,norb,n),oper%neg_dead_hess(norb,norb,n),stat=ierr)
+            if(ierr==0) allocate(oper%alive_hess(norb,norb,norb,n),oper%dead_hess(norb,norb,norb,n),stat=ierr)
+            if(ierr==0) allocate(oper%neg_alive_hess(norb,norb,norb,n),oper%neg_dead_hess(norb,norb,norb,n),stat=ierr)
+            if(ierr==0) allocate(oper%hcnt(0:n,norb,norb),stat=ierr)
         end if
         if (ierr/=0) then
             write(0,"(a,i0)") "Error in operators allocation. ierr had value ", ierr
@@ -622,19 +625,33 @@ MODULE alarrays
         if(GDflg.eq.'y')then
            
             oper%dcnt=0
-            oper%neg_alive_diff=1
-            oper%neg_dead_diff=1
-            oper%neg_alive_hess=1
-            oper%neg_dead_hess=1
-            do j=1,norbs
-                do k=1,n
-                    oper%alive_diff(j,:,k)=[integer(kind=2)::(l,l=1,norbs)]
-                    oper%dead_diff(j,:,k)=[integer(kind=2)::((l+norbs),l=1,norbs)]
-                    oper%alive_hess(j,:,k)=[integer(kind=2)::(l,l=1,norbs)]
-                    oper%dead_hess(j,:,k)=[integer(kind=2)::((l+norbs),l=1,norbs)]
-                end do
+            oper%hcnt=0
+            oper%neg_alive_diff=0
+            oper%neg_dead_diff=0
+            oper%neg_alive_hess=0
+            oper%neg_dead_hess=0
+            ! do j=1,norbs
+            !     do k=1,n
+            !         oper%alive_diff(j,:,k)=[integer(kind=2)::(l,l=1,norbs)]
+            !         oper%dead_diff(j,:,k)=[integer(kind=2)::((l+norbs),l=1,norbs)]
+            !     end do
                 
-            end do
+            ! end do
+            ! print*,'heres'
+            ! do j=1,norbs
+            !     do k=1,norb
+            !         do l=1,norbs
+            !             do p=1,n
+            !                 oper%alive_hess(j,k,l,p)=l
+            !                 oper%dead_hess(j,k,l,p)=l+norbs
+            !             ! oper%alive_hess(j,p,:,k)=[integer(kind=2)::(l,l=1,norbs)]
+            !             ! oper%dead_hess(j,p,:,k)=[integer(kind=2)::((l+norbs),l=1,norbs)]
+            !             end do
+            !         end do
+            !     end do
+            ! end do   
+
+
         end if 
        
         return 

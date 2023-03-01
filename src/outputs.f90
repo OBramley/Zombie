@@ -252,7 +252,7 @@ MODULE outputs
         integer,intent(in)::step,pass
         ! integer,dimension(:),intent(in)::chng_trk
         integer,intent(in)::chng_trk
-        integer::epoc,ierr,k
+        integer::epoc,ierr
         logical :: file_exists
 
         if (errorflag .ne. 0) return
