@@ -374,7 +374,7 @@ Module grad_d
             ! end if
 
             ! grad_fin%vars_hess(diff_state,:)=0
-            grad_fin%vars_hess(diff_state,:)=grad_fin%vars(diff_state,:)
+            ! grad_fin%vars_hess(diff_state,:)=grad_fin%vars(diff_state,:)
             ! call DGEMM("N","N",size,size,size,1.d0,haml%inv,size,haml%hjk,size,0.d0,haml%kinvh,size)
             ! do j=1,norb
             !     do k=1,norb

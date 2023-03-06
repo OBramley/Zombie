@@ -29,8 +29,8 @@ MODULE globvars
 
         real(kind=8), dimension(:,:,:), allocatable::diff_hjk !ZS to be differentiated,zs is bra or ket, orbital, bra/ket pairing
         real(kind=8), dimension(:,:,:), allocatable::diff_ovrlp!ZS to be differntiated, orbital, bra/ket pairing
-        real(kind=8), dimension(:,:,:,:), allocatable::hess_hjk !ZS to be differentiated,zs is bra or ket, orbital, bra/ket pairing
-        real(kind=8), dimension(:,:,:,:), allocatable::hess_ovrlp!ZS to be differntiated, orbital, bra/ket pairing
+        ! real(kind=8), dimension(:,:,:,:), allocatable::hess_hjk !ZS to be differentiated,zs is bra or ket, orbital, bra/ket pairing
+        ! real(kind=8), dimension(:,:,:,:), allocatable::hess_ovrlp!ZS to be differntiated, orbital, bra/ket pairing
         real(kind=8), dimension(:,:,:,:), allocatable::diff_invh
         real(kind=8), dimension(:,:,:,:),allocatable::diff_ov_dov
         real(kind=8), dimension(:,:,:,:),allocatable::diff_in_dhjk
@@ -74,10 +74,9 @@ MODULE globvars
     type oprts
         type(oprts_2)::ham 
         type(oprts_2),allocatable,dimension(:)::diff
-        type(oprts_2),allocatable,dimension(:,:)::hess
-        integer(kind=1),allocatable,dimension(:,:)::d_neg
+        ! type(oprts_2),allocatable,dimension(:,:)::hess
         integer,dimension(:,:), allocatable::dcnt
-        integer,dimension(:,:,:), allocatable::hcnt
+        ! integer,dimension(:,:,:), allocatable::hcnt
 
         ! integer(kind=2),dimension(:,:), allocatable::alive,dead
         ! integer(kind=1),dimension(:,:), allocatable::neg_alive,neg_dead
@@ -95,12 +94,12 @@ MODULE globvars
 
     type grad 
         real(kind=8),dimension(:,:), allocatable::vars
-        real(kind=8),dimension(:,:), allocatable::vars_hess
+        ! real(kind=8),dimension(:,:), allocatable::vars_hess
         real(kind=8):: prev_erg
         real(kind=8):: current_erg
         integer,dimension(:),allocatable::grad_avlb
-        real(kind=8),dimension(:,:),allocatable::prev_mmntm
-        real(kind=8),dimension(:),allocatable::hess_sum
+        ! real(kind=8),dimension(:,:),allocatable::prev_mmntm
+        ! real(kind=8),dimension(:),allocatable::hess_sum
     end type grad
 
     

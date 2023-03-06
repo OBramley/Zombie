@@ -19,7 +19,7 @@ run={
     'language':'fortran',
 
     # What is the name of the run
-    'runfolder':'li10_looking',
+    'runfolder':'Li10_remove_stuff_2',
 
     # Amount of time to request on HPC 
     'runtime': "00:05:00",
@@ -102,7 +102,7 @@ zombs={
     'spin':0,
 
     # Number of Zombie states
-    'ndet':20, 
+    'ndet':10, 
 
     # Type of zombie states. Random (ran), Hartree Fock (HF) or biased (bb)
     'zomtyp':'bb',

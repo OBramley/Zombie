@@ -391,80 +391,80 @@ MODULE ham
 
     end subroutine haml_grad
 
-    ! subroutine that finds the gradient of the overlap w.r.t a specified state
-    subroutine ovrlp_make_hessian(zstore,state,ovrlp_hess)
+    ! ! subroutine that finds the gradient of the overlap w.r.t a specified state
+    ! subroutine ovrlp_make_hessian(zstore,state,ovrlp_hess)
 
-        implicit none 
-        type(zombiest),dimension(:),intent(in)::zstore
-        real(kind=8),dimension(:,:,:),intent(inout)::ovrlp_hess
-        integer,intent(in)::state
-        real(kind=8),dimension(0:2*norb)::z1d,z1dd
-        integer::j,k 
+    !     implicit none 
+    !     type(zombiest),dimension(:),intent(in)::zstore
+    !     real(kind=8),dimension(:,:,:),intent(inout)::ovrlp_hess
+    !     integer,intent(in)::state
+    !     real(kind=8),dimension(0:2*norb)::z1d,z1dd
+    !     integer::j,k 
 
-        !$omp parallel do shared(zstore,state,ovrlp_grad) private(z1d)
-        do j=1, norb
-            z1d(0:2*norb)=zstore(state)%val(0:2*norb)
-            z1d(j)=zstore(state)%cos(j)
-            z1d(j+norb)=(-1)*zstore(state)%sin(j)
-            do k=1,norb
-                z1dd(0:2*norb)=z1d(0:2*norb)
-                if(j.ne.k)then
-                    z1dd(k)=zstore(state)%cos(k)
-                    z1dd(k+norb)=(-1)*zstore(state)%sin(k)
-                else 
-                    z1dd(k)=(-1)*zstore(state)%sin(k)
-                    z1dd(k+norb)=(-1)*zstore(state)%cos(k)
-                end if
-                ovrlp_hess(j,k,:)=ovrlp_column_grad(z1dd,zstore,state)
-            end do
-        end do
-        !$omp end parallel do 
+    !     !$omp parallel do shared(zstore,state,ovrlp_grad) private(z1d)
+    !     do j=1, norb
+    !         z1d(0:2*norb)=zstore(state)%val(0:2*norb)
+    !         z1d(j)=zstore(state)%cos(j)
+    !         z1d(j+norb)=(-1)*zstore(state)%sin(j)
+    !         do k=1,norb
+    !             z1dd(0:2*norb)=z1d(0:2*norb)
+    !             if(j.ne.k)then
+    !                 z1dd(k)=zstore(state)%cos(k)
+    !                 z1dd(k+norb)=(-1)*zstore(state)%sin(k)
+    !             else 
+    !                 z1dd(k)=(-1)*zstore(state)%sin(k)
+    !                 z1dd(k+norb)=(-1)*zstore(state)%cos(k)
+    !             end if
+    !             ovrlp_hess(j,k,:)=ovrlp_column_grad(z1dd,zstore,state)
+    !         end do
+    !     end do
+    !     !$omp end parallel do 
 
-        return 
+    !     return 
 
-    end subroutine ovrlp_make_hessian
+    ! end subroutine ovrlp_make_hessian
 
-    subroutine haml_hessian(haml_hess,zstore,elecs,an_cr,an2_cr2,state) 
+    ! subroutine haml_hessian(haml_hess,zstore,elecs,an_cr,an2_cr2,state) 
 
-        implicit none
+    !     implicit none
         
-        real(kind=8),dimension(:,:,:),intent(inout)::haml_hess 
-        type(zombiest),dimension(:),intent(in)::zstore
-        type(elecintrgl),intent(in)::elecs
-        type(oprts),intent(in)::an_cr,an2_cr2
-        integer,intent(in)::state
-        real(kind=8),dimension(0:2*norb)::z1d,z1dd
+    !     real(kind=8),dimension(:,:,:),intent(inout)::haml_hess 
+    !     type(zombiest),dimension(:),intent(in)::zstore
+    !     type(elecintrgl),intent(in)::elecs
+    !     type(oprts),intent(in)::an_cr,an2_cr2
+    !     integer,intent(in)::state
+    !     real(kind=8),dimension(0:2*norb)::z1d,z1dd
   
-        integer::j,ierr,k
+    !     integer::j,ierr,k
     
-        if (errorflag .ne. 0) return 
-        ierr=0
+    !     if (errorflag .ne. 0) return 
+    !     ierr=0
 
        
-        !$omp parallel do &
-        !$omp & private(j) &
-        !$omp & shared(elecs,zstore,an_cr,an2_cr2,haml_diff)
-        do j=1,norb
-            z1d(0:2*norb)=zstore(state)%val(0:2*norb)
-            z1d(j)=zstore(state)%cos(j)
-            z1d(j+norb)=(-1)*zstore(state)%sin(j)
-            do k=j,norb
-                z1dd(0:2*norb)=z1d(0:2*norb)
-                if(j.ne.k)then
-                    z1dd(k)=zstore(state)%cos(k)
-                    z1dd(k+norb)=(-1)*zstore(state)%sin(k)
-                else 
-                    z1dd(k)=(-1)*zstore(state)%sin(k)
-                    z1dd(k+norb)=(-1)*zstore(state)%cos(k)
-                end if
-                call haml_hess_rc(haml_hess(j,k,:),z1dd,zstore,an_cr,an2_cr2,elecs,state,j,k)
-            end do
-        end do
-        !$omp end parallel do
+    !     !$omp parallel do &
+    !     !$omp & private(j) &
+    !     !$omp & shared(elecs,zstore,an_cr,an2_cr2,haml_diff)
+    !     do j=1,norb
+    !         z1d(0:2*norb)=zstore(state)%val(0:2*norb)
+    !         z1d(j)=zstore(state)%cos(j)
+    !         z1d(j+norb)=(-1)*zstore(state)%sin(j)
+    !         do k=j,norb
+    !             z1dd(0:2*norb)=z1d(0:2*norb)
+    !             if(j.ne.k)then
+    !                 z1dd(k)=zstore(state)%cos(k)
+    !                 z1dd(k+norb)=(-1)*zstore(state)%sin(k)
+    !             else 
+    !                 z1dd(k)=(-1)*zstore(state)%sin(k)
+    !                 z1dd(k+norb)=(-1)*zstore(state)%cos(k)
+    !             end if
+    !             call haml_hess_rc(haml_hess(j,k,:),z1dd,zstore,an_cr,an2_cr2,elecs,state,j,k)
+    !         end do
+    !     end do
+    !     !$omp end parallel do
 
-        return
+    !     return
         
-    end subroutine haml_hessian
+    ! end subroutine haml_hessian
 
     !##############################################################################################################################
 
@@ -561,63 +561,63 @@ MODULE ham
     end subroutine haml_grad_rc
 
 
-    subroutine haml_hess_rc(hcol,z1d,zstore,an_cr,an2_cr2,elecs,state,orb1,orb2)
+    ! subroutine haml_hess_rc(hcol,z1d,zstore,an_cr,an2_cr2,elecs,state,orb1,orb2)
 
-        implicit none
-        real(kind=8),dimension(:),intent(inout)::hcol 
-        type(zombiest),dimension(:),intent(in)::zstore
-        real(kind=8),dimension(0:),intent(in)::z1d
-        type(elecintrgl),intent(in)::elecs
-        type(oprts),intent(in)::an_cr,an2_cr2
-        integer,intent(in)::state,orb1,orb2
-        real(kind=8)::h1etot,h2etot
-        integer::j
+    !     implicit none
+    !     real(kind=8),dimension(:),intent(inout)::hcol 
+    !     type(zombiest),dimension(:),intent(in)::zstore
+    !     real(kind=8),dimension(0:),intent(in)::z1d
+    !     type(elecintrgl),intent(in)::elecs
+    !     type(oprts),intent(in)::an_cr,an2_cr2
+    !     integer,intent(in)::state,orb1,orb2
+    !     real(kind=8)::h1etot,h2etot
+    !     integer::j
         
         
-        !$omp parallel 
-        !$omp single
-        do j=1,ndet
-            if(j.ne.state)then
-                ! Differentiating the bra 1 el
-                !$omp task firstprivate(h1etot,j) shared(hcol,zstore,an_cr,elecs,z1d)
-                h1etot = haml_vals_2(z1d,zstore(j)%val,an_cr%ham,elecs%h1ei,elecs%h1_num,an_cr%d_neg(:,orb1))
-                !$omp atomic
-                hcol(j)=hcol(j)+h1etot
-                !$omp end atomic
-                !$omp end task
+    !     !$omp parallel 
+    !     !$omp single
+    !     do j=1,ndet
+    !         if(j.ne.state)then
+    !             ! Differentiating the bra 1 el
+    !             !$omp task firstprivate(h1etot,j) shared(hcol,zstore,an_cr,elecs,z1d)
+    !             h1etot = haml_vals(z1d,zstore(j)%val,an_cr%ham,elecs%h1ei,elecs%h1_num)!,an_cr%d_neg(:,orb1))
+    !             !$omp atomic
+    !             hcol(j)=hcol(j)+h1etot
+    !             !$omp end atomic
+    !             !$omp end task
                
-                !Differentiating the bra 2 el
-                !$omp task firstprivate(h2etot,j) shared(hcol,zstore,an2_cr2,elecs,z1d)
-                h2etot = haml_vals_2(z1d,zstore(j)%val,an2_cr2%ham,elecs%h2ei,elecs%h2_num,an2_cr2%d_neg(:,orb1))
-                !$omp atomic
-                hcol(j)=hcol(j)+(0.5*h2etot)
-                !$omp end atomic
-                !$omp end task
+    !             !Differentiating the bra 2 el
+    !             !$omp task firstprivate(h2etot,j) shared(hcol,zstore,an2_cr2,elecs,z1d)
+    !             h2etot = haml_vals(z1d,zstore(j)%val,an2_cr2%ham,elecs%h2ei,elecs%h2_num)!,an2_cr2%d_neg(:,orb1))
+    !             !$omp atomic
+    !             hcol(j)=hcol(j)+(0.5*h2etot)
+    !             !$omp end atomic
+    !             !$omp end task
 
-            else
-                !Differentiaitn hamiltonian element (a,a) only placed in hamiltonian column
-                !$omp task firstprivate(h1etot,j) shared(hcol,zstore,an_cr,elecs)
-                h1etot = haml_vals_mod(zstore(state)%val,zstore(state)%val,an_cr%hess(orb1,orb2),&
-                elecs%h1ei,an_cr%hcnt(:,orb1,orb2))!,an_cr%d_neg(:,orb1))
-                !$omp atomic
-                hcol(j)=hcol(j)+h1etot
-                !$omp end atomic
-                !$omp end task
-                !$omp task firstprivate(h2etot,j) shared(hcol,zstore,an2_cr2,elecs)
-                h2etot = haml_vals_mod(zstore(state)%val,zstore(state)%val,an2_cr2%hess(orb1,orb2),&
-                elecs%h2ei,an_cr%hcnt(:,orb1,orb2))!,an2_cr2%d_neg(:,orb1))
-                !$omp atomic
-                hcol(j)=hcol(j)+(0.5*h2etot)
-                !$omp end atomic
-                !$omp end task
-            end if
-        end do 
-        !$omp end single
-        !$omp end parallel  
+    !         else
+    !             !Differentiaitn hamiltonian element (a,a) only placed in hamiltonian column
+    !             !$omp task firstprivate(h1etot,j) shared(hcol,zstore,an_cr,elecs)
+    !             h1etot = haml_vals_mod(zstore(state)%val,zstore(state)%val,an_cr%hess(orb1,orb2),&
+    !             elecs%h1ei,an_cr%hcnt(:,orb1,orb2))!,an_cr%d_neg(:,orb1))
+    !             !$omp atomic
+    !             hcol(j)=hcol(j)+h1etot
+    !             !$omp end atomic
+    !             !$omp end task
+    !             !$omp task firstprivate(h2etot,j) shared(hcol,zstore,an2_cr2,elecs)
+    !             h2etot = haml_vals_mod(zstore(state)%val,zstore(state)%val,an2_cr2%hess(orb1,orb2),&
+    !             elecs%h2ei,an_cr%hcnt(:,orb1,orb2))!,an2_cr2%d_neg(:,orb1))
+    !             !$omp atomic
+    !             hcol(j)=hcol(j)+(0.5*h2etot)
+    !             !$omp end atomic
+    !             !$omp end task
+    !         end if
+    !     end do 
+    !     !$omp end single
+    !     !$omp end parallel  
 
-        return
+    !     return
 
-    end subroutine haml_hess_rc
+    ! end subroutine haml_hess_rc
 
     !##############################################################################################################################
 
@@ -654,36 +654,36 @@ MODULE ham
       
     end function haml_vals_mod
 
-    real(kind=8) function haml_vals_2(z1d,z2d,ops,el,len,neg)
+    ! real(kind=8) function haml_vals_2(z1d,z2d,ops,el,len,neg)
 
-        implicit none 
-        real(kind=8),dimension(0:),intent(in)::z1d,z2d
-        real(kind=8),dimension(:),intent(in)::el
-        integer(kind=1),dimension(:),intent(in)::neg
-        integer,intent(in)::len
-        type(oprts_2),intent(in)::ops
-        real(kind=8)::ov
-        integer::j,k
+    !     implicit none 
+    !     real(kind=8),dimension(0:),intent(in)::z1d,z2d
+    !     real(kind=8),dimension(:),intent(in)::el
+    !     integer(kind=1),dimension(:),intent(in)::neg
+    !     integer,intent(in)::len
+    !     type(oprts_2),intent(in)::ops
+    !     real(kind=8)::ov
+    !     integer::j,k
 
         
-        haml_vals_2=0.0
-        !$omp parallel private(j,k,ov) shared(ops,z1d,z2d)
-        !$omp do simd reduction(+:haml_vals) 
-        do j=1,len
-            ov=1.0
-            !!$omp do simd reduction(*:ov)
-            do k=1, norb
-                ov=ov*((z1d(k)*z2d(ops%alive(k,j))*ops%neg_alive(k,j))+(z1d(k+norb)*z2d(ops%dead(k,j))*ops%neg_dead(k,j))) 
-            end do
-            !!$omp end do simd
-            haml_vals_2=haml_vals_2+(ov*el(j)*neg(j))
-        end do
-        !$omp end do simd
-        !$omp end parallel 
+    !     haml_vals_2=0.0
+    !     !$omp parallel private(j,k,ov) shared(ops,z1d,z2d)
+    !     !$omp do simd reduction(+:haml_vals) 
+    !     do j=1,len
+    !         ov=1.0
+    !         !!$omp do simd reduction(*:ov)
+    !         do k=1, norb
+    !             ov=ov*((z1d(k)*z2d(ops%alive(k,j))*ops%neg_alive(k,j))+(z1d(k+norb)*z2d(ops%dead(k,j))*ops%neg_dead(k,j))) 
+    !         end do
+    !         !!$omp end do simd
+    !         haml_vals_2=haml_vals_2+(ov*el(j)*neg(j))
+    !     end do
+    !     !$omp end do simd
+    !     !$omp end parallel 
         
-        return 
+    !     return 
       
-    end function haml_vals_2
+    ! end function haml_vals_2
 
      ! ! calculates indvidual hamliltonian elements taking in two Zombie states and a set of 
     ! ! creation and annihilation operations

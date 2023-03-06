@@ -81,7 +81,6 @@ MODULE gradient_descent
         if(grad_fin%grad_avlb(pick).eq.0)then
             dvec(1)%d_diff(:,pick,:)=0
             call gradient_zs(haml,zstore,elect,an_cr,an2_cr2,pick,orb)
-            ! call final_grad(dvec(1),haml,grad_fin,pick,orb,grad_fin%grad_avlb(pick))  
         else if(grad_fin%grad_avlb(pick).eq.1)then
             dvec(1)%d_diff(:,pick,:)=0
             call imgtime_prop(dvec,en,haml,pick,0)
@@ -132,11 +131,11 @@ MODULE gradient_descent
         chng_trk2=0 !stores which orbitals in the ZS have changed 
         rjct_cnt=0 !tracks how many rejections 
         acpt_cnt=0  !counts how many ZS have been changed
-        l2_rglrstn=1! !L2 regularisation lambda paramter
+        ! l2_rglrstn=1! !L2 regularisation lambda paramter
         rjct_cnt2=0
         loops=0
-        d_diff_flg=1
-
+        ! d_diff_flg=1
+        pickerorb=scramble_norb(norb)
         do while(rjct_cnt2.lt.(norb*100))
             loops=loops+1
             write(6,"(a)") '    Zombie state    |     Previous Energy     |    Energy after Gradient Descent steps &
@@ -145,7 +144,7 @@ MODULE gradient_descent
                
                 grad_fin%current_erg=grad_fin%prev_erg
                 pick=picker(j)
-                pickerorb=scramble_norb(norb)
+                ! pickerorb=scramble_norb(norb)
                 !pickerorb=(/1,2,3,4,5,6,7,8,9,10/)
                 chng_trk2=0
                 acpt_cnt=0
@@ -160,7 +159,7 @@ MODULE gradient_descent
                     
                         nanchk=.false.
                         if(is_nan(grad_fin%vars(pick,pickorb)).eqv..true.)then
-                            call grad_calc(haml,zstore,elect,an_cr,an2_cr2,pick,dvecs,grad_fin,en,0)
+                            call grad_calc(haml,zstore,elect,an_cr,an2_cr2,pick,dvecs,grad_fin,en,pickorb)
                         end if 
                     
                         ! Setup temporary zombie state
@@ -192,24 +191,68 @@ MODULE gradient_descent
                             ergerr='NaN ' 
                             write(0,"(a,a,a,i0,a,i0)") "Error in energy calculation which took value ",ergerr, &
                             " for zombie state ", pick, ",orbital ", pickorb 
-                            t=(1.0d-14)
                             nanchk=.true.
-                            rjct_cnt=1
                             call emergency(zstore,haml,grad_fin,dvecs,temp_zom,temp_ham,temp_dvecs,en,an_cr,an2_cr2)
+                            call grad_calc(haml,zstore,elect,an_cr,an2_cr2,pick,dvecs,grad_fin,en,0)
+                            temp_zom(pick)%sin(:)=sin(temp_zom(pick)%phi(:))
+                            temp_zom(pick)%cos(:)=cos(temp_zom(pick)%phi(:))
+                            temp_zom(pick)%val(1:)=temp_zom(pick)%sin
+                            temp_zom(pick)%val(norb+1:)=temp_zom(pick)%cos
+                            temp_ham=haml
+                            call he_full_row(temp_ham,temp_zom,elect,ndet,an_cr,an2_cr2,pick)
+                            fxtdk=en%erg(1,timesteps+1)
+                            if(is_nan(fxtdk).eqv..true.)then 
+                                nanchk=.true.
+                                t=(1.0d-14)
+                                rjct_cnt=1
+                            else 
+                                nanchk=.False.
+                                write(0,"(a)") "Error corrected"
+                            end if
                         else if(is_posinf(fxtdk).eqv..true.)then
                             ergerr='+NaN'  
                             write(0,"(a,a,a,i0,a,i0)") "Error in energy calculation which took value ",ergerr, &
                             " for zombie state ", pick, ",orbital ", pickorb  
-                            t=(1.0d-14)
                             nanchk=.true.
-                            rjct_cnt=1
+                            call emergency(zstore,haml,grad_fin,dvecs,temp_zom,temp_ham,temp_dvecs,en,an_cr,an2_cr2)
+                            call grad_calc(haml,zstore,elect,an_cr,an2_cr2,pick,dvecs,grad_fin,en,0)
+                            temp_zom(pick)%sin(:)=sin(temp_zom(pick)%phi(:))
+                            temp_zom(pick)%cos(:)=cos(temp_zom(pick)%phi(:))
+                            temp_zom(pick)%val(1:)=temp_zom(pick)%sin
+                            temp_zom(pick)%val(norb+1:)=temp_zom(pick)%cos
+                            temp_ham=haml
+                            call he_full_row(temp_ham,temp_zom,elect,ndet,an_cr,an2_cr2,pick)
+                            fxtdk=en%erg(1,timesteps+1)
+                            if(is_nan(fxtdk).eqv..true.)then 
+                                nanchk=.true.
+                                t=(1.0d-14)
+                                rjct_cnt=1
+                            else 
+                                nanchk=.False.
+                                write(0,"(a)") "Error corrected"
+                            end if
                         else if(is_neginf(fxtdk).eqv..true.)then
                             ergerr='-NaN'  
                             write(0,"(a,a,a,i0,a,i0)") "Error in energy calculation which took value ",ergerr, &
                             " for zombie state ", pick, ",orbital ", pickorb 
-                            t=(1.0d-14)
                             nanchk=.true.
-                            rjct_cnt=1
+                            call emergency(zstore,haml,grad_fin,dvecs,temp_zom,temp_ham,temp_dvecs,en,an_cr,an2_cr2)
+                            call grad_calc(haml,zstore,elect,an_cr,an2_cr2,pick,dvecs,grad_fin,en,0)
+                            temp_zom(pick)%sin(:)=sin(temp_zom(pick)%phi(:))
+                            temp_zom(pick)%cos(:)=cos(temp_zom(pick)%phi(:))
+                            temp_zom(pick)%val(1:)=temp_zom(pick)%sin
+                            temp_zom(pick)%val(norb+1:)=temp_zom(pick)%cos
+                            temp_ham=haml
+                            call he_full_row(temp_ham,temp_zom,elect,ndet,an_cr,an2_cr2,pick)
+                            fxtdk=en%erg(1,timesteps+1)
+                            if(is_nan(fxtdk).eqv..true.)then 
+                                nanchk=.true.
+                                t=(1.0d-14)
+                                rjct_cnt=1
+                            else 
+                                nanchk=.False.
+                                write(0,"(a)") "Error corrected"
+                            end if
                         end if
                         
                         if(nanchk.eqv..false.)then
@@ -241,7 +284,8 @@ MODULE gradient_descent
                     end do
                     
                     if((rjct_cnt.eq.0).and.(n.ne.norb))then
-                        call grad_calc(haml,zstore,elect,an_cr,an2_cr2,pick,dvecs,grad_fin,en,0)
+                        grad_fin%grad_avlb=0
+                        call grad_calc(haml,zstore,elect,an_cr,an2_cr2,pick,dvecs,grad_fin,en,pickerorb(n))
                     end if
                 end do
 
@@ -249,6 +293,7 @@ MODULE gradient_descent
                     epoc_cnt=epoc_cnt+1
                     picker=scramble(ndet-1)
                     next=picker(1)
+                    pickerorb=scramble_norb(norb)
                     lralt_zs=0
                     !Every 100 epoc brings phi values back within the normal 0-2pi range
                     if(modulo(epoc_cnt,100).eq.0)then 
@@ -267,6 +312,7 @@ MODULE gradient_descent
                     end if
                 else 
                     next=picker(j+1)
+                    pickerorb=scramble_norb(norb)
                 end if
 
                 if(grad_fin%grad_avlb(next).eq.1)then  
@@ -278,11 +324,21 @@ MODULE gradient_descent
                     end do
                 end if
 
-                !Set up gradients for next pass
-                if(grad_fin%grad_avlb(next).eq.0)then 
+                if(loops.lt.maxloop)then
+                    grad_fin%grad_avlb=0
+                    ! if(grad_fin%grad_avlb(next).eq.0)then 
+                        call grad_calc(haml,zstore,elect,an_cr,an2_cr2,next,dvecs,grad_fin,en,pickerorb(1))
+                    ! end if
+                else
+                    if(rjct_cnt_in.eq.0)then
+                        grad_fin%grad_avlb=0
+                    end if
+                    !Set up gradients for next pass
+                    ! if(grad_fin%grad_avlb(next).eq.0)then 
                     call grad_calc(haml,zstore,elect,an_cr,an2_cr2,next,dvecs,grad_fin,en,0)
-            
+                    ! end if
                 end if
+
                 if(acpt_cnt.gt.0)then
                     write(6,"(a,i0,a,f21.16,a,f21.16,a,*(i0:','))") '       ', pick,'              ', &
                     grad_fin%current_erg,'               ',grad_fin%prev_erg,'            ',chng_trk2(1:acpt_cnt) 
@@ -540,13 +596,13 @@ MODULE gradient_descent
         rjct_cnt=0 !tracks how many rejections 
         t=newb*(alpha**lralt) !learning rate
         acpt_cnt=0  !counts how many ZS have been changed
-        l2_rglrstn=1! !L2 regularisation lambda paramter
-        orbitcnt=0
-        mmntm=0
-        mmntma=1
-        mmntmflg=0
+        ! l2_rglrstn=1! !L2 regularisation lambda paramter
+        ! orbitcnt=0
+        ! mmntm=0
+        ! mmntma=1
+        ! mmntmflg=0
         loop_max=120
-        loop_dwn=0 
+        ! loop_dwn=0 
 
         call allocdv(temp_dvecs,1,ndet,norb)
         temp_dvecs=dvecs
@@ -567,11 +623,11 @@ MODULE gradient_descent
                         exit 
                     end if 
                 end do
-                gradient_norm=((grad_fin%vars(pick,:))*grad_fin%vars(pick,:))
+                ! gradient_norm=((grad_fin%vars(pick,:))*grad_fin%vars(pick,:))
                 do while(lralt_temp.lt.(loop_max))
                     t=newb*(alpha**lralt_temp)
                     nanchk=.false.
-                    mmnmtb=(t*mmntm(pick))/mmntma(pick)
+                    ! mmnmtb=(t*mmntm(pick))/mmntma(pick)
                     ! Setup temporary zombie state
                     temp_zom=zstore
                     temp_zom(pick)%phi(:)=zstore(pick)%phi(:)-(t*(grad_fin%vars(pick,:)))!+&
@@ -608,16 +664,32 @@ MODULE gradient_descent
                         grad_fin%vars(pick,:)=0.0
                         grad_fin%grad_avlb(pick)=0
                         call emergency(zstore,haml,grad_fin,dvecs,temp_zom,temp_ham,temp_dvecs,en,an_cr,an2_cr2)
+                        call grad_calc(haml,zstore,elect,an_cr,an2_cr2,pick,dvecs,grad_fin,en,0)
+                        temp_zom(pick)%sin(:)=sin(temp_zom(pick)%phi(:))
+                        temp_zom(pick)%cos(:)=cos(temp_zom(pick)%phi(:))
+                        temp_zom(pick)%val(1:)=temp_zom(pick)%sin
+                        temp_zom(pick)%val(norb+1:)=temp_zom(pick)%cos
+                        temp_ham=haml
+                        call he_full_row(temp_ham,temp_zom,elect,ndet,an_cr,an2_cr2,pick)
+                        fxtdk=en%erg(1,timesteps+1)
+                        if(is_nan(fxtdk).eqv..true.)then 
+                            nanchk=.true.
+                        else 
+                            nanchk=.False.
+                        end if
+
                     else if(is_posinf(fxtdk).eqv..true.)then
                         nanchk=.true.
                         ergerr='+NaN'
                         grad_fin%vars(pick,:)=0.0
-                        grad_fin%grad_avlb(pick)=0  
+                        grad_fin%grad_avlb(pick)=0
+                        call emergency(zstore,haml,grad_fin,dvecs,temp_zom,temp_ham,temp_dvecs,en,an_cr,an2_cr2)  
                     else if(is_neginf(fxtdk).eqv..true.)then
                         nanchk=.true.
                         ergerr='-NaN'
                         grad_fin%vars(pick,:)=0.0
-                        grad_fin%grad_avlb(pick)=0  
+                        grad_fin%grad_avlb(pick)=0 
+                        call emergency(zstore,haml,grad_fin,dvecs,temp_zom,temp_ham,temp_dvecs,en,an_cr,an2_cr2)
                     end if
             
                     if(nanchk.eqv..false.)then
@@ -637,21 +709,21 @@ MODULE gradient_descent
                             haml%diff_invh=0
                             haml%diff_ovrlp=0
                             grad_fin%prev_erg=fxtdk
-                            d_diff_flg=0
+                            ! d_diff_flg=0
                             ! grad_fin%prev_mmntm(pick,:)=zstore(pick)%phi(:)
                             dvecs(1)%d_diff=0
                             ! mmntma(pick)=t
                             ! mmntm(pick)=mmnmtb
-                            loop_dwn=loop_dwn+1
-                            if(orbitcnt.lt.0)then
-                                orbitcnt=orbitcnt+1 
-                            else
-                                orbitcnt=0
-                            end if
-                            if((loop_max.gt.20).and.(loop_dwn.eq.5))then
-                                loop_max=loop_max-1
-                                loop_dwn=0
-                            end if
+                            ! loop_dwn=loop_dwn+1
+                            ! if(orbitcnt.lt.0)then
+                                ! orbitcnt=orbitcnt+1 
+                            ! else
+                                ! orbitcnt=0
+                            ! end if
+                            ! if((loop_max.gt.20).and.(loop_dwn.eq.5))then
+                                ! loop_max=loop_max-1
+                                ! loop_dwn=0
+                            ! end if
                             write(6,"(a,i0,a,f21.16,a,f21.16,a,f12.10,a,i0,a,i0)") '       ', pick,'              ', &
                 grad_fin%prev_erg,'               ',fxtdk,'            ',t,'          ',acpt_cnt,'                 ',rjct_cnt
                             Exit
@@ -670,13 +742,13 @@ MODULE gradient_descent
                     rjct_cnt=rjct_cnt+1
                     write(6,"(a,i0,a,f21.16,a,f21.16,a,f12.10,a,i0,a,i0)") '       ', pick,'              ', &
                 grad_fin%prev_erg,'               ',fxtdk,'            ',0.0,'          ',acpt_cnt,'                 ',rjct_cnt
-                    if(orbitcnt.ne.0)then
-                        orbitcnt=orbitcnt+1
-                    end if
-                    if(loop_max.lt.35)then 
-                        loop_max=loop_max+1
-                    end if
-                    loop_dwn=0 
+                    ! if(orbitcnt.ne.0)then
+                        ! orbitcnt=orbitcnt+1
+                    ! end if
+                    ! if(loop_max.lt.35)then 
+                        ! loop_max=loop_max+1
+                    ! end if
+                    ! loop_dwn=0 
                 end if
                 
             
@@ -706,14 +778,14 @@ MODULE gradient_descent
                     next=picker(j+1)
                 end if
         
-                if(grad_fin%grad_avlb(next).eq.1)then 
-                    d_diff_flg=1 
-                else 
-                    d_diff_flg=0
-                    if(ZBQLU01(1).lt.0.3)then 
-                        d_diff_flg=1
-                    end if
-                end if
+                ! if(grad_fin%grad_avlb(next).eq.1)then 
+                !     d_diff_flg=1 
+                ! else 
+                !     d_diff_flg=0
+                !     if(ZBQLU01(1).lt.0.3)then 
+                !         d_diff_flg=1
+                !     end if
+                ! end if
 
                 !Set up gradients for next pass
                 if(grad_fin%grad_avlb(next).lt.2)then
@@ -743,7 +815,7 @@ MODULE gradient_descent
                     epoc_cnt,alphain,b,picker,1,an_cr,an2_cr2,rjct_cnt)
 
                     ! grad_fin%grad_avlb=0
-                    orbitcnt=-(10*ndet)
+                    ! orbitcnt=-(10*ndet)
                 ! end if
             end if
 
@@ -764,23 +836,25 @@ MODULE gradient_descent
                 haml%diff_ov_dov=0
                 haml%diff_in_dhjk=0
                 dvecs(1)%d_diff=0
-                ! grad_fin%vars_hess=0
             end if
 
           
             t=newb*(alpha**lralt)
-            if(mmntmflg.eq.0)then 
-                mmntm=0.4
-                mmntmflg=1
-            end if 
+            ! if(mmntmflg.eq.0)then 
+            !     mmntm=0.4
+            !     mmntmflg=1
+            ! end if 
             acpt_cnt=0
             if(epoc_cnt.gt.epoc_max)then 
                 exit 
             end if
         end do
+
         rjct_cnt=0
         call orbital_gd(zstore,grad_fin,elect,dvecs,temp_dvecs,en,haml,temp_ham,temp_zom,&
         epoc_cnt,alphain,b,picker,epoc_max-epoc_cnt,an_cr,an2_cr2,rjct_cnt)
+
+        return
 
     end subroutine full_zs_gd
 
@@ -1280,12 +1354,5 @@ MODULE gradient_descent
     end function scramble_norb
 
 
-elemental pure function is_nan_dp(x) result(y)
-implicit none
-
-real(kind=8), intent(in) :: x
-logical :: y
-y = (.not. (x <= huge(x) .and. x >= -huge(x))) .and. (.not. abs(x) > huge(x))
-end function is_nan_dp
 
 END MODULE gradient_descent
