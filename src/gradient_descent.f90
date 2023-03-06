@@ -117,8 +117,10 @@ MODULE gradient_descent
         integer,intent(in)::maxloop
         real(kind=8),intent(in)::b,alphain
         integer,dimension(ndet-1),intent(inout)::picker
-        integer::rjct_cnt,next,acpt_cnt,pick,pickorb,rjct_cnt2,loops,d_diff_flg,lralt_zs
-        real(kind=8)::t,fxtdk,l2_rglrstn
+        integer::rjct_cnt,next,acpt_cnt,pick,pickorb,rjct_cnt2,loops,lralt_zs
+        real(kind=8)::t,fxtdk
+        ! integer::d_diff_flg
+        ! real(kind=8)::l2_rglrstn
         integer,dimension(ndet-1)::rsrtpass
         integer,dimension(norb)::pickerorb
         integer,dimension(norb)::chng_trk2
@@ -192,7 +194,7 @@ MODULE gradient_descent
                             write(0,"(a,a,a,i0,a,i0)") "Error in energy calculation which took value ",ergerr, &
                             " for zombie state ", pick, ",orbital ", pickorb 
                             nanchk=.true.
-                            call emergency(zstore,haml,grad_fin,dvecs,temp_zom,temp_ham,temp_dvecs,en,an_cr,an2_cr2)
+                            call emergency(haml,dvecs,temp_dvecs,en)  
                             call grad_calc(haml,zstore,elect,an_cr,an2_cr2,pick,dvecs,grad_fin,en,0)
                             temp_zom(pick)%sin(:)=sin(temp_zom(pick)%phi(:))
                             temp_zom(pick)%cos(:)=cos(temp_zom(pick)%phi(:))
@@ -214,7 +216,7 @@ MODULE gradient_descent
                             write(0,"(a,a,a,i0,a,i0)") "Error in energy calculation which took value ",ergerr, &
                             " for zombie state ", pick, ",orbital ", pickorb  
                             nanchk=.true.
-                            call emergency(zstore,haml,grad_fin,dvecs,temp_zom,temp_ham,temp_dvecs,en,an_cr,an2_cr2)
+                            call emergency(haml,dvecs,temp_dvecs,en)  
                             call grad_calc(haml,zstore,elect,an_cr,an2_cr2,pick,dvecs,grad_fin,en,0)
                             temp_zom(pick)%sin(:)=sin(temp_zom(pick)%phi(:))
                             temp_zom(pick)%cos(:)=cos(temp_zom(pick)%phi(:))
@@ -236,7 +238,7 @@ MODULE gradient_descent
                             write(0,"(a,a,a,i0,a,i0)") "Error in energy calculation which took value ",ergerr, &
                             " for zombie state ", pick, ",orbital ", pickorb 
                             nanchk=.true.
-                            call emergency(zstore,haml,grad_fin,dvecs,temp_zom,temp_ham,temp_dvecs,en,an_cr,an2_cr2)
+                            call emergency(haml,dvecs,temp_dvecs,en)  
                             call grad_calc(haml,zstore,elect,an_cr,an2_cr2,pick,dvecs,grad_fin,en,0)
                             temp_zom(pick)%sin(:)=sin(temp_zom(pick)%phi(:))
                             temp_zom(pick)%cos(:)=cos(temp_zom(pick)%phi(:))
@@ -575,13 +577,14 @@ MODULE gradient_descent
         integer,intent(in)::epoc_max
         real(kind=8),intent(in)::b,alphain
         integer,dimension(ndet-1),intent(inout)::picker
-        integer::lralt,rjct_cnt,next,acpt_cnt,pick,orbitcnt,d_diff_flg,lralt_temp,mmntmflg,loop_max,loop_dwn
-        real(kind=8)::newb,t,fxtdk,l2_rglrstn,alpha,mmnmtb
-        real(kind=8),dimension(norb)::gradient_norm
-        real(kind=8),dimension(ndet)::mmntm,mmntma
+        integer::lralt,rjct_cnt,next,acpt_cnt,pick,lralt_temp,loop_max
+        real(kind=8)::newb,t,fxtdk,alpha
+        ! real(kind=8)::l2_rglrstn,mmnmtb
+        ! real(kind=8),dimension(norb)::gradient_norm
+        ! real(kind=8),dimension(ndet)::mmntm,mmntma
+        ! integer::orbitcnt,d_diff_flg,mmntmflg,loop_dwn
         integer,dimension(ndet-1)::rsrtpass
         DOUBLE PRECISION, external::ZBQLU01
-        ! real::r
         logical::nanchk
         character(len=4)::ergerr
         integer::j,k,l
@@ -610,19 +613,19 @@ MODULE gradient_descent
         do while(rjct_cnt.lt.200)
             t=newb*(alpha**lralt)
             write(6,"(a)") '    Zombie state    |     Previous Energy     |    Energy after Gradient Descent step &
-            &   | Learning rate | Acceptance count | Rejection count'
+            &   |       Learning rate      | Acceptance count | Rejection count'
             
             do j=1,(ndet-1)
                 
                 pick=picker(j)
                 lralt_temp=lralt
-                do k=1,norb
-                    if(is_nan(grad_fin%vars(pick,k)).eqv..true.)then
-                        call grad_calc(haml,zstore,elect,an_cr,an2_cr2,pick,dvecs,grad_fin,en,0)
-                        nanchk=.false. 
-                        exit 
-                    end if 
-                end do
+                ! do k=1,norb
+                !     if(is_nan(grad_fin%vars(pick,k)).eqv..true.)then
+                !         call grad_calc(haml,zstore,elect,an_cr,an2_cr2,pick,dvecs,grad_fin,en,0)
+                !         nanchk=.false. 
+                !         exit 
+                !     end if 
+                ! end do
                 ! gradient_norm=((grad_fin%vars(pick,:))*grad_fin%vars(pick,:))
                 do while(lralt_temp.lt.(loop_max))
                     t=newb*(alpha**lralt_temp)
@@ -634,14 +637,13 @@ MODULE gradient_descent
                     ! mmnmtb*(zstore(pick)%phi(:)-grad_fin%prev_mmntm(pick,:))
                     ! temp_zom(pick)%phi(:)=temp_zom(pick)%phi(:)+l2_rglrstn*gradient_norm
                 
-                    do k=1,norb
-                        if(is_nan(temp_zom(pick)%phi(k)).eqv..true.)then
-                            temp_zom(pick)%phi=zstore(pick)%phi
-                            exit
-                        end if
-                    end do
-                    ! temp_zom(pick)%sin=sin(cmplx(temp_zom(pick)%phi,0.0d0,kind=8))
-                    ! temp_zom(pick)%cos=cos(cmplx(temp_zom(pick)%phi,0.0d0,kind=8))
+                    ! do k=1,norb
+                    !     if(is_nan(temp_zom(pick)%phi(k)).eqv..true.)then
+                    !         temp_zom(pick)%phi=zstore(pick)%phi
+                    !         exit
+                    !     end if
+                    ! end do
+                   
                     temp_zom(pick)%sin(:)=sin(temp_zom(pick)%phi(:))
                     temp_zom(pick)%cos(:)=cos(temp_zom(pick)%phi(:))
                     temp_zom(pick)%val(1:)=temp_zom(pick)%sin
@@ -663,7 +665,7 @@ MODULE gradient_descent
                         ergerr='NaN '
                         grad_fin%vars(pick,:)=0.0
                         grad_fin%grad_avlb(pick)=0
-                        call emergency(zstore,haml,grad_fin,dvecs,temp_zom,temp_ham,temp_dvecs,en,an_cr,an2_cr2)
+                        call emergency(haml,dvecs,temp_dvecs,en)  
                         call grad_calc(haml,zstore,elect,an_cr,an2_cr2,pick,dvecs,grad_fin,en,0)
                         temp_zom(pick)%sin(:)=sin(temp_zom(pick)%phi(:))
                         temp_zom(pick)%cos(:)=cos(temp_zom(pick)%phi(:))
@@ -683,13 +685,13 @@ MODULE gradient_descent
                         ergerr='+NaN'
                         grad_fin%vars(pick,:)=0.0
                         grad_fin%grad_avlb(pick)=0
-                        call emergency(zstore,haml,grad_fin,dvecs,temp_zom,temp_ham,temp_dvecs,en,an_cr,an2_cr2)  
+                        call emergency(haml,dvecs,temp_dvecs,en)  
                     else if(is_neginf(fxtdk).eqv..true.)then
                         nanchk=.true.
                         ergerr='-NaN'
                         grad_fin%vars(pick,:)=0.0
                         grad_fin%grad_avlb(pick)=0 
-                        call emergency(zstore,haml,grad_fin,dvecs,temp_zom,temp_ham,temp_dvecs,en,an_cr,an2_cr2)
+                        call emergency(haml,dvecs,temp_dvecs,en)  
                     end if
             
                     if(nanchk.eqv..false.)then
@@ -708,7 +710,7 @@ MODULE gradient_descent
                             haml%diff_hjk=0
                             haml%diff_invh=0
                             haml%diff_ovrlp=0
-                            grad_fin%prev_erg=fxtdk
+                           
                             ! d_diff_flg=0
                             ! grad_fin%prev_mmntm(pick,:)=zstore(pick)%phi(:)
                             dvecs(1)%d_diff=0
@@ -724,8 +726,10 @@ MODULE gradient_descent
                                 ! loop_max=loop_max-1
                                 ! loop_dwn=0
                             ! end if
-                            write(6,"(a,i0,a,f21.16,a,f21.16,a,f12.10,a,i0,a,i0)") '       ', pick,'              ', &
-                grad_fin%prev_erg,'               ',fxtdk,'            ',t,'          ',acpt_cnt,'                 ',rjct_cnt
+                            write(6,"(a,i0,a,f21.16,a,f21.16,a,f21.16,a,i0,a,i0)") '       ', pick,'              ', &
+            grad_fin%prev_erg,'               ',fxtdk,'               ',t,'                ',acpt_cnt,'                 ',rjct_cnt
+                            
+                            grad_fin%prev_erg=fxtdk
                             Exit
                         
                         else 
@@ -752,7 +756,7 @@ MODULE gradient_descent
                 end if
                 
             
-                t=newb*(alpha**lralt)
+                ! t=newb*(alpha**lralt)
                 if(j.eq.(ndet-1))then 
                     epoc_cnt=epoc_cnt+1
                     ! if(acpt_cnt.gt.0)then 
@@ -795,8 +799,8 @@ MODULE gradient_descent
             end do
 
             call epoc_writer(grad_fin%prev_erg,epoc_cnt,pick,t,0)
-            write(6,"(a,i0,a,f21.16,a,f12.10,a,i0,a)") "Energy after epoc no. ",epoc_cnt,": ", &
-                grad_fin%prev_erg, ". The current learning rate is: ",t, ". ", acpt_cnt, " Zombie state(s) altered."
+            write(6,"(a,i0,a,f21.16,a,i0,a)") "Energy after epoc no. ",epoc_cnt,": ", &
+                grad_fin%prev_erg, ". ", acpt_cnt, " Zombie state(s) altered."
 
             
             ! If only a single ZS is being altered the learning rate is lowered to allow others to be changed
@@ -1167,7 +1171,7 @@ MODULE gradient_descent
         alpha=0.8  ! learning rate reduction
         b=8.0D0 !starting learning rate
         
-        epoc_max=1000
+        epoc_max=2000
 
         do j=1, ndet-1
             picker(j)=j+1
@@ -1208,16 +1212,12 @@ MODULE gradient_descent
     end subroutine zombie_alter
 
 
-    subroutine emergency(zstore,haml,grad_fin,dvecs,temp_zom,temp_ham,dvecs_temp,en,an_cr,an2_cr2)
+    subroutine emergency(haml,dvecs,dvecs_temp,en)
 
         implicit none
-        type(zombiest),dimension(:),intent(inout)::zstore,temp_zom
-        type(grad),intent(inout)::grad_fin
         type(dvector),dimension(:),intent(inout)::dvecs,dvecs_temp
         type(energy),intent(inout)::en
-        type(hamiltonian),intent(inout)::haml,temp_ham
-        type(oprts),intent(in)::an_cr,an2_cr2
-        real(kind=8)::r
+        type(hamiltonian),intent(inout)::haml
         integer::j,k,l
         logical::checker
 

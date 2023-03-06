@@ -666,7 +666,7 @@ MODULE alarrays
 
         implicit none 
         type(oprts),intent(inout)::oper 
-        integer::ierr,j,k
+        integer::ierr,j!,k
 
         if (errorflag .ne. 0) return
 

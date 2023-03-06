@@ -343,7 +343,7 @@ MODULE electrons
         real(kind=8),dimension(e1+1,3)::read_in
         integer::ierr,l,k,an,cr,j,max
         integer,allocatable,dimension(:,:)::temp_diff
-        integer,allocatable,dimension(:,:,:)::temp_hess
+        ! integer,allocatable,dimension(:,:,:)::temp_hess
         
         ierr=0
     
