@@ -130,8 +130,8 @@ program MainZombie
        
         ! Imaginary time propagation
         write(6,"(a)") "Imaginary time propagation started"
-        call imgtime_prop(dvecs,en,haml,diff_state,0)
-        ! call imgtime_prop(dvecs,en,haml,0,0)
+        ! call imgtime_prop(dvecs,en,haml,diff_state,0)
+        call imgtime_prop(dvecs,en,haml,0,0)
         write(6,"(a)") "Imaginary time propagation finished"
        
         if(gramflg.eq."n")then
@@ -148,7 +148,7 @@ program MainZombie
         ! print*,real(en%erg(1,timesteps+1))
         
         if(GDflg.eq."y")then
-            ! call sd_anal(zstore,nel,dvecs(1),1)
+            call sd_anal(zstore,nel,dvecs(1),1)
             ! gradients%prev_erg=real(en%erg(1,timesteps+1))
             gradients%prev_erg=en%erg(1,timesteps+1)
             write(6,"(a,f20.16)") "Initial energy: ", gradients%prev_erg
@@ -159,7 +159,7 @@ program MainZombie
             end if
           
             ! call final_grad(dvecs(1),haml,gradients,j,0)
-            call final_grad(dvecs(1),haml,gradients,diff_state,0)
+            call final_grad(dvecs(1),haml,gradients,diff_state,0,0)
       
           
             

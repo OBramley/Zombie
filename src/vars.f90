@@ -66,17 +66,29 @@ MODULE globvars
         
     end type elecintrgl
 
-    type oprts
+    type oprts_2
         integer(kind=2),dimension(:,:), allocatable::alive,dead
         integer(kind=1),dimension(:,:), allocatable::neg_alive,neg_dead
+    end type oprts_2
 
-        integer(kind=2),dimension(:,:,:), allocatable::alive_diff,dead_diff
-        integer(kind=1),dimension(:,:,:), allocatable::neg_alive_diff,neg_dead_diff
+    type oprts
+        type(oprts_2)::ham 
+        type(oprts_2),allocatable,dimension(:)::diff
+        type(oprts_2),allocatable,dimension(:,:)::hess
+        integer(kind=1),allocatable,dimension(:,:)::d_neg
         integer,dimension(:,:), allocatable::dcnt
-
-        integer(kind=2),dimension(:,:,:,:), allocatable::alive_hess,dead_hess
-        integer(kind=1),dimension(:,:,:,:), allocatable::neg_alive_hess,neg_dead_hess
         integer,dimension(:,:,:), allocatable::hcnt
+
+        ! integer(kind=2),dimension(:,:), allocatable::alive,dead
+        ! integer(kind=1),dimension(:,:), allocatable::neg_alive,neg_dead
+
+        ! integer(kind=2),dimension(:,:,:), allocatable::alive_diff,dead_diff
+        ! integer(kind=1),dimension(:,:,:), allocatable::neg_alive_diff,neg_dead_diff
+        ! integer,dimension(:,:), allocatable::dcnt
+
+        ! integer(kind=2),dimension(:,:,:,:), allocatable::alive_hess,dead_hess
+        ! integer(kind=1),dimension(:,:,:,:), allocatable::neg_alive_hess,neg_dead_hess
+        ! integer,dimension(:,:,:), allocatable::hcnt
     end type oprts
 
     
@@ -88,7 +100,7 @@ MODULE globvars
         real(kind=8):: current_erg
         integer,dimension(:),allocatable::grad_avlb
         real(kind=8),dimension(:,:),allocatable::prev_mmntm
-        ! real(kind=8),dimension(:),allocatable::hess_sum
+        real(kind=8),dimension(:),allocatable::hess_sum
     end type grad
 
     

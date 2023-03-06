@@ -508,7 +508,7 @@ MODULE alarrays
         if (ierr==0) allocate(gradients%vars_hess(num,length),stat=ierr)
         if (ierr==0)allocate(gradients%grad_avlb(num),stat=ierr)
         if (ierr==0)allocate(gradients%prev_mmntm(num,length),stat=ierr)
-        ! if (ierr==0)allocate(gradients%hess_sum(num),stat=ierr)
+        if (ierr==0)allocate(gradients%hess_sum(num),stat=ierr)
         
         if (ierr/=0) then
             write(0,"(a,i0)") "Error in gradient matrix allocation. ierr had value ", ierr
@@ -588,30 +588,49 @@ MODULE alarrays
         implicit none 
         type(oprts),intent(inout)::oper 
         integer,intent(in)::n 
-        integer::ierr,k,p
-        integer(kind=2)::j,norbs,l
+        integer::ierr
 
         if (errorflag .ne. 0) return
       
         ierr=0
+       
+        call alloc_oprts_2(oper%ham,n)
+        
+        if(GDflg.eq.'y')then 
+            allocate(oper%diff(norb),stat=ierr)
+            if(ierr==0) allocate(oper%hess(norb,norb),stat=ierr)
+            if(ierr==0) allocate(oper%d_neg(n,norb),stat=ierr)
+            if (ierr/=0) then
+                write(0,"(a,i0)") "Error in gradient operators allocation. ierr had value ", ierr
+                errorflag=1
+                return
+            end if
+            oper%d_neg=1
+        end if
+       
+        return 
+
+    end subroutine alloc_oprts
+
+    subroutine alloc_oprts_2(oper,n) 
+
+        implicit none 
+        type(oprts_2),intent(inout)::oper 
+        integer,intent(in)::n 
+        integer::ierr,k
+        integer(kind=2)::j,norbs
+
+        if (errorflag .ne. 0) return
+
+        ierr=0
         norbs=int(norb,kind=2)
         allocate(oper%alive(norb,n),oper%dead(norb,n),oper%neg_alive(norb,n),oper%neg_dead(norb,n),stat=ierr)
-        if(GDflg.eq.'y')then 
-            if(ierr==0) allocate(oper%alive_diff(norb,norb,n),oper%dead_diff(norb,norb,n),stat=ierr)
-            if(ierr==0) allocate(oper%neg_alive_diff(norb,norb,n),oper%neg_dead_diff(norb,norb,n),stat=ierr)
-            if(ierr==0) allocate(oper%dcnt(0:n,norb),stat=ierr)
-
-            if(ierr==0) allocate(oper%alive_hess(norb,norb,norb,n),oper%dead_hess(norb,norb,norb,n),stat=ierr)
-            if(ierr==0) allocate(oper%neg_alive_hess(norb,norb,norb,n),oper%neg_dead_hess(norb,norb,norb,n),stat=ierr)
-            if(ierr==0) allocate(oper%hcnt(0:n,norb,norb),stat=ierr)
-        end if
         if (ierr/=0) then
-            write(0,"(a,i0)") "Error in operators allocation. ierr had value ", ierr
+            write(0,"(a,i0)") "Error in operators deallocation. ierr had value ", ierr
             errorflag=1
             return
         end if
-       
-       
+
         oper%neg_alive=1
         oper%neg_dead=1
         oper%alive=0
@@ -621,47 +640,15 @@ MODULE alarrays
             oper%alive(:,k)=[integer(kind=2)::(j,j=1,norbs)]
             oper%dead(:,k)=[integer(kind=2)::((j+norbs),j=1,norbs)]
         end do
-      
-        if(GDflg.eq.'y')then
-           
-            oper%dcnt=0
-            oper%hcnt=0
-            oper%neg_alive_diff=0
-            oper%neg_dead_diff=0
-            oper%neg_alive_hess=0
-            oper%neg_dead_hess=0
-            ! do j=1,norbs
-            !     do k=1,n
-            !         oper%alive_diff(j,:,k)=[integer(kind=2)::(l,l=1,norbs)]
-            !         oper%dead_diff(j,:,k)=[integer(kind=2)::((l+norbs),l=1,norbs)]
-            !     end do
-                
-            ! end do
-            ! print*,'heres'
-            ! do j=1,norbs
-            !     do k=1,norb
-            !         do l=1,norbs
-            !             do p=1,n
-            !                 oper%alive_hess(j,k,l,p)=l
-            !                 oper%dead_hess(j,k,l,p)=l+norbs
-            !             ! oper%alive_hess(j,p,:,k)=[integer(kind=2)::(l,l=1,norbs)]
-            !             ! oper%dead_hess(j,p,:,k)=[integer(kind=2)::((l+norbs),l=1,norbs)]
-            !             end do
-            !         end do
-            !     end do
-            ! end do   
 
+        return
 
-        end if 
-       
-        return 
+    end subroutine alloc_oprts_2
 
-    end subroutine alloc_oprts
-
-    subroutine dealloc_oprts(oper)
+    subroutine dealloc_oprts_2(oper)
 
         implicit none 
-        type(oprts),intent(inout)::oper 
+        type(oprts_2),intent(inout)::oper 
         integer::ierr
 
         if (errorflag .ne. 0) return
@@ -669,18 +656,41 @@ MODULE alarrays
         ierr=0
 
         deallocate(oper%alive,oper%dead,oper%neg_alive,oper%neg_dead,stat=ierr)
-        if(GDflg.eq.'y')then 
-            if(ierr==0) deallocate(oper%alive_diff,oper%dead_diff,stat=ierr)
-            if(ierr==0) deallocate(oper%neg_alive_diff,oper%neg_dead_diff,stat=ierr)
-            if(ierr==0) deallocate(oper%alive_hess,oper%dead_hess,stat=ierr)
-            if(ierr==0) deallocate(oper%neg_alive_hess,oper%neg_dead_hess,stat=ierr)
-            if(ierr==0) deallocate(oper%dcnt,stat=ierr)
-        end if
         if (ierr/=0) then
             write(0,"(a,i0)") "Error in operators deallocation. ierr had value ", ierr
             errorflag=1
             return
         end if
+
+    end subroutine
+
+    subroutine dealloc_oprts(oper)
+
+        implicit none 
+        type(oprts),intent(inout)::oper 
+        integer::ierr,j,k
+
+        if (errorflag .ne. 0) return
+
+        ierr=0
+
+        call dealloc_oprts_2(oper%ham)
+      
+        if(GDflg.eq.'y')then 
+            do j=1,norb 
+                call dealloc_oprts_2(oper%diff(j))
+                do k=1,norb 
+                    call dealloc_oprts_2(oper%hess(j,k))
+                end do 
+            end do 
+            deallocate(oper%diff,oper%hess,oper%dcnt,oper%hcnt,stat=ierr)
+            if (ierr/=0) then
+                write(0,"(a,i0)") "Error in gradient operators deallocation. ierr had value ", ierr
+                errorflag=1
+                return
+            end if
+        end if
+       
 
 
     end subroutine dealloc_oprts
