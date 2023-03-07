@@ -209,7 +209,7 @@ MODULE ham
 
         
         haml_vals=0.0
-        !$omp parallel private(j,k,ov) shared(ops,z1d,z2d)
+        !$omp parallel private(j,k,ov) shared(ops,z1d,z2d,el)
         !$omp do simd reduction(+:haml_vals) 
         do j=1,len
             ov=1.0
@@ -260,9 +260,8 @@ MODULE ham
         type(elecintrgl),intent(in)::elecs
         type(oprts),intent(in)::an_cr,an2_cr2
         integer,intent(in)::state,orb
-        real(kind=8),allocatable,dimension(:,:,:)::temp2 
-        integer::ierr,k,l,j,p,orblim,orbsrt
-        ierr=0
+        integer::orblim,orbsrt
+        
 
         if(orb.eq.0)then
             orbsrt=1
@@ -281,52 +280,7 @@ MODULE ham
         ! call haml_hessian(haml%hess_hjk(state,:,:,:),zstore,elecs,an_cr,an2_cr2,state)
       
         
-        allocate(temp2(ndet,norb,ndet),stat=ierr)
-        if (ierr/=0) then
-            write(0,"(a,i0)") "Error in occupancy diff_inverse temp array allocation . ierr had value ", ierr
-            errorflag=1
-            return
-        end if
-        temp2=0.0
-    
-        do j=1,norb
-            do k=1,ndet
-                do l=1, ndet
-                    if(l.ne.state)then
-                        haml%diff_ov_dov(state,k,j,l)=(haml%ovrlp(k,state)*&
-                            haml%diff_ovrlp(state,j,l))/abs(haml%ovrlp(k,state))
-
-                        haml%diff_in_dhjk(state,k,j,l)=(haml%inv(k,state)*haml%diff_hjk(state,j,l))
-
-                        temp2(k,j,l)=(haml%inv(k,l))*haml%diff_ovrlp(state,j,l)
-                    else
-                        do p=1,ndet
-                            haml%diff_ov_dov(state,k,j,l)=haml%diff_ov_dov(state,k,j,l)+&
-                            (haml%ovrlp(k,p)*haml%diff_ovrlp(state,j,p))/abs(haml%ovrlp(k,p))
-
-                            haml%diff_in_dhjk(state,k,j,l)=haml%diff_in_dhjk(state,k,j,l)+&
-                            (haml%inv(k,p)*haml%diff_hjk(state,j,p))
-
-                            temp2(k,j,l)= temp2(k,p,l)+(haml%inv(k,p)*haml%diff_ovrlp(state,j,p))
-                        end do 
-                    end if 
-                end do
-            end do 
-    
-            do k=1, ndet
-                do l=1, ndet
-                    do p=1,ndet
-                        haml%diff_invh(state,k,j,l)=haml%diff_invh(state,k,j,l)+(temp2(k,j,p)*haml%kinvh(p,l))
-                    end do 
-                    haml%diff_invh(state,k,j,l)=haml%diff_invh(state,k,j,l)*(-1)
-                end do  
-            end do
-        end do
-
-
-        deallocate(temp2)
-        
-        return
+       
 
     end subroutine gradient_zs
 
@@ -377,7 +331,7 @@ MODULE ham
 
        
         !$omp parallel do &
-        !$omp & private(j) &
+        !$omp & private(j,z1d) &
         !$omp & shared(elecs,zstore,an_cr,an2_cr2,haml_diff)
         do j=orbsrt, orblim
             z1d(0:2*norb)=zstore(state)%val(0:2*norb)
@@ -390,6 +344,84 @@ MODULE ham
         return
 
     end subroutine haml_grad
+
+    subroutine sub_matrices(haml,state)
+
+        implicit none 
+        type(hamiltonian), intent(inout)::haml 
+        integer,intent(in)::state!orb
+        real(kind=8),allocatable,dimension(:,:,:)::temp2 
+        integer::ierr,k,l,j,p!,orbsrt,orblim
+
+        ierr=0
+
+        ! if(orb.eq.0)then
+        !     orbsrt=1
+        !     orblim=norb
+        !     haml%diff_ov_dov(state,:,:,:)=0.0
+        !     haml%diff_in_dhjk(state,:,:,:)=0.0
+        !     haml%diff_invh(state,:,:,:)=0.0
+        ! else 
+        !     orbsrt=orb
+        !     orblim=orb
+        !     haml%diff_ov_dov(state,:,orb,:)=0.0
+        !     haml%diff_in_dhjk(state,:,orb,:)=0.0
+        !     haml%diff_invh(state,:,orb,:)=0.0
+        ! end if
+
+        haml%diff_ov_dov(state,:,:,:)=0.0
+        haml%diff_in_dhjk(state,:,:,:)=0.0
+        haml%diff_invh(state,:,:,:)=0.0
+
+        allocate(temp2(ndet,norb,ndet),stat=ierr)
+        if (ierr/=0) then
+            write(0,"(a,i0)") "Error in occupancy diff_inverse temp array allocation . ierr had value ", ierr
+            errorflag=1
+            return
+        end if
+        temp2=0.0
+
+        do j=1,norb
+        ! do j=orbsrt,orblim
+            do k=1,ndet
+                do l=1, ndet
+                    if(l.ne.state)then
+                        haml%diff_ov_dov(state,k,j,l)=(haml%ovrlp(k,state)*&
+                            haml%diff_ovrlp(state,j,l))/abs(haml%ovrlp(k,state))
+
+                        haml%diff_in_dhjk(state,k,j,l)=(haml%inv(k,state)*haml%diff_hjk(state,j,l))
+
+                        temp2(k,j,l)=(haml%inv(k,l))*haml%diff_ovrlp(state,j,l)
+                    else
+                        do p=1,ndet
+                            haml%diff_ov_dov(state,k,j,l)=haml%diff_ov_dov(state,k,j,l)+&
+                            (haml%ovrlp(k,p)*haml%diff_ovrlp(state,j,p))/abs(haml%ovrlp(k,p))
+
+                            haml%diff_in_dhjk(state,k,j,l)=haml%diff_in_dhjk(state,k,j,l)+&
+                            (haml%inv(k,p)*haml%diff_hjk(state,j,p))
+
+                            temp2(k,j,l)= temp2(k,p,l)+(haml%inv(k,p)*haml%diff_ovrlp(state,j,p))
+                        end do 
+                    end if 
+                end do
+            end do 
+    
+            do k=1, ndet
+                do l=1, ndet
+                    do p=1,ndet
+                        haml%diff_invh(state,k,j,l)=haml%diff_invh(state,k,j,l)+(temp2(k,j,p)*haml%kinvh(p,l))
+                    end do 
+                    haml%diff_invh(state,k,j,l)=haml%diff_invh(state,k,j,l)*(-1)
+                end do  
+            end do
+        end do
+
+
+        deallocate(temp2)
+        
+        return
+
+    end subroutine sub_matrices 
 
     ! ! subroutine that finds the gradient of the overlap w.r.t a specified state
     ! subroutine ovrlp_make_hessian(zstore,state,ovrlp_hess)
@@ -637,7 +669,7 @@ MODULE ham
         len=int(el_num(0))
         haml_vals_mod=0.0
         !$omp parallel private(j,k,ov) shared(ops,z1d,z2d)
-        !$omp do simd reduction(+:haml_vals) 
+        !$omp do simd reduction(+:haml_vals_mod) 
         do j=1,len
             ov=1.0
             !!$omp do simd reduction(*:ov)
