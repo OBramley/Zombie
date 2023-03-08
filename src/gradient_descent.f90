@@ -93,7 +93,7 @@ MODULE gradient_descent
             call imgtime_prop(dvec,en,haml,pick,0)
         end if
       
-        call final_grad(dvec(1),haml,grad_fin,pick,orb,grad_fin%grad_avlb(pick))
+        call final_grad(dvec(1),haml,grad_fin,pick,orb)
            
         en%erg=0
         en%t=0
@@ -339,11 +339,12 @@ MODULE gradient_descent
                 end if
 
                 if(acpt_cnt.gt.0)then
-                    write(6,"(a,i0,a,f21.16,a,f21.16,a,*(i0:','))") '       ', pick,'              ', &
+                    write(6,"(a,i3,a,f21.16,a,f21.16,a,*(i0:','))") '       ', pick,'              ', &
                     grad_fin%current_erg,'               ',grad_fin%prev_erg,'            ',chng_trk2(1:acpt_cnt) 
                     rsrtpass(pick)=0
                     zstore(pick)%update_num=zstore(pick)%update_num+1
                     call zombiewriter(zstore(pick),pick,rsrtpass(pick))
+                    call epoc_writer(grad_fin%prev_erg,epoc_cnt,pick,t,0)
                 else 
                     write(6,"(a,i0,a,f21.16,a,f21.16,a,i0)") '       ', pick,'              ', &
                     grad_fin%current_erg,'               ',grad_fin%prev_erg,'            ',0
@@ -364,7 +365,7 @@ MODULE gradient_descent
                 dvecs(1)%d_diff=0
             end if
 
-            call epoc_writer(grad_fin%prev_erg,epoc_cnt,pick,t,0)
+            ! call epoc_writer(grad_fin%prev_erg,epoc_cnt,pick,t,0)
             write(6,"(a,i0,a,f21.16)") "Energy after epoch no. ",epoc_cnt,": ",grad_fin%prev_erg
             acpt_cnt=0
             if(loops.ge.maxloop)then 
@@ -432,7 +433,8 @@ MODULE gradient_descent
                   
                     ! Setup temporary zombie state
                     temp_zom=zstore
-                    temp_zom(pick)%phi(:)=zstore(pick)%phi(:)-(t*(grad_fin%vars(pick,:)))!+&
+                    ! temp_zom(pick)%phi(:)=zstore(pick)%phi(:)-(t*(grad_fin%vars(pick,:)))
+                    temp_zom(pick)%phi(:)=zstore(pick)%phi(:)-(t*(grad_fin%vars_hess(pick,:)))
                   
                    
                     temp_zom(pick)%sin(:)=sin(temp_zom(pick)%phi(:))
@@ -516,10 +518,11 @@ MODULE gradient_descent
                             haml%diff_invh=0
                             haml%diff_ovrlp=0
                             dvecs(1)%d_diff=0
-                            write(6,"(a,i0,a,f21.16,a,f21.16,a,f21.16,a,i0,a,i0)") '       ', pick,'              ', &
-            grad_fin%prev_erg,'               ',fxtdk,'             ',t,'                ',acpt_cnt,'               ',rjct_cnt
+                            write(6,"(a,i3,a,f21.16,a,f21.16,a,f21.16,a,i3,a,i3)") '       ', pick,'              ', &
+            grad_fin%prev_erg,'               ',fxtdk,'             ',t,'        ',acpt_cnt,'        ',rjct_cnt
                             
                             grad_fin%prev_erg=fxtdk
+                            call epoc_writer(grad_fin%prev_erg,epoc_cnt,pick,t,0)
                             Exit
                         
                         else 
@@ -534,14 +537,15 @@ MODULE gradient_descent
 
                 if(lralt_temp.ge.loop_max)then
                     rjct_cnt=rjct_cnt+1
-                    write(6,"(a,i0,a,f21.16,a,f21.16,a,f21.16,a,i0,a,i0)") '       ', pick,'              ', &
-                grad_fin%prev_erg,'               ',fxtdk,'             ',0.0,'                ',acpt_cnt,'               ',rjct_cnt
+                    write(6,"(a,i3,a,f21.16,a,f21.16,a,f21.16,a,i3,a,i3)") '       ', pick,'              ', &
+                grad_fin%prev_erg,'               ',fxtdk,'             ',0.0,'        ',acpt_cnt,'        ',rjct_cnt
                 end if
                 
               
-                if(j.eq.(ndet-1))then 
-                    epoc_cnt=epoc_cnt+1
-                    
+                if(j.eq.(ndet-1))then
+                    if(acpt_cnt.gt.0)then 
+                        epoc_cnt=epoc_cnt+1
+                    end if
                     picker=scramble(ndet-1)
                     
                     next=picker(1)
@@ -570,18 +574,15 @@ MODULE gradient_descent
 
             end do
 
-            call epoc_writer(grad_fin%prev_erg,epoc_cnt,pick,t,0)
+            ! call epoc_writer(grad_fin%prev_erg,epoc_cnt,pick,t,0)
             write(6,"(a,i0,a,f21.16,a,i0,a)") "Energy after epoc no. ",epoc_cnt,": ", &
                 grad_fin%prev_erg, ". ", acpt_cnt, " Zombie state(s) altered."
 
 
-            if(rjct_cnt.gt.((ndet-1)*2)+1)then
-            
+            if((rjct_cnt.gt.((ndet-1)*2)+1).or.(modulo(epoc_cnt,100).eq.0))then
                 call orbital_gd(zstore,grad_fin,elect,dvecs,temp_dvecs,en,haml,temp_ham,temp_zom,&
                 epoc_cnt,alphain,b,picker,1,an_cr,an2_cr2,rjct_cnt)
-
             end if
-
         
             if(rjct_cnt.gt.(ndet-1)*2)then
                 do k=2,ndet 
