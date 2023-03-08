@@ -86,7 +86,7 @@ MODULE globvars
         real(kind=8),dimension(:,:), allocatable::vars_hess
         real(kind=8):: prev_erg
         real(kind=8):: current_erg
-        integer,dimension(:),allocatable::grad_avlb
+        integer,dimension(:,:),allocatable::grad_avlb
         ! real(kind=8),dimension(:,:),allocatable::prev_mmntm
         ! real(kind=8),dimension(:),allocatable::hess_sum
     end type grad

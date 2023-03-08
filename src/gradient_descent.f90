@@ -519,7 +519,7 @@ MODULE gradient_descent
                             haml%diff_ovrlp=0
                             dvecs(1)%d_diff=0
                             write(6,"(a,i3,a,f21.16,a,f21.16,a,f21.16,a,i3,a,i3)") '       ', pick,'              ', &
-            grad_fin%prev_erg,'               ',fxtdk,'             ',t,'        ',acpt_cnt,'        ',rjct_cnt
+            grad_fin%prev_erg,'               ',fxtdk,'             ',t,'        ',acpt_cnt,'          ',rjct_cnt
                             
                             grad_fin%prev_erg=fxtdk
                             call epoc_writer(grad_fin%prev_erg,epoc_cnt,pick,t,0)
@@ -538,7 +538,7 @@ MODULE gradient_descent
                 if(lralt_temp.ge.loop_max)then
                     rjct_cnt=rjct_cnt+1
                     write(6,"(a,i3,a,f21.16,a,f21.16,a,f21.16,a,i3,a,i3)") '       ', pick,'              ', &
-                grad_fin%prev_erg,'               ',fxtdk,'             ',0.0,'        ',acpt_cnt,'        ',rjct_cnt
+                grad_fin%prev_erg,'               ',fxtdk,'             ',0.0,'        ',acpt_cnt,'          ',rjct_cnt
                 end if
                 
               

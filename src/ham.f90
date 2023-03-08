@@ -15,7 +15,7 @@ MODULE ham
         type(elecintrgl),intent(in)::elecs
         type(oprts),intent(in)::an_cr,an2_cr2
         integer,intent(in)::size,verb
-        integer, allocatable,dimension(:)::IPIV1
+        integer, allocatable,dimension(:)::IPIV1,cmplt
         real(kind=8),allocatable,dimension(:)::WORK1
         integer::ierr
        
@@ -48,6 +48,8 @@ MODULE ham
         call DGEMM("N","N",size,size,size,1.d0,haml%inv,size,haml%hjk,size,0.d0,haml%kinvh,size)
 
         if(GDflg.eq.'y')then
+            allocate(cmplt(ndet),stat=ierr)
+            cmplt=0
             call gradient_zs(haml,zstore,elecs,an_cr,an2_cr2,2,0)
         end if
 
@@ -251,7 +253,7 @@ MODULE ham
 
     !Level 1 routine to calcualate hamiltonian and overlap gradient and hessian matrix
     !subroutine to calcualte gradient of w.r.t to a specific zombie state
-    subroutine gradient_zs(haml,zstore,elecs,an_cr,an2_cr2,state,orb)
+    subroutine gradient_zs(haml,zstore,elecs,an_cr,an2_cr2,state,orb,cmplt)
 
         implicit none
 
@@ -260,6 +262,7 @@ MODULE ham
         type(elecintrgl),intent(in)::elecs
         type(oprts),intent(in)::an_cr,an2_cr2
         integer,intent(in)::state,orb
+        integer,dimension(:),intent(in)::cmplt
         integer::orblim,orbsrt
         
 
