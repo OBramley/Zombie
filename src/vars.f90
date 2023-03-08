@@ -84,6 +84,7 @@ MODULE globvars
     type grad 
         real(kind=8),dimension(:,:), allocatable::vars
         real(kind=8),dimension(:,:), allocatable::vars_hess
+        real(kind=8),dimension(:,:,:), allocatable::hessian
         real(kind=8):: prev_erg
         real(kind=8):: current_erg
         integer,dimension(:,:),allocatable::grad_avlb

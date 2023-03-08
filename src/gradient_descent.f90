@@ -75,36 +75,42 @@ MODULE gradient_descent
         integer,intent(in)::pick,orb
         DOUBLE PRECISION, external::ZBQLU01
         type(energy),intent(inout)::en
+        integer::typ
 
         if (errorflag .ne. 0) return
-        if(grad_fin%grad_avlb(pick).eq.2) return
-
-        if(grad_fin%grad_avlb(pick).eq.0)then
+        if(grad_fin%grad_avlb(0,pick).eq.2) return
+        typ=0
+        if(grad_fin%grad_avlb(0,pick).eq.0)then
+            typ=0
             dvec(1)%d_diff(:,pick,:)=0
-            call gradient_zs(haml,zstore,elect,an_cr,an2_cr2,pick,orb)
-        else if(grad_fin%grad_avlb(pick).eq.1)then
+            call gradient_zs(haml,zstore,elect,an_cr,an2_cr2,pick,orb,grad_fin%grad_avlb(1:ndet,pick))
+        else if(grad_fin%grad_avlb(0,pick).eq.1)then
+            typ=1
             dvec(1)%d_diff(:,pick,:)=0
             call sub_matrices(haml,pick)
             call imgtime_prop(dvec,en,haml,pick,0)
-        else if(grad_fin%grad_avlb(pick).eq.3)then
+        else if(grad_fin%grad_avlb(0,pick).eq.3)then
+            typ=1
             dvec(1)%d_diff(:,pick,:)=0
-        else if(grad_fin%grad_avlb(pick).eq.4)then
+        else if(grad_fin%grad_avlb(0,pick).eq.4)then
+            typ=1
             dvec(1)%d_diff(:,pick,:)=0
             call imgtime_prop(dvec,en,haml,pick,0)
         end if
-      
-        call final_grad(dvec(1),haml,grad_fin,pick,orb)
+        
+        
+        call final_grad(dvec(1),haml,grad_fin,pick,orb,typ)
            
         en%erg=0
         en%t=0
-        if( grad_fin%grad_avlb(pick).eq.1)then 
-            grad_fin%grad_avlb(pick)=2
-        else if( grad_fin%grad_avlb(pick).eq.0)then 
-            grad_fin%grad_avlb(pick)=1
-        else if( grad_fin%grad_avlb(pick).eq.3)then
-            grad_fin%grad_avlb(pick)=4
-        else if( grad_fin%grad_avlb(pick).eq.4)then
-            grad_fin%grad_avlb(pick)=3
+        if( grad_fin%grad_avlb(0,pick).eq.1)then 
+            grad_fin%grad_avlb(:,pick)=2
+        else if( grad_fin%grad_avlb(0,pick).eq.0)then 
+            grad_fin%grad_avlb(:,pick)=1
+        else if( grad_fin%grad_avlb(0,pick).eq.3)then
+            grad_fin%grad_avlb(:,pick)=4
+        else if( grad_fin%grad_avlb(0,pick).eq.4)then
+            grad_fin%grad_avlb(:,pick)=3
         end if 
        
 
@@ -199,7 +205,7 @@ MODULE gradient_descent
                             
                             nanchk=.true.
                             call emergency(haml,dvecs,temp_dvecs,en)  
-                            grad_fin%grad_avlb(pick)=3 
+                            grad_fin%grad_avlb(0,pick)=3 
                             call grad_calc(haml,zstore,elect,an_cr,an2_cr2,pick,dvecs,grad_fin,en,0)
                             temp_zom(pick)%sin(:)=sin(temp_zom(pick)%phi(:))
                             temp_zom(pick)%cos(:)=cos(temp_zom(pick)%phi(:))
@@ -223,7 +229,7 @@ MODULE gradient_descent
                           
                             nanchk=.true.
                             call emergency(haml,dvecs,temp_dvecs,en) 
-                            grad_fin%grad_avlb(pick)=3 
+                            grad_fin%grad_avlb(0,pick)=3 
                             call grad_calc(haml,zstore,elect,an_cr,an2_cr2,pick,dvecs,grad_fin,en,0)
                             temp_zom(pick)%sin(:)=sin(temp_zom(pick)%phi(:))
                             temp_zom(pick)%cos(:)=cos(temp_zom(pick)%phi(:))
@@ -247,7 +253,7 @@ MODULE gradient_descent
                           
                             nanchk=.true.
                             call emergency(haml,dvecs,temp_dvecs,en)
-                            grad_fin%grad_avlb(pick)=3   
+                            grad_fin%grad_avlb(0,pick)=3   
                             call grad_calc(haml,zstore,elect,an_cr,an2_cr2,pick,dvecs,grad_fin,en,0)
                             temp_zom(pick)%sin(:)=sin(temp_zom(pick)%phi(:))
                             temp_zom(pick)%cos(:)=cos(temp_zom(pick)%phi(:))
@@ -279,12 +285,14 @@ MODULE gradient_descent
                                 rjct_cnt=0
                                 rjct_cnt2=0
                                 haml=temp_ham
-                                grad_fin%grad_avlb=0
+                                grad_fin%grad_avlb(0,:)=0
+                                grad_fin%grad_avlb(pick,:)=0
+                                grad_fin%grad_avlb(:,pick)=0
                                 grad_fin%vars=0.0
-                                haml%diff_hjk=0
-                                haml%diff_invh=0
-                                haml%diff_ovrlp=0
-                                dvecs(1)%d_diff=0
+                                haml%diff_hjk(pick,:,:)=0
+                                haml%diff_hjk(:,:,pick)=0
+                                haml%diff_ovrlp(pick,:,:)=0
+                                haml%diff_ovrlp(:,:,pick)=0
                                 grad_fin%prev_erg=fxtdk
                                 rjct_cnt_in=0
                             else 
@@ -346,7 +354,7 @@ MODULE gradient_descent
                     call zombiewriter(zstore(pick),pick,rsrtpass(pick))
                     call epoc_writer(grad_fin%prev_erg,epoc_cnt,pick,t,0)
                 else 
-                    write(6,"(a,i0,a,f21.16,a,f21.16,a,i0)") '       ', pick,'              ', &
+                    write(6,"(a,i3,a,f21.16,a,f21.16,a,i0)") '       ', pick,'              ', &
                     grad_fin%current_erg,'               ',grad_fin%prev_erg,'            ',0
                     rjct_cnt2=rjct_cnt2+1
 
@@ -456,7 +464,7 @@ MODULE gradient_descent
                         nanchk=.true.
                         ergerr='NaN '
                         grad_fin%vars(pick,:)=0.0
-                        grad_fin%grad_avlb(pick)=3 
+                        grad_fin%grad_avlb(0,pick)=3 
                         call emergency(haml,dvecs,temp_dvecs,en)  
                         call grad_calc(haml,zstore,elect,an_cr,an2_cr2,pick,dvecs,grad_fin,en,0)
                         temp_zom(pick)%sin(:)=sin(temp_zom(pick)%phi(:))
@@ -476,7 +484,7 @@ MODULE gradient_descent
                         nanchk=.true.
                         ergerr='+NaN'
                         grad_fin%vars(pick,:)=0.0
-                        grad_fin%grad_avlb(pick)=3
+                        grad_fin%grad_avlb(0,pick)=3
                         call emergency(haml,dvecs,temp_dvecs,en)  
                         call grad_calc(haml,zstore,elect,an_cr,an2_cr2,pick,dvecs,grad_fin,en,0)
                         temp_zom(pick)%sin(:)=sin(temp_zom(pick)%phi(:))
@@ -490,7 +498,7 @@ MODULE gradient_descent
                         nanchk=.true.
                         ergerr='-NaN'
                         grad_fin%vars(pick,:)=0.0
-                        grad_fin%grad_avlb(pick)=3 
+                        grad_fin%grad_avlb(0,pick)=3 
                         call emergency(haml,dvecs,temp_dvecs,en)
                         call grad_calc(haml,zstore,elect,an_cr,an2_cr2,pick,dvecs,grad_fin,en,0)
                         temp_zom(pick)%sin(:)=sin(temp_zom(pick)%phi(:))
@@ -512,11 +520,14 @@ MODULE gradient_descent
                             haml=temp_ham
                             dvecs=temp_dvecs
                             rjct_cnt=0
-                            grad_fin%grad_avlb=0
+                            grad_fin%grad_avlb(:,0)=0
+                            grad_fin%grad_avlb(pick,:)=0
+                            grad_fin%grad_avlb(:,pick)=0
                             grad_fin%vars=0.0
-                            haml%diff_hjk=0
-                            haml%diff_invh=0
-                            haml%diff_ovrlp=0
+                            haml%diff_hjk(pick,:,:)=0
+                            haml%diff_hjk(:,:,pick)=0
+                            haml%diff_ovrlp(pick,:,:)=0
+                            haml%diff_ovrlp(:,:,pick)=0
                             dvecs(1)%d_diff=0
                             write(6,"(a,i3,a,f21.16,a,f21.16,a,f21.16,a,i3,a,i3)") '       ', pick,'              ', &
             grad_fin%prev_erg,'               ',fxtdk,'             ',t,'        ',acpt_cnt,'          ',rjct_cnt
@@ -586,10 +597,10 @@ MODULE gradient_descent
         
             if(rjct_cnt.gt.(ndet-1)*2)then
                 do k=2,ndet 
-                    if(grad_fin%grad_avlb(j).eq.2)then 
-                        grad_fin%grad_avlb(j)=3 
-                        grad_fin%vars(j,:)=0.0
-                        dvecs(1)%d_diff(:,j,:)=0
+                    if(grad_fin%grad_avlb(0,k).eq.2)then 
+                        grad_fin%grad_avlb(0,k)=3 
+                        grad_fin%vars(k,:)=0.0
+                        dvecs(1)%d_diff(:,k,:)=0
                     end if 
                 end do
                 call grad_calc(haml,zstore,elect,an_cr,an2_cr2,next,dvecs,grad_fin,en,0)

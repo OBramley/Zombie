@@ -19,7 +19,7 @@ run={
     'language':'fortran',
 
     # What is the name of the run
-    'runfolder':'BH10_working_withhess',
+    'runfolder':'bh38_less_calc',
 
     # Amount of time to request on HPC 
     'runtime': "00:05:00",
@@ -172,7 +172,7 @@ zombs={
     'spin':0,
 
     # Number of Zombie states
-    'ndet':10,#pyscf['norb']*4, 
+    'ndet':pyscf['norb']*2, 
 
     # Type of zombie states. Random (ran), Hartree Fock (HF) or biased (bb)
     'zomtyp':'bb',

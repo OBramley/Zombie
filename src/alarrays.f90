@@ -507,6 +507,7 @@ MODULE alarrays
         allocate(gradients%vars(num,length),stat=ierr)
         if (ierr==0) allocate(gradients%vars_hess(num,length),stat=ierr)
         if (ierr==0)allocate(gradients%grad_avlb(0:num,num),stat=ierr)
+        if (ierr==0)allocate(gradients%hessian(num,length,length),stat=ierr)
         ! if (ierr==0)allocate(gradients%prev_mmntm(num,length),stat=ierr)
         ! if (ierr==0)allocate(gradients%hess_sum(num),stat=ierr)
         
@@ -518,6 +519,7 @@ MODULE alarrays
         ! gradients%prev_mmntm=0
         gradients%vars=0
         gradients%grad_avlb=0
+        gradients%hessian=0
         return
      
     end subroutine allocgrad
@@ -537,6 +539,7 @@ MODULE alarrays
         deallocate(gradients%vars,stat=ierr)
         if (ierr==0)deallocate(gradients%grad_avlb,stat=ierr)
         if (ierr==0) deallocate(gradients%vars_hess,stat=ierr)
+        if (ierr==0) deallocate(gradients%hessian,stat=ierr)
         ! if (ierr==0)deallocate(gradients%prev_mmntm,stat=ierr)
         ! if (ierr==0)deallocate(gradients%hess_sum,stat=ierr)
         if (ierr/=0) then

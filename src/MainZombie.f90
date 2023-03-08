@@ -158,9 +158,9 @@ program MainZombie
                 call epoc_writer(gradients%prev_erg,0,0,0.0d0,0)
             end if
           
-            ! call final_grad(dvecs(1),haml,gradients,j,0)
+          
             call final_grad(dvecs(1),haml,gradients,diff_state,0,0)
-      
+            gradients%grad_avlb(diff_state,0:ndet)=1
           
             
             call zombie_alter(zstore,gradients,haml,elect,en,dvecs,an_cr,an2_cr2)
