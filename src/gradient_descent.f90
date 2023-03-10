@@ -170,7 +170,7 @@ MODULE gradient_descent
                     lralt_zs=0
                     t=b*(alphain**lralt_zs)
                     
-                    do while(t.gt.(1.0d-13))
+                    do while(t.gt.(1.0d-7))
                     
                         nanchk=.false.
                         if(is_nan(grad_fin%vars(pick,pickorb)).eqv..true.)then
@@ -402,7 +402,7 @@ MODULE gradient_descent
         real(kind=8),intent(in)::b,alphain
         integer,dimension(ndet-1),intent(inout)::picker
         integer::lralt,rjct_cnt,next,acpt_cnt,pick,lralt_temp,loop_max
-        real(kind=8)::newb,t,fxtdk,alpha,gradient_norm
+        real(kind=8)::newb,t,fxtdk,alpha
         integer,dimension(ndet-1)::rsrtpass
         logical::nanchk
         character(len=4)::ergerr
@@ -418,7 +418,7 @@ MODULE gradient_descent
         rjct_cnt=0 !tracks how many rejections 
         t=newb*(alpha**lralt) !learning rate
         acpt_cnt=0  !counts how many ZS have been changed
-        loop_max=120
+        loop_max=5
       
 
         call allocdv(temp_dvecs,1,ndet,norb)
@@ -434,7 +434,7 @@ MODULE gradient_descent
                 pick=picker(j)
                 lralt_temp=lralt
               
-                gradient_norm=sqrt(sum((grad_fin%vars(pick,:))*grad_fin%vars(pick,:)))
+                ! gradient_norm=sqrt(sum((grad_fin%vars(pick,:))*grad_fin%vars(pick,:)))
                 do while(lralt_temp.lt.(loop_max))
                     t=newb*(alpha**lralt_temp)
                     nanchk=.false.
@@ -536,14 +536,15 @@ MODULE gradient_descent
                             call epoc_writer(grad_fin%prev_erg,epoc_cnt,pick,t,0)
                             Exit
                         
-                        else 
-                            lralt_temp=lralt_temp+1
+                        ! else 
+                            
                         end if
                     else 
                         write(0,"(a,a,a,i0,a,i0)") "Error in energy calculation which took value ",ergerr, &
                                                 " for zombie state ", pick, ", on epoc ", epoc_cnt 
                         Exit
                     end if
+                    lralt_temp=lralt_temp+1
                 end do
 
                 if(lralt_temp.ge.loop_max)then
@@ -675,8 +676,8 @@ MODULE gradient_descent
             epoc_cnt=1
         end if
 
-        alpha=0.8  ! learning rate reduction
-        b=8.0D0 !starting learning rate
+        alpha=0.01  ! learning rate reduction
+        b=1.0D0 !starting learning rate
         
         epoc_max=2000
 
