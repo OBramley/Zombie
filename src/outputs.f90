@@ -1,6 +1,12 @@
 MODULE outputs
     use globvars
 
+    interface epoc_writer
+
+        module procedure epoc_writer_int, epoc_writer_array,epoc_writer_array_orbital
+
+    end interface epoc_writer
+
     contains
 
     subroutine matrixwriter_real(out,size,filenm)
@@ -245,12 +251,11 @@ MODULE outputs
 
     end subroutine energywriter
 
-    subroutine epoc_writer(erg,step,chng_trk,lr,pass)
+    subroutine epoc_writer_int(erg,step,chng_trk,lr,pass)
 
         implicit none
         real(kind=8),intent(in)::erg,lr 
         integer,intent(in)::step,pass
-        ! integer,dimension(:),intent(in)::chng_trk
         integer,intent(in)::chng_trk
         integer::epoc,ierr
         logical :: file_exists
@@ -268,10 +273,8 @@ MODULE outputs
                 errorflag=1
                 return
             end if
-            ! write(epoc,'(i0,",",e25.17e3,",",e25.17e3,",",*(i0:", "))') step,erg,0.0,(chng_trk(k),k=1,ndet-1)
             write(epoc,'(a,",",a,",",a,","a)') "EPOC", "Energy", "Learning rate", "Zombie state altered"
             write(epoc,'(i0,",",e25.17e3,",",e25.17e3,",",i0)') 0,erg,0.0,0
-            ! write(epoc,'(i0,",",e25.17e3,",",i0)') step,erg,chng_trk
             close(epoc)
         else if(file_exists.eqv..true.) then
             open(unit=epoc,file='epoc.csv',status="old",access='append',iostat=ierr)
@@ -281,20 +284,106 @@ MODULE outputs
                 return
             end if
             if(pass.eq.1)then
-                write(epoc,*)' '
-                ! write(epoc,'(i0,",",e25.17e3,",",i0)') step,erg,chng_trk
-                ! write(epoc,'(i0,",",e25.17e3,",",e25.17e3,",",*(i0:", "))') step,erg,lr,(chng_trk(k),k=1,ndet-1)
                 write(epoc,'(i0,",",e25.17e3,",",e25.17e3,",",i0)') step,erg,lr,chng_trk
             else
-                ! write(epoc,'(i0,",",e25.17e3,",",i0)') step,erg,chng_trk
-                ! write(epoc,'(i0,",",e25.17e3,",",e25.17e3,",",*(i0:", "))') step,erg,lr,(chng_trk(k),k=1,ndet-1)
                 write(epoc,'(i0,",",e25.17e3,",",e25.17e3,",",i0)') step,erg,lr,chng_trk
             end if
             close(epoc)
         end if
         return
         
-    end subroutine epoc_writer
+    end subroutine epoc_writer_int
+
+    subroutine epoc_writer_array_orbital(erg,step,chng_trk,pass)
+
+        implicit none
+        real(kind=8),intent(in)::erg
+        integer,intent(in)::step,pass
+        integer,dimension(:),intent(in)::chng_trk
+        integer::epoc,ierr,k
+
+        if (errorflag .ne. 0) return
+
+    
+        epoc=450
+        ierr=0
+       
+        open(unit=epoc,file='epoc.csv',status="old",access='append',iostat=ierr)
+        if(ierr/=0)then
+            write(0,"(a,i0)") "Error in opening epoc output file. ierr had value ", ierr
+            errorflag=1
+            return
+        end if
+        if(pass.eq.1)then
+            write(epoc,'(i0,",",e25.17e3,",",a,",",*(i0:", "))') step,erg,"   ",(chng_trk(k),k=1,ndet-1)
+            ! do k=1,ndet-1
+            !     write(epoc,'(i0,",",e25.17e3,",",e25.17e3,",",*(i0:", "))') step,erg,(chng_trk(k),k=1,ndet-1)
+            !     if(chng_trk(k).eq.0)then
+            !         EXIT 
+            !     end if 
+            !     write(epoc,'(a,",",e25.17e3,",",e25.17e3,",",i0)') "   ",erg_dim(k),lr(k),chng_trk(k)
+            ! end do
+        else
+            write(epoc,'(i0,",",e25.17e3,",",a,",",*(i0:", "))') step,erg,"   ",(chng_trk(k),k=1,ndet-1)
+            ! do k=1,ndet-1
+            !     write(epoc,'(i0,",",e25.17e3,",",e25.17e3,",",*(i0:", "))') step,erg,(chng_trk(k),k=1,ndet-1)
+            !     if(chng_trk(k).eq.0)then
+            !         EXIT 
+            !     end if 
+            !     write(epoc,'(a,",",e25.17e3,",",e25.17e3,",",i0)') "   ",erg_dim(k),lr(k),chng_trk(k)
+            ! end do
+            ! write(epoc,'(i0,",",e25.17e3,",",e25.17e3,",",*(i0:", "))') step,erg,lr,(chng_trk(k),k=1,ndet-1)
+        end if
+        close(epoc)
+       
+        return
+        
+    end subroutine epoc_writer_array_orbital
+
+    subroutine epoc_writer_array(erg,step,chng_trk,erg_dim,lr,pass)
+
+        implicit none
+        real(kind=8),intent(in)::erg
+        real(kind=8),dimension(:),intent(in)::lr,erg_dim 
+        integer,intent(in)::step,pass
+        integer,dimension(:),intent(in)::chng_trk
+        integer::epoc,ierr,k
+
+        if (errorflag .ne. 0) return
+
+    
+        epoc=450
+        ierr=0
+       
+        open(unit=epoc,file='epoc.csv',status="old",access='append',iostat=ierr)
+        if(ierr/=0)then
+            write(0,"(a,i0)") "Error in opening epoc output file. ierr had value ", ierr
+            errorflag=1
+            return
+        end if
+        if(pass.eq.1)then
+            write(epoc,'(i0,",",e25.17e3,",",a,",",*(i0:", "))') step,erg,"   ",(chng_trk(k),k=1,ndet-1)
+            do k=1,ndet-1
+                if(chng_trk(k).eq.0)then
+                    EXIT 
+                end if 
+                write(epoc,'(a,",",e25.17e3,",",e25.17e3,",",i0)') "   ",erg_dim(k),lr(k),chng_trk(k)
+            end do
+        else
+            write(epoc,'(i0,",",e25.17e3,",",a,",",*(i0:", "))') step,erg,"   ",(chng_trk(k),k=1,ndet-1)
+            do k=1,ndet-1
+                if(chng_trk(k).eq.0)then
+                    EXIT 
+                end if 
+                write(epoc,'(a,",",e25.17e3,",",e25.17e3,",",i0)') "   ",erg_dim(k),lr(k),chng_trk(k)
+            end do
+            ! write(epoc,'(i0,",",e25.17e3,",",e25.17e3,",",*(i0:", "))') step,erg,lr,(chng_trk(k),k=1,ndet-1)
+        end if
+        close(epoc)
+       
+        return
+        
+    end subroutine epoc_writer_array
 
 
     subroutine dvec_writer(d,size,p)

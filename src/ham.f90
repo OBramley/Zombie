@@ -2,6 +2,7 @@ MODULE ham
 
     use globvars
     use alarrays
+    use omp_lib
     contains
 
     !Level 0 Hamiltonian Routine
@@ -17,13 +18,19 @@ MODULE ham
         integer,intent(in)::size,verb,diff_state
         integer, allocatable,dimension(:)::IPIV1,cmplt
         real(kind=8),allocatable,dimension(:)::WORK1
-        integer::ierr
+        integer::ierr,threads
 
         real(kind=8):: starttime, stoptime, runtime
        
         if (errorflag .ne. 0) return
         ierr=0
 
+        
+        threads=omp_get_max_threads()
+        print*,threads
+        ! call omp_set_num_threads(3)
+        threads=omp_get_num_threads()
+        print*,threads
         call CPU_TIME(starttime) 
         call ovrlp_make(haml%ovrlp,zstore)
         call CPU_TIME(stoptime)
@@ -123,16 +130,16 @@ MODULE ham
         if (errorflag .ne. 0) return 
         ierr=0
     
-        !$omp parallel do &
-        !$omp & private(j) &
-        !$omp & shared(elecs,zstore,an_cr,an2_cr2,haml) 
+        !!$omp parallel do &
+        !!$omp & private(j) &
+        !!$omp & shared(elecs,zstore,an_cr,an2_cr2,haml) 
         do j=1,ndet
             call haml_column(haml(j:,j),zstore(j)%val,zstore,an_cr,an2_cr2,elecs,j) 
             if(verb.eq.1)then
                 write(6,"(a,i0,a)") "hamliltonian column ",j, " completed"
             end if 
         end do
-        !$omp end parallel do
+        !!$omp end parallel do
 
         do j=1,ndet
             haml(j,:)=haml(:,j)
@@ -153,9 +160,9 @@ MODULE ham
     
         if (errorflag .ne. 0) return
 
-        !$omp parallel do &
-        !$omp & private(j,k) &
-        !$omp & shared(zstore,ovrlp)
+        !!$omp parallel do &
+        !!$omp & private(j,k) &
+        !!$omp & shared(zstore,ovrlp)
         do j=1,ndet
             do k=j,ndet
                 if(k.ne.j)then 
@@ -165,7 +172,7 @@ MODULE ham
                 end if 
             end do
         end do 
-        !$omp end parallel do 
+        !!$omp end parallel do 
 
         return
 
@@ -351,14 +358,14 @@ MODULE ham
         integer::j 
 
        
-        !$omp parallel do shared(zstore,state,ovrlp_grad) private(z1d)
+        !!$omp parallel do shared(zstore,state,ovrlp_grad) private(z1d)
         do j=orbsrt, orblim
             z1d(0:2*norb)=zstore(state)%val(0:2*norb)
             z1d(j)=zstore(state)%cos(j)
             z1d(j+norb)=(-1)*zstore(state)%sin(j)
             ovrlp_grad(j,:)=ovrlp_column_grad(z1d,zstore,state,cmplt)
         end do
-        !$omp end parallel do 
+        !!$omp end parallel do 
 
         return 
 
@@ -383,16 +390,16 @@ MODULE ham
         ierr=0
 
        
-        !$omp parallel do &
-        !$omp & private(j,z1d) &
-        !$omp & shared(elecs,zstore,an_cr,an2_cr2,haml_diff)
+        !!$omp parallel do &
+        !!$omp & private(j,z1d) &
+        !!$omp & shared(elecs,zstore,an_cr,an2_cr2,haml_diff)
         do j=orbsrt, orblim
             z1d(0:2*norb)=zstore(state)%val(0:2*norb)
             z1d(j)=zstore(state)%cos(j)
             z1d(j+norb)=zstore(state)%sin(j)*(-1)
             call haml_grad_rc(haml_diff(j,:),z1d,zstore,an_cr,an2_cr2,elecs,state,j,cmplt)
         end do
-        !$omp end parallel do
+        !!$omp end parallel do
 
         return
 
@@ -605,46 +612,46 @@ MODULE ham
         integer::j
         
         
-        !$omp parallel 
-        !$omp single
+        !!$omp parallel 
+        !!$omp single
         do j=1,ndet
             if(cmplt(j).eq.0)then
                 if(j.ne.state)then
                     ! Differentiating the bra 1 el
-                    !$omp task firstprivate(h1etot,j) shared(hcol,zstore,an_cr,elecs,z1d)
+                    !!$omp task firstprivate(h1etot,j) shared(hcol,zstore,an_cr,elecs,z1d)
                     h1etot = haml_vals(z1d,zstore(j)%val,an_cr%ham,elecs%h1ei,elecs%h1_num)
-                    !$omp atomic
+                    !!$omp atomic
                     hcol(j)=hcol(j)+h1etot
-                    !$omp end atomic
-                    !$omp end task
+                    !!$omp end atomic
+                    !!$omp end task
                 
                     !Differentiating the bra 2 el
-                    !$omp task firstprivate(h2etot,j) shared(hcol,zstore,an2_cr2,elecs,z1d)
+                    !!$omp task firstprivate(h2etot,j) shared(hcol,zstore,an2_cr2,elecs,z1d)
                     h2etot = haml_vals(z1d,zstore(j)%val,an2_cr2%ham,elecs%h2ei,elecs%h2_num)
-                    !$omp atomic
+                    !!$omp atomic
                     hcol(j)=hcol(j)+(0.5*h2etot)
-                    !$omp end atomic
-                    !$omp end task
+                    !!$omp end atomic
+                    !!$omp end task
 
                 else
                     !Differentiaitn hamiltonian element (a,a) only placed in hamiltonian column
-                    !$omp task firstprivate(h1etot,j) shared(hcol,zstore,an_cr,elecs)
+                    !!$omp task firstprivate(h1etot,j) shared(hcol,zstore,an_cr,elecs)
                     h1etot = haml_vals_mod(zstore(state)%val,zstore(state)%val,an_cr%diff(orb),elecs%h1ei,an_cr%dcnt(:,orb))
-                    !$omp atomic
+                    !!$omp atomic
                     hcol(j)=hcol(j)+h1etot
-                    !$omp end atomic
-                    !$omp end task
-                    !$omp task firstprivate(h2etot,j) shared(hcol,zstore,an2_cr2,elecs)
+                    !!$omp end atomic
+                    !!$omp end task
+                    !!$omp task firstprivate(h2etot,j) shared(hcol,zstore,an2_cr2,elecs)
                     h2etot = haml_vals_mod(zstore(state)%val,zstore(state)%val,an2_cr2%diff(orb),elecs%h2ei,an2_cr2%dcnt(:,orb))
-                    !$omp atomic
+                    !!$omp atomic
                     hcol(j)=hcol(j)+(0.5*h2etot)
-                    !$omp end atomic
-                    !$omp end task
+                    !!$omp end atomic
+                    !!$omp end task
                 end if
             end if
         end do 
-        !$omp end single
-        !$omp end parallel  
+        !!$omp end single
+        !!$omp end parallel  
         return
 
     end subroutine haml_grad_rc
@@ -727,8 +734,8 @@ MODULE ham
 
         len=int(el_num(0))
         haml_vals_mod=0.0
-        !$omp parallel private(j,k,ov) shared(ops,z1d,z2d)
-        !$omp do simd reduction(+:haml_vals_mod) 
+        !!$omp parallel private(j,k,ov) shared(ops,z1d,z2d)
+        !!$omp do simd reduction(+:haml_vals_mod) 
         do j=1,len
             ov=1.0
             !!$omp do simd reduction(*:ov)
@@ -738,8 +745,8 @@ MODULE ham
             !!$omp end do simd
             haml_vals_mod=haml_vals_mod+(ov*el(el_num(j)))
         end do
-        !$omp end do simd
-        !$omp end parallel 
+        !!$omp end do simd
+        !!$omp end parallel 
         
         return 
       
