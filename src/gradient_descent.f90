@@ -427,8 +427,8 @@ MODULE gradient_descent
                         call he_full_row(temp_ham,temp_zom,elect,ndet,an_cr,an2_cr2,pick)
                         fxtdk=en%erg(1,timesteps+1)
                         if(is_nan(fxtdk).eqv..true.)then
-                            write(0,"(a,a,a,i0,a,i0)") "Error in energy calculation which took value ",ergerr, &
-                        " for zombie state ", pick, ",orbital ", pickorb  
+                            write(0,"(a,a,a,i0)") "Error in energy calculation which took value ",ergerr, &
+                        " for zombie state ", pick
                             nanchk=.true.
                             t=(1.0d-14)
                             rjct_cnt=1
