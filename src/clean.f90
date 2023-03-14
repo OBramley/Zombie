@@ -317,7 +317,7 @@ MODULE clean
        
         
         call allocham(cleanham,clean_ndet,1)
-        call hamgen(cleanham,cstore,elecs,ndet,an_cr,an2_cr2,1)
+        call hamgen(cleanham,cstore,elecs,ndet,an_cr,an2_cr2,1,0)
         ! call hamgen(cleanham,cstore,elecs,clean_ndet,1)
         call matrixwriter(cleanham%hjk,clean_ndet,"data/clean_ham.csv")
         
@@ -422,7 +422,7 @@ MODULE clean
         if(pyscfc.eq.1)then
             call pyscf_clean(cstore,clean_ndet,nel)
             call allocham(cleanham,clean_ndet,1)
-            call hamgen(cleanham,cstore,elecs,ndet,an_cr,an2_cr2,1)
+            call hamgen(cleanham,cstore,elecs,ndet,an_cr,an2_cr2,1,0)
             ! call hamgen(cleanham,cstore,elecs,clean_ndet,1)
             call matrixwriter(cleanham%hjk,clean_ndet,"data/clean_ham.csv")
         else

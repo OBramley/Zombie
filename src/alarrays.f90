@@ -288,8 +288,8 @@ MODULE alarrays
         if(GDflg.eq.'y')then  
             if(ierr==0) allocate(ham%diff_hjk(size,diff_size,size), stat=ierr)
             if(ierr==0) allocate(ham%diff_ovrlp(size,diff_size,size), stat=ierr)
-            if(ierr==0) allocate(ham%hess_hjk(size,diff_size,diff_size,size), stat=ierr)
-            if(ierr==0) allocate(ham%hess_ovrlp(size,diff_size,diff_size,size), stat=ierr)
+            ! if(ierr==0) allocate(ham%hess_hjk(size,diff_size,diff_size,size), stat=ierr)
+            ! if(ierr==0) allocate(ham%hess_ovrlp(size,diff_size,diff_size,size), stat=ierr)
             if(ierr==0) allocate(ham%diff_invh(size,size,diff_size,size), stat=ierr)
             if(ierr==0) allocate(ham%diff_ov_dov(size,size,diff_size,size), stat=ierr)
             if(ierr==0) allocate(ham%diff_in_dhjk(size,size,diff_size,size), stat=ierr)
@@ -300,8 +300,8 @@ MODULE alarrays
             end if
             ham%diff_hjk=0.0
             ham%diff_ovrlp=0.0
-            ham%hess_hjk=0.0
-            ham%hess_ovrlp=0.0
+            ! ham%hess_hjk=0.0
+            ! ham%hess_ovrlp=0.0
             ham%diff_invh=0.0
             ham%diff_ov_dov=0.0
             ham%diff_in_dhjk=0.0
@@ -337,8 +337,8 @@ MODULE alarrays
         if(GDflg.eq.'y')then  
             if(ierr==0) deallocate(ham%diff_hjk, stat=ierr)
             if(ierr==0) deallocate(ham%diff_ovrlp, stat=ierr)
-            if(ierr==0) deallocate(ham%hess_hjk, stat=ierr)
-            if(ierr==0) deallocate(ham%hess_ovrlp, stat=ierr)
+            ! if(ierr==0) deallocate(ham%hess_hjk, stat=ierr)
+            ! if(ierr==0) deallocate(ham%hess_ovrlp, stat=ierr)
             if(ierr==0) deallocate(ham%diff_invh, stat=ierr)
             if (ierr/=0) then
                 write(0,"(a,i0)") "Error in GD Hamiltonian deallocation. ierr had value ", ierr
@@ -505,9 +505,9 @@ MODULE alarrays
 
         
         allocate(gradients%vars(num,length),stat=ierr)
-        if (ierr==0) allocate(gradients%vars_hess(num,length),stat=ierr)
+        ! if (ierr==0) allocate(gradients%vars_hess(num,length),stat=ierr)
         if (ierr==0)allocate(gradients%grad_avlb(0:num,num),stat=ierr)
-        if (ierr==0)allocate(gradients%hessian(num,length,length),stat=ierr)
+        ! if (ierr==0)allocate(gradients%hessian(num,length,length),stat=ierr)
         ! if (ierr==0)allocate(gradients%prev_mmntm(num,length),stat=ierr)
         ! if (ierr==0)allocate(gradients%hess_sum(num),stat=ierr)
         
@@ -519,7 +519,7 @@ MODULE alarrays
         ! gradients%prev_mmntm=0
         gradients%vars=0
         gradients%grad_avlb=0
-        gradients%hessian=0
+        ! gradients%hessian=0
         return
      
     end subroutine allocgrad
@@ -538,8 +538,8 @@ MODULE alarrays
         
         deallocate(gradients%vars,stat=ierr)
         if (ierr==0)deallocate(gradients%grad_avlb,stat=ierr)
-        if (ierr==0) deallocate(gradients%vars_hess,stat=ierr)
-        if (ierr==0) deallocate(gradients%hessian,stat=ierr)
+        ! if (ierr==0) deallocate(gradients%vars_hess,stat=ierr)
+        ! if (ierr==0) deallocate(gradients%hessian,stat=ierr)
         ! if (ierr==0)deallocate(gradients%prev_mmntm,stat=ierr)
         ! if (ierr==0)deallocate(gradients%hess_sum,stat=ierr)
         if (ierr/=0) then
@@ -601,7 +601,7 @@ MODULE alarrays
         
         if(GDflg.eq.'y')then 
             allocate(oper%diff(norb),stat=ierr)
-            if(ierr==0) allocate(oper%hess(norb,norb),stat=ierr)
+            ! if(ierr==0) allocate(oper%hess(norb,norb),stat=ierr)
             if (ierr/=0) then
                 write(0,"(a,i0)") "Error in gradient operators allocation. ierr had value ", ierr
                 errorflag=1
@@ -680,12 +680,12 @@ MODULE alarrays
         if(GDflg.eq.'y')then 
             do j=1,norb 
                 call dealloc_oprts_2(oper%diff(j))
-                do k=1,norb 
-                    call dealloc_oprts_2(oper%hess(j,k))
-                end do 
+                ! do k=1,norb 
+                !     call dealloc_oprts_2(oper%hess(j,k))
+                ! end do 
             end do 
             deallocate(oper%diff,oper%dcnt,stat=ierr)
-            deallocate(oper%diff,oper%hess,oper%dcnt,oper%hcnt,stat=ierr)
+            ! deallocate(oper%diff,oper%hess,oper%dcnt,oper%hcnt,stat=ierr)
             if (ierr/=0) then
                 write(0,"(a,i0)") "Error in gradient operators deallocation. ierr had value ", ierr
                 errorflag=1

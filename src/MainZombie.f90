@@ -119,7 +119,7 @@ program MainZombie
                 ! Maybe specificy conditons but maybe not needed?!
             end if
             write(6,"(a)") "To hamiltonian gen"
-            call hamgen(haml,zstore,elect,ndet,an_cr,an2_cr2,1)
+            call hamgen(haml,zstore,elect,ndet,an_cr,an2_cr2,1,diff_state)
             call matrixwriter(haml%hjk,ndet,"data/ham.csv")
             call matrixwriter(haml%ovrlp,ndet,"data/ovlp.csv")
             write(6,"(a)") "Hamiltonian successfully generated"

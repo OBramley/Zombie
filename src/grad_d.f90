@@ -282,12 +282,12 @@ Module grad_d
         type(hamiltonian),intent(in)::haml
         type(grad),intent(inout)::grad_fin
         integer,intent(in)::diff_state,orb,typ
-        integer::j,p,orblim,orbsrt,ierr,k
-        real(kind=8),dimension(ndet)::dh_temp,dh_temp_hess
+        integer::j,p,orblim,orbsrt!,ierr,k
+        real(kind=8),dimension(ndet)::dh_temp!,dh_temp_hess
         real(kind=8),dimension(ndet)::dham
-        real(kind=8),allocatable,dimension(:,:)::temp
-        integer, allocatable,dimension(:)::IPIV1
-        real(kind=8),allocatable,dimension(:)::WORK1
+        ! real(kind=8),allocatable,dimension(:,:)::temp
+        ! integer, allocatable,dimension(:)::IPIV1
+        ! real(kind=8),allocatable,dimension(:)::WORK1
 
         if (errorflag .ne. 0) return
 
@@ -404,10 +404,10 @@ Module grad_d
 
         !     end if 
         ! else
-            grad_fin%vars_hess(diff_state,:)=grad_fin%vars(diff_state,:)
+            ! grad_fin%vars_hess(diff_state,:)=grad_fin%vars(diff_state,:)
         ! end if 
           
-        return
+        ! return
     end subroutine final_grad
 
     

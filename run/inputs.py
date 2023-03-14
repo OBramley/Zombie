@@ -19,7 +19,7 @@ run={
     'language':'fortran',
 
     # What is the name of the run
-    'runfolder':'bh15_less_calc_5_loops_lr_1',
+    'runfolder':'BH15',
 
     # Amount of time to request on HPC 
     'runtime': "00:05:00",

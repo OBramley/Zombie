@@ -92,7 +92,7 @@ MODULE electrons
         real(kind=8),dimension(e2+1,5)::read_in
         integer::ierr,l,k,an1,an2,cr1,cr2,j,max
         integer,allocatable,dimension(:,:)::temp_diff
-        integer,allocatable,dimension(:,:,:)::temp_hess
+        ! integer,allocatable,dimension(:,:,:)::temp_hess
 
         
         ierr=0
@@ -213,115 +213,115 @@ MODULE electrons
                 return
             end if
 
-            allocate(temp_hess(0:e2,norb,norb),stat=ierr)
-            if (ierr/=0) then
-                write(0,"(a,i0)") "Error in temp operators allocation. ierr had value ", ierr
-                errorflag=1
-                return
-            end if
-            max=0
+            ! allocate(temp_hess(0:e2,norb,norb),stat=ierr)
+            ! if (ierr/=0) then
+            !     write(0,"(a,i0)") "Error in temp operators allocation. ierr had value ", ierr
+            !     errorflag=1
+            !     return
+            ! end if
+            ! max=0
 
-            do j=1,norb
-                do k=j,norb 
-                    do l=1,e2
-                        cr1=int(read_in(l+1,2))
-                        cr2=int(read_in(l+1,3))
-                        an2=int(read_in(l+1,4))
-                        an1=int(read_in(l+1,5))
-                        if(((an2.eq.j).or.(cr2.eq.j).or.(an1.eq.j).or.(cr1.eq.j)))then
-                            if((an2.eq.k).or.(cr2.eq.k).or.(an1.eq.k).or.(cr1.eq.k))then
-                                temp_hess(0,j,k)=int(temp_hess(0,j,k)+1,kind=2)
-                                temp_hess(temp_hess(0,j,k),j,k)=l
+            ! do j=1,norb
+            !     do k=j,norb 
+            !         do l=1,e2
+            !             cr1=int(read_in(l+1,2))
+            !             cr2=int(read_in(l+1,3))
+            !             an2=int(read_in(l+1,4))
+            !             an1=int(read_in(l+1,5))
+            !             if(((an2.eq.j).or.(cr2.eq.j).or.(an1.eq.j).or.(cr1.eq.j)))then
+            !                 if((an2.eq.k).or.(cr2.eq.k).or.(an1.eq.k).or.(cr1.eq.k))then
+            !                     temp_hess(0,j,k)=int(temp_hess(0,j,k)+1,kind=2)
+            !                     temp_hess(temp_hess(0,j,k),j,k)=l
 
-                                temp_an2_cr2%alive(:,l)=an2_cr2%ham%alive(:,l)
-                                temp_an2_cr2%dead(:,l)=an2_cr2%ham%dead(:,l)
-                                temp_an2_cr2%neg_alive(:,l)=an2_cr2%ham%neg_alive(:,l)
-                                temp_an2_cr2%neg_dead(:,l)=an2_cr2%ham%neg_dead(:,l)
-                                if(j.ne.k)then
-                                    if((j.eq.an1).or.(j.eq.an2))then !j=an1 or j=an2
-                                        if((j.eq.cr1).or.(j.eq.cr2))then !j=an1 or j=an2 and j=cr1 or j=cr2
-                                            temp_an2_cr2%alive(j,l)=int(j+norb,kind=2)
-                                            temp_an2_cr2%neg_alive(j,l)=int(2*temp_an2_cr2%neg_alive(j,l),kind=1)
-                                            temp_an2_cr2%neg_dead(j,l)=0
-                                        else 
-                                            temp_an2_cr2%alive(j,l)=int(j,kind=2)
-                                            temp_an2_cr2%dead(j,l)=int(j+norb,kind=2)
-                                            temp_an2_cr2%neg_alive(j,l)=int(temp_an2_cr2%neg_dead(j,l)*(-1),kind=1)
-                                        end if
-                                    else 
-                                        temp_an2_cr2%alive(j,l)=int(j,kind=2)
-                                        temp_an2_cr2%dead(j,l)=int(j+norb,kind=2)
-                                        temp_an2_cr2%neg_dead(j,l)=temp_an2_cr2%neg_alive(j,l)
-                                        temp_an2_cr2%neg_alive(j,l)=int(temp_an2_cr2%neg_alive(j,l)*(-1),kind=1)
-                                    end if
+            !                     temp_an2_cr2%alive(:,l)=an2_cr2%ham%alive(:,l)
+            !                     temp_an2_cr2%dead(:,l)=an2_cr2%ham%dead(:,l)
+            !                     temp_an2_cr2%neg_alive(:,l)=an2_cr2%ham%neg_alive(:,l)
+            !                     temp_an2_cr2%neg_dead(:,l)=an2_cr2%ham%neg_dead(:,l)
+            !                     if(j.ne.k)then
+            !                         if((j.eq.an1).or.(j.eq.an2))then !j=an1 or j=an2
+            !                             if((j.eq.cr1).or.(j.eq.cr2))then !j=an1 or j=an2 and j=cr1 or j=cr2
+            !                                 temp_an2_cr2%alive(j,l)=int(j+norb,kind=2)
+            !                                 temp_an2_cr2%neg_alive(j,l)=int(2*temp_an2_cr2%neg_alive(j,l),kind=1)
+            !                                 temp_an2_cr2%neg_dead(j,l)=0
+            !                             else 
+            !                                 temp_an2_cr2%alive(j,l)=int(j,kind=2)
+            !                                 temp_an2_cr2%dead(j,l)=int(j+norb,kind=2)
+            !                                 temp_an2_cr2%neg_alive(j,l)=int(temp_an2_cr2%neg_dead(j,l)*(-1),kind=1)
+            !                             end if
+            !                         else 
+            !                             temp_an2_cr2%alive(j,l)=int(j,kind=2)
+            !                             temp_an2_cr2%dead(j,l)=int(j+norb,kind=2)
+            !                             temp_an2_cr2%neg_dead(j,l)=temp_an2_cr2%neg_alive(j,l)
+            !                             temp_an2_cr2%neg_alive(j,l)=int(temp_an2_cr2%neg_alive(j,l)*(-1),kind=1)
+            !                         end if
                                     
-                                    if((k.eq.an1).or.(k.eq.an2))then !k=an1 or k=an2
-                                        if((k.eq.cr1).or.(k.eq.cr2))then !k=an1 or k=an2 and k=cr1 or k=cr2
-                                            temp_an2_cr2%alive(k,l)=int(k+norb,kind=2)
-                                            temp_an2_cr2%neg_alive(k,l)=int(2*temp_an2_cr2%neg_alive(k,l),kind=1)
-                                            temp_an2_cr2%neg_dead(k,l)=0
-                                        else 
-                                            temp_an2_cr2%alive(k,l)=int(k,kind=2)
-                                            temp_an2_cr2%dead(k,l)=int(k+norb,kind=2)
-                                            temp_an2_cr2%neg_alive(k,l)=int(temp_an2_cr2%neg_dead(k,l)*(-1),kind=1)
-                                        end if
-                                    else 
-                                        temp_an2_cr2%alive(k,l)=int(k,kind=2)
-                                        temp_an2_cr2%dead(k,l)=int(k+norb,kind=2)
-                                        temp_an2_cr2%neg_dead(k,l)=temp_an2_cr2%neg_alive(k,l)
-                                        temp_an2_cr2%neg_alive(k,l)=int(temp_an2_cr2%neg_alive(k,l)*(-1),kind=1)
-                                    end if 
-                                else
-                                    if((j.eq.an1).or.(j.eq.an2))then !j=k=an1 or j=k=an2
-                                        if((j.eq.cr1).or.(j.eq.cr2))then !j=k=an1 or j=k=an2 and j=k=cr1 or j=k=cr2 double differentiate 
-                                            temp_an2_cr2%alive(j,l)=int(j,kind=2)
-                                            temp_an2_cr2%dead(j,l)=int(j+norb,kind=2)
-                                            temp_an2_cr2%neg_dead(j,l)=int(2*temp_an2_cr2%neg_alive(j,l),kind=1)  
-                                            temp_an2_cr2%neg_alive(j,l)=int(-2*temp_an2_cr2%neg_alive(j,l),kind=1)
-                                        else !double differentiate at j annihilation
-                                            temp_an2_cr2%alive(j,l)=int(j+norb,kind=2)
-                                            temp_an2_cr2%neg_alive(j,l)=int(-4*temp_an2_cr2%neg_dead(j,l),kind=1)
-                                            temp_an2_cr2%neg_dead(j,l)=0
-                                        end if
-                                    else !j=k=cr1 or j=k=cr2 so double differentiate at j creation
-                                        temp_an2_cr2%alive(j,l)=int(j+norb,kind=2)
-                                        temp_an2_cr2%neg_alive(k,l)=int(-4*temp_an2_cr2%neg_alive(k,l),kind=1)
-                                        temp_an2_cr2%neg_dead(j,l)=0
-                                    end if 
+            !                         if((k.eq.an1).or.(k.eq.an2))then !k=an1 or k=an2
+            !                             if((k.eq.cr1).or.(k.eq.cr2))then !k=an1 or k=an2 and k=cr1 or k=cr2
+            !                                 temp_an2_cr2%alive(k,l)=int(k+norb,kind=2)
+            !                                 temp_an2_cr2%neg_alive(k,l)=int(2*temp_an2_cr2%neg_alive(k,l),kind=1)
+            !                                 temp_an2_cr2%neg_dead(k,l)=0
+            !                             else 
+            !                                 temp_an2_cr2%alive(k,l)=int(k,kind=2)
+            !                                 temp_an2_cr2%dead(k,l)=int(k+norb,kind=2)
+            !                                 temp_an2_cr2%neg_alive(k,l)=int(temp_an2_cr2%neg_dead(k,l)*(-1),kind=1)
+            !                             end if
+            !                         else 
+            !                             temp_an2_cr2%alive(k,l)=int(k,kind=2)
+            !                             temp_an2_cr2%dead(k,l)=int(k+norb,kind=2)
+            !                             temp_an2_cr2%neg_dead(k,l)=temp_an2_cr2%neg_alive(k,l)
+            !                             temp_an2_cr2%neg_alive(k,l)=int(temp_an2_cr2%neg_alive(k,l)*(-1),kind=1)
+            !                         end if 
+            !                     else
+            !                         if((j.eq.an1).or.(j.eq.an2))then !j=k=an1 or j=k=an2
+            !                             if((j.eq.cr1).or.(j.eq.cr2))then !j=k=an1 or j=k=an2 and j=k=cr1 or j=k=cr2 double differentiate 
+            !                                 temp_an2_cr2%alive(j,l)=int(j,kind=2)
+            !                                 temp_an2_cr2%dead(j,l)=int(j+norb,kind=2)
+            !                                 temp_an2_cr2%neg_dead(j,l)=int(2*temp_an2_cr2%neg_alive(j,l),kind=1)  
+            !                                 temp_an2_cr2%neg_alive(j,l)=int(-2*temp_an2_cr2%neg_alive(j,l),kind=1)
+            !                             else !double differentiate at j annihilation
+            !                                 temp_an2_cr2%alive(j,l)=int(j+norb,kind=2)
+            !                                 temp_an2_cr2%neg_alive(j,l)=int(-4*temp_an2_cr2%neg_dead(j,l),kind=1)
+            !                                 temp_an2_cr2%neg_dead(j,l)=0
+            !                             end if
+            !                         else !j=k=cr1 or j=k=cr2 so double differentiate at j creation
+            !                             temp_an2_cr2%alive(j,l)=int(j+norb,kind=2)
+            !                             temp_an2_cr2%neg_alive(k,l)=int(-4*temp_an2_cr2%neg_alive(k,l),kind=1)
+            !                             temp_an2_cr2%neg_dead(j,l)=0
+            !                         end if 
 
 
 
                                     
-                                end if
-                            end if
-                        end if
-                    end do
-                    if(max.lt.temp_hess(0,j,k))then 
-                        max=temp_hess(0,j,k)
-                    end if
-                    call alloc_oprts_2(an2_cr2%hess(j,k),temp_hess(0,j,k))
-                    do l=1,temp_hess(0,j,k)
-                        an2_cr2%hess(j,k)%alive(:,l)=temp_an2_cr2%alive(:,temp_hess(l,j,k))
-                        an2_cr2%hess(j,k)%dead(:,l)=temp_an2_cr2%dead(:,temp_hess(l,j,k))
-                        an2_cr2%hess(j,k)%neg_alive(:,l)=temp_an2_cr2%neg_alive(:,temp_hess(l,j,k))
-                        an2_cr2%hess(j,k)%neg_dead(:,l)=temp_an2_cr2%neg_dead(:,temp_hess(l,j,k))
-                    end do 
-                end do
-            end do 
+            !                     end if
+            !                 end if
+            !             end if
+            !         end do
+            !         if(max.lt.temp_hess(0,j,k))then 
+            !             max=temp_hess(0,j,k)
+            !         end if
+            !         call alloc_oprts_2(an2_cr2%hess(j,k),temp_hess(0,j,k))
+            !         do l=1,temp_hess(0,j,k)
+            !             an2_cr2%hess(j,k)%alive(:,l)=temp_an2_cr2%alive(:,temp_hess(l,j,k))
+            !             an2_cr2%hess(j,k)%dead(:,l)=temp_an2_cr2%dead(:,temp_hess(l,j,k))
+            !             an2_cr2%hess(j,k)%neg_alive(:,l)=temp_an2_cr2%neg_alive(:,temp_hess(l,j,k))
+            !             an2_cr2%hess(j,k)%neg_dead(:,l)=temp_an2_cr2%neg_dead(:,temp_hess(l,j,k))
+            !         end do 
+            !     end do
+            ! end do 
 
-            allocate(an2_cr2%hcnt(0:max,norb,norb))
-            an2_cr2%hcnt(0,:,:)=temp_hess(0,:,:)
-            do j=1, norb
-                do k=1,norb 
-                    an2_cr2%hcnt(1:,j,k)=temp_hess(1:max,j,k)
-                end do
-            end do 
-            deallocate(temp_hess,stat=ierr)
-            if (ierr/=0) then
-                write(0,"(a,i0)") "Error in temp operators deallocation. ierr had value ", ierr
-                errorflag=1
-                return
-            end if
+            ! allocate(an2_cr2%hcnt(0:max,norb,norb))
+            ! an2_cr2%hcnt(0,:,:)=temp_hess(0,:,:)
+            ! do j=1, norb
+            !     do k=1,norb 
+            !         an2_cr2%hcnt(1:,j,k)=temp_hess(1:max,j,k)
+            !     end do
+            ! end do 
+            ! deallocate(temp_hess,stat=ierr)
+            ! if (ierr/=0) then
+            !     write(0,"(a,i0)") "Error in temp operators deallocation. ierr had value ", ierr
+            !     errorflag=1
+            !     return
+            ! end if
 
             call dealloc_oprts_2(temp_an2_cr2)
         end if
@@ -341,7 +341,7 @@ MODULE electrons
         real(kind=8),dimension(e1+1,3)::read_in
         integer::ierr,l,k,an,cr,j,max
         integer,allocatable,dimension(:,:)::temp_diff
-        integer,allocatable,dimension(:,:,:)::temp_hess
+        ! integer,allocatable,dimension(:,:,:)::temp_hess
         
         ierr=0
     
@@ -439,80 +439,80 @@ MODULE electrons
                 return
             end if
 
-            allocate(temp_hess(0:e1,norb,norb),stat=ierr)
-            if (ierr/=0) then
-                write(0,"(a,i0)") "Error in temp operators allocation. ierr had value ", ierr
-                errorflag=1
-                return
-            end if
-            max=0
-            do j=1,norb
-                do k=j,norb
-                    do l=1,e1
-                        an=int(read_in(l+1,2))
-                        cr=int(read_in(l+1,3)) 
-                        if(((an.eq.j).or.(cr.eq.j)).and.((an.eq.k).or.(cr.eq.k)))then
-                            temp_hess(0,j,k)=int(temp_hess(0,j,k)+1,kind=2)
-                            temp_hess(temp_hess(0,j,k),j,k)=l
+            ! allocate(temp_hess(0:e1,norb,norb),stat=ierr)
+            ! if (ierr/=0) then
+            !     write(0,"(a,i0)") "Error in temp operators allocation. ierr had value ", ierr
+            !     errorflag=1
+            !     return
+            ! end if
+            ! max=0
+            ! do j=1,norb
+            !     do k=j,norb
+            !         do l=1,e1
+            !             an=int(read_in(l+1,2))
+            !             cr=int(read_in(l+1,3)) 
+            !             if(((an.eq.j).or.(cr.eq.j)).and.((an.eq.k).or.(cr.eq.k)))then
+            !                 temp_hess(0,j,k)=int(temp_hess(0,j,k)+1,kind=2)
+            !                 temp_hess(temp_hess(0,j,k),j,k)=l
 
-                            temp_an_cr%alive(:,l)=an_cr%ham%alive(:,l)
-                            temp_an_cr%dead(:,l)=an_cr%ham%dead(:,l)
-                            temp_an_cr%neg_alive(:,l)=an_cr%ham%neg_alive(:,l)
-                            temp_an_cr%neg_dead(:,l)=an_cr%ham%neg_dead(:,l)
+            !                 temp_an_cr%alive(:,l)=an_cr%ham%alive(:,l)
+            !                 temp_an_cr%dead(:,l)=an_cr%ham%dead(:,l)
+            !                 temp_an_cr%neg_alive(:,l)=an_cr%ham%neg_alive(:,l)
+            !                 temp_an_cr%neg_dead(:,l)=an_cr%ham%neg_dead(:,l)
 
 
-                            if(j.ne.k)then
-                                temp_an_cr%alive(an,l)=int(an,kind=2)
-                                temp_an_cr%dead(an,l)=int(an+norb,kind=2)
-                                temp_an_cr%neg_alive(an,l)=int(temp_an_cr%neg_dead(an,l)*(-1),kind=1)
+            !                 if(j.ne.k)then
+            !                     temp_an_cr%alive(an,l)=int(an,kind=2)
+            !                     temp_an_cr%dead(an,l)=int(an+norb,kind=2)
+            !                     temp_an_cr%neg_alive(an,l)=int(temp_an_cr%neg_dead(an,l)*(-1),kind=1)
 
-                                temp_an_cr%alive(cr,l)=int(cr,kind=2)
-                                temp_an_cr%dead(cr,l)=int(cr+norb,kind=2)
-                                temp_an_cr%neg_dead(cr,l)=temp_an_cr%neg_alive(cr,l)
-                                temp_an_cr%neg_alive(cr,l)=int(temp_an_cr%neg_alive(cr,l)*(-1),kind=1)
-                            else
-                                if(an.eq.cr)then
-                                    temp_an_cr%alive(j,l)=int(j,kind=2)
-                                    temp_an_cr%dead(j,l)=int(j+norb,kind=2)
-                                    temp_an_cr%neg_alive(j,l)=int(-2*temp_an_cr%neg_alive(j,l),kind=1)
-                                    temp_an_cr%neg_dead(j,l)=int(2*temp_an_cr%neg_alive(j,l),kind=1)
-                                else if(j.eq.an)then 
-                                    temp_an_cr%alive(an,l)=int(an+norb,kind=2)
-                                    temp_an_cr%neg_alive(an,l)=int(-4*temp_an_cr%neg_dead(an,l),kind=1)
-                                    temp_an_cr%neg_dead(an,l)=0
-                                else if(j.eq.cr)then
-                                    temp_an_cr%alive(cr,l)=int(cr+norb,kind=2)
-                                    temp_an_cr%neg_alive(cr,l)=int(-4*temp_an_cr%neg_alive(cr,l),kind=1)
-                                    temp_an_cr%neg_dead(cr,l)=0
-                                end if
-                            end if 
-                        end if
-                    end do
-                    if(max.lt.temp_hess(0,j,k))then 
-                        max=temp_hess(0,j,k)
-                    end if
-                    call alloc_oprts_2(an_cr%hess(j,k),temp_hess(0,j,k))
-                    do l=1,temp_hess(0,j,k)
-                        an_cr%hess(j,k)%alive(:,l)=temp_an_cr%alive(:,temp_hess(l,j,k))
-                        an_cr%hess(j,k)%dead(:,l)=temp_an_cr%dead(:,temp_hess(l,j,k))
-                        an_cr%hess(j,k)%neg_alive(:,l)=temp_an_cr%neg_alive(:,temp_hess(l,j,k))
-                        an_cr%hess(j,k)%neg_dead(:,l)=temp_an_cr%neg_dead(:,temp_hess(l,j,k))
-                    end do
-                end do
-            end do 
+            !                     temp_an_cr%alive(cr,l)=int(cr,kind=2)
+            !                     temp_an_cr%dead(cr,l)=int(cr+norb,kind=2)
+            !                     temp_an_cr%neg_dead(cr,l)=temp_an_cr%neg_alive(cr,l)
+            !                     temp_an_cr%neg_alive(cr,l)=int(temp_an_cr%neg_alive(cr,l)*(-1),kind=1)
+            !                 else
+            !                     if(an.eq.cr)then
+            !                         temp_an_cr%alive(j,l)=int(j,kind=2)
+            !                         temp_an_cr%dead(j,l)=int(j+norb,kind=2)
+            !                         temp_an_cr%neg_alive(j,l)=int(-2*temp_an_cr%neg_alive(j,l),kind=1)
+            !                         temp_an_cr%neg_dead(j,l)=int(2*temp_an_cr%neg_alive(j,l),kind=1)
+            !                     else if(j.eq.an)then 
+            !                         temp_an_cr%alive(an,l)=int(an+norb,kind=2)
+            !                         temp_an_cr%neg_alive(an,l)=int(-4*temp_an_cr%neg_dead(an,l),kind=1)
+            !                         temp_an_cr%neg_dead(an,l)=0
+            !                     else if(j.eq.cr)then
+            !                         temp_an_cr%alive(cr,l)=int(cr+norb,kind=2)
+            !                         temp_an_cr%neg_alive(cr,l)=int(-4*temp_an_cr%neg_alive(cr,l),kind=1)
+            !                         temp_an_cr%neg_dead(cr,l)=0
+            !                     end if
+            !                 end if 
+            !             end if
+            !         end do
+            !         if(max.lt.temp_hess(0,j,k))then 
+            !             max=temp_hess(0,j,k)
+            !         end if
+            !         call alloc_oprts_2(an_cr%hess(j,k),temp_hess(0,j,k))
+            !         do l=1,temp_hess(0,j,k)
+            !             an_cr%hess(j,k)%alive(:,l)=temp_an_cr%alive(:,temp_hess(l,j,k))
+            !             an_cr%hess(j,k)%dead(:,l)=temp_an_cr%dead(:,temp_hess(l,j,k))
+            !             an_cr%hess(j,k)%neg_alive(:,l)=temp_an_cr%neg_alive(:,temp_hess(l,j,k))
+            !             an_cr%hess(j,k)%neg_dead(:,l)=temp_an_cr%neg_dead(:,temp_hess(l,j,k))
+            !         end do
+            !     end do
+            ! end do 
 
-            allocate(an_cr%hcnt(0:max,norb,norb))
-            do j=1, norb 
-                do k=1,norb 
-                    an_cr%hcnt(0:,j,k)=temp_hess(0:max,j,k)
-                end do
-            end do 
-            deallocate(temp_hess,stat=ierr)
-            if (ierr/=0) then
-                write(0,"(a,i0)") "Error in temp operators deallocation. ierr had value ", ierr
-                errorflag=1
-                return
-            end if
+            ! allocate(an_cr%hcnt(0:max,norb,norb))
+            ! do j=1, norb 
+            !     do k=1,norb 
+            !         an_cr%hcnt(0:,j,k)=temp_hess(0:max,j,k)
+            !     end do
+            ! end do 
+            ! deallocate(temp_hess,stat=ierr)
+            ! if (ierr/=0) then
+            !     write(0,"(a,i0)") "Error in temp operators deallocation. ierr had value ", ierr
+            !     errorflag=1
+            !     return
+            ! end if
 
             call dealloc_oprts_2(temp_an_cr)
         
