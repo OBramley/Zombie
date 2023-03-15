@@ -58,11 +58,11 @@ MODULE electrons
         
         ! call allocintgrl(elecs,e1,e2)
         write(6,"(a)") "Starting one electron integral allocation"
-        call  one_electrons(elecs,an_cr,e1)
+        call  one_electrons(elecs,an_cr)
         write(6,"(a)") "completed one electron integral allocation"
        
         write(6,"(a)") "Starting two electron integral allocation"
-        call  two_electrons(elecs,an2_cr2,e2)
+        call  two_electrons(elecs,an2_cr2)
         write(6,"(a)") "completed two electron integral allocation"
        
         
@@ -88,14 +88,14 @@ MODULE electrons
     end subroutine electronintegrals
     
     
-    subroutine two_electrons(elecs,an2_cr2,e2)
+    subroutine two_electrons(elecs,an2_cr2)
     
         implicit none 
         type(elecintrgl), intent(inout)::elecs
         type(oprts),intent(inout)::an2_cr2
-        integer,intent(in)::e2
+        integer::e2
         type(oprts_2)::temp_an2_cr2
-        real(kind=8),dimension(e2+1,5)::read_in
+        real(kind=8),dimension(norb*norb*norb*norb,5)::read_in
         integer::ierr,l,k,an1,an2,cr1,cr2,j,max
         integer,allocatable,dimension(:,:)::temp_diff
         ! integer,allocatable,dimension(:,:,:)::temp_hess
@@ -109,16 +109,19 @@ MODULE electrons
             errorflag = 1
             return
         end if
-       
-        do j=1,e2+1
+
+        read(131,*) (read_in(1,k),k=1,5)
+        elecs%h2_num=int(read_in(1,1))
+        e2=elecs%h2_num
+        do j=2,e2+1
             read(131,*) (read_in(j,k),k=1,5)
         end do 
        
         close(131)
-        elecs%h2_num=int(read_in(1,1))
+      
 
-       allocate (elecs%h2ei(elecs%h2_num),stat=ierr)
-       if (ierr/=0) then
+        allocate (elecs%h2ei(elecs%h2_num),stat=ierr)
+        if (ierr/=0) then
         write(0,"(a,i0)") "Error in electron integral  allocation. ierr had value ", ierr
         errorflag=1
         return
@@ -345,14 +348,14 @@ MODULE electrons
     end subroutine two_electrons
     
     
-    subroutine one_electrons(elecs,an_cr,e1)
+    subroutine one_electrons(elecs,an_cr)
     
         implicit none 
         type(elecintrgl), intent(inout)::elecs
         type(oprts),intent(inout)::an_cr
         type(oprts_2)::temp_an_cr
-        integer,intent(in)::e1
-        real(kind=8),dimension(e1+1,3)::read_in
+        integer::e1
+        real(kind=8),dimension(norb*norb,3)::read_in
         integer::ierr,l,k,an,cr,j,max
         integer,allocatable,dimension(:,:)::temp_diff
         ! integer,allocatable,dimension(:,:,:)::temp_hess
@@ -365,8 +368,10 @@ MODULE electrons
             errorflag = 1
             return
         end if
-    
-        do j=1,e1+1
+        read(129,*) (read_in(1,k),k=1,3)
+        elecs%h1_num=int(read_in(1,1))
+        e1=elecs%h1_num
+        do j=2,e1+1
             read(129,*) (read_in(j,k),k=1,3)
         end do 
         close(129)
@@ -379,7 +384,7 @@ MODULE electrons
             return
         end if
         elecs%h1ei=read_in(2:,1)
-        
+        e1=elecs%h1_num
         call alloc_oprts(an_cr,e1)
           
         do l=1,e1
