@@ -18,57 +18,56 @@ MODULE ham
         integer,intent(in)::size,verb,diff_state
         integer, allocatable,dimension(:)::IPIV1,cmplt
         real(kind=8),allocatable,dimension(:)::WORK1
-        integer::ierr,threads
+        integer::ierr
 
-        real(kind=8):: starttime, stoptime, runtime
-       
+      
+      
         if (errorflag .ne. 0) return
         ierr=0
 
         
-        threads=omp_get_max_threads()
-        print*,threads
-        ! call omp_set_num_threads(3)
-        threads=omp_get_num_threads()
-        print*,threads
-        call CPU_TIME(starttime) 
+    
+      
+
+        ! call CPU_TIME(starttime) 
         call ovrlp_make(haml%ovrlp,zstore)
-        call CPU_TIME(stoptime)
-        
-        runtime = stoptime-starttime
+
+        ! call CPU_TIME(stoptime)
        
-        write(6,"(a)") 'Successfully overlap '
+        ! runtime = stoptime-starttime
+       
+        ! write(6,"(a)") 'Successfully overlap '
        
       
-        if (runtime/3600.0d0 .gt. 1.0d0)then
-            runtime = runtime/3600.0d0
-            write(6,"(a,es12.5,a)") 'Time taken : ', runtime, ' hours'
-        ! else if (runtime/60.0d0 .gt. 1.0d0)then
-            ! runtime = runtime/60.0d0
-            ! write(6,"(a,es12.5,a)") 'Time taken : ', runtime , ' mins'
-        else
-            write(6,"(a,es12.5,a)") 'Time taken : ', runtime, ' seconds'
-        end if
+        ! if (runtime/3600.0d0 .gt. 1.0d0)then
+        !     runtime = runtime/3600.0d0
+        !     write(6,"(a,es12.5,a)") 'Time taken : ', runtime, ' hours'
+        ! ! else if (runtime/60.0d0 .gt. 1.0d0)then
+        !     ! runtime = runtime/60.0d0
+        !     ! write(6,"(a,es12.5,a)") 'Time taken : ', runtime , ' mins'
+        ! else
+        !     write(6,"(a,es12.5,a)") 'Time taken : ', runtime, ' seconds'
+        ! end if
 
         haml%hjk=haml%ovrlp*elecs%hnuc
-        call CPU_TIME(starttime) 
+        ! call CPU_TIME(starttime) 
         call haml_make(haml%hjk,zstore,elecs,an_cr%ham,an2_cr2%ham,verb)
-        call CPU_TIME(stoptime)
+        ! call CPU_TIME(stoptime)
 
-        runtime = stoptime-starttime
+        ! runtime = stoptime-starttime
        
-        write(6,"(a)") 'Successfully hamiltonian '
+        ! write(6,"(a)") 'Successfully hamiltonian '
        
       
-        if (runtime/3600.0d0 .gt. 1.0d0)then
-            runtime = runtime/3600.0d0
-            write(6,"(a,es12.5,a)") 'Time taken : ', runtime, ' hours'
-        ! else if (runtime/60.0d0 .gt. 1.0d0)then
-            ! runtime = runtime/60.0d0
-            ! write(6,"(a,es12.5,a)") 'Time taken : ', runtime , ' mins'
-        else
-            write(6,"(a,es12.5,a)") 'Time taken : ', runtime, ' seconds'
-        end if
+        ! if (runtime/3600.0d0 .gt. 1.0d0)then
+        !     runtime = runtime/3600.0d0
+        !     write(6,"(a,es12.5,a)") 'Time taken : ', runtime, ' hours'
+        ! ! else if (runtime/60.0d0 .gt. 1.0d0)then
+        !     ! runtime = runtime/60.0d0
+        !     ! write(6,"(a,es12.5,a)") 'Time taken : ', runtime , ' mins'
+        ! else
+        !     write(6,"(a,es12.5,a)") 'Time taken : ', runtime, ' seconds'
+        ! end if
 
         
         haml%inv=haml%ovrlp
@@ -126,6 +125,7 @@ MODULE ham
         type(oprts_2),intent(in)::an_cr,an2_cr2
         integer,intent(in)::verb
         integer::j,ierr
+      
     
         if (errorflag .ne. 0) return 
         ierr=0
@@ -133,12 +133,14 @@ MODULE ham
         !!$omp parallel do &
         !!$omp & private(j) &
         !!$omp & shared(elecs,zstore,an_cr,an2_cr2,haml) 
+
         do j=1,ndet
             call haml_column(haml(j:,j),zstore(j)%val,zstore,an_cr,an2_cr2,elecs,j) 
             if(verb.eq.1)then
                 write(6,"(a,i0,a)") "hamliltonian column ",j, " completed"
             end if 
         end do
+      
         !!$omp end parallel do
 
         do j=1,ndet
@@ -157,22 +159,17 @@ MODULE ham
         real(kind=8),dimension(:,:),intent(inout)::ovrlp
         type(zombiest),dimension(:),intent(in)::zstore
         integer::j,k
-    
+        
         if (errorflag .ne. 0) return
-
-        !!$omp parallel do &
-        !!$omp & private(j,k) &
-        !!$omp & shared(zstore,ovrlp)
+        ovrlp=1.0d0
+        !!$omp parallel do private(j,l,k,ov) shared(ovrlp,zstore)
         do j=1,ndet
-            do k=j,ndet
-                if(k.ne.j)then 
-                    ovrlp(j,k)=overlap_1(zstore(j)%val,zstore(k)%val); ovrlp(k,j)=ovrlp(j,k)
-                else
-                    ovrlp(j,k)=1.0
-                end if 
+            do k=j+1,ndet
+                ovrlp(j,k)=overlap_1(zstore(j)%val,zstore(k)%val); ovrlp(k,j)=ovrlp(j,k)
             end do
-        end do 
-        !!$omp end parallel do 
+        end do  
+        !!$omp end parallel do
+  
 
         return
 
@@ -196,7 +193,7 @@ MODULE ham
         real(kind=8)::h1etot,h2etot
         integer::j
         
-        !!$omp parallel 
+        !!$omp parallel
         !!$omp single
         do j=1,(ndet-(start-1))
             !!$omp task firstprivate(h1etot,j) shared(zstore,hcol,an_cr,an2_cr2,elecs,z1d,start)
@@ -205,7 +202,7 @@ MODULE ham
             hcol(j)=hcol(j)+h1etot
             !!$omp end atomic
             !!$omp end task
-            !!$omp task firstprivate(h2etot,j) shared(zstore,hcol,an_cr,an2_cr2,elecs,z1d)
+            !!$omp task firstprivate(h2etot,j) shared(zstore,hcol,an_cr,an2_cr2,elecs,z1d,start)
             h2etot = haml_vals(z1d,zstore(start+j-1)%val,an2_cr2,elecs%h2ei,elecs%h2_num)
             !!$omp atomic
             hcol(j)=hcol(j)+(0.5*h2etot)
@@ -230,10 +227,11 @@ MODULE ham
         real(kind=8),dimension(ndet)::ovrlp_column
         integer::j
         
-        ovrlp_column=0.0
-        !!$omp parallel do &
+       
+        ovrlp_column=1.0
+        !!$omp parallel do & !NUM_THREADS(2) &
         !!$omp & shared(z1d,zstore,ovrlp_column) &
-        !!$omp & private(j)
+        !!$omp & private(j,k)
         do j=1,ndet
             if(j.ne.row)then 
                 ovrlp_column(j)=overlap_1(z1d,zstore(j)%val)
@@ -289,10 +287,10 @@ MODULE ham
         real(kind=8),dimension(0:)::z1d,z2d
         integer::j
     
-    
         overlap_1=1.0
-        !!$omp parallel do simd reduction(*:overlap_1)
+        !!$omp parallel do simd reduction(*:overlap_1) private(ov)
         do j=1,norb
+           
             overlap_1=overlap_1*((z1d(j)*z2d(j))+(z1d(j+norb)*z2d(norb+j)))
         end do
         !!$omp end parallel do simd

@@ -148,7 +148,9 @@ program MainZombie
         ! print*,real(en%erg(1,timesteps+1))
         
         if(GDflg.eq."y")then
-            call sd_anal(zstore,nel,dvecs(1),1)
+            if(rstrtflg.eq.'n')then
+                call sd_anal(zstore,nel,dvecs(1),1)
+            end if
             ! gradients%prev_erg=real(en%erg(1,timesteps+1))
             gradients%prev_erg=en%erg(1,timesteps+1)
             write(6,"(a,f20.16)") "Initial energy: ", gradients%prev_erg

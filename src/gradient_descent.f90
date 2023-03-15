@@ -79,6 +79,7 @@ MODULE gradient_descent
 
         if (errorflag .ne. 0) return
         if(grad_fin%grad_avlb(0,pick).eq.2) return
+
         typ=0
         if(grad_fin%grad_avlb(0,pick).eq.0)then
             typ=0
@@ -372,7 +373,6 @@ MODULE gradient_descent
         lralt=1    ! power alpha is raised to  
         newb=b
         rjct_cnt=0 !tracks how many rejections 
-        t=newb*(alpha**lralt) !learning rate
         acpt_cnt=0  !counts how many ZS have been changed
         loop_max=13
       
@@ -389,6 +389,7 @@ MODULE gradient_descent
             chng_trk=0
             lr_chng_trk=0
             erg_chng_trk=0
+
             do j=1,(ndet-1)
                 
                 pick=picker(j)
@@ -447,7 +448,6 @@ MODULE gradient_descent
                    
 
                     if((nanchk.eqv..false.).and.(fxtdk.lt.grad_fin%prev_erg))then
-                       
                         acpt_cnt=acpt_cnt+1
                         chng_trk(acpt_cnt)=pick
                         lr_chng_trk(acpt_cnt)=t
@@ -456,8 +456,11 @@ MODULE gradient_descent
                         zstore(pick)%update_num=zstore(pick)%update_num+1
                         call zombiewriter(zstore(pick),pick,rsrtpass(pick))
                         rsrtpass(pick)=0
+                        haml%ovrlp=temp_ham%ovrlp
+                        haml%hjk=temp_ham%hjk
+                        haml%kinvh=temp_ham%kinvh
                         haml=temp_ham
-                        dvecs=temp_dvecs
+                        dvecs(1)%d=temp_dvecs(1)%d
                         rjct_cnt=0
                         grad_fin%grad_avlb(:,0)=0
                         grad_fin%grad_avlb(pick,:)=0
@@ -489,7 +492,8 @@ MODULE gradient_descent
                 if(j.eq.(ndet-1))then
                     picker=scramble(ndet-1)
                     next=picker(1)
-                    if(acpt_cnt.gt.0)then 
+                    if(acpt_cnt.gt.0)then
+                        call epoc_writer(grad_fin%prev_erg,epoc_cnt,chng_trk,erg_chng_trk,lr_chng_trk,0) 
                         epoc_cnt=epoc_cnt+1
                     end if
                     
@@ -517,7 +521,7 @@ MODULE gradient_descent
 
             end do
             
-            call epoc_writer(grad_fin%prev_erg,epoc_cnt,chng_trk,erg_chng_trk,lr_chng_trk,0)
+            ! call epoc_writer(grad_fin%prev_erg,epoc_cnt,chng_trk,erg_chng_trk,lr_chng_trk,0)
 
             write(6,"(a,i0,a,f21.16,a,i0,a)") "Energy after epoc no. ",epoc_cnt,": ", &
                 grad_fin%prev_erg, ". ", acpt_cnt, " Zombie state(s) altered."
@@ -525,7 +529,7 @@ MODULE gradient_descent
 
             if((rjct_cnt.gt.((ndet-1)*2)+1).or.(modulo(epoc_cnt,100).eq.0).or.(epoc_cnt.eq.2))then
                 call orbital_gd(zstore,grad_fin,elect,dvecs,temp_dvecs,en,haml,temp_ham,temp_zom,&
-                epoc_cnt,alphain,b,picker,1,an_cr,an2_cr2,rjct_cnt)
+                epoc_cnt,alphain,b,picker,10,an_cr,an2_cr2,rjct_cnt)
             end if
         
             if(rjct_cnt.gt.(ndet-1)*2)then
@@ -570,7 +574,7 @@ MODULE gradient_descent
         type(hamiltonian),intent(inout)::haml
         type(zombiest),dimension(:),allocatable::temp_zom
         type(hamiltonian)::temp_ham
-        integer::epoc_cnt,epoc_max
+        integer::epoc_cnt,epoc_max,cnt
         real(kind=8)::alpha,b
         integer,dimension(ndet-1)::picker
 
@@ -588,23 +592,36 @@ MODULE gradient_descent
                 errorflag=1
                 return
             end if
-            do while (ierr==0) 
-                read(450,*,iostat=ierr) epoc_cnt
+            cnt=0
+            do 
+                read(450,*,iostat=ierr)
+                if(ierr<0)then
+                    exit
+                else if(ierr>0)then
+                    write(0,"(a,i0)") "Error in counting epocs. ierr had value ", ierr
+                    errorflag=1
+                    return
+                else 
+                    cnt=cnt+1
+                end if
                 
-                ! epoc_cnt=epoc_cnt+1
             end do
-
-            if(ierr==-1)then
-                write(0,"(a,i0)") "Number of epoc_previosuly_completed", epoc_cnt
-            else
-                write(0,"(a,i0)") "Error in counting epocs. ierr had value ", ierr
+            close(450) 
+            open(unit=450,file='epoc.csv',status="old",iostat=ierr)
+            if(ierr/=0)then
+                write(0,"(a,i0)") "Error in opening epoc file to read in. ierr had value ", ierr
                 errorflag=1
                 return
             end if
-            ! epoc_cnt=2
+            do j=1,cnt-1
+                read(450,*,iostat=ierr)
+            end do 
+            read(450,*,iostat=ierr)epoc_cnt
+    
             close(450) 
-           
-            ! call epoc_writer(grad_fin%prev_erg,epoc_cnt,chng_trk,0.0d0,1)
+
+            write(0,"(a,i0)") "Epoc read in as ", epoc_cnt
+        
             call epoc_writer(grad_fin%prev_erg,epoc_cnt,0,0.0d0,1)
            
         end if
