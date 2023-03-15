@@ -13,7 +13,7 @@ MODULE electrons
     
         type(elecintrgl), intent(inout)::elecs
         type(oprts),intent(inout)::an_cr,an2_cr2
-        real::e1in,e2in
+        ! real::e1in,e2in
         integer:: ierr,e1,e2
         
     
@@ -21,42 +21,42 @@ MODULE electrons
        
     
         ierr = 0
-        open(unit=129, file='integrals/h1e.csv',status='old',iostat=ierr)
-        if (ierr.ne.0) then
-            write(0,"(a)") 'Error in opening h1ec.csv file'
-            errorflag = 1
-            return
-        end if
-        read(129,*, iostat=ierr)e1in
-        if (ierr .ne. 0) then
-            write(0,"(a)") 'Error reading h1e'
-            errorflag = 1
-            return
-          end if
-        close(129)
+        ! open(unit=129, file='integrals/h1e.csv',status='old',iostat=ierr)
+        ! if (ierr.ne.0) then
+        !     write(0,"(a)") 'Error in opening h1ec.csv file'
+        !     errorflag = 1
+        !     return
+        ! end if
+        ! read(129,*, iostat=ierr)e1in
+        ! if (ierr .ne. 0) then
+        !     write(0,"(a)") 'Error reading h1e'
+        !     errorflag = 1
+        !     return
+        !   end if
+        ! close(129)
         
       
        
         
     
-        open(unit=131, file='integrals/h2e.csv',status='old',iostat=ierr)
-        if (ierr.ne.0) then
-            write(0,"(a)") 'Error in opening h2e.csv file'
-            errorflag = 1
-            return
-        end if
-        read(131,*, iostat=ierr)e2in
-        if (ierr .ne. 0) then
-            write(0,"(a)") 'Error reading h1e'
-            errorflag = 1
-            return
-          end if
-        close(131)
+        ! open(unit=131, file='integrals/h2e.csv',status='old',iostat=ierr)
+        ! if (ierr.ne.0) then
+        !     write(0,"(a)") 'Error in opening h2e.csv file'
+        !     errorflag = 1
+        !     return
+        ! end if
+        ! read(131,*, iostat=ierr)e2in
+        ! if (ierr .ne. 0) then
+        !     write(0,"(a)") 'Error reading h1e'
+        !     errorflag = 1
+        !     return
+        !   end if
+        ! close(131)
 
-        e1=int(e1in)
-        e2=int(e2in)
+        ! e1=int(e1in)
+        ! e2=int(e2in)
         
-        call allocintgrl(elecs,e1,e2)
+        ! call allocintgrl(elecs,e1,e2)
         write(6,"(a)") "Starting one electron integral allocation"
         call  one_electrons(elecs,an_cr,e1)
         write(6,"(a)") "completed one electron integral allocation"
@@ -115,6 +115,14 @@ MODULE electrons
         end do 
        
         close(131)
+        elecs%h2_num=int(read_in(1,1))
+
+       allocate (elecs%h2ei(elecs%h2_num),stat=ierr)
+       if (ierr/=0) then
+        write(0,"(a,i0)") "Error in electron integral  allocation. ierr had value ", ierr
+        errorflag=1
+        return
+        end if
        
         elecs%h2ei=read_in(2:,1)
        
@@ -362,8 +370,14 @@ MODULE electrons
             read(129,*) (read_in(j,k),k=1,3)
         end do 
         close(129)
-    
-          
+        
+        elecs%h1_num=int(read_in(1,1))
+        allocate (elecs%h1ei( elecs%h1_num), stat=ierr)
+        if (ierr/=0) then
+            write(0,"(a,i0)") "Error in electron integral  allocation. ierr had value ", ierr
+            errorflag=1
+            return
+        end if
         elecs%h1ei=read_in(2:,1)
         
         call alloc_oprts(an_cr,e1)
