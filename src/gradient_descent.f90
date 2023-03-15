@@ -207,8 +207,9 @@ MODULE gradient_descent
                             ergerr='NaN ' 
                             nanchk=.true.
                             call emergency(haml,dvecs,temp_dvecs,en)  
-                            grad_fin%grad_avlb(0,pick)=3 
-                            call grad_calc(haml,zstore,elect,an_cr,an2_cr2,pick,dvecs,grad_fin,en,0)
+                            grad_fin%grad_avlb=0
+                            grad_fin%vars=0
+                            call grad_calc(haml,zstore,elect,an_cr,an2_cr2,pick,dvecs,grad_fin,en,pickorb)
                             temp_zom(pick)%sin(:)=sin(temp_zom(pick)%phi(:))
                             temp_zom(pick)%cos(:)=cos(temp_zom(pick)%phi(:))
                             temp_zom(pick)%val(1:)=temp_zom(pick)%sin
@@ -425,7 +426,9 @@ MODULE gradient_descent
                         ergerr='NaN ' 
                         nanchk=.true.
                         call emergency(haml,dvecs,temp_dvecs,en)  
-                        grad_fin%grad_avlb(0,pick)=3 
+                        grad_fin%grad_avlb=0
+                        grad_fin%vars=0
+                        call grad_calc(haml,zstore,elect,an_cr,an2_cr2,pick,dvecs,grad_fin,en,0)
                         call grad_calc(haml,zstore,elect,an_cr,an2_cr2,pick,dvecs,grad_fin,en,0)
                         temp_zom(pick)%sin(:)=sin(temp_zom(pick)%phi(:))
                         temp_zom(pick)%cos(:)=cos(temp_zom(pick)%phi(:))
@@ -442,7 +445,7 @@ MODULE gradient_descent
                             rjct_cnt=1
                         else 
                             nanchk=.False.
-                            write(0,"(a)") "Error corrected"
+                            ! write(0,"(a)") "Error corrected"
                         end if
                     end if 
                    
@@ -629,7 +632,7 @@ MODULE gradient_descent
         alpha=0.8  ! learning rate reduction
         b=1.0D0 !starting learning rate
         
-        epoc_max=50000
+        epoc_max=10000
 
         do j=1, ndet-1
             picker(j)=j+1

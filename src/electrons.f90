@@ -34,8 +34,10 @@ MODULE electrons
             return
           end if
         close(129)
-    
-        e1=int(e1in)
+        
+      
+       
+        
     
         open(unit=131, file='integrals/h2e.csv',status='old',iostat=ierr)
         if (ierr.ne.0) then
@@ -50,14 +52,18 @@ MODULE electrons
             return
           end if
         close(131)
-    
+
+        e1=int(e1in)
         e2=int(e2in)
-       
+        
         call allocintgrl(elecs,e1,e2)
-      
+        write(6,"(a)") "Starting one electron integral allocation"
         call  one_electrons(elecs,an_cr,e1)
+        write(6,"(a)") "completed one electron integral allocation"
        
+        write(6,"(a)") "Starting two electron integral allocation"
         call  two_electrons(elecs,an2_cr2,e2)
+        write(6,"(a)") "completed two electron integral allocation"
        
         
     
@@ -81,7 +87,7 @@ MODULE electrons
     
     end subroutine electronintegrals
     
-    ! 
+    
     subroutine two_electrons(elecs,an2_cr2,e2)
     
         implicit none 
@@ -357,12 +363,11 @@ MODULE electrons
         end do 
         close(129)
     
-        
+          
         elecs%h1ei=read_in(2:,1)
         
-        
         call alloc_oprts(an_cr,e1)
-    
+          
         do l=1,e1
             an=int(read_in(l+1,2))
             cr=int(read_in(l+1,3))
@@ -377,15 +382,18 @@ MODULE electrons
             an_cr%ham%dead(cr,l)=0
             an_cr%ham%neg_alive(:cr-1,l)=int(an_cr%ham%neg_alive(:cr-1,l)*(-1),kind=1)
         end do 
+          
         if(GDflg.eq.'y')then
-
+            ! print*,'here'   
             allocate(temp_diff(0:e1,norb),stat=ierr)
             if (ierr/=0) then
                 write(0,"(a,i0)") "Error in temp operators allocation. ierr had value ", ierr
                 errorflag=1
                 return
             end if
+            ! print*,'here'   
             call alloc_oprts_2(temp_an_cr,e1)
+            ! print*,'here'   
             max=0
             do j=1,norb
                 do l=1,e1
@@ -426,7 +434,7 @@ MODULE electrons
                     an_cr%diff(j)%neg_dead(:,l)=temp_an_cr%neg_dead(:,temp_diff(l,j))
                 end do
             end do
-
+            ! print*,'here'   
             allocate(an_cr%dcnt(0:max,norb))
          
             do j=1, norb 

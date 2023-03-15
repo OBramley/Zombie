@@ -68,6 +68,7 @@ program MainZombie
     diff_state=0
     if(GDflg=="y")then
         call allocgrad(gradients,ndet,norb)
+        write(6,"(a)") "Gradients allocated"
         diff_state=2
     end if
 
@@ -76,8 +77,9 @@ program MainZombie
        
         ! if((cleanflg=="y").or.((hamgflg=='y')))then
             ! call allocintgrl(elect)
+        write(6,"(a)") "Setting electron"
         call electronintegrals(elect,an_cr,an2_cr2)
-       
+        write(6,"(a)") "Electrons allocated"
         ! end if
         ! generate zombie states
         call alloczs(zstore,ndet)
