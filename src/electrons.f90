@@ -411,7 +411,7 @@ MODULE electrons
                 return
             end if
             ! print*,'here'   
-            call alloc_oprts_2(temp_an_cr,e1)
+            call alloc_oprts_2(temp_an_cr,e1) 
             ! print*,'here'   
             max=0
             do j=1,norb
