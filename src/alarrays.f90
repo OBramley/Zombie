@@ -508,7 +508,7 @@ MODULE alarrays
         ! if (ierr==0) allocate(gradients%vars_hess(num,length),stat=ierr)
         if (ierr==0)allocate(gradients%grad_avlb(0:num,num),stat=ierr)
         ! if (ierr==0)allocate(gradients%hessian(num,length,length),stat=ierr)
-        ! if (ierr==0)allocate(gradients%prev_mmntm(num,length),stat=ierr)
+        if (ierr==0)allocate(gradients%prev_mmntm(num,length),stat=ierr)
         ! if (ierr==0)allocate(gradients%hess_sum(num),stat=ierr)
         
         if (ierr/=0) then

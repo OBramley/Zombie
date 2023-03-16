@@ -19,14 +19,14 @@ run={
     'language':'fortran',
 
     # What is the name of the run
-    'runfolder':'BH38',
+    'runfolder':'BH15_mmntm',
 
     # Amount of time to request on HPC 
     'runtime': "00:01:30",
 
     'nodes':1,
 
-    'cores':1,
+    'cores':8,
 
     # Set the numpy random seed for Zombie state generation
     'seed':1,
@@ -102,7 +102,7 @@ run={
 #     'spin':0,
 #     'charge':0,
 #     'symmetry_subgroup' : 0, #0 is code for A1 point group
-#     'norb': 28,
+#     'norb': 5,
 #     'nel':6
 # }
 
@@ -172,7 +172,7 @@ zombs={
     'spin':0,
 
     # Number of Zombie states
-    'ndet':38,#pyscf['norb']*2, 
+    'ndet':15,#pyscf['norb']*4, 
 
     # Type of zombie states. Random (ran), Hartree Fock (HF) or biased (bb)
     'zomtyp':'bb',

@@ -21,7 +21,7 @@ MODULE ham
         integer::ierr
 
       
-      
+        ! integer(kind=8)::beginning,rate,end
         if (errorflag .ne. 0) return
         ierr=0
 
@@ -29,47 +29,16 @@ MODULE ham
     
       
 
-        ! call CPU_TIME(starttime) 
+        ! call system_clock(beginning, rate)
         call ovrlp_make(haml%ovrlp,zstore)
-
-        ! call CPU_TIME(stoptime)
-       
-        ! runtime = stoptime-starttime
-       
-        ! write(6,"(a)") 'Successfully overlap '
-       
-      
-        ! if (runtime/3600.0d0 .gt. 1.0d0)then
-        !     runtime = runtime/3600.0d0
-        !     write(6,"(a,es12.5,a)") 'Time taken : ', runtime, ' hours'
-        ! ! else if (runtime/60.0d0 .gt. 1.0d0)then
-        !     ! runtime = runtime/60.0d0
-        !     ! write(6,"(a,es12.5,a)") 'Time taken : ', runtime , ' mins'
-        ! else
-        !     write(6,"(a,es12.5,a)") 'Time taken : ', runtime, ' seconds'
-        ! end if
-
-        haml%hjk=haml%ovrlp*elecs%hnuc
-        ! call CPU_TIME(starttime) 
-        call haml_make(haml%hjk,zstore,elecs,an_cr%ham,an2_cr2%ham,verb)
-        ! call CPU_TIME(stoptime)
-
-        ! runtime = stoptime-starttime
-       
-        ! write(6,"(a)") 'Successfully hamiltonian '
-       
-      
-        ! if (runtime/3600.0d0 .gt. 1.0d0)then
-        !     runtime = runtime/3600.0d0
-        !     write(6,"(a,es12.5,a)") 'Time taken : ', runtime, ' hours'
-        ! ! else if (runtime/60.0d0 .gt. 1.0d0)then
-        !     ! runtime = runtime/60.0d0
-        !     ! write(6,"(a,es12.5,a)") 'Time taken : ', runtime , ' mins'
-        ! else
-        !     write(6,"(a,es12.5,a)") 'Time taken : ', runtime, ' seconds'
-        ! end if
-
+        ! call system_clock(end)
+        ! print *, "elapsed time: ", real(end - beginning) / real(rate)
+     
         
+        haml%hjk=haml%ovrlp*elecs%hnuc
+        
+        call haml_make(haml%hjk,zstore,elecs,an_cr%ham,an2_cr2%ham,verb)
+       
         haml%inv=haml%ovrlp
         allocate(WORK1(size),IPIV1(size),stat=ierr)
         if (ierr/=0) then
@@ -90,6 +59,7 @@ MODULE ham
 
         call DGEMM("N","N",size,size,size,1.d0,haml%inv,size,haml%hjk,size,0.d0,haml%kinvh,size)
 
+    
         if(GDflg.eq.'y')then
             allocate(cmplt(ndet),stat=ierr)
             if (ierr/=0) then
@@ -130,18 +100,18 @@ MODULE ham
         if (errorflag .ne. 0) return 
         ierr=0
     
-        !!$omp parallel do &
-        !!$omp & private(j) &
-        !!$omp & shared(elecs,zstore,an_cr,an2_cr2,haml) 
+        !$omp parallel do schedule(guided) &
+        !$omp & private(j) &
+        !$omp & shared(elecs,zstore,an_cr,an2_cr2,haml) 
 
-        do j=1,ndet
+        do j=ndet,1,-1
             call haml_column(haml(j:,j),zstore(j)%val,zstore,an_cr,an2_cr2,elecs,j) 
             if(verb.eq.1)then
                 write(6,"(a,i0,a)") "hamliltonian column ",j, " completed"
             end if 
         end do
       
-        !!$omp end parallel do
+        !$omp end parallel do
 
         do j=1,ndet
             haml(j,:)=haml(:,j)
@@ -162,13 +132,13 @@ MODULE ham
         
         if (errorflag .ne. 0) return
         ovrlp=1.0d0
-        !!$omp parallel do private(j,l,k,ov) shared(ovrlp,zstore)
+        !!$omp parallel do private(j,k) shared(ovrlp,zstore)
         do j=1,ndet
             do k=j+1,ndet
                 ovrlp(j,k)=overlap_1(zstore(j)%val,zstore(k)%val); ovrlp(k,j)=ovrlp(j,k)
             end do
         end do  
-        !!$omp end parallel do
+        !!$omp end parallel do 
   
 
         return
@@ -229,9 +199,9 @@ MODULE ham
         
        
         ovrlp_column=1.0
-        !!$omp parallel do & !NUM_THREADS(2) &
-        !!$omp & shared(z1d,zstore,ovrlp_column) &
-        !!$omp & private(j,k)
+        !!$omp parallel do & 
+        !!$omp & shared(z1d,zstore,ovrlp_column,row) &
+        !!$omp & private(j)
         do j=1,ndet
             if(j.ne.row)then 
                 ovrlp_column(j)=overlap_1(z1d,zstore(j)%val)
@@ -288,7 +258,7 @@ MODULE ham
         integer::j
     
         overlap_1=1.0
-        !!$omp parallel do simd reduction(*:overlap_1) private(ov)
+        !!$omp parallel do simd reduction(*:overlap_1)
         do j=1,norb
            
             overlap_1=overlap_1*((z1d(j)*z2d(j))+(z1d(j+norb)*z2d(norb+j)))
@@ -325,9 +295,11 @@ MODULE ham
             orblim=orb
         end if
 
-    
+       
         call ovrlp_make_grad(zstore,state,haml%diff_ovrlp(state,:,:),orbsrt,orblim,cmplt)
-        haml%diff_hjk(state,:,:)=haml%diff_ovrlp(state,:,:)*elecs%hnuc 
+        
+        haml%diff_hjk(state,:,:)=haml%diff_ovrlp(state,:,:)*elecs%hnuc
+       
         call haml_grad(haml%diff_hjk(state,:,:),zstore,elecs,an_cr,an2_cr2,state,orbsrt,orblim,cmplt)
        
         
@@ -356,7 +328,7 @@ MODULE ham
         integer::j 
 
        
-        !!$omp parallel do shared(zstore,state,ovrlp_grad) private(z1d)
+        !!$omp parallel do schedule(dynamic) shared(zstore,state,ovrlp_grad,orbsrt,orblim,cmplt) private(z1d,j)
         do j=orbsrt, orblim
             z1d(0:2*norb)=zstore(state)%val(0:2*norb)
             z1d(j)=zstore(state)%cos(j)
@@ -388,16 +360,16 @@ MODULE ham
         ierr=0
 
        
-        !!$omp parallel do &
-        !!$omp & private(j,z1d) &
-        !!$omp & shared(elecs,zstore,an_cr,an2_cr2,haml_diff)
+        !$omp parallel do schedule(dynamic) &
+        !$omp & private(j,z1d) &
+        !$omp & shared(elecs,zstore,an_cr,an2_cr2,haml_diff,orbsrt,orblim,cmplt,state)
         do j=orbsrt, orblim
             z1d(0:2*norb)=zstore(state)%val(0:2*norb)
             z1d(j)=zstore(state)%cos(j)
             z1d(j+norb)=zstore(state)%sin(j)*(-1)
             call haml_grad_rc(haml_diff(j,:),z1d,zstore,an_cr,an2_cr2,elecs,state,j,cmplt)
         end do
-        !!$omp end parallel do
+        !$omp end parallel do
 
         return
 
@@ -576,9 +548,9 @@ MODULE ham
         integer::j
         
         ovrlp_column_grad=0.0
-        !$omp parallel do &
-        !$omp & shared(z1d,zstore,ovrlp_column_grad,state) &
-        !$omp & private(j)
+        !!$omp parallel do schedule(dynamic) &
+        !!$omp & shared(z1d,zstore,ovrlp_column_grad,state) &
+        !!$omp & private(j)
         do j=1,ndet
             if(cmplt(j).eq.0)then
                 if(j.ne.state)then 
@@ -588,7 +560,7 @@ MODULE ham
                 end if
             end if
         end do 
-        !$omp end parallel do
+        !!$omp end parallel do
         return
 
     end function ovrlp_column_grad
@@ -615,41 +587,41 @@ MODULE ham
         do j=1,ndet
             if(cmplt(j).eq.0)then
                 if(j.ne.state)then
-                    ! Differentiating the bra 1 el
-                    !!$omp task firstprivate(h1etot,j) shared(hcol,zstore,an_cr,elecs,z1d)
+                     !! Differentiating the bra 1 el
+                     !!$omp task firstprivate(h1etot,j) shared(hcol,zstore,an_cr,elecs,z1d)
                     h1etot = haml_vals(z1d,zstore(j)%val,an_cr%ham,elecs%h1ei,elecs%h1_num)
-                    !!$omp atomic
+                     !!$omp atomic
                     hcol(j)=hcol(j)+h1etot
-                    !!$omp end atomic
-                    !!$omp end task
+                    ! !$omp end atomic
+                     !!$omp end task
                 
                     !Differentiating the bra 2 el
-                    !!$omp task firstprivate(h2etot,j) shared(hcol,zstore,an2_cr2,elecs,z1d)
+                    ! !$omp task firstprivate(h2etot,j) shared(hcol,zstore,an2_cr2,elecs,z1d)
                     h2etot = haml_vals(z1d,zstore(j)%val,an2_cr2%ham,elecs%h2ei,elecs%h2_num)
-                    !!$omp atomic
+                    ! !$omp atomic
                     hcol(j)=hcol(j)+(0.5*h2etot)
-                    !!$omp end atomic
-                    !!$omp end task
+                    ! !$omp end atomic
+                   !  !$omp end task
 
                 else
                     !Differentiaitn hamiltonian element (a,a) only placed in hamiltonian column
-                    !!$omp task firstprivate(h1etot,j) shared(hcol,zstore,an_cr,elecs)
+                    ! !$omp task firstprivate(h1etot,j) shared(hcol,zstore,an_cr,elecs)
                     h1etot = haml_vals_mod(zstore(state)%val,zstore(state)%val,an_cr%diff(orb),elecs%h1ei,an_cr%dcnt(:,orb))
-                    !!$omp atomic
+                    ! !$omp atomic
                     hcol(j)=hcol(j)+h1etot
-                    !!$omp end atomic
-                    !!$omp end task
-                    !!$omp task firstprivate(h2etot,j) shared(hcol,zstore,an2_cr2,elecs)
+                     !!$omp end atomic
+                    ! !$omp end task
+                    ! !$omp task firstprivate(h2etot,j) shared(hcol,zstore,an2_cr2,elecs)
                     h2etot = haml_vals_mod(zstore(state)%val,zstore(state)%val,an2_cr2%diff(orb),elecs%h2ei,an2_cr2%dcnt(:,orb))
-                    !!$omp atomic
+                    ! !$omp atomic
                     hcol(j)=hcol(j)+(0.5*h2etot)
-                    !!$omp end atomic
-                    !!$omp end task
+                    ! !$omp end atomic
+                    ! !$omp end task
                 end if
             end if
         end do 
-        !!$omp end single
-        !!$omp end parallel  
+         !!$omp end single
+         !!$omp end parallel  
         return
 
     end subroutine haml_grad_rc

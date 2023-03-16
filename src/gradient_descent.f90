@@ -186,7 +186,8 @@ MODULE gradient_descent
                     
                         ! Setup temporary zombie state
                         temp_zom=zstore
-                        temp_zom(pick)%phi(pickorb)=zstore(pick)%phi(pickorb)-(t*(grad_fin%vars(pick,pickorb)))
+                        temp_zom(pick)%phi(pickorb)=zstore(pick)%phi(pickorb)-(t*(grad_fin%vars(pick,pickorb)))&
+                        +((grad_fin%vars(pick,pickorb))*grad_fin%vars(pick,pickorb))
                       
                         temp_zom(pick)%sin(pickorb)=sin(temp_zom(pick)%phi(pickorb))
                         temp_zom(pick)%cos(pickorb)=cos(temp_zom(pick)%phi(pickorb))
@@ -248,6 +249,7 @@ MODULE gradient_descent
                             haml%diff_hjk(:,:,pick)=0
                             haml%diff_ovrlp(pick,:,:)=0
                             haml%diff_ovrlp(:,:,pick)=0
+                            grad_fin%prev_mmntm(pick,pickerorb)=zstore(pick)%phi(pickerorb)
                             grad_fin%prev_erg=fxtdk
                             rjct_cnt_in=0
                             EXIT 
@@ -356,8 +358,8 @@ MODULE gradient_descent
         integer,intent(in)::epoc_max
         real(kind=8),intent(in)::b,alphain
         integer,dimension(ndet-1),intent(inout)::picker
-        integer::lralt,rjct_cnt,next,acpt_cnt,pick,lralt_temp,loop_max
-        real(kind=8)::newb,t,fxtdk,alpha
+        integer::lralt,rjct_cnt,next,acpt_cnt,pick,lralt_temp,loop_max,orb_cnt,mmntmflg
+        real(kind=8)::newb,t,fxtdk,alpha,mmnmtb
         integer,dimension(ndet-1)::rsrtpass
         logical::nanchk
         character(len=4)::ergerr
@@ -366,6 +368,8 @@ MODULE gradient_descent
         real(kind=8),dimension(ndet-1)::lr_chng_trk,erg_chng_trk
         integer,dimension(12)::fibs
 
+        real(kind=8),dimension(ndet)::mmntm,mmntma
+        real(kind=8),dimension(norb)::gradient_norm
         fibs=[0,1,2,3,5,8,13,21,34,55,89,144]
         if (errorflag .ne. 0) return
 
@@ -376,7 +380,10 @@ MODULE gradient_descent
         rjct_cnt=0 !tracks how many rejections 
         acpt_cnt=0  !counts how many ZS have been changed
         loop_max=13
-      
+        mmntm=0
+        mmntma=1
+        mmntmflg=0
+        orb_cnt=100
 
         call allocdv(temp_dvecs,1,ndet,norb)
       
@@ -395,14 +402,15 @@ MODULE gradient_descent
                 
                 pick=picker(j)
                 lralt_temp=lralt
-              
+                gradient_norm=((grad_fin%vars(pick,:))*grad_fin%vars(pick,:))
                 do while(lralt_temp.lt.(loop_max))
                     t=newb*(alpha**fibs(lralt_temp))
                     nanchk=.false.
-                  
+                    mmnmtb=(t*mmntm(pick))/mmntma(pick)
                     ! Setup temporary zombie state
                     temp_zom=zstore
-                    temp_zom(pick)%phi(:)=zstore(pick)%phi(:)-(t*(grad_fin%vars(pick,:)))
+                    temp_zom(pick)%phi(:)=zstore(pick)%phi(:)-(t*(grad_fin%vars(pick,:)))+&
+                    mmnmtb*(zstore(pick)%phi(:)-grad_fin%prev_mmntm(pick,:))+gradient_norm
                     ! temp_zom(pick)%phi(:)=zstore(pick)%phi(:)-(t*(grad_fin%vars_hess(pick,:)))
                   
                    
@@ -474,6 +482,9 @@ MODULE gradient_descent
                         haml%diff_ovrlp(pick,:,:)=0
                         haml%diff_ovrlp(:,:,pick)=0
                         dvecs(1)%d_diff=0
+                        grad_fin%prev_mmntm(pick,:)=zstore(pick)%phi(:)
+                        mmntma(pick)=t
+                        mmntm(pick)=mmnmtb
                         write(6,"(a,i3,a,f21.16,a,f21.16,a,f21.16,a,i3,a,i3)") '       ', pick,'              ', &
                         grad_fin%prev_erg,'               ',fxtdk,'             ',t,'        ',acpt_cnt,'          ',rjct_cnt
                         grad_fin%prev_erg=fxtdk
@@ -499,7 +510,7 @@ MODULE gradient_descent
                         call epoc_writer(grad_fin%prev_erg,epoc_cnt,chng_trk,erg_chng_trk,lr_chng_trk,0) 
                         epoc_cnt=epoc_cnt+1
                     end if
-                    
+                    orb_cnt=orb_cnt-1
                     !Every 100 epoc brings phi values back within the normal 0-2pi range
                     if(modulo(epoc_cnt,100).eq.0)then 
                         do k=2,ndet 
@@ -529,10 +540,18 @@ MODULE gradient_descent
             write(6,"(a,i0,a,f21.16,a,i0,a)") "Energy after epoc no. ",epoc_cnt,": ", &
                 grad_fin%prev_erg, ". ", acpt_cnt, " Zombie state(s) altered."
 
+            if(mmntmflg.eq.0)then 
+                mmntm=0.9
+                mmntmflg=1
+            end if 
 
-            if((rjct_cnt.gt.((ndet-1)*2)+1).or.(modulo(epoc_cnt,100).eq.0).or.(epoc_cnt.eq.2))then
+            if((rjct_cnt.gt.((ndet-1)*3)+1).or.(orb_cnt.le.0).or.(epoc_cnt.eq.2))then
                 call orbital_gd(zstore,grad_fin,elect,dvecs,temp_dvecs,en,haml,temp_ham,temp_zom,&
                 epoc_cnt,alphain,b,picker,10,an_cr,an2_cr2,rjct_cnt)
+                orb_cnt=150
+                ! mmntm=0
+                ! mmntma=1
+                ! mmntmflg=0
             end if
         
             if(rjct_cnt.gt.(ndet-1)*2)then
@@ -546,6 +565,7 @@ MODULE gradient_descent
                 call grad_calc(haml,zstore,elect,an_cr,an2_cr2,next,dvecs,grad_fin,en,0)
             end if
 
+            
           
             t=newb*(alpha**lralt)
            
