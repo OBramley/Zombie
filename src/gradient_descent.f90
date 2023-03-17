@@ -547,7 +547,7 @@ MODULE gradient_descent
 
             if((rjct_cnt.gt.((ndet-1)*3)+1).or.(orb_cnt.le.0).or.(epoc_cnt.eq.2))then
                 call orbital_gd(zstore,grad_fin,elect,dvecs,temp_dvecs,en,haml,temp_ham,temp_zom,&
-                epoc_cnt,alphain,b,picker,10,an_cr,an2_cr2,rjct_cnt)
+                epoc_cnt,alphain,b,picker,5,an_cr,an2_cr2,rjct_cnt)
                 orb_cnt=150
                 ! mmntm=0
                 ! mmntma=1
