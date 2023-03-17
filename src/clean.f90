@@ -14,95 +14,94 @@ MODULE clean
 
         implicit none 
 
-        type(zombiest),dimension(:),allocatable::cstore
+        type(zombiest)::zs
         type(zombiest),dimension(:),intent(in)::zstore
         type(dvector),intent(in)::dvec
         integer, intent(in)::nume,pass
-        integer, allocatable, dimension(:,:)::combs,combs2
-        integer, allocatable, dimension(:)::position
-        real(kind=8), allocatable, dimension(:)::magovrlp
-        integer::ierr
-        integer(kind=16)::total,total2,checker,j,k,l
-        ! complex(kind=8)::norm
-        real(kind=8)::norm
+        integer, allocatable, dimension(:,:)::combs2
+        integer(kind=16), allocatable, dimension(:)::position
+        real(kind=8), allocatable, dimension(:)::magovrlp,temporary
+        integer::ierr,s,kx
+        integer(kind=16)::total,total2,j,k,l,temp_t2,jx, t
+        real(kind=8)::norm,checker
         logical,allocatable,dimension(:)::excld
-        ! complex(kind=8)::ovrlp1, ovrlp2
-        real(kind=8)::ovrlp1, ovrlp2
+        real(kind=8)::ovrlp1, ovrlp2      
+        integer, dimension(:), allocatable :: combins
 
-       
-        total=choose(norb,nume)
-        allocate(combs(total,nume),stat=ierr)
-        if(ierr/=0) then
-            write(0,"(a,i0)") "Error in combination matrix allocation. ierr had value ", ierr
-            errorflag=1
-            return
-        end if
-        if(ierr==0)  allocate (combs2(total,nume),stat=ierr)
-        if(ierr/=0) then
-            write(0,"(a,i0)") "Error in combination matrix allocation. ierr had value ", ierr
-            errorflag=1
-            return
-        end if
-        write(6,"(a,i0)") 'Total combinations ',total
-
-
-        ! The occupational combiantions for the correct number of electrons are found 
-        call combinations(norb,nume,combs,total)
     
-        
+    
+        total=choose(norb,nume)
         total2=0
-        do j=1, total
+        temp_t2=5000
+        call  alloczf(zs)
+        norm=0.0
+        excld=.TRUE.
+       
+        allocate(combins(0:nume-1))
+        if(pass.ne.1)then
+            allocate(magovrlp(temp_t2),stat=ierr)
+            magovrlp=0.0
+        end if
+        if(ierr/=0) then
+            write(0,"(a,i0)") "Error in combins matrix allocation. ierr had value ", ierr
+            errorflag=1
+            return
+        end if
+
+        !$omp parallel do reduction(+:norm)&
+        !$omp & private(jx,j,kx,s,t,k,combins,checker,ovrlp1,ovrlp2,ierr,zs,zstore,temporary) &
+        !$omp & shared(total2,pass,temp_t2,magovrlp)
+        do j = 0, total-1
+            jx = j; kx = nume
+            do s = 0, norb-1
+               if ( kx == 0 ) exit
+               t = choose(norb-(s+1), kx-1)
+               if ( jx < t ) then
+                  combins(kx-1) = s +1
+                  kx = kx - 1
+               else
+                  jx = jx - t
+               end if
+            end do
             checker=0
             do k=1,nume
-                checker=checker+modulo(combs(j,k),2)
+                checker=checker+modulo(combins(k),2)
             end do
             if(checker==((nume/2)-spin))then
+                !$omp critical
                 total2=total2+1
-                combs2(total2,:)=combs(j,:)
+                if((pass.ne.1).and.(total2.gt.temp_t2))then 
+                    allocate(temporary(total2-1),stat=ierr)
+                    temporary=magovrlp
+                    if(ierr==0) deallocate(magovrlp,stat=ierr)
+                    if(ierr==0) allocate(magovrlp(temp_t2*2))
+                    magovrlp(1:)=temporary(1:)
+                    if(ierr==0) deallocate(temporary,stat=ierr)
+                    temp_t2=temp_t2*2
+                    if(ierr/=0) then
+                        write(0,"(a,i0)") "Error in magovrlp matrix increase. ierr had value ", ierr
+                        errorflag=1
+                    end if
+                end if 
+                !$omp end critical 
+                !$omp flush(total2,magovrlp,temp_t2)
+                call zomhfc(zs,combins)
+                do k=1,ndet
+                    ovrlp1=product((zs%sin*zstore(k)%sin)+(zs%cos*zstore(k)%cos))*dvec%d(k)
+                    if(pass.ne.1)then
+                        magovrlp(total2)=magovrlp(total2)+ovrlp1
+                    end if
+                    do l=1,ndet
+                        ovrlp2=product((zs%sin*zstore(l)%sin)+(zs%cos*zstore(l)%cos))
+                        norm=norm + (dvec%d(l)*ovrlp1*ovrlp2)
+                    end do
+                end do
             end if
         end do
-        write(6,"(a,i0)") 'Total combinations with correct spin ',total2
+        !$omp end parallel do 
+
     
-        call alloczs(cstore,total2)
-
-        allocate(magovrlp(total2),stat=ierr)
-        if(ierr==0) allocate(position(total2),stat=ierr)
-        if(ierr==0) allocate(excld(total2),stat=ierr)
-        if(ierr/=0) then
-            write(0,"(a,i0)") "Error in magovrlp allocation. ierr had value ", ierr
-            errorflag=1
-            return
-        end if
-       
-        deallocate(combs,stat=ierr)
-   
-        do j=1, total2
-            call zomhfc(cstore(j),combs2(j,:))
-        end do
-
-        ! norm=(0.0d0,0.0d0)
-        ! magovrlp=(0.0,0.0)
-        norm=0.0
-        magovrlp=0.0
-        
-        excld=.TRUE.
-        !!$omp parallel do collapse(2) reduction(+:norm)
-        do j=1,total2
-            do k=1,ndet 
-                ! ovrlp1=overlap(cstore(j),zstore(k))*dvec%d(k)
-                ovrlp1=product((cstore(j)%sin*zstore(k)%sin)+(cstore(j)%cos*zstore(k)%cos))*dvec%d(k)
-                ! magovrlp(j)=magovrlp(j)+real(ovrlp1)
-                magovrlp(j)=magovrlp(j)+ovrlp1
-                do l=1,ndet
-                    ovrlp2=product((cstore(j)%sin*zstore(l)%sin)+(cstore(j)%cos*zstore(l)%cos))
-                    ! ovrlp2=overlap(zstore(l),cstore(j))
-                    ! norm=norm + (conjg(dvec%d(l))*ovrlp1*ovrlp2)
-                    norm=norm + (dvec%d(l)*ovrlp1*ovrlp2)
-
-                end do
-            end do
-        end do
-        !!$omp end parallel do 
+        write(6,"(a,i0)") 'Total combinations with correct spin ',total2
         write(6,"(a,e25.17e3)") 'The norm for states with correct spin and electrons is ',real(norm)
         
  
@@ -117,7 +116,26 @@ MODULE clean
             write(9,'(a,e25.17e3)') 'Norm before gradient descent is : ', real(norm)
             close(9)
         else
-            
+            if(total2.ne.temp_t2)then
+                allocate(temporary(total2),stat=ierr)
+                    temporary=magovrlp(1:total2)
+                    if(ierr==0) deallocate(magovrlp,stat=ierr)
+                    if(ierr==0) allocate(magovrlp(total2))
+                    magovrlp=temporary
+                    if(ierr==0) deallocate(temporary,stat=ierr)
+                    if(ierr/=0) then
+                        write(0,"(a,i0)") "Error in magovrlp matrix re-size. ierr had value ", ierr
+                        errorflag=1
+                        return
+                    end if 
+            end if
+            if(ierr==0) allocate(position(total2),stat=ierr)
+            if(ierr==0) allocate(excld(total2),stat=ierr)
+            if(ierr/=0) then
+                write(0,"(a,i0)") "Error in magovrlp allocation. ierr had value ", ierr
+                errorflag=1
+                return
+            end if
             do j=1, total2
                 position(j)=minloc(magovrlp,1,excld)
                 excld(position(j))=.FALSE.
@@ -135,11 +153,12 @@ MODULE clean
             end do
 
             close(9)
+            deallocate(position,stat=ierr)
+            deallocate(excld,stat=ierr)
+            deallocate(magovrlp,stat=ierr)
         end if 
-        call dealloczs(cstore)
-        deallocate(position,stat=ierr)
-        deallocate(excld,stat=ierr)
-        deallocate(magovrlp,stat=ierr)
+       
+       
 
         return 
 
@@ -160,9 +179,9 @@ MODULE clean
         type(zombiest),dimension(:),allocatable::cstoretemp
         integer, allocatable, dimension(:,:)::combs,combs2,combsfix
         integer(kind=16), allocatable, dimension(:)::magovrlp
-        integer(kind=16)::j,k,ierr,total,total2,total3,totalf,checker
+        integer(kind=16)::j,k,ierr,total,total2,total3,totalf
         ! complex(kind=8)::magnitude
-        real(kind=8)::magnitude
+        real(kind=8)::magnitude,checker
 
 
         if (errorflag .ne. 0) return
