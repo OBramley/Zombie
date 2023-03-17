@@ -101,10 +101,10 @@ if(inputs.run['gram']=='y'):
 print("Arguments checked")
 # Check if on HPC
 Hostname=socket.gethostname()
-if((Hostname==("login2.arc4.leeds.ac.uk"))or(Hostname==("login1.arc4.leeds.ac.uk"))):
-    HPCFLG=1
+if((Hostname==("login2.arc4.leeds.ac.uk"))or(Hostname==("login1.arc4.leeds.ac.uk"))or(Hostname==("login2.arc3.leeds.ac.uk"))or(Hostname==("login1.arc3.leeds.ac.uk"))):
+    HPCFLG=0
 else:
-    HPCFLG=1
+    HPCFLG=0
 
 # Make Execution folder
 if(HPCFLG==0):
@@ -184,7 +184,7 @@ elif(inputs.run['language']=="fortran"):
         symmetry = inputs.pyscf['symmetry'],
         spin=inputs.pyscf['spin'],
         charge=inputs.pyscf['charge'],
-        symmetry_subgroup = inputs.pyscf['symmetry_subgroup'], #0 is code for A1 point group
+        # symmetry_subgroup = inputs.pyscf['symmetry_subgroup'], #0 is code for A1 point group
         )
         myhf=scf.RHF(mol)
         myhf.kernel()
@@ -268,7 +268,7 @@ elif(inputs.run['language']=="fortran"):
             f.write("#$ -l coproc_v100=1 \n")
             f.write("#$ -P feps-gpu \n")
         f.write("#$ -l h_rt="+inputs.run['runtime']+"\n")
-        f.write("#$ -l h_vmem=4G \n")
+        f.write("#$ -l h_vmem=5G \n")
         f.write("module add mkl \n")
         # f.write('time ./d_check.exe')
         f.write('time ./ZOMBIE.exe')

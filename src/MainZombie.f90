@@ -68,6 +68,7 @@ program MainZombie
     diff_state=0
     if(GDflg=="y")then
         call allocgrad(gradients,ndet,norb)
+        write(6,"(a)") "Gradients allocated"
         diff_state=2
     end if
 
@@ -76,11 +77,12 @@ program MainZombie
        
         ! if((cleanflg=="y").or.((hamgflg=='y')))then
             ! call allocintgrl(elect)
+        write(6,"(a)") "Setting electron"
         call electronintegrals(elect,an_cr,an2_cr2)
-       
+        write(6,"(a)") "Electrons allocated"
         ! end if
         ! generate zombie states
-        call alloczs(zstore,ndet)
+        call alloczs(zstore,int(ndet,kind=16))
         write(6,"(a)") "Zombie states allocated"
         if(zomgflg=='y')then
             call genzf(zstore,ndet)
@@ -148,7 +150,9 @@ program MainZombie
         ! print*,real(en%erg(1,timesteps+1))
         
         if(GDflg.eq."y")then
-            call sd_anal(zstore,nel,dvecs(1),1)
+            if(rstrtflg.eq.'n')then
+                ! call sd_anal(zstore,nel,dvecs(1),1)
+            end if
             ! gradients%prev_erg=real(en%erg(1,timesteps+1))
             gradients%prev_erg=en%erg(1,timesteps+1)
             write(6,"(a,f20.16)") "Initial energy: ", gradients%prev_erg

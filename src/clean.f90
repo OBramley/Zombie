@@ -21,16 +21,22 @@ MODULE clean
         integer, allocatable, dimension(:,:)::combs,combs2
         integer, allocatable, dimension(:)::position
         real(kind=8), allocatable, dimension(:)::magovrlp
-        integer::j,k,l,ierr,total,total2,checker
+        integer::ierr
+        integer(kind=16)::total,total2,checker,j,k,l
         ! complex(kind=8)::norm
         real(kind=8)::norm
         logical,allocatable,dimension(:)::excld
         ! complex(kind=8)::ovrlp1, ovrlp2
         real(kind=8)::ovrlp1, ovrlp2
 
-
+       
         total=choose(norb,nume)
         allocate(combs(total,nume),stat=ierr)
+        if(ierr/=0) then
+            write(0,"(a,i0)") "Error in combination matrix allocation. ierr had value ", ierr
+            errorflag=1
+            return
+        end if
         if(ierr==0)  allocate (combs2(total,nume),stat=ierr)
         if(ierr/=0) then
             write(0,"(a,i0)") "Error in combination matrix allocation. ierr had value ", ierr
@@ -56,6 +62,7 @@ MODULE clean
             end if
         end do
         write(6,"(a,i0)") 'Total combinations with correct spin ',total2
+    
         call alloczs(cstore,total2)
 
         allocate(magovrlp(total2),stat=ierr)
@@ -152,16 +159,14 @@ MODULE clean
         integer, intent(in)::nume
         type(zombiest),dimension(:),allocatable::cstoretemp
         integer, allocatable, dimension(:,:)::combs,combs2,combsfix
-        integer, allocatable, dimension(:)::magovrlp
-        integer::j,k,ierr,total,total2,total3,totalf,checker
+        integer(kind=16), allocatable, dimension(:)::magovrlp
+        integer(kind=16)::j,k,ierr,total,total2,total3,totalf,checker
         ! complex(kind=8)::magnitude
         real(kind=8)::magnitude
 
 
         if (errorflag .ne. 0) return
 
-      
-        
 
         total=choose(norb,nume)
         allocate(combs(total,nume),stat=ierr)
@@ -289,7 +294,7 @@ MODULE clean
         end if
         !$omp end parallel
         
-        call alloczs(cstore,clean_ndet)
+        call alloczs(cstore,int(clean_ndet,kind=16))
         if(total2>99)then
             !$omp parallel do
             do j=1, total3
@@ -312,7 +317,7 @@ MODULE clean
         
 
         do j=1,clean_ndet
-            call zombiewriter_c(cstore(j),j)
+            call zombiewriter_c(cstore(j),int(j,kind=4))
         end do
        
         
@@ -427,7 +432,7 @@ MODULE clean
             call matrixwriter(cleanham%hjk,clean_ndet,"data/clean_ham.csv")
         else
             clean_ndet = lines_clean(clean_ndet)        
-            call alloczs(cstore,clean_ndet)
+            call alloczs(cstore,int(clean_ndet,kind=16))
             call read_zombie_c(cstore,clean_ndet)
             call allocham(cleanham,clean_ndet,1)
             call read_ham_c(cleanham,clean_ndet)
@@ -514,7 +519,7 @@ MODULE clean
         end do
         ierr=0
         print*, clean_ndet
-        call alloczs(cstore,clean_ndet)
+        call alloczs(cstore,int(clean_ndet,kind=16))
         allocate(combs(clean_ndet,nume),stat=ierr)
         if (ierr.ne.0) then
             write(0,"(a,i0)") 'Error in combination matrix allocation',ierr
