@@ -82,7 +82,7 @@ program MainZombie
         write(6,"(a)") "Electrons allocated"
         ! end if
         ! generate zombie states
-        call alloczs(zstore,ndet)
+        call alloczs(zstore,int(ndet,kind=16))
         write(6,"(a)") "Zombie states allocated"
         if(zomgflg=='y')then
             call genzf(zstore,ndet)
@@ -151,7 +151,7 @@ program MainZombie
         
         if(GDflg.eq."y")then
             if(rstrtflg.eq.'n')then
-                call sd_anal(zstore,nel,dvecs(1),1)
+                ! call sd_anal(zstore,nel,dvecs(1),1)
             end if
             ! gradients%prev_erg=real(en%erg(1,timesteps+1))
             gradients%prev_erg=en%erg(1,timesteps+1)

@@ -19,14 +19,18 @@ run={
     'language':'fortran',
 
     # What is the name of the run
+<<<<<<< HEAD
     'runfolder':'BH_15_stretch_mmntm',
+=======
+    'runfolder':'BH_15',
+>>>>>>> c503f66aa11204f83da6ec3f6075df74a460c0bd
 
     # Amount of time to request on HPC 
-    'runtime': "00:01:30",
+    'runtime': "48:00:00",
 
     'nodes':1,
 
-    'cores':4,
+    'cores':8,
 
     # Set the numpy random seed for Zombie state generation
     'seed':1,
@@ -102,7 +106,7 @@ run={
 #     'spin':0,
 #     'charge':0,
 #     'symmetry_subgroup' : 0, #0 is code for A1 point group
-#     'norb': 28,
+#     'norb': 5,
 #     'nel':6
 # }
 # pyscf={
@@ -122,7 +126,44 @@ run={
 #     'nel':6
 # }
 
+# pyscf={
+#      # The units the geometry of the molecule is set up in
+#     'units':'Angstrom',
+#      # The geometry of the molecule being investigated
+#     'atoms': 'Li',
+#     # The type of basis used to generate the 1 and 2 electron integrals
+#     'bs' : 'cc-pVDZ',
+#     # How verbose do you want the PyScf output to be in your terminal?
+#     'verbosity' : 4,
+#     'symmetry' :True,
+#     'spin':0,
+#     'charge':0,
+#     'symmetry_subgroup' : 0, #0 is code for A1 point group
+#     'norb': 14,
+#     'nel':3
+# }
 
+<<<<<<< HEAD
+=======
+
+# pyscf={
+#      # The units the geometry of the molecule is set up in
+#     'units':'Angstrom',
+#      # The geometry of the molecule being investigated
+#     'atoms': 'Be 0 0 0; Be 0 0 2.45',
+#     # The type of basis used to generate the 1 and 2 electron integrals
+#     'bs' : 'cc-pVDZ',
+#     # How verbose do you want the PyScf output to be in your terminal?
+#     'verbosity' : 4,
+#     'symmetry' :True,
+#     'spin':0,
+#     'charge':0,
+#     'symmetry_subgroup' : 0, #0 is code for A1 point group
+#     'norb': 28,
+#     'nel':8
+# }
+
+>>>>>>> c503f66aa11204f83da6ec3f6075df74a460c0bd
 # pyscf={
 #      # The units the geometry of the molecule is set up in
 #     'units':'Angstrom',
@@ -144,7 +185,11 @@ pyscf={
      # The units the geometry of the molecule is set up in
     'units':'Angstrom',
      # The geometry of the molecule being investigated
+<<<<<<< HEAD
     'atoms': 'B 0 0 0; H 0 0 4.0',
+=======
+    'atoms': 'B 0 0 0; H 0 0 1.2324',
+>>>>>>> c503f66aa11204f83da6ec3f6075df74a460c0bd
     # The type of basis used to generate the 1 and 2 electron integrals
     'bs' : '6-31g**',
     # How verbose do you want the PyScf output to be in your terminal?
@@ -156,6 +201,7 @@ pyscf={
     'norb': 19,
     'nel':6
 }
+<<<<<<< HEAD
 
 # pyscf={
 #      # The units the geometry of the molecule is set up in
@@ -173,6 +219,8 @@ pyscf={
 #     'norb': 19,
 #     'nel':6
 # }
+=======
+>>>>>>> c503f66aa11204f83da6ec3f6075df74a460c0bd
 
 
 

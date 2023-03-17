@@ -77,7 +77,7 @@ MODULE alarrays
         implicit none
 
         type(zombiest),dimension(:),allocatable,intent(inout)::zstore
-        integer, intent (in) :: nbf
+        integer(kind=16), intent (in) :: nbf
 
         integer::j,ierr
 

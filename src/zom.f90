@@ -78,7 +78,8 @@ MODULE zom
 
         implicit none
         type(zombiest),dimension(:),intent(inout)::zstore
-        integer::j,k,total,ierr,count
+        integer::j,k,ierr,count
+        integer(kind=16)::total
         integer, allocatable, dimension(:,:)::combs
         integer, dimension(ndet,norb)::combs2
 
@@ -140,7 +141,7 @@ MODULE zom
        
         implicit none
 
-        integer :: choose
+        integer(kind=16) :: choose
         integer, intent(in) :: n, k
         integer :: jmax, j, jmin
      
@@ -178,7 +179,8 @@ MODULE zom
             integer, dimension(:), allocatable :: combs
         end type comb_result
 
-        integer, intent(in)::n_max,m_max,tot
+        integer, intent(in)::n_max,m_max
+        integer(kind=16), intent(in)::tot
         integer,dimension(:,:),intent(inout)::final
         type(comb_result), dimension(:), pointer :: co
         integer :: j, k, s, jx, kx, t,ierr
@@ -245,11 +247,11 @@ MODULE zom
         ! zom%alive(1:norb)=(0.0d0,0.0d0)
         ! zom%cos(1:norb)=(1.0d0,0.0d0)
         ! zom%sin(1:norb)=(0.0d0,0.0d0)
-        zom%dead(1:norb)=1.0d0
-        zom%alive(1:norb)=0.0d0
+        zom%dead(1:norb)=1
+        zom%alive(1:norb)=0
         zom%cos(1:norb)=1.0d0
         zom%sin(1:norb)=0.0d0
-        zom%phi(1:norb)=0.0
+        zom%phi(1:norb)=0
 
         do j=1, norb
             if(occ(j)==0)then
@@ -263,8 +265,8 @@ MODULE zom
             zom%sin(occ(j))=1.0d0
             zom%cos(occ(j))=0.0d0
             zom%phi(occ(j))=0.5*pirl
-            zom%alive(occ(j))=1.0d0
-            zom%dead(occ(j))=0.0d0
+            zom%alive(occ(j))=1
+            zom%dead(occ(j))=0
         end do
 
         return

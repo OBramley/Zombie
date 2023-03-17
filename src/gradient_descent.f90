@@ -658,7 +658,7 @@ MODULE gradient_descent
             picker(j)=j+1
         end do
 
-        call alloczs(temp_zom,ndet)
+        call alloczs(temp_zom,int(ndet,kind=16))
         call allocham(temp_ham,ndet,norb)
     
         if(epoc_cnt.lt.epoc_max)then
