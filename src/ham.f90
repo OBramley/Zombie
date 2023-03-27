@@ -299,9 +299,11 @@ MODULE ham
         call ovrlp_make_grad(zstore,state,haml%diff_ovrlp(state,:,:),orbsrt,orblim,cmplt)
         
         haml%diff_hjk(state,:,:)=haml%diff_ovrlp(state,:,:)*elecs%hnuc
-       
-        call haml_grad(haml%diff_hjk(state,:,:),zstore,elecs,an_cr,an2_cr2,state,orbsrt,orblim,cmplt)
-       
+        if(orb.eq.0)then
+            call haml_grad(haml%diff_hjk(state,:,:),zstore,elecs,an_cr,an2_cr2,state,cmplt)
+        else 
+            call  haml_grad_one_elec(haml%diff_hjk(state,:,:),zstore,elecs,an_cr,an2_cr2,state,orb,cmplt) 
+        end if 
         
         ! call ovrlp_make_hessian(zstore,state,haml%hess_ovrlp(state,:,:,:),cmplt)
         ! haml%hess_hjk(state,:,:,:)=haml%hess_ovrlp(state,:,:,:)*elecs%hnuc
@@ -342,7 +344,7 @@ MODULE ham
     end subroutine ovrlp_make_grad
 
     !  ! Hamiltonian calcualtion - calcualtes the gradient of ther hamliltonian w.r.t one zombie state 
-    subroutine haml_grad(haml_diff,zstore,elecs,an_cr,an2_cr2,state,orbsrt,orblim,cmplt) 
+    subroutine haml_grad(haml_diff,zstore,elecs,an_cr,an2_cr2,state,cmplt) 
 
         implicit none
         
@@ -350,7 +352,7 @@ MODULE ham
         type(zombiest),dimension(:),intent(in)::zstore
         type(elecintrgl),intent(in)::elecs
         type(oprts),intent(in)::an_cr,an2_cr2
-        integer,intent(in)::state,orbsrt, orblim
+        integer,intent(in)::state
         integer,dimension(:),intent(in)::cmplt
         real(kind=8),dimension(0:2*norb)::z1d
   
@@ -362,8 +364,8 @@ MODULE ham
        
         !$omp parallel do schedule(dynamic) &
         !$omp & private(j,z1d) &
-        !$omp & shared(elecs,zstore,an_cr,an2_cr2,haml_diff,orbsrt,orblim,cmplt,state)
-        do j=orbsrt, orblim
+        !$omp & shared(elecs,zstore,an_cr,an2_cr2,haml_diff,cmplt,state)
+        do j=1, norb
             z1d(0:2*norb)=zstore(state)%val(0:2*norb)
             z1d(j)=zstore(state)%cos(j)
             z1d(j+norb)=zstore(state)%sin(j)*(-1)
@@ -374,6 +376,36 @@ MODULE ham
         return
 
     end subroutine haml_grad
+
+    subroutine haml_grad_one_elec(haml_diff,zstore,elecs,an_cr,an2_cr2,state,orbsrt,cmplt) 
+
+        implicit none
+        
+        real(kind=8),dimension(:,:),intent(inout)::haml_diff 
+        type(zombiest),dimension(:),intent(in)::zstore
+        type(elecintrgl),intent(in)::elecs
+        type(oprts),intent(in)::an_cr,an2_cr2
+        integer,intent(in)::state,orbsrt
+        integer,dimension(:),intent(in)::cmplt
+        real(kind=8),dimension(0:2*norb)::z1d
+  
+        integer::j,ierr
+    
+        if (errorflag .ne. 0) return 
+        ierr=0
+
+       
+        
+       
+        z1d(0:2*norb)=zstore(state)%val(0:2*norb)
+        z1d(orbsrt)=zstore(state)%cos(orbsrt)
+        z1d(orbsrt+norb)=zstore(state)%sin(orbsrt)*(-1)
+        call haml_grad_rc(haml_diff(j,:),z1d,zstore,an_cr,an2_cr2,elecs,state,orbsrt,cmplt)
+        
+        
+        return
+
+    end subroutine haml_grad_one_elec
 
     subroutine sub_matrices(haml,state)
 
