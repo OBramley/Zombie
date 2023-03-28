@@ -331,7 +331,7 @@ MODULE ham
 
        
         !!$omp parallel do schedule(dynamic) shared(zstore,state,ovrlp_grad,orbsrt,orblim,cmplt) private(z1d,j)
-        do j=orbsrt, orblim
+        do j=1,10 !orbsrt, orblim
             z1d(0:2*norb)=zstore(state)%val(0:2*norb)
             z1d(j)=zstore(state)%cos(j)
             z1d(j+norb)=(-1)*zstore(state)%sin(j)
@@ -365,7 +365,7 @@ MODULE ham
         !$omp parallel do schedule(dynamic) &
         !$omp & private(j,z1d) &
         !$omp & shared(elecs,zstore,an_cr,an2_cr2,haml_diff,cmplt,state)
-        do j=1, norb
+        do j=1, 10!norb
             z1d(0:2*norb)=zstore(state)%val(0:2*norb)
             z1d(j)=zstore(state)%cos(j)
             z1d(j+norb)=zstore(state)%sin(j)*(-1)

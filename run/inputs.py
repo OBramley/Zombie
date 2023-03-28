@@ -19,14 +19,14 @@ run={
     'language':'fortran',
 
     # What is the name of the run
-    'runfolder':'BE2_15',
+    'runfolder':'BE2_truncated_2',
 
     # Amount of time to request on HPC 
     'runtime': "48:00:00",
 
     'nodes':1,
 
-    'cores':8,
+    'cores':4,
 
     # Set the numpy random seed for Zombie state generation
     'seed':1,
@@ -222,7 +222,7 @@ zombs={
     'spin':0,
 
     # Number of Zombie states
-    'ndet':15,#pyscf['norb']*4, 
+    'ndet':5,#pyscf['norb']*4, 
 
     # Type of zombie states. Random (ran), Hartree Fock (HF) or biased (bb)
     'zomtyp':'bb',

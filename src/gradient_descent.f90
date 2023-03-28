@@ -31,6 +31,7 @@ MODULE gradient_descent
 
         if (errorflag .ne. 0) return
         ierr=0
+        ! print*,'ergstart'
         
         haml%ovrlp(:,diff_state)=ovrlp_column(zstore(diff_state)%val,zstore,diff_state)
         haml%ovrlp(diff_state,:)=haml%ovrlp(:,diff_state)
@@ -58,7 +59,7 @@ MODULE gradient_descent
 
         call DGEMM("N","N",size,size,size,1.d0,haml%inv,size,haml%hjk,size,0.d0,haml%kinvh,size)
 
-
+        ! print*,'erg end'
     end subroutine he_full_row
 
 
@@ -81,6 +82,7 @@ MODULE gradient_descent
         if(grad_fin%grad_avlb(0,pick).eq.2) return
 
         typ=0
+        print*,'gradstrt'
         if(grad_fin%grad_avlb(0,pick).eq.0)then
             typ=0
             dvec(1)%d_diff(:,pick,:)=0
@@ -98,10 +100,10 @@ MODULE gradient_descent
             dvec(1)%d_diff(:,pick,:)=0
             call imgtime_prop(dvec,en,haml,pick,0)
         end if
-        
+        print*,'grad done'
         
         call final_grad(dvec(1),haml,grad_fin,pick,orb,typ)
-           
+        print*,'finals'
         en%erg=0
         en%t=0
         if( grad_fin%grad_avlb(0,pick).eq.1)then 
@@ -157,7 +159,8 @@ MODULE gradient_descent
         loops=0
 
     
-        pickerorb=scramble_norb(norb)
+        ! pickerorb=scramble_norb(norb)
+        pickerorb=scramble_norb(10)
         do while(rjct_cnt2.lt.(norb*100))
             loops=loops+1
             write(6,"(a)") '    Zombie state    |     Previous Energy     |    Energy after Gradient Descent steps &
@@ -171,7 +174,7 @@ MODULE gradient_descent
                
                 chng_trk2=0
                 acpt_cnt=0
-                do n=1,norb
+                do n=1,10 !norb
                    
                     rjct_cnt=0
                     pickorb=pickerorb(n)
@@ -241,7 +244,7 @@ MODULE gradient_descent
                             rjct_cnt=0
                             rjct_cnt2=0
                             haml=temp_ham
-                            grad_fin%grad_avlb(0,:)=0
+                            grad_fin%grad_avlb(:,0)=0
                             grad_fin%grad_avlb(pick,:)=0
                             grad_fin%grad_avlb(:,pick)=0
                             grad_fin%vars=0.0
@@ -249,6 +252,7 @@ MODULE gradient_descent
                             haml%diff_hjk(:,:,pick)=0
                             haml%diff_ovrlp(pick,:,:)=0
                             haml%diff_ovrlp(:,:,pick)=0
+                            dvecs(1)%d_diff=0
                             grad_fin%prev_mmntm(pick,pickerorb)=zstore(pick)%phi(pickerorb)
                             grad_fin%prev_erg=fxtdk
                             rjct_cnt_in=0
@@ -269,7 +273,6 @@ MODULE gradient_descent
                     epoc_cnt=epoc_cnt+1
                     picker=scramble(ndet-1)
                     next=picker(1)
-                    pickerorb=scramble_norb(norb)
                     lralt_zs=0
                     !Every 100 epoc brings phi values back within the normal 0-2pi range
                     if(modulo(epoc_cnt,100).eq.0)then 
@@ -288,9 +291,10 @@ MODULE gradient_descent
                     end if
                 else 
                     next=picker(j+1)
-                    pickerorb=scramble_norb(norb)
                 end if
 
+                pickerorb=scramble_norb(10)
+                ! pickerorb=scramble_norb(norb)
                 if(loops.lt.maxloop)then
                     grad_fin%grad_avlb=0
                     call grad_calc(haml,zstore,elect,an_cr,an2_cr2,next,dvecs,grad_fin,en,pickerorb(1))
@@ -319,16 +323,16 @@ MODULE gradient_descent
                 
             end do
 
-            if(rjct_cnt2.gt.(ndet-1)*2)then
-                grad_fin%grad_avlb=0
-                grad_fin%vars=0.0
-                haml%diff_hjk=0
-                haml%diff_ovrlp=0
-                haml%diff_invh=0
-                haml%diff_ov_dov=0
-                haml%diff_in_dhjk=0
-                dvecs(1)%d_diff=0
-            end if
+            ! if(rjct_cnt2.gt.(ndet-1)*2)then
+            !     grad_fin%grad_avlb=0
+            !     grad_fin%vars=0.0
+            !     haml%diff_hjk=0
+            !     haml%diff_ovrlp=0
+            !     haml%diff_invh=0
+            !     haml%diff_ov_dov=0
+            !     haml%diff_in_dhjk=0
+            !     dvecs(1)%d_diff=0
+            ! end if
 
             call epoc_writer(grad_fin%prev_erg,epoc_cnt,chng_trk,0)
             write(6,"(a,i0,a,f21.16)") "Energy after epoch no. ",epoc_cnt,": ",grad_fin%prev_erg
@@ -401,7 +405,7 @@ MODULE gradient_descent
             do j=1,(ndet-1)
                 
                 pick=picker(j)
-                lralt_temp=lralt
+                lralt_temp=1
                 gradient_norm=((grad_fin%vars(pick,:))*grad_fin%vars(pick,:))
                 do while(lralt_temp.lt.(loop_max))
                     t=newb*(alpha**fibs(lralt_temp))
@@ -410,7 +414,7 @@ MODULE gradient_descent
                     ! Setup temporary zombie state
                     temp_zom=zstore
                     temp_zom(pick)%phi(:)=zstore(pick)%phi(:)-(t*(grad_fin%vars(pick,:)))+&
-                    mmnmtb*(zstore(pick)%phi(:)-grad_fin%prev_mmntm(pick,:))+gradient_norm
+                    mmnmtb*(zstore(pick)%phi(:)-grad_fin%prev_mmntm(pick,:))!+gradient_norm
                     ! temp_zom(pick)%phi(:)=zstore(pick)%phi(:)-(t*(grad_fin%vars_hess(pick,:)))
                   
                    
@@ -530,7 +534,7 @@ MODULE gradient_descent
                 else 
                     next=picker(j+1)
                 end if
-              
+                print*,next
                 call grad_calc(haml,zstore,elect,an_cr,an2_cr2,next,dvecs,grad_fin,en,0)
 
             end do
@@ -547,27 +551,26 @@ MODULE gradient_descent
 
             if((rjct_cnt.gt.((ndet-1)*3)+1).or.(orb_cnt.le.0).or.(epoc_cnt.eq.2))then
                 call orbital_gd(zstore,grad_fin,elect,dvecs,temp_dvecs,en,haml,temp_ham,temp_zom,&
-                epoc_cnt,alphain,b,picker,5,an_cr,an2_cr2,rjct_cnt)
+                epoc_cnt,alphain,b,picker,1,an_cr,an2_cr2,rjct_cnt)
                 orb_cnt=150
-                ! mmntm=0
-                ! mmntma=1
-                ! mmntmflg=0
+                mmntm=0
+                mmntma=1
+                mmntmflg=0
+                print*,picker
             end if
         
-            if(rjct_cnt.gt.(ndet-1)*2)then
-                do k=2,ndet 
-                    if(grad_fin%grad_avlb(0,k).eq.2)then 
-                        grad_fin%grad_avlb(0,k)=3 
-                        grad_fin%vars(k,:)=0.0
-                        dvecs(1)%d_diff(:,k,:)=0
-                    end if 
-                end do
-                call grad_calc(haml,zstore,elect,an_cr,an2_cr2,next,dvecs,grad_fin,en,0)
-            end if
+            ! if(rjct_cnt.gt.(ndet-1)*2)then
+            !     do k=2,ndet 
+            !         if(grad_fin%grad_avlb(0,k).eq.2)then 
+            !             grad_fin%grad_avlb(0,k)=3 
+            !             grad_fin%vars(k,:)=0.0
+            !             dvecs(1)%d_diff(:,k,:)=0
+            !         end if 
+            !     end do
+            !     call grad_calc(haml,zstore,elect,an_cr,an2_cr2,next,dvecs,grad_fin,en,0)
+            ! end if
 
             
-          
-            t=newb*(alpha**lralt)
            
             acpt_cnt=0
             if(epoc_cnt.gt.epoc_max)then 
