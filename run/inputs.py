@@ -26,7 +26,7 @@ run={
 
     'nodes':1,
 
-    'cores':4,
+    'cores':1,
 
     # Set the numpy random seed for Zombie state generation
     'seed':1,
@@ -206,7 +206,7 @@ zombs={
     'spin':0,
 
     # Number of Zombie states
-    'ndet':5,#pyscf['norb']*4, 
+    'ndet':10,#pyscf['norb']*4, 
 
     # Type of zombie states. Random (ran), Hartree Fock (HF) or biased (bb)
     'zomtyp':'bb',
