@@ -230,7 +230,7 @@ MODULE ham
 
         
         haml_vals=0.0
-        !$omp parallel do simd reduction(+:haml_vals) private(j,k,ov) shared(ops,z1d,z2d,el)  
+        !!$omp parallel do reduction(+:haml_vals) private(j,k,ov) shared(ops,z1d,z2d,el)  
         !!$omp do simd 
         do j=1,len
             ov=1.0
@@ -242,7 +242,7 @@ MODULE ham
             haml_vals=haml_vals+(ov*el(j))
         end do
         !!$omp end do 
-        !$omp end parallel do simd
+        !!$omp end parallel do
         
         return 
       
@@ -303,7 +303,7 @@ MODULE ham
             call haml_grad(haml%diff_hjk(state,:,:),zstore,elecs,an_cr,an2_cr2,state,cmplt)
             
         else 
-            call  haml_grad_one_elec(haml%diff_hjk(state,:,:),zstore,elecs,an_cr,an2_cr2,state,orb,cmplt) 
+            call haml_grad_one_elec(haml%diff_hjk(state,:,:),zstore,elecs,an_cr,an2_cr2,state,orb,cmplt) 
         end if 
        
         ! call ovrlp_make_hessian(zstore,state,haml%hess_ovrlp(state,:,:,:),cmplt)
@@ -767,7 +767,7 @@ MODULE ham
 
         len=int(el_num(0))
         haml_vals_mod=0.0
-        !$omp parallel do simd reduction(+:haml_vals_mod) private(j,k,ov) shared(ops,z1d,z2d) 
+        !!$omp parallel do reduction(+:haml_vals_mod) private(j,k,ov) shared(ops,z1d,z2d,el) 
         !!$omp do  
         do j=1,len
             ov=1.0
@@ -779,7 +779,7 @@ MODULE ham
             haml_vals_mod=haml_vals_mod+(ov*el(el_num(j)))
         end do
         !!$omp end do 
-        !$omp end parallel do simd
+        !!$omp end parallel do
         
         return 
       

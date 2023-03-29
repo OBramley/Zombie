@@ -179,13 +179,12 @@ MODULE gradient_descent
                
                 chng_trk2=0
                 acpt_cnt=0
-                do n=1,norb
+                do n=1,norb,2
                    
                     rjct_cnt=0
                     pickorb=pickerorb(n)
                     lralt_zs=1
-                    t=b*(alphain**0)
-                    
+                    t=1.0
                     do while(t.gt.(1.0d-15))
 
                         t=b*(alphain**fibs(lralt_zs))
@@ -270,13 +269,13 @@ MODULE gradient_descent
                         end if
                         lralt_zs=lralt_zs+1
                         rjct_cnt=rjct_cnt+1
-                        t=b*(alphain**fibs(lralt_zs))
+                       
                     end do
                     
                     ! if((n.lt.10))then
                     if((n.lt.norb))then
                         grad_fin%grad_avlb=0
-                        call grad_calc(haml,zstore,elect,an_cr,an2_cr2,pick,dvecs,grad_fin,en,pickerorb(n+1))
+                        call grad_calc(haml,zstore,elect,an_cr,an2_cr2,pick,dvecs,grad_fin,en,pickerorb(n+2))
                     end if
                 end do
 
