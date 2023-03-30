@@ -31,8 +31,7 @@ MODULE ham
         ! call system_clock(end)
         ! print *, "elapsed time: ", real(end - beginning) / real(rate)
      
-        call omp_set_nested(.true.)
-     
+        
         haml%hjk=haml%ovrlp*elecs%hnuc
        
         call haml_make(haml%hjk,zstore,elecs,an_cr%ham,an2_cr2%ham,verb)
@@ -161,7 +160,7 @@ MODULE ham
         real(kind=8)::h1etot,h2etot
         integer::j
         
-        !$omp parallel do private(h1etot,h2etot,j) shared(zstore,hcol,an_cr,an2_cr2,elecs,z1d,start)
+        !!$omp parallel do private(h1etot,h2etot,j) shared(zstore,hcol,an_cr,an2_cr2,elecs,z1d,start)
         !!$omp single
         do j=1,(ndet-(start-1))
             !!$omp task firstprivate(h1etot,j) shared(zstore,hcol,an_cr,an2_cr2,elecs,z1d,start)
@@ -178,7 +177,7 @@ MODULE ham
             !!$omp end task
         end do 
         
-        !$omp end parallel do
+        !!$omp end parallel do
         
         return
 
@@ -284,25 +283,13 @@ MODULE ham
         integer,dimension(:),intent(in)::cmplt
         integer::j
         
-
-        call omp_set_nested(.true.)
-     
-     
-       
        
         if(orb.eq.0)then
             call ovrlp_make_grad(zstore,state,haml%diff_ovrlp(state,:,:),cmplt)
             haml%diff_hjk(state,:,:)=haml%diff_ovrlp(state,:,:)*elecs%hnuc
             call haml_grad(haml%diff_hjk(state,:,:),zstore,elecs,an_cr,an2_cr2,state,cmplt)
             
-        else 
-
-            ! do j=1,ndet
-            !     !Differentiaitn hamiltonian element (a,a) only placed in hamiltonian columm
-            !     print*,an_cr%dcnt(0:,orb)
-            
-                 
-            ! end do 
+        else
 
             call ovrlp_make_grad_one_elec(zstore,state,haml%diff_ovrlp(state,:,:),orb,cmplt)
             haml%diff_hjk(state,:,:)=haml%diff_ovrlp(state,:,:)*elecs%hnuc
@@ -429,7 +416,7 @@ MODULE ham
         z1d(orb)=zstore(state)%cos(orb)
         z1d(orb+norb)=zstore(state)%sin(orb)*(-1)
 
-        call haml_grad_rc(haml_diff(orb,:),z1d,zstore,an_cr,an2_cr2,elecs,state,orb,cmplt)
+        call haml_grad_rc_p(haml_diff(orb,:),z1d,zstore,an_cr,an2_cr2,elecs,state,orb,cmplt)
       
       
       
@@ -645,6 +632,49 @@ MODULE ham
         
         
        
+        !!$omp parallel do private(h1etot,h2etot) shared(hcol,zstore,an_cr,an2_cr2,elecs,z1d,state,orb)
+        do j=1,ndet
+            if(cmplt(j).eq.0)then
+                if(j.ne.state)then
+                    !! Differentiating the bra 1 el
+                   
+                    h1etot = haml_vals(z1d,zstore(j)%val,an_cr%ham,elecs%h1ei,elecs%h1_num)
+                    hcol(j)=hcol(j)+h1etot
+            
+                    !Differentiating the bra 2 el
+                    h2etot = haml_vals(z1d,zstore(j)%val,an2_cr2%ham,elecs%h2ei,elecs%h2_num)
+                    hcol(j)=hcol(j)+(0.5*h2etot)
+                else
+                    !Differentiaitn hamiltonian element (a,a) only placed in hamiltonian columm
+                    h1etot = haml_vals_mod(zstore(state)%val,zstore(state)%val,an_cr%diff(orb),elecs%h1ei,an_cr%dcnt(0:,orb))
+                    hcol(j)=hcol(j)+h1etot
+                    h2etot = haml_vals_mod(zstore(state)%val,zstore(state)%val,an2_cr2%diff(orb),elecs%h2ei,an2_cr2%dcnt(0:,orb))
+                    hcol(j)=hcol(j)+(0.5*h2etot)
+                end if
+            end if
+        end do 
+        !!$omp end parallel do  
+        return
+        
+
+    end subroutine haml_grad_rc
+ ! Calcualates a column of a hamliltonian Start specifies the row the column
+    ! is started to be calcualted 
+    subroutine haml_grad_rc_p(hcol,z1d,zstore,an_cr,an2_cr2,elecs,state,orb,cmplt)
+
+        implicit none
+        real(kind=8),dimension(:),intent(inout)::hcol 
+        type(zombiest),dimension(:),intent(in)::zstore
+        real(kind=8),dimension(0:),intent(in)::z1d
+        type(elecintrgl),intent(in)::elecs
+        type(oprts),intent(in)::an_cr,an2_cr2
+        integer,intent(in)::state,orb
+        integer,dimension(:),intent(in)::cmplt
+        real(kind=8)::h1etot,h2etot
+        integer::j
+        
+        
+       
         !$omp parallel do private(h1etot,h2etot) shared(hcol,zstore,an_cr,an2_cr2,elecs,z1d,state,orb)
         do j=1,ndet
             if(cmplt(j).eq.0)then
@@ -670,53 +700,7 @@ MODULE ham
         return
         
 
-    end subroutine haml_grad_rc
-
-     ! Calcualates a column of a hamliltonian Start specifies the row the column
-    ! is started to be calcualted 
-    ! subroutine haml_grad_rc_p(hcol,z1d,zstore,an_cr,an2_cr2,elecs,state,orb,cmplt)
-
-    !     implicit none
-    !     real(kind=8),dimension(:),intent(inout)::hcol 
-    !     type(zombiest),dimension(:),intent(in)::zstore
-    !     real(kind=8),dimension(0:),intent(in)::z1d
-    !     type(elecintrgl),intent(in)::elecs
-    !     type(oprts),intent(in)::an_cr,an2_cr2
-    !     integer,intent(in)::state,orb
-    !     integer,dimension(:),intent(in)::cmplt
-    !     real(kind=8)::h1etot,h2etot
-    !     integer::j
-        
-        
-    !     !$omp parallel do private(h1etot,h2etot), shared(hcol,zstore,an_cr,an2_cr2,elecs,z1d,state,orb)
-    !     do j=1,ndet
-    !         if(cmplt(j).eq.0)then
-    !             if(j.ne.state)then
-    !                 !! Differentiating the bra 1 el
-    !                 h1etot = haml_vals(z1d,zstore(j)%val,an_cr%ham,elecs%h1ei,elecs%h1_num)
-    !                 hcol(j)=hcol(j)+h1etot
-    !                 !Differentiating the bra 2 el
-    !                 h2etot = haml_vals(z1d,zstore(j)%val,an2_cr2%ham,elecs%h2ei,elecs%h2_num)
-    !                 hcol(j)=hcol(j)+(0.5*h2etot)
-    
-    !             else
-    !                 !Differentiaitn hamiltonian element (a,a) only placed in hamiltonian column
-    !                 print*,'h1etot',orb,j
-    !                 h1etot = haml_vals_mod(zstore(state)%val,zstore(state)%val,an_cr%diff(orb),elecs%h1ei,an_cr%dcnt(:,orb))
-    !                 hcol(j)=hcol(j)+h1etot
-    !                 print*,'h2etot',orb,j
-    !                 h2etot = haml_vals_mod(zstore(state)%val,zstore(state)%val,an2_cr2%diff(orb),elecs%h2ei,an2_cr2%dcnt(:,orb))
-    !                 hcol(j)=hcol(j)+(0.5*h2etot)
-                   
-    !             end if
-    !         end if
-    !     end do 
-    !     !$omp end parallel do
-        
-    !     return
-
-
-    ! end subroutine haml_grad_rc_p
+    end subroutine haml_grad_rc_p
 
 
     ! subroutine haml_hess_rc(hcol,z1d,zstore,an_cr,an2_cr2,elecs,state,orb1,orb2,cmplt)
