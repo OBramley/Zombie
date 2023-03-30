@@ -393,14 +393,15 @@ MODULE gradient_descent
 
         ierr=0
     
-        allocate(mmntm(ndet),stat=ierr)
+        ! allocate(mmntm(ndet),stat=ierr)
+        allocate(mmntm(norb),stat=ierr)
         if(ierr==0) allocate(mmntma(ndet),stat=ierr)
         if(ierr==0) allocate(gradient_norm(norb),stat=ierr)
         if(ierr==0) allocate(chng_trk(ndet-1),stat=ierr)
         if(ierr==0) allocate(lr_chng_trk(ndet-1),stat=ierr)
         if(ierr==0) allocate(erg_chng_trk(ndet-1),stat=ierr)
         if(ierr==0) allocate(fibs(12),stat=ierr)
-
+       
         call alloczs(temp_zom,int(ndet,kind=16))
 
         fibs=[0,1,2,3,5,8,13,21,34,55,89,144]
@@ -414,8 +415,11 @@ MODULE gradient_descent
         acpt_cnt=0  !counts how many ZS have been changed
         loop_max=13
         mmntm=0
-        mmntma=1
-        mmntmflg=0
+        ! mmntma=1
+        mmntma=0.9
+        ! mmntmflg=0
+
+       
         orb_cnt=100
 
         call allocdv(temp_dvecs,1,ndet,norb)
@@ -435,17 +439,21 @@ MODULE gradient_descent
                 
                 pick=picker(j)
                 lralt_temp=1
-                gradient_norm=((grad_fin%vars(pick,:))*grad_fin%vars(pick,:))
+                
+             
+                !gradient_norm=((grad_fin%vars(pick,:))*grad_fin%vars(pick,:))
                 do while(lralt_temp.lt.(loop_max))
                     t=newb*(alpha**fibs(lralt_temp))
                     nanchk=.false.
-                    mmnmtb=(t*mmntm(pick))/mmntma(pick)
+                    ! mmnmtb=(t*mmntm(pick))/mmntma(pick)
                     ! Setup temporary zombie state
                     temp_zom=zstore
-                    temp_zom(pick)%phi(:)=zstore(pick)%phi(:)-(t*(grad_fin%vars(pick,:)))+&
-                    mmnmtb*(zstore(pick)%phi(:)-grad_fin%prev_mmntm(pick,:))!+gradient_norm
+                    mmntm=-1*(t*(grad_fin%vars(pick,:))+mmntma*grad_fin%prev_mmntm(pick,:))
+
+                    ! temp_zom(pick)%phi(:)=zstore(pick)%phi(:)-(t*(grad_fin%vars(pick,:)))+&
+                    ! mmntma*grad_fin%prev_mmntm(pick,:)!+gradient_norm
                     ! temp_zom(pick)%phi(:)=zstore(pick)%phi(:)-(t*(grad_fin%vars_hess(pick,:)))
-                  
+                    temp_zom(pick)%phi(:)=zstore(pick)%phi(:)+mmntm
                    
                     temp_zom(pick)%sin(:)=sin(temp_zom(pick)%phi(:))
                     temp_zom(pick)%cos(:)=cos(temp_zom(pick)%phi(:))
@@ -461,7 +469,7 @@ MODULE gradient_descent
                     ! Imaginary time propagation for back tracing
                     en%erg=0
                     en%t=0
-                    ! temp_dvecs(1)%d=dvecs(1)%d
+                  
                     call imgtime_prop(temp_dvecs,en,temp_ham,0,0)
                 
                   
@@ -518,13 +526,16 @@ MODULE gradient_descent
                         haml%diff_ovrlp(pick,:,:)=0
                         haml%diff_ovrlp(:,:,pick)=0
                         dvecs(1)%d_diff=0
-                        grad_fin%prev_mmntm(pick,:)=zstore(pick)%phi(:)
-                        mmntma(pick)=t
-                        mmntm(pick)=mmnmtb
+                        ! grad_fin%prev_mmntm(pick,:)=zstore(pick)%phi(:)
+                        grad_fin%prev_mmntm(pick,:)=mmntm
+                        ! mmntma(pick)=t
+                        ! mmntm(pick)=mmnmtb
                         write(6,"(a,i3,a,f21.16,a,f21.16,a,f21.16,a,i3,a,i3)") '       ', pick,'              ', &
                         grad_fin%prev_erg,'               ',fxtdk,'             ',t,'        ',acpt_cnt,'          ',rjct_cnt
                         grad_fin%prev_erg=fxtdk
                         ! call epoc_writer(grad_fin%prev_erg,epoc_cnt,pick,t,0)
+
+                        
                         Exit
                     end if
 
@@ -575,18 +586,19 @@ MODULE gradient_descent
             write(6,"(a,i0,a,f21.16,a,i0,a)") "Energy after epoc no. ",epoc_cnt,": ", &
                 grad_fin%prev_erg, ". ", acpt_cnt, " Zombie state(s) altered."
 
-            if(mmntmflg.eq.0)then 
-                mmntm=0.9
-                mmntmflg=1
-            end if 
+            ! if(mmntmflg.eq.0)then 
+            !     mmntm=0.9
+            !     mmntmflg=1
+            ! end if 
 
             if((rjct_cnt.gt.((ndet-1)*2)).or.(orb_cnt.le.0).or.(epoc_cnt.eq.2))then
                 call orbital_gd(zstore,grad_fin,elect,dvecs,temp_dvecs,en,haml,temp_ham,&
                 epoc_cnt,alphain,b,picker,1,an_cr,an2_cr2,rjct_cnt)
                 orb_cnt=150
-                mmntm=0
-                mmntma=1
-                mmntmflg=0
+                grad_fin%prev_mmntm=0
+                ! mmntm=0
+                ! mmntma=1
+                ! mmntmflg=0
             end if
         
             if(rjct_cnt.gt.(ndet-1)*2)then
