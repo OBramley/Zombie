@@ -51,14 +51,14 @@ MODULE imgtp
     
         do j=1,timesteps+1
             en%t(j)=db*(j-1)
-            !$omp parallel shared(en,j,haml,dvecs) private(k)
-            !$omp do
+            !!$omp parallel shared(en,j,haml,dvecs) private(k)
+            !!$omp do
             do k=1,states
                 en%erg(k,j)=ergcalc(haml%hjk,dvecs(k)%d)
                 call timestep(haml,dvecs(k),db,diff_state,orb)
             end do
-            !$omp end do
-            !$omp end parallel
+            !!$omp end do
+            !!$omp end parallel
             if(gramflg.eq."y")then
                 call gs(dvecs,haml,diff_state,orb)
             else

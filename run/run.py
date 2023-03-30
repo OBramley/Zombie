@@ -279,8 +279,8 @@ elif(inputs.run['language']=="fortran"):
         print(os.getcwd())
         if(inputs.run['cores']!=1):
             os.environ["OMP_NUM_THREADS"]=str(inputs.run['cores'])
-        subprocess.run(["./ZOMBIE.exe"])
-        # subprocess.run(["./d_check.exe"])
+            subprocess.run(["./ZOMBIE.exe"])
+    # subprocess.run(["./d_check.exe"])
         
         
 
