@@ -87,18 +87,18 @@ MODULE gradient_descent
             dvec(1)%d_diff(:,pick,:)=0
            
             call gradient_zs(haml,zstore,elect,an_cr,an2_cr2,pick,orb,grad_fin%grad_avlb(1:ndet,pick))
-        else if(grad_fin%grad_avlb(0,pick).eq.1)then
-            typ=1
-            dvec(1)%d_diff(:,pick,:)=0
-            call sub_matrices(haml,pick)
-            call imgtime_prop(dvec,en,haml,pick,0)
-        else if(grad_fin%grad_avlb(0,pick).eq.3)then
-            typ=1
-            dvec(1)%d_diff(:,pick,:)=0
-        else if(grad_fin%grad_avlb(0,pick).eq.4)then
-            typ=1
-            dvec(1)%d_diff(:,pick,:)=0
-            call imgtime_prop(dvec,en,haml,pick,0)
+        ! else if(grad_fin%grad_avlb(0,pick).eq.1)then
+        !     typ=1
+        !     dvec(1)%d_diff(:,pick,:)=0
+        !     call sub_matrices(haml,pick)
+        !     call imgtime_prop(dvec,en,haml,pick,0)
+        ! else if(grad_fin%grad_avlb(0,pick).eq.3)then
+        !     typ=1
+        !     dvec(1)%d_diff(:,pick,:)=0
+        ! else if(grad_fin%grad_avlb(0,pick).eq.4)then
+        !     typ=1
+        !     dvec(1)%d_diff(:,pick,:)=0
+        !     call imgtime_prop(dvec,en,haml,pick,0)
         end if
       
         
@@ -448,7 +448,7 @@ MODULE gradient_descent
                     ! mmnmtb=(t*mmntm(pick))/mmntma(pick)
                     ! Setup temporary zombie state
                     temp_zom=zstore
-                    mmntm=-1*(t*(grad_fin%vars(pick,:))+mmntma*grad_fin%prev_mmntm(pick,:))
+                    mmntm=-1*(t*(grad_fin%vars(pick,:))+(mmntma*grad_fin%prev_mmntm(pick,:)))
 
                     ! temp_zom(pick)%phi(:)=zstore(pick)%phi(:)-(t*(grad_fin%vars(pick,:)))+&
                     ! mmntma*grad_fin%prev_mmntm(pick,:)!+gradient_norm
@@ -590,7 +590,7 @@ MODULE gradient_descent
             !     mmntmflg=1
             ! end if 
 
-            if((rjct_cnt.gt.((ndet-1)*2-1)).or.(orb_cnt.le.0).or.(epoc_cnt.eq.2))then
+            if((rjct_cnt.gt.((ndet-1))).or.(orb_cnt.le.0))then!.or.(epoc_cnt.eq.2))then
                 call orbital_gd(zstore,grad_fin,elect,dvecs,temp_dvecs,en,haml,temp_ham,&
                 epoc_cnt,alphain,b,picker,1,an_cr,an2_cr2,rjct_cnt)
                 orb_cnt=150
@@ -600,16 +600,16 @@ MODULE gradient_descent
                 ! mmntmflg=0
             end if
         
-            if(rjct_cnt.gt.(ndet-1)*2)then
-                do k=2,ndet 
-                    if(grad_fin%grad_avlb(0,k).eq.2)then 
-                        grad_fin%grad_avlb(0,k)=3 
-                        grad_fin%vars(k,:)=0.0
-                        dvecs(1)%d_diff(:,k,:)=0
-                    end if 
-                end do
-                call grad_calc(haml,zstore,elect,an_cr,an2_cr2,next,dvecs,grad_fin,en,0)
-            end if
+            ! if(rjct_cnt.gt.(ndet-1)*2)then
+            !     do k=2,ndet 
+            !         if(grad_fin%grad_avlb(0,k).eq.2)then 
+            !             grad_fin%grad_avlb(0,k)=3 
+            !             grad_fin%vars(k,:)=0.0
+            !             dvecs(1)%d_diff(:,k,:)=0
+            !         end if 
+            !     end do
+            !     call grad_calc(haml,zstore,elect,an_cr,an2_cr2,next,dvecs,grad_fin,en,0)
+            ! end if
 
             
            
