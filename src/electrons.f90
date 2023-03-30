@@ -220,8 +220,10 @@ MODULE electrons
             end do
 
             allocate(an2_cr2%dcnt(0:max,norb))
+            an2_cr2%dcnt=0
             do j=1, norb 
                 an2_cr2%dcnt(0:max,j)=temp_diff(0:max,j)
+                ! print*,an2_cr2%dcnt(0:,j)
             end do
             ! an2_cr2%dcnt(0,:)=temp_diff(0,:)
             ! do j=1, norb 
@@ -463,14 +465,16 @@ MODULE electrons
          
             do j=1, norb 
                 an_cr%dcnt(0:max,j)=temp_diff(0:max,j)
+                ! print*,an_cr%dcnt(0:,j)
             end do 
+            
             deallocate(temp_diff,stat=ierr)
             if (ierr/=0) then
                 write(0,"(a,i0)") "Error in temp operators deallocation. ierr had value ", ierr
                 errorflag=1
                 return
             end if
-
+          
             call dealloc_oprts_2(temp_an_cr)
 
             ! allocate(temp_hess(0:e1,norb,norb),stat=ierr)
