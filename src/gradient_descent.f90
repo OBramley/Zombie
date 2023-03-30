@@ -535,7 +535,6 @@ MODULE gradient_descent
                         grad_fin%prev_erg=fxtdk
                         ! call epoc_writer(grad_fin%prev_erg,epoc_cnt,pick,t,0)
 
-                        
                         Exit
                     end if
 
@@ -591,7 +590,7 @@ MODULE gradient_descent
             !     mmntmflg=1
             ! end if 
 
-            if((rjct_cnt.gt.((ndet-1)*2)).or.(orb_cnt.le.0).or.(epoc_cnt.eq.2))then
+            if((rjct_cnt.gt.((ndet-1)*2-1)).or.(orb_cnt.le.0).or.(epoc_cnt.eq.2))then
                 call orbital_gd(zstore,grad_fin,elect,dvecs,temp_dvecs,en,haml,temp_ham,&
                 epoc_cnt,alphain,b,picker,1,an_cr,an2_cr2,rjct_cnt)
                 orb_cnt=150
