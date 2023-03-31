@@ -19,14 +19,14 @@ run={
     'language':'fortran',
 
     # What is the name of the run
-    'runfolder':'BH_stretchy',
+    'runfolder':'H2_20_nm',
 
     # Amount of time to request on HPC 
     'runtime': "48:00:00",
 
     'nodes':1,
 
-    'cores':6,
+    'cores':8,
 
     # Set the numpy random seed for Zombie state generation
     'seed':1,
@@ -106,22 +106,22 @@ run={
 #     'nel':6
 # }
 
-pyscf={
-     # The units the geometry of the molecule is set up in
-    'units':'Angstrom',
-     # The geometry of the molecule being investigated
-    'atoms': 'Li 0 0 0; Li 0 0 2.673',
-    # The type of basis used to generate the 1 and 2 electron integrals
-    'bs' : 'cc-pVDZ',
-    # How verbose do you want the PyScf output to be in your terminal?
-    'verbosity' : 4,
-    'symmetry' :True,
-    'spin':0,
-    'charge':0,
-    'symmetry_subgroup' : 0, #0 is code for A1 point group
-    'norb': 28,
-    'nel':6
-}
+# pyscf={
+#      # The units the geometry of the molecule is set up in
+#     'units':'Angstrom',
+#      # The geometry of the molecule being investigated
+#     'atoms': 'Li 0 0 0; Li 0 0 2.673',
+#     # The type of basis used to generate the 1 and 2 electron integrals
+#     'bs' : 'cc-pVDZ',
+#     # How verbose do you want the PyScf output to be in your terminal?
+#     'verbosity' : 4,
+#     'symmetry' :True,
+#     'spin':0,
+#     'charge':0,
+#     'symmetry_subgroup' : 0, #0 is code for A1 point group
+#     'norb': 28,
+#     'nel':6
+# }
 
 # pyscf={
 #      # The units the geometry of the molecule is set up in
@@ -158,22 +158,22 @@ pyscf={
 #     'nel':8
 # }
 
-pyscf={
-     # The units the geometry of the molecule is set up in
-    'units':'Angstrom',
-     # The geometry of the molecule being investigated
-    'atoms': 'B 0 0 0; H 0 0 4.0',
-    # The type of basis used to generate the 1 and 2 electron integrals
-    'bs' : '6-31g**',
-    # How verbose do you want the PyScf output to be in your terminal?
-    'verbosity' : 4,
-    'symmetry' :True,
-    'spin':0,
-    'charge':0,
-    'symmetry_subgroup' : 0, #0 is code for A1 point group
-    'norb': 19,
-    'nel':6
-}
+# pyscf={
+#      # The units the geometry of the molecule is set up in
+#     'units':'Angstrom',
+#      # The geometry of the molecule being investigated
+#     'atoms': 'B 0 0 0; H 0 0 4.0',
+#     # The type of basis used to generate the 1 and 2 electron integrals
+#     'bs' : '6-31g**',
+#     # How verbose do you want the PyScf output to be in your terminal?
+#     'verbosity' : 4,
+#     'symmetry' :True,
+#     'spin':0,
+#     'charge':0,
+#     'symmetry_subgroup' : 0, #0 is code for A1 point group
+#     'norb': 19,
+#     'nel':6
+# }
 
 # pyscf={
 #      # The units the geometry of the molecule is set up in
@@ -226,22 +226,22 @@ pyscf={
 #     'nel':14
 # }
 
-# pyscf={
-#      # The units the geometry of the molecule is set up in
-#     'units':'Angstrom',
-#      # The geometry of the molecule being investigated
-#     'atoms': 'H 0 0 0; H 0 0 0.741',
-#     # The type of basis used to generate the 1 and 2 electron integrals
-#     'bs' : 'cc-pVDZ',
-#     # How verbose do you want the PyScf output to be in your terminal?
-#     'verbosity' : 4,
-#     'symmetry' :True,
-#     'spin':0,
-#     'charge':0,
-#     'symmetry_subgroup' : 0, #0 is code for A1 point group
-#     'norb': 19,
-#     'nel':6
-# }
+pyscf={
+     # The units the geometry of the molecule is set up in
+    'units':'Angstrom',
+     # The geometry of the molecule being investigated
+    'atoms': 'H 0 0 0; H 0 0 0.741',
+    # The type of basis used to generate the 1 and 2 electron integrals
+    'bs' : 'cc-pVDZ',
+    # How verbose do you want the PyScf output to be in your terminal?
+    'verbosity' : 4,
+    'symmetry' :True,
+    'spin':0,
+    'charge':0,
+    'symmetry_subgroup' : 0, #0 is code for A1 point group
+    'norb': 10,
+    'nel':2
+}
 
 zombs={
     # Number of orbitals
@@ -255,7 +255,7 @@ zombs={
     'spin':0,
 
     # Number of Zombie states
-    'ndet':15,#pyscf['norb']*4, 
+    'ndet':20,#pyscf['norb']*4, 
 
     # Type of zombie states. Random (ran), Hartree Fock (HF) or biased (bb)
     'zomtyp':'bb',
