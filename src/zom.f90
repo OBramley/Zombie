@@ -1,7 +1,7 @@
 MODULE zom 
 
     use globvars
-
+    use infnan_mod
     contains
 
 
@@ -310,7 +310,12 @@ MODULE zom
                         ! if((val.gt.0.5*pirl))then
                         !     val=-1
                         ! end if
+                        
                     end do
+                    if((is_nan(val).eqv..true.))then
+                        call random_number(val)
+                        val=2*pirl*val 
+                    end if 
                     zstore(j)%phi(2*k-1)=val
                     val=-1
                     do while(val.lt.0)
@@ -318,6 +323,10 @@ MODULE zom
                         val=2*pirl*random_normal(mu(k),sig(k))
                     
                     end do
+                    if((is_nan(val).eqv..true.))then
+                        call random_number(val)
+                        val=2*pirl*val 
+                    end if 
                     zstore(j)%phi(2*k)=val
                     ! print*,val(2*k-1),val(2*k)
                     ! val(2*k-1)=2*pirl*mu(k)*exp(-ZBQLUAB(0,0.1))

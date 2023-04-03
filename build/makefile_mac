@@ -42,7 +42,7 @@ readpars.o:readpars.f90 vars.o
 electrons.o:electrons.f90 vars.o alarrays.o
 	 $(F90) $(FFLAGS) -c $<
 
-zom.o:zom.f90 vars.o
+zom.o:zom.f90 vars.o infnan.o
 	 $(F90) $(FFLAGS) -c $<
 	 
 ham.o:ham.f90 vars.o alarrays.o
