@@ -19,7 +19,7 @@ run={
     'language':'fortran',
 
     # What is the name of the run
-    'runfolder':'BH_test_nm_2',
+    'runfolder':'BH_test_nm_nod',
 
     # Amount of time to request on HPC 
     'runtime': "48:00:00",
