@@ -588,7 +588,10 @@ MODULE gradient_descent
                 ! call grad_calc(haml,zstore,elect,an_cr,an2_cr2,next,dvecs,grad_fin,en,0)
 
             end do
-            
+            if(modulo(epoc_cnt,100).eq.0)then 
+                grad_fin%prev_mmntm=0
+            end if 
+
             if((rjct_cnt.ge.((ndet-1)*2)).or.(orb_cnt.le.0))then
                 call orbital_gd(zstore,grad_fin,elect,dvecs,temp_dvecs,en,haml,temp_ham,&
                 epoc_cnt,alphain,b,picker,1,an_cr,an2_cr2,rjct_cnt,(1 + FLOOR(10*ZBQLU01(1))))
