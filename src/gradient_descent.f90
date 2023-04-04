@@ -124,7 +124,7 @@ MODULE gradient_descent
     end subroutine grad_calc
 
     subroutine orbital_gd(zstore,grad_fin,elect,dvecs,temp_dvecs,en,haml,temp_ham,&
-        epoc_cnt,alphain,b,picker,maxloop,an_cr,an2_cr2,rjct_cnt_in,zs_ab) 
+        epoc_cnt,alphain,b,picker,maxloop,an_cr,an2_cr2,rjct_cnt_in) 
 
         implicit none 
 
@@ -136,7 +136,7 @@ MODULE gradient_descent
         type(hamiltonian),intent(inout)::haml,temp_ham
         type(oprts),intent(in)::an_cr,an2_cr2
         integer,intent(inout)::epoc_cnt,rjct_cnt_in
-        integer,intent(in)::maxloop,zs_ab
+        integer,intent(in)::maxloop
         real(kind=8),intent(in)::b,alphain
         integer,dimension(:),intent(inout)::picker
         type(zombiest),dimension(:),allocatable::temp_zom
@@ -176,7 +176,7 @@ MODULE gradient_descent
                 Energy after Gradient Descent steps   | Orbitals altered '
             chng_trk=0
             acpt_cnt_2=0          
-            do j=1,zs_ab
+            do j=1,ndet-1
                
                 grad_fin%current_erg=grad_fin%prev_erg
                 pick=picker(j)
@@ -196,7 +196,7 @@ MODULE gradient_descent
                         t=b*(alphain**fibs(lralt_zs))
                         nanchk=.false.
                      
-                        mmntm=((grad_fin%vars(pick,pickorb))+(0.9*grad_fin%prev_mmntm(pick,pickorb)))
+                        mmntm=((grad_fin%vars(pick,pickorb))+(0.5*grad_fin%prev_mmntm(pick,pickorb)))
                         !(0.9*grad_fin%prev_mmntm(pick,pickerorb)))
                         ! Setup temporary zombie state
                         temp_zom=zstore
@@ -235,7 +235,19 @@ MODULE gradient_descent
                             grad_fin%grad_avlb(:,0)=0
                             grad_fin%vars=0
                             fxtdk=0.0
-                            EXIT
+                            call grad_calc(haml,zstore,elect,an_cr,an2_cr2,pick,dvecs,grad_fin,en,pickorb)
+                            temp_zom(pick)%sin(:)=sin(temp_zom(pick)%phi(:))
+                            temp_zom(pick)%cos(:)=cos(temp_zom(pick)%phi(:))
+                            temp_zom(pick)%val(1:)=temp_zom(pick)%sin
+                            temp_zom(pick)%val(norb+1:)=temp_zom(pick)%cos
+                            temp_ham%hjk=haml%hjk
+                            temp_ham%ovrlp=haml%ovrlp
+                            call he_full_row(temp_ham,temp_zom,elect,ndet,an_cr,an2_cr2,pick)
+                            fxtdk=en%erg(1,timesteps+1)
+                            if(is_nan(fxtdk).eqv..true.)then
+                                nanchk=.true.
+                                EXIT
+                            end if 
                         end if 
                         
                         ! if((is_nan(fxtdk).eqv..true.).or.(is_posinf(fxtdk).eqv..true.).or.(is_neginf(fxtdk).eqv..true.))then 
@@ -318,12 +330,13 @@ MODULE gradient_descent
                     acpt_cnt_2=acpt_cnt_2+1
                     chng_trk(acpt_cnt_2)=pick
                 else 
+                    grad_fin%prev_mmntm=0
                     write(6,"(a,i3,a,f21.16,a,f21.16,a,i0)")'   ',pick,'          ', &
                     grad_fin%current_erg,'             ',grad_fin%prev_erg,'          ',0
                     rjct_cnt2=rjct_cnt2+1
                 end if
 
-                if(j.eq.zs_ab)then
+                if(j.eq.(ndet-1))then
                     picker=scramble(ndet-1)
                     next=picker(1)
                     lralt_zs=0
@@ -431,9 +444,8 @@ MODULE gradient_descent
         acpt_cnt=0  !counts how many ZS have been changed
         loop_max=13
         mmntm=0
-        ! mmntma=1
-        mmntma=0.9
-        ! mmntmflg=0
+        mmntma=0.5
+      
 
        
         orb_cnt=100
@@ -441,7 +453,7 @@ MODULE gradient_descent
         call allocdv(temp_dvecs,1,ndet,norb)
     
 
-        do while(rjct_cnt.lt.(ndet-1)*20)
+        do while(rjct_cnt.lt.(ndet-1)*50)
             
             write(6,"(a)") '    Zombie state    |     Previous Energy     |    Energy after Gradient Descent step &
             &   |       Learning rate      | Acceptance count | Rejection count'
@@ -588,19 +600,21 @@ MODULE gradient_descent
                 ! call grad_calc(haml,zstore,elect,an_cr,an2_cr2,next,dvecs,grad_fin,en,0)
 
             end do
-            if(modulo(epoc_cnt,100).eq.0)then 
-                grad_fin%prev_mmntm=0
-            end if 
+            ! if(modulo(epoc_cnt,100).eq.0)then 
+            !     grad_fin%prev_mmntm=0
+            ! end if 
 
-            if((rjct_cnt.ge.((ndet-1)*2)).or.(orb_cnt.le.0))then
+            if((rjct_cnt.ge.((ndet-1)*2)))then
+                ! grad_fin%prev_mmntm=0
                 call orbital_gd(zstore,grad_fin,elect,dvecs,temp_dvecs,en,haml,temp_ham,&
-                epoc_cnt,alphain,b,picker,1,an_cr,an2_cr2,rjct_cnt,(1 + FLOOR(10*ZBQLU01(1))))
+                epoc_cnt,alphain,b,picker,1,an_cr,an2_cr2,rjct_cnt) !(4 + FLOOR(ndet*ZBQLU01(1))))
+               
                 orb_cnt=150
                 next=picker(1)
                
-            else if((epoc_cnt.eq.2))then
+            else if((epoc_cnt.eq.2).or.(orb_cnt.le.0))then
                 call orbital_gd(zstore,grad_fin,elect,dvecs,temp_dvecs,en,haml,temp_ham,&
-                epoc_cnt,alphain,b,picker,1,an_cr,an2_cr2,rjct_cnt,(ndet-1))
+                epoc_cnt,alphain,b,picker,1,an_cr,an2_cr2,rjct_cnt)
                 orb_cnt=150
                 next=picker(1)
             end if
@@ -625,7 +639,7 @@ MODULE gradient_descent
         if(ierr==0) deallocate(fibs,stat=ierr)
 
         call orbital_gd(zstore,grad_fin,elect,dvecs,temp_dvecs,en,haml,temp_ham,&
-        epoc_cnt,alphain,b,picker,epoc_max-epoc_cnt,an_cr,an2_cr2,rjct_cnt,(ndet-1))
+        epoc_cnt,alphain,b,picker,epoc_max-epoc_cnt,an_cr,an2_cr2,rjct_cnt)
 
      
        

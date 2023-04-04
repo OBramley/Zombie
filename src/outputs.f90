@@ -362,21 +362,22 @@ MODULE outputs
             return
         end if
         if(pass.eq.1)then
-            write(epoc,'(i0,",",e25.17e3,",",a,",",*(i0:", "))') step,erg,"   ",(chng_trk(k),k=1,ndet-1)
             do k=1,ndet-1
                 if(chng_trk(k).eq.0)then
                     EXIT 
                 end if 
                 write(epoc,'(a,",",e25.17e3,",",e25.17e3,",",i0)') "   ",erg_dim(k),lr(k),chng_trk(k)
             end do
+            write(epoc,'(i0,",",e25.17e3,",",a,",",*(i0:", "))') step,erg,"   ",(chng_trk(k),k=1,ndet-1)
         else
-            write(epoc,'(i0,",",e25.17e3,",",a,",",*(i0:", "))') step,erg,"   ",(chng_trk(k),k=1,ndet-1)
+           
             do k=1,ndet-1
                 if(chng_trk(k).eq.0)then
                     EXIT 
                 end if 
                 write(epoc,'(a,",",e25.17e3,",",e25.17e3,",",i0)') "   ",erg_dim(k),lr(k),chng_trk(k)
             end do
+            write(epoc,'(i0,",",e25.17e3,",",a,",",*(i0:", "))') step,erg,"   ",(chng_trk(k),k=1,ndet-1)
             ! write(epoc,'(i0,",",e25.17e3,",",e25.17e3,",",*(i0:", "))') step,erg,lr,(chng_trk(k),k=1,ndet-1)
         end if
         close(epoc)
