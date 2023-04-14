@@ -330,6 +330,12 @@ MODULE gradient_descent
             else
                 if(rjct_cnt_in.eq.0)then
                     grad_fin%grad_avlb=0
+                else 
+                    grad_fin%grad_avlb=0
+                    haml%diff_hjk=0
+                    haml%diff_ovrlp=0
+                    dvecs(1)%d_diff=0
+
                 end if
                 exit
             end if
