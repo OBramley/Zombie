@@ -7,7 +7,7 @@ MODULE ham
 
     !Level 0 Hamiltonian Routine
     ! Subroutine that controls and calcualtes all of the hamiltonian variables 
-    subroutine hamgen(haml,zstore,elecs,size,an_cr,an2_cr2,verb,diff_state)
+    subroutine hamgen(haml,zstore,elecs,size,an_cr,an2_cr2,verb)
 
         implicit none 
 
@@ -15,8 +15,8 @@ MODULE ham
         type(zombiest),dimension(:),intent(in)::zstore
         type(elecintrgl),intent(in)::elecs
         type(oprts),intent(in)::an_cr,an2_cr2
-        integer,intent(in)::size,verb,diff_state
-        integer, allocatable,dimension(:)::IPIV1,cmplt
+        integer,intent(in)::size,verb
+        integer, allocatable,dimension(:)::IPIV1
         real(kind=8),allocatable,dimension(:)::WORK1
         integer::ierr
 
@@ -55,22 +55,6 @@ MODULE ham
         deallocate(WORK1,IPIV1)
 
         call DGEMM("N","N",size,size,size,1.d0,haml%inv,size,haml%hjk,size,0.d0,haml%kinvh,size)
-
-    
-        if(GDflg.eq.'y')then
-            allocate(cmplt(ndet),stat=ierr)
-            if (ierr/=0) then
-                write(0,"(a,i0)") "Error in  cmplt vector allocation . ierr had value ", ierr
-                errorflag=1
-            end if 
-            cmplt=0
-            call gradient_zs(haml,zstore,elecs,an_cr,an2_cr2,diff_state,0,cmplt)
-            deallocate(cmplt,stat=ierr)
-            if (ierr/=0) then
-                write(0,"(a,i0)") "Error in  cmplt vector deallocation . ierr had value ", ierr
-                errorflag=1
-            end if 
-        end if
 
         return 
 
@@ -161,6 +145,8 @@ MODULE ham
         integer,intent(in)::start
         real(kind=8)::h1etot,h2etot
         integer::j
+
+        if (errorflag .ne. 0) return
         
         !$omp parallel do private(h1etot,h2etot,j) shared(zstore,hcol,an_cr,an2_cr2,elecs,z1d,start)
         do j=1,(ndet-(start-1))
@@ -186,6 +172,7 @@ MODULE ham
         real(kind=8),dimension(ndet)::ovrlp_column
         integer::j
         
+        if (errorflag .ne. 0) return
        
         ovrlp_column=1.0
         !!$omp parallel do & 
@@ -219,7 +206,8 @@ MODULE ham
         real(kind=8)::ov
         integer::j,k
 
-        
+        if (errorflag .ne. 0) return
+
         haml_vals=0.0
         !!$omp parallel do reduction(+:haml_vals) private(j,k,ov) shared(ops,z1d,z2d,el)  
         !!$omp do simd 
@@ -245,6 +233,8 @@ MODULE ham
         implicit none
         real(kind=8),dimension(0:)::z1d,z2d
         integer::j
+
+        if (errorflag .ne. 0) return
     
         overlap_1=1.0
         !!$omp parallel do simd reduction(*:overlap_1)
@@ -276,6 +266,8 @@ MODULE ham
         integer,dimension(ndet)::cmplt_2
         integer::j,loop_num
         
+        if (errorflag .ne. 0) return
+
         loop_num=0
         do j=1,ndet
             if(cmplt(j).eq.0)then
@@ -284,6 +276,8 @@ MODULE ham
             end if 
         end do 
 
+        if (loop_num.eq.0) return
+        
         if(orb.eq.0)then
             call ovrlp_make_grad(zstore,state,haml%diff_ovrlp(state,:,:),cmplt_2,loop_num)
             haml%diff_hjk(state,:,:)=haml%diff_ovrlp(state,:,:)*elecs%hnuc
@@ -319,7 +313,7 @@ MODULE ham
         integer,dimension(:),intent(in)::cmplt
         integer::j 
 
-       
+        if (errorflag .ne. 0) return
        
         do j=1, norb
             z1d(0:2*norb)=zstore(state)%val(0:2*norb)
@@ -344,6 +338,7 @@ MODULE ham
         integer,dimension(:),intent(in)::cmplt
         
 
+        if (errorflag .ne. 0) return
 
         z1d(0:2*norb)=zstore(state)%val(0:2*norb)
         z1d(orb)=zstore(state)%cos(orb)
@@ -441,6 +436,8 @@ MODULE ham
         real(kind=8),allocatable,dimension(:,:,:)::temp2 
         integer::ierr,k,l,j,p!,orbsrt,orblim
 
+        if (errorflag .ne. 0) return
+
         ierr=0
 
         ! if(orb.eq.0)then
@@ -528,6 +525,8 @@ MODULE ham
         real(kind=8),dimension(ndet)::ovrlp_column_grad
         integer,dimension(:),intent(in)::cmplt
         integer::k,j
+
+        if (errorflag .ne. 0) return
         
         ovrlp_column_grad=0.0
         !!$omp parallel do schedule(dynamic) &
@@ -563,7 +562,7 @@ MODULE ham
         integer::j,k
         
         
-       
+        if (errorflag .ne. 0) return
         !!$omp parallel do private(h1etot,h2etot,j) shared(hcol,zstore,an_cr,an2_cr2,elecs,z1d,state,orb,cmplt)
         do k=1,loops
             j=cmplt(k)
@@ -603,7 +602,8 @@ MODULE ham
         real(kind=8)::h1etot,h2etot
         integer::j,k
         
-    
+        if (errorflag .ne. 0) return
+
         !$omp parallel do private(h1etot,h2etot,j) shared(hcol,zstore,an_cr,an2_cr2,elecs,z1d,state,orb,cmplt)
         do k=1,loops
             j=cmplt(k)
@@ -644,6 +644,7 @@ MODULE ham
         real(kind=8)::ov
         integer::j,k,len
 
+        if (errorflag .ne. 0) return
    
         len=int(el_num(0))
      

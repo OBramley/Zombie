@@ -121,7 +121,7 @@ program MainZombie
                 ! Maybe specificy conditons but maybe not needed?!
             end if
             write(6,"(a)") "To hamiltonian gen"
-            call hamgen(haml,zstore,elect,ndet,an_cr,an2_cr2,1,diff_state)
+            call hamgen(haml,zstore,elect,ndet,an_cr,an2_cr2,1)
             call matrixwriter(haml%hjk,ndet,"data/ham.csv")
             call matrixwriter(haml%ovrlp,ndet,"data/ovlp.csv")
             write(6,"(a)") "Hamiltonian successfully generated"
@@ -161,12 +161,7 @@ program MainZombie
                 ! call epoc_writer(gradients%prev_erg,0,chng_trk,0.0d0,0)
                 call epoc_writer(gradients%prev_erg,0,0,0.0d0,0)
             end if
-          
-          
-            call final_grad(dvecs(1),haml,gradients,diff_state,0,0)
-            gradients%grad_avlb(diff_state,0:ndet)=1
-          
-            
+           
             call zombie_alter(zstore,gradients,haml,elect,en,dvecs,an_cr,an2_cr2)
             
             GDflg='n'

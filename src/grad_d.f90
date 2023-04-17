@@ -274,14 +274,14 @@ Module grad_d
             
     end subroutine timestep_diff_d_cmpnt
 
-    subroutine final_grad(dvec,haml,grad_fin,diff_state,orb,typ)
+    subroutine final_grad(dvec,haml,grad_fin,diff_state,orb)
 
         implicit none
 
         type(dvector),intent(in)::dvec
         type(hamiltonian),intent(in)::haml
         type(grad),intent(inout)::grad_fin
-        integer,intent(in)::diff_state,orb,typ
+        integer,intent(in)::diff_state,orb
         integer::j,p,orblim,orbsrt!,ierr,k
         real(kind=8),dimension(ndet)::dh_temp!,dh_temp_hess
         real(kind=8),dimension(ndet)::dham
