@@ -438,19 +438,24 @@ MODULE gradient_descent
                     fxtdk=en%erg(1,timesteps+1)
                    
                     if((is_nan(fxtdk).eqv..true.))then 
-                        call emergency(haml,dvecs,temp_dvecs,en)
-                        call grad_calc(haml,zstore,elect,an_cr,an2_cr2,pick,dvecs,grad_fin,en,0)
-                        temp_zom(pick)%sin(:)=sin(temp_zom(pick)%phi(:))
-                        temp_zom(pick)%cos(:)=cos(temp_zom(pick)%phi(:))
-                        temp_zom(pick)%val(1:)=temp_zom(pick)%sin
-                        temp_zom(pick)%val(norb+1:)=temp_zom(pick)%cos
-                        temp_ham%hjk=haml%hjk
-                        temp_ham%ovrlp=haml%ovrlp
-                        call he_full_row(temp_ham,temp_zom,elect,ndet,an_cr,an2_cr2,pick)
-                        fxtdk=en%erg(1,timesteps+1)
-                        if(is_nan(fxtdk).eqv..true.)then
-                            EXIT
-                        end if 
+                        dvecs(1)%d_diff=0.0d0
+                        grad_fin%grad_avlb(:,0)=0
+                        grad_fin%vars=0
+                        fxtdk=0.0
+                        EXIT
+                        ! call emergency(haml,dvecs,temp_dvecs,en)
+                        ! call grad_calc(haml,zstore,elect,an_cr,an2_cr2,pick,dvecs,grad_fin,en,0)
+                        ! temp_zom(pick)%sin(:)=sin(temp_zom(pick)%phi(:))
+                        ! temp_zom(pick)%cos(:)=cos(temp_zom(pick)%phi(:))
+                        ! temp_zom(pick)%val(1:)=temp_zom(pick)%sin
+                        ! temp_zom(pick)%val(norb+1:)=temp_zom(pick)%cos
+                        ! temp_ham%hjk=haml%hjk
+                        ! temp_ham%ovrlp=haml%ovrlp
+                        ! call he_full_row(temp_ham,temp_zom,elect,ndet,an_cr,an2_cr2,pick)
+                        ! fxtdk=en%erg(1,timesteps+1)
+                        ! if(is_nan(fxtdk).eqv..true.)then
+                        !     EXIT
+                        ! end if 
                     end if 
 
                     if((fxtdk.lt.grad_fin%prev_erg))then
@@ -480,10 +485,12 @@ MODULE gradient_descent
                         grad_fin%prev_erg,'               ',fxtdk,'             ',t,'        ',acpt_cnt,'          ',rjct_cnt
                         grad_fin%prev_erg=fxtdk
                         Exit
-                    end if     
+
+                    end if 
+
                 end do
 
-                if(lralt_temp.ge.loop_max)then
+                if(rjct_cnt.ne.0)then
                     rjct_cnt=rjct_cnt+1
                     write(6,"(a,i3,a,f21.16,a,f21.16,a,f21.16,a,i3,a,i3)") '       ', pick,'              ', &
                 grad_fin%prev_erg,'               ',fxtdk,'             ',0.0,'        ',acpt_cnt,'          ',rjct_cnt
@@ -525,7 +532,7 @@ MODULE gradient_descent
                 call orbital_gd(zstore,grad_fin,elect,dvecs,temp_dvecs,en,haml,temp_ham,&
                 epoc_cnt,alphain,b,picker,1,an_cr,an2_cr2,rjct_cnt)
                 orb_cnt=150
-            else if((epoc_cnt.eq.2).or.(orb_cnt.le.0))then
+            else if((orb_cnt.le.0))then !(epoc_cnt.eq.2).or.
                 call orbital_gd(zstore,grad_fin,elect,dvecs,temp_dvecs,en,haml,temp_ham,&
                 epoc_cnt,alphain,b,picker,1,an_cr,an2_cr2,rjct_cnt)
                 orb_cnt=150

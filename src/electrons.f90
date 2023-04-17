@@ -94,14 +94,18 @@ MODULE electrons
         type(oprts),intent(inout)::an2_cr2
         integer::e2
         type(oprts_2)::temp_an2_cr2
-        real(kind=8),dimension(norb*norb*norb*norb,5)::read_in
-        integer::ierr,l,k,an1,an2,cr1,cr2,j,max
+        real(kind=8),dimension(:,:),allocatable::read_in
+        integer::ierr,l,k,an1,an2,cr1,cr2,j,max,len
         integer,allocatable,dimension(:,:)::temp_diff
         ! integer,allocatable,dimension(:,:,:)::temp_hess
-
+        
+    
+     
         
         ierr=0
-        
+        len=norb*norb*norb*norb
+        allocate(read_in(len,5),stat=ierr)
+       
         open(unit=131, file='integrals/h2e.csv',status='old',iostat=ierr)
         if (ierr.ne.0) then
             write(0,"(a)") 'Error in opening hnuc.csv file'
@@ -129,7 +133,7 @@ MODULE electrons
         elecs%h2ei=read_in(2:,1)
        
         call alloc_oprts(an2_cr2,e2)
-        
+       
     
         do l=1,e2
             cr1=int(read_in(l+1,2)) 
@@ -161,7 +165,7 @@ MODULE electrons
         end do
 
         
-       
+      
         if(GDflg.eq.'y')then
             allocate(temp_diff(0:e2,norb),stat=ierr)
             if (ierr/=0) then
@@ -230,6 +234,7 @@ MODULE electrons
             !     an2_cr2%dcnt(1:,j)=temp_diff(1:max,j)
             ! end do 
             deallocate(temp_diff,stat=ierr)
+            deallocate(read_in,stat=ierr)
             if (ierr/=0) then
                 write(0,"(a,i0)") "Error in temp operators deallocation. ierr had value ", ierr
                 errorflag=1
@@ -362,12 +367,15 @@ MODULE electrons
         type(oprts),intent(inout)::an_cr
         type(oprts_2)::temp_an_cr
         integer::e1
-        real(kind=8),dimension(norb*norb,3)::read_in
-        integer::ierr,l,k,an,cr,j,max
+        real(kind=8),dimension(:,:),allocatable::read_in
+        integer::ierr,l,k,an,cr,j,max,len
         integer,allocatable,dimension(:,:)::temp_diff
         ! integer,allocatable,dimension(:,:,:)::temp_hess
         
         ierr=0
+
+        len=norb*norb
+        allocate(read_in(len,3),stat=ierr)
     
         open(unit=129, file='integrals/h1e.csv',status='old',iostat=ierr)
         if (ierr.ne.0) then
@@ -469,6 +477,7 @@ MODULE electrons
             end do 
             
             deallocate(temp_diff,stat=ierr)
+            deallocate(read_in,stat=ierr)
             if (ierr/=0) then
                 write(0,"(a,i0)") "Error in temp operators deallocation. ierr had value ", ierr
                 errorflag=1
