@@ -7,7 +7,7 @@ MODULE ham
 
     !Level 0 Hamiltonian Routine
     ! Subroutine that controls and calcualtes all of the hamiltonian variables 
-    subroutine hamgen(haml,zstore,elecs,size,an_cr,an2_cr2,verb,diff_state)
+    subroutine hamgen(haml,zstore,elecs,size,an_cr,an2_cr2,verb)
 
         implicit none 
 
@@ -15,8 +15,8 @@ MODULE ham
         type(zombiest),dimension(:),intent(in)::zstore
         type(elecintrgl),intent(in)::elecs
         type(oprts),intent(in)::an_cr,an2_cr2
-        integer,intent(in)::size,verb,diff_state
-        integer, allocatable,dimension(:)::IPIV1,cmplt
+        integer,intent(in)::size,verb
+        integer, allocatable,dimension(:)::IPIV1
         real(kind=8),allocatable,dimension(:)::WORK1
         integer::ierr
 
@@ -56,29 +56,13 @@ MODULE ham
 
         call DGEMM("N","N",size,size,size,1.d0,haml%inv,size,haml%hjk,size,0.d0,haml%kinvh,size)
 
-    
-        if(GDflg.eq.'y')then
-            allocate(cmplt(ndet),stat=ierr)
-            if (ierr/=0) then
-                write(0,"(a,i0)") "Error in  cmplt vector allocation . ierr had value ", ierr
-                errorflag=1
-            end if 
-            cmplt=0
-            call gradient_zs(haml,zstore,elecs,an_cr,an2_cr2,diff_state,0,cmplt)
-            deallocate(cmplt,stat=ierr)
-            if (ierr/=0) then
-                write(0,"(a,i0)") "Error in  cmplt vector deallocation . ierr had value ", ierr
-                errorflag=1
-            end if 
-        end if
-
         return 
 
     end subroutine hamgen
 
     !##############################################################################################################################
     
-
+    
     !Level 1 Routines to make the Hamiltonian and Overlap matrices
 
     ! hamliltonian calcualtion - calcualtes the whole hamliltonian 
@@ -161,6 +145,8 @@ MODULE ham
         integer,intent(in)::start
         real(kind=8)::h1etot,h2etot
         integer::j
+
+        if (errorflag .ne. 0) return
         
         !$omp parallel do private(h1etot,h2etot,j) shared(zstore,hcol,an_cr,an2_cr2,elecs,z1d,start)
         do j=1,(ndet-(start-1))
@@ -186,6 +172,7 @@ MODULE ham
         real(kind=8),dimension(ndet)::ovrlp_column
         integer::j
         
+        if (errorflag .ne. 0) return
        
         ovrlp_column=1.0
         !!$omp parallel do & 
@@ -219,7 +206,8 @@ MODULE ham
         real(kind=8)::ov
         integer::j,k
 
-        
+        if (errorflag .ne. 0) return
+
         haml_vals=0.0
         !!$omp parallel do reduction(+:haml_vals) private(j,k,ov) shared(ops,z1d,z2d,el)  
         !!$omp do simd 
@@ -245,6 +233,8 @@ MODULE ham
         implicit none
         real(kind=8),dimension(0:)::z1d,z2d
         integer::j
+
+        if (errorflag .ne. 0) return
     
         overlap_1=1.0
         !!$omp parallel do simd reduction(*:overlap_1)
@@ -276,6 +266,8 @@ MODULE ham
         integer,dimension(ndet)::cmplt_2
         integer::j,loop_num
         
+        if (errorflag .ne. 0) return
+
         loop_num=0
         do j=1,ndet
             if(cmplt(j).eq.0)then
@@ -284,15 +276,19 @@ MODULE ham
             end if 
         end do 
 
+        if (loop_num.eq.0) return
+
         if(orb.eq.0)then
-            call ovrlp_make_grad(zstore,state,haml%diff_ovrlp(state,:,:),cmplt_2,loop_num)
-            haml%diff_hjk(state,:,:)=haml%diff_ovrlp(state,:,:)*elecs%hnuc
-            call haml_grad(haml%diff_hjk(state,:,:),zstore,elecs,an_cr,an2_cr2,state,cmplt_2,loop_num)
-            
+            ! call ovrlp_make_grad(zstore,state,haml%diff_ovrlp(state,:,:),cmplt_2,loop_num)
+            ! haml%diff_hjk(state,:,:)=haml%diff_ovrlp(state,:,:)*elecs%hnuc
+            ! call haml_grad(haml%diff_hjk(state,:,:),zstore,elecs,an_cr,an2_cr2,state,cmplt_2,loop_num)
+            call haml_ovrlp_grad_comb(haml,zstore,elecs,an_cr,an2_cr2,state,loop_num,cmplt_2)
         else
-            call ovrlp_make_grad_one_elec(zstore,state,haml%diff_ovrlp(state,:,:),orb,cmplt_2,loop_num)
-            haml%diff_hjk(state,:,:)=haml%diff_ovrlp(state,:,:)*elecs%hnuc
-            call haml_grad_one_elec(haml%diff_hjk(state,:,:),zstore,elecs,an_cr,an2_cr2,state,orb,cmplt_2,loop_num) 
+            call haml_ovrlp_grad_comb_one_elec(haml,zstore,elecs,an_cr,an2_cr2,state,orb,loop_num,cmplt_2)
+
+            ! call ovrlp_make_grad_one_elec(zstore,state,haml%diff_ovrlp(state,:,:),orb,cmplt_2,loop_num)
+            ! haml%diff_hjk(state,:,:)=haml%diff_ovrlp(state,:,:)*elecs%hnuc
+            ! call haml_grad_one_elec(haml%diff_hjk(state,:,:),zstore,elecs,an_cr,an2_cr2,state,orb,cmplt_2,loop_num) 
         end if 
        
         ! call ovrlp_make_hessian(zstore,state,haml%hess_ovrlp(state,:,:,:),cmplt)
@@ -306,132 +302,90 @@ MODULE ham
 
     !##############################################################################################################################
 
-    !Level 2 routines to calcualte overlap and hamiltonian gradient and hessian matrices
 
-    ! subroutine that finds the gradient of the overlap w.r.t a specified state
-    subroutine ovrlp_make_grad(zstore,state,ovrlp_grad,cmplt,loops)
-
-        implicit none 
-        type(zombiest),dimension(:),intent(in)::zstore
-        real(kind=8),dimension(:,:),intent(inout)::ovrlp_grad
-        integer,intent(in)::state,loops
-        real(kind=8),dimension(0:2*norb)::z1d
-        integer,dimension(:),intent(in)::cmplt
-        integer::j 
-
-       
-       
-        do j=1, norb
-            z1d(0:2*norb)=zstore(state)%val(0:2*norb)
-            z1d(j)=zstore(state)%cos(j)
-            z1d(j+norb)=(-1)*zstore(state)%sin(j)
-            ovrlp_grad(j,:)=ovrlp_column_grad(z1d,zstore,state,cmplt,loops)
-        end do
-       
-
-        return 
-
-    end subroutine ovrlp_make_grad
-
-     ! subroutine that finds the gradient of the overlap w.r.t a specified state
-    subroutine ovrlp_make_grad_one_elec(zstore,state,ovrlp_grad,orb,cmplt,loops)
-
-        implicit none 
-        type(zombiest),dimension(:),intent(in)::zstore
-        real(kind=8),dimension(:,:),intent(inout)::ovrlp_grad
-        integer,intent(in)::state,orb,loops
-        real(kind=8),dimension(0:2*norb)::z1d
-        integer,dimension(:),intent(in)::cmplt
-        
-
-
-        z1d(0:2*norb)=zstore(state)%val(0:2*norb)
-        z1d(orb)=zstore(state)%cos(orb)
-        z1d(orb+norb)=(-1)*zstore(state)%sin(orb)
-        ovrlp_grad(orb,:)=ovrlp_column_grad(z1d,zstore,state,cmplt,loops)
-      
-    
-        return 
-
-    end subroutine ovrlp_make_grad_one_elec
-
-    !  ! Hamiltonian calcualtion - calcualtes the gradient of ther hamliltonian w.r.t one zombie state 
-    subroutine haml_grad(haml_diff,zstore,elecs,an_cr,an2_cr2,state,cmplt,loops) 
+    subroutine haml_ovrlp_grad_comb(haml,zstore,elecs,an_cr,an2_cr2,state,loops,cmplt)
 
         implicit none
-        
-        real(kind=8),dimension(:,:),intent(inout)::haml_diff 
+
+        type(hamiltonian), intent(inout)::haml 
         type(zombiest),dimension(:),intent(in)::zstore
         type(elecintrgl),intent(in)::elecs
         type(oprts),intent(in)::an_cr,an2_cr2
         integer,intent(in)::state,loops
         integer,dimension(:),intent(in)::cmplt
+        real(kind=8)::h1etot,h2etot
         real(kind=8),dimension(0:2*norb)::z1d
-  
-        integer::j,ierr
-    
-        if (errorflag .ne. 0) return 
-        ierr=0
+        integer::j,k
 
-        if(loops.le.2)then
-            !$omp parallel do schedule(dynamic) &
-            !$omp & private(j,z1d) &
-            !$omp & shared(elecs,zstore,an_cr,an2_cr2,haml_diff,cmplt,state)
-            do j=1, norb
+        if (errorflag .ne. 0) return
+
+        !$omp parallel do collapse(2) private(j,k,h1etot,h2etot,z1d) shared(cmplt,zstore,haml,state,an_cr,an2_cr2,elecs)
+        do j=1,norb 
+            do k=1,loops
                 z1d(0:2*norb)=zstore(state)%val(0:2*norb)
                 z1d(j)=zstore(state)%cos(j)
                 z1d(j+norb)=zstore(state)%sin(j)*(-1)
-                call haml_grad_rc(haml_diff(j,:),z1d,zstore,an_cr,an2_cr2,elecs,state,j,cmplt,loops)
-            end do
-            !$omp end parallel do
-        else 
-            !$omp parallel do schedule(dynamic) num_threads(6)&
-            !$omp & private(j,z1d) &
-            !$omp & shared(elecs,zstore,an_cr,an2_cr2,haml_diff,cmplt,state)
-            do j=1, norb
-                z1d(0:2*norb)=zstore(state)%val(0:2*norb)
-                z1d(j)=zstore(state)%cos(j)
-                z1d(j+norb)=zstore(state)%sin(j)*(-1)
-                call haml_grad_rc_p(haml_diff(j,:),z1d,zstore,an_cr,an2_cr2,elecs,state,j,cmplt,loops)
-            end do
-            !$omp end parallel do
-        end if 
+                if(cmplt(k).ne.state)then
+                    haml%diff_ovrlp(state,j,cmplt(k))=overlap_1(z1d,zstore(cmplt(k))%val)
+                    h1etot = haml_vals(z1d,zstore(cmplt(k))%val,an_cr%ham,elecs%h1ei,elecs%h1_num)
+                    h2etot = haml_vals(z1d,zstore(cmplt(k))%val,an2_cr2%ham,elecs%h2ei,elecs%h2_num)
+                    haml%diff_hjk(state,j,cmplt(k))=h1etot+(0.5*h2etot)+(haml%diff_ovrlp(state,j,cmplt(k))*elecs%hnuc)
+                else 
+                    haml%diff_ovrlp(state,j,state)=0.0 
+                    h1etot = haml_vals_mod(zstore(state)%val,zstore(state)%val,an_cr%diff(j),elecs%h1ei,an_cr%dcnt(0:,j))
+                    h2etot = haml_vals_mod(zstore(state)%val,zstore(state)%val,an2_cr2%diff(j),elecs%h2ei,an2_cr2%dcnt(0:,j))
+                    haml%diff_hjk(state,j,state)=h1etot+(0.5*h2etot)
+                end if 
+            end do 
+        end do 
+        !$omp end parallel do  
+        
+        return 
 
-        return
 
-    end subroutine haml_grad
+    end subroutine haml_ovrlp_grad_comb
 
-    subroutine haml_grad_one_elec(haml_diff,zstore,elecs,an_cr,an2_cr2,state,orb,cmplt,loops) 
+    subroutine haml_ovrlp_grad_comb_one_elec(haml,zstore,elecs,an_cr,an2_cr2,state,orb,loops,cmplt)
 
         implicit none
-        
-        real(kind=8),dimension(:,:),intent(inout)::haml_diff 
+
+        type(hamiltonian), intent(inout)::haml 
         type(zombiest),dimension(:),intent(in)::zstore
         type(elecintrgl),intent(in)::elecs
         type(oprts),intent(in)::an_cr,an2_cr2
-        integer,intent(in)::state,orb,loops
+        integer,intent(in)::state,loops,orb
         integer,dimension(:),intent(in)::cmplt
+        real(kind=8)::h1etot,h2etot
         real(kind=8),dimension(0:2*norb)::z1d
-        
-   
-    
-        if (errorflag .ne. 0) return 
-        
+        integer::k
+
+        if (errorflag .ne. 0) return
 
         z1d(0:2*norb)=zstore(state)%val(0:2*norb)
         z1d(orb)=zstore(state)%cos(orb)
         z1d(orb+norb)=zstore(state)%sin(orb)*(-1)
-        if(loops.le.2)then
-            call haml_grad_rc(haml_diff(orb,:),z1d,zstore,an_cr,an2_cr2,elecs,state,orb,cmplt,loops)
-        else
-            call haml_grad_rc_p(haml_diff(orb,:),z1d,zstore,an_cr,an2_cr2,elecs,state,orb,cmplt,loops)
-        end if 
+        !$omp parallel do private(k,h1etot,h2etot) shared(cmplt,zstore,haml,state,an_cr,an2_cr2,elecs,orb,z1d)
+        do k=1,loops
+            if(cmplt(k).ne.state)then 
+                haml%diff_ovrlp(state,orb,cmplt(k))=overlap_1(z1d,zstore(cmplt(k))%val)
+            
+                h1etot = haml_vals(z1d,zstore(cmplt(k))%val,an_cr%ham,elecs%h1ei,elecs%h1_num)
+                h2etot = haml_vals(z1d,zstore(cmplt(k))%val,an2_cr2%ham,elecs%h2ei,elecs%h2_num)
+                haml%diff_hjk(state,orb,cmplt(k))=h1etot+(0.5*h2etot)+(haml%diff_ovrlp(state,orb,cmplt(k))*elecs%hnuc)
+                
+            else 
+                haml%diff_ovrlp(state,orb,state)=0.0 
+                h1etot = haml_vals_mod(zstore(state)%val,zstore(state)%val,an_cr%diff(orb),elecs%h1ei,an_cr%dcnt(0:,orb))
+                h2etot = haml_vals_mod(zstore(state)%val,zstore(state)%val,an2_cr2%diff(orb),elecs%h2ei,an2_cr2%dcnt(0:,orb))
+                haml%diff_hjk(state,orb,state)=h1etot+(0.5*h2etot)
+            end if 
+        end do 
+        !$omp end parallel do 
 
-      
-      
-        return
+        return 
 
-    end subroutine haml_grad_one_elec
+
+    end subroutine haml_ovrlp_grad_comb_one_elec
 
     subroutine sub_matrices(haml,state)
 
@@ -440,6 +394,8 @@ MODULE ham
         integer,intent(in)::state!orb
         real(kind=8),allocatable,dimension(:,:,:)::temp2 
         integer::ierr,k,l,j,p!,orbsrt,orblim
+
+        if (errorflag .ne. 0) return
 
         ierr=0
 
@@ -514,121 +470,7 @@ MODULE ham
 
     !##############################################################################################################################
 
-    !Level 3 routines to calcualte columns of gradient and hessian matrices
-
-    ! subroutine that finds the gradient w.r.t to a specfic zombie state element 
-    ! for an entire column 
-    function ovrlp_column_grad(z1d,zstore,state,cmplt,loops)
-
-        implicit none
-        
-        type(zombiest),dimension(:),intent(in)::zstore
-        real(kind=8),dimension(0:),intent(in)::z1d
-        integer,intent(in)::state,loops
-        real(kind=8),dimension(ndet)::ovrlp_column_grad
-        integer,dimension(:),intent(in)::cmplt
-        integer::k,j
-        
-        ovrlp_column_grad=0.0
-        !!$omp parallel do schedule(dynamic) &
-        !!$omp & shared(z1d,zstore,ovrlp_column_grad,state) &
-        !!$omp & private(j)
-        do k=1,loops
-            j=cmplt(k)
-            if(j.ne.state)then 
-                ovrlp_column_grad(j)=overlap_1(z1d,zstore(j)%val)
-            else
-                ovrlp_column_grad(j)=0.0
-            end if
-        end do 
-        !!$omp end parallel do
-        return
-
-    end function ovrlp_column_grad
-
-
-    ! Calcualates a column of a hamliltonian Start specifies the row the column
-    ! is started to be calcualted 
-    subroutine haml_grad_rc(hcol,z1d,zstore,an_cr,an2_cr2,elecs,state,orb,cmplt,loops)
-
-        implicit none
-        real(kind=8),dimension(:),intent(inout)::hcol 
-        type(zombiest),dimension(:),intent(in)::zstore
-        real(kind=8),dimension(0:),intent(in)::z1d
-        type(elecintrgl),intent(in)::elecs
-        type(oprts),intent(in)::an_cr,an2_cr2
-        integer,intent(in)::state,orb,loops
-        integer,dimension(:),intent(in)::cmplt
-        real(kind=8)::h1etot,h2etot
-        integer::j,k
-        
-        
-       
-        !!$omp parallel do private(h1etot,h2etot,j) shared(hcol,zstore,an_cr,an2_cr2,elecs,z1d,state,orb,cmplt)
-        do k=1,loops
-            j=cmplt(k)
-            if(j.ne.state)then
-                !! Differentiating the bra 1 el
-                h1etot = haml_vals(z1d,zstore(j)%val,an_cr%ham,elecs%h1ei,elecs%h1_num)
-                hcol(j)=hcol(j)+h1etot
-                !Differentiating the bra 2 el
-                h2etot = haml_vals(z1d,zstore(j)%val,an2_cr2%ham,elecs%h2ei,elecs%h2_num)
-                hcol(j)=hcol(j)+(0.5*h2etot)
-            else
-                !Differentiaitn hamiltonian element (a,a) only placed in hamiltonian columm
-                h1etot = haml_vals_mod(zstore(state)%val,zstore(state)%val,an_cr%diff(orb),elecs%h1ei,an_cr%dcnt(0:,orb))
-                hcol(j)=hcol(j)+h1etot
-                h2etot = haml_vals_mod(zstore(state)%val,zstore(state)%val,an2_cr2%diff(orb),elecs%h2ei,an2_cr2%dcnt(0:,orb))
-                hcol(j)=hcol(j)+(0.5*h2etot)
-            end if
-           
-        end do 
-        !!$omp end parallel do  
-        return
-        
-
-    end subroutine haml_grad_rc
- ! Calcualates a column of a hamliltonian Start specifies the row the column
-    ! is started to be calcualted 
-    subroutine haml_grad_rc_p(hcol,z1d,zstore,an_cr,an2_cr2,elecs,state,orb,cmplt,loops)
-
-        implicit none
-        real(kind=8),dimension(:),intent(inout)::hcol 
-        type(zombiest),dimension(:),intent(in)::zstore
-        real(kind=8),dimension(0:),intent(in)::z1d
-        type(elecintrgl),intent(in)::elecs
-        type(oprts),intent(in)::an_cr,an2_cr2
-        integer,intent(in)::state,orb,loops
-        integer,dimension(:),intent(in)::cmplt
-        real(kind=8)::h1etot,h2etot
-        integer::j,k
-        
-    
-        !$omp parallel do private(h1etot,h2etot,j) shared(hcol,zstore,an_cr,an2_cr2,elecs,z1d,state,orb,cmplt)
-        do k=1,loops
-            j=cmplt(k)
-            if(j.ne.state)then
-                !! Differentiating the bra 1 el
-                
-                h1etot = haml_vals(z1d,zstore(j)%val,an_cr%ham,elecs%h1ei,elecs%h1_num)
-                hcol(j)=hcol(j)+h1etot
-        
-                !Differentiating the bra 2 el
-                h2etot = haml_vals(z1d,zstore(j)%val,an2_cr2%ham,elecs%h2ei,elecs%h2_num)
-                hcol(j)=hcol(j)+(0.5*h2etot)
-            else
-                !Differentiaitn hamiltonian element (a,a) only placed in hamiltonian columm
-                h1etot = haml_vals_mod(zstore(state)%val,zstore(state)%val,an_cr%diff(orb),elecs%h1ei,an_cr%dcnt(0:,orb))
-                hcol(j)=hcol(j)+h1etot
-                h2etot = haml_vals_mod(zstore(state)%val,zstore(state)%val,an2_cr2%diff(orb),elecs%h2ei,an2_cr2%dcnt(0:,orb))
-                hcol(j)=hcol(j)+(0.5*h2etot)
-            end if
-        end do 
-        !$omp end parallel do  
-        return
-        
-
-    end subroutine haml_grad_rc_p
+! 
 
     !##############################################################################################################################
 
@@ -644,6 +486,7 @@ MODULE ham
         real(kind=8)::ov
         integer::j,k,len
 
+        if (errorflag .ne. 0) return
    
         len=int(el_num(0))
      
@@ -668,6 +511,252 @@ MODULE ham
 
     !##############################################################################################################################
 
+    !Level 2 routines to calcualte overlap and hamiltonian gradient and hessian matrices
+
+    ! ! subroutine that finds the gradient of the overlap w.r.t a specified state
+    ! subroutine ovrlp_make_grad(zstore,state,ovrlp_grad,cmplt,loops)
+
+    !     implicit none 
+    !     type(zombiest),dimension(:),intent(in)::zstore
+    !     real(kind=8),dimension(:,:),intent(inout)::ovrlp_grad
+    !     integer,intent(in)::state,loops
+    !     real(kind=8),dimension(0:2*norb)::z1d
+    !     integer,dimension(:),intent(in)::cmplt
+    !     integer::j 
+
+    !     if (errorflag .ne. 0) return
+       
+    !     do j=1, norb
+    !         z1d(0:2*norb)=zstore(state)%val(0:2*norb)
+    !         z1d(j)=zstore(state)%cos(j)
+    !         z1d(j+norb)=(-1)*zstore(state)%sin(j)
+    !         ovrlp_grad(j,:)=ovrlp_column_grad(z1d,zstore,state,cmplt,loops)
+    !     end do
+       
+
+    !     return 
+
+    ! end subroutine ovrlp_make_grad
+
+    !  ! subroutine that finds the gradient of the overlap w.r.t a specified state
+    ! subroutine ovrlp_make_grad_one_elec(zstore,state,ovrlp_grad,orb,cmplt,loops)
+
+    !     implicit none 
+    !     type(zombiest),dimension(:),intent(in)::zstore
+    !     real(kind=8),dimension(:,:),intent(inout)::ovrlp_grad
+    !     integer,intent(in)::state,orb,loops
+    !     real(kind=8),dimension(0:2*norb)::z1d
+    !     integer,dimension(:),intent(in)::cmplt
+        
+
+    !     if (errorflag .ne. 0) return
+
+    !     z1d(0:2*norb)=zstore(state)%val(0:2*norb)
+    !     z1d(orb)=zstore(state)%cos(orb)
+    !     z1d(orb+norb)=(-1)*zstore(state)%sin(orb)
+    !     ovrlp_grad(orb,:)=ovrlp_column_grad(z1d,zstore,state,cmplt,loops)
+      
+    
+    !     return 
+
+    ! end subroutine ovrlp_make_grad_one_elec
+
+    ! !  ! Hamiltonian calcualtion - calcualtes the gradient of ther hamliltonian w.r.t one zombie state 
+    ! subroutine haml_grad(haml_diff,zstore,elecs,an_cr,an2_cr2,state,cmplt,loops) 
+
+    !     implicit none
+        
+    !     real(kind=8),dimension(:,:),intent(inout)::haml_diff 
+    !     type(zombiest),dimension(:),intent(in)::zstore
+    !     type(elecintrgl),intent(in)::elecs
+    !     type(oprts),intent(in)::an_cr,an2_cr2
+    !     integer,intent(in)::state,loops
+    !     integer,dimension(:),intent(in)::cmplt
+    !     real(kind=8),dimension(0:2*norb)::z1d
+  
+    !     integer::j,ierr
+    
+    !     if (errorflag .ne. 0) return 
+    !     ierr=0
+
+    !     if(loops.le.2)then
+    !         !$omp parallel do schedule(dynamic) &
+    !         !$omp & private(j,z1d) &
+    !         !$omp & shared(elecs,zstore,an_cr,an2_cr2,haml_diff,cmplt,state)
+    !         do j=1, norb
+    !             z1d(0:2*norb)=zstore(state)%val(0:2*norb)
+    !             z1d(j)=zstore(state)%cos(j)
+    !             z1d(j+norb)=zstore(state)%sin(j)*(-1)
+    !             call haml_grad_rc(haml_diff(j,:),z1d,zstore,an_cr,an2_cr2,elecs,state,j,cmplt,loops)
+    !         end do
+    !         !$omp end parallel do
+    !     else 
+    !         !$omp parallel do schedule(dynamic) num_threads(6)&
+    !         !$omp & private(j,z1d) &
+    !         !$omp & shared(elecs,zstore,an_cr,an2_cr2,haml_diff,cmplt,state)
+    !         do j=1, norb
+    !             z1d(0:2*norb)=zstore(state)%val(0:2*norb)
+    !             z1d(j)=zstore(state)%cos(j)
+    !             z1d(j+norb)=zstore(state)%sin(j)*(-1)
+    !             call haml_grad_rc_p(haml_diff(j,:),z1d,zstore,an_cr,an2_cr2,elecs,state,j,cmplt,loops)
+    !         end do
+    !         !$omp end parallel do
+    !     end if 
+
+    !     return
+
+    ! end subroutine haml_grad
+
+    ! subroutine haml_grad_one_elec(haml_diff,zstore,elecs,an_cr,an2_cr2,state,orb,cmplt,loops) 
+
+    !     implicit none
+        
+    !     real(kind=8),dimension(:,:),intent(inout)::haml_diff 
+    !     type(zombiest),dimension(:),intent(in)::zstore
+    !     type(elecintrgl),intent(in)::elecs
+    !     type(oprts),intent(in)::an_cr,an2_cr2
+    !     integer,intent(in)::state,orb,loops
+    !     integer,dimension(:),intent(in)::cmplt
+    !     real(kind=8),dimension(0:2*norb)::z1d
+        
+   
+    
+    !     if (errorflag .ne. 0) return 
+        
+
+    !     z1d(0:2*norb)=zstore(state)%val(0:2*norb)
+    !     z1d(orb)=zstore(state)%cos(orb)
+    !     z1d(orb+norb)=zstore(state)%sin(orb)*(-1)
+    !     if(loops.le.2)then
+    !         call haml_grad_rc(haml_diff(orb,:),z1d,zstore,an_cr,an2_cr2,elecs,state,orb,cmplt,loops)
+    !     else
+    !         call haml_grad_rc_p(haml_diff(orb,:),z1d,zstore,an_cr,an2_cr2,elecs,state,orb,cmplt,loops)
+    !     end if 
+
+      
+      
+    !     return
+
+    ! end subroutine haml_grad_one_elec
+
+        !Level 3 routines to calcualte columns of gradient and hessian matrices
+
+!     ! subroutine that finds the gradient w.r.t to a specfic zombie state element 
+!     ! for an entire column 
+!     function ovrlp_column_grad(z1d,zstore,state,cmplt,loops)
+
+!         implicit none
+        
+!         type(zombiest),dimension(:),intent(in)::zstore
+!         real(kind=8),dimension(0:),intent(in)::z1d
+!         integer,intent(in)::state,loops
+!         real(kind=8),dimension(ndet)::ovrlp_column_grad
+!         integer,dimension(:),intent(in)::cmplt
+!         integer::k,j
+
+!         if (errorflag .ne. 0) return
+        
+!         ovrlp_column_grad=0.0
+!         !!$omp parallel do schedule(dynamic) &
+!         !!$omp & shared(z1d,zstore,ovrlp_column_grad,state) &
+!         !!$omp & private(j)
+!         do k=1,loops
+!             j=cmplt(k)
+!             if(j.ne.state)then 
+!                 ovrlp_column_grad(j)=overlap_1(z1d,zstore(j)%val)
+!             else
+!                 ovrlp_column_grad(j)=0.0
+!             end if
+!         end do 
+!         !!$omp end parallel do
+!         return
+
+!     end function ovrlp_column_grad
+
+
+!     ! Calcualates a column of a hamliltonian Start specifies the row the column
+!     ! is started to be calcualted 
+!     subroutine haml_grad_rc(hcol,z1d,zstore,an_cr,an2_cr2,elecs,state,orb,cmplt,loops)
+
+!         implicit none
+!         real(kind=8),dimension(:),intent(inout)::hcol 
+!         type(zombiest),dimension(:),intent(in)::zstore
+!         real(kind=8),dimension(0:),intent(in)::z1d
+!         type(elecintrgl),intent(in)::elecs
+!         type(oprts),intent(in)::an_cr,an2_cr2
+!         integer,intent(in)::state,orb,loops
+!         integer,dimension(:),intent(in)::cmplt
+!         real(kind=8)::h1etot,h2etot
+!         integer::j,k
+        
+        
+!         if (errorflag .ne. 0) return
+!         !!$omp parallel do private(h1etot,h2etot,j) shared(hcol,zstore,an_cr,an2_cr2,elecs,z1d,state,orb,cmplt)
+!         do k=1,loops
+!             j=cmplt(k)
+!             if(j.ne.state)then
+!                 !! Differentiating the bra 1 el
+!                 h1etot = haml_vals(z1d,zstore(j)%val,an_cr%ham,elecs%h1ei,elecs%h1_num)
+!                 hcol(j)=hcol(j)+h1etot
+!                 !Differentiating the bra 2 el
+!                 h2etot = haml_vals(z1d,zstore(j)%val,an2_cr2%ham,elecs%h2ei,elecs%h2_num)
+!                 hcol(j)=hcol(j)+(0.5*h2etot)
+!             else
+!                 !Differentiaitn hamiltonian element (a,a) only placed in hamiltonian columm
+!                 h1etot = haml_vals_mod(zstore(state)%val,zstore(state)%val,an_cr%diff(orb),elecs%h1ei,an_cr%dcnt(0:,orb))
+!                 hcol(j)=hcol(j)+h1etot
+!                 h2etot = haml_vals_mod(zstore(state)%val,zstore(state)%val,an2_cr2%diff(orb),elecs%h2ei,an2_cr2%dcnt(0:,orb))
+!                 hcol(j)=hcol(j)+(0.5*h2etot)
+!             end if
+           
+!         end do 
+!         !!$omp end parallel do  
+!         return
+        
+
+!     end subroutine haml_grad_rc
+!  ! Calcualates a column of a hamliltonian Start specifies the row the column
+!     ! is started to be calcualted 
+!     subroutine haml_grad_rc_p(hcol,z1d,zstore,an_cr,an2_cr2,elecs,state,orb,cmplt,loops)
+
+!         implicit none
+!         real(kind=8),dimension(:),intent(inout)::hcol 
+!         type(zombiest),dimension(:),intent(in)::zstore
+!         real(kind=8),dimension(0:),intent(in)::z1d
+!         type(elecintrgl),intent(in)::elecs
+!         type(oprts),intent(in)::an_cr,an2_cr2
+!         integer,intent(in)::state,orb,loops
+!         integer,dimension(:),intent(in)::cmplt
+!         real(kind=8)::h1etot,h2etot
+!         integer::j,k
+        
+!         if (errorflag .ne. 0) return
+
+!         !$omp parallel do private(h1etot,h2etot,j) shared(hcol,zstore,an_cr,an2_cr2,elecs,z1d,state,orb,cmplt)
+!         do k=1,loops
+!             j=cmplt(k)
+!             if(j.ne.state)then
+!                 !! Differentiating the bra 1 el
+                
+!                 h1etot = haml_vals(z1d,zstore(j)%val,an_cr%ham,elecs%h1ei,elecs%h1_num)
+!                 hcol(j)=hcol(j)+h1etot
+        
+!                 !Differentiating the bra 2 el
+!                 h2etot = haml_vals(z1d,zstore(j)%val,an2_cr2%ham,elecs%h2ei,elecs%h2_num)
+!                 hcol(j)=hcol(j)+(0.5*h2etot)
+!             else
+!                 !Differentiaitn hamiltonian element (a,a) only placed in hamiltonian columm
+!                 h1etot = haml_vals_mod(zstore(state)%val,zstore(state)%val,an_cr%diff(orb),elecs%h1ei,an_cr%dcnt(0:,orb))
+!                 hcol(j)=hcol(j)+h1etot
+!                 h2etot = haml_vals_mod(zstore(state)%val,zstore(state)%val,an2_cr2%diff(orb),elecs%h2ei,an2_cr2%dcnt(0:,orb))
+!                 hcol(j)=hcol(j)+(0.5*h2etot)
+!             end if
+!         end do 
+!         !$omp end parallel do  
+!         return
+        
+
+!     end subroutine haml_grad_rc_p
 
     ! ! subroutine that finds the gradient of the overlap w.r.t a specified state
     ! subroutine ovrlp_make_hessian(zstore,state,ovrlp_hess,cmplt)

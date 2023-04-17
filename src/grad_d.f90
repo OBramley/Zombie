@@ -274,15 +274,15 @@ Module grad_d
             
     end subroutine timestep_diff_d_cmpnt
 
-    subroutine final_grad(dvec,haml,grad_fin,diff_state,orb,typ)
+    subroutine final_grad(dvec,haml,grad_fin,diff_state,orb)
 
         implicit none
 
         type(dvector),intent(in)::dvec
         type(hamiltonian),intent(in)::haml
         type(grad),intent(inout)::grad_fin
-        integer,intent(in)::diff_state,orb,typ
-        integer::j,p,orblim,orbsrt!,ierr,k
+        integer,intent(in)::diff_state,orb
+        integer::j,p!,ierr,k
         real(kind=8),dimension(ndet)::dh_temp!,dh_temp_hess
         real(kind=8),dimension(ndet)::dham
         ! real(kind=8),allocatable,dimension(:,:)::temp
@@ -293,33 +293,44 @@ Module grad_d
 
        
         grad_fin%vars(diff_state,:)=0
-
-        if(orb.eq.0)then
-            orbsrt=1
-            orblim=norb
-        else 
-            orbsrt=orb
-            orblim=orb
-        end if
-  
-
         dham=2*matmul(dvec%d,haml%hjk)
-        do j=orbsrt, orblim
+        if(orb.eq.0)then
+            do j=1, norb
 
-            dh_temp=dvec%d*haml%diff_hjk(diff_state,j,:)   
+                dh_temp=dvec%d*haml%diff_hjk(diff_state,j,:)   
+                dh_temp(diff_state)=0
+    
+                do p=1,ndet
+                    dh_temp(diff_state)=dh_temp(diff_state)+(dvec%d(p)*haml%diff_hjk(diff_state,j,p))
+                end do
+                    
+                do p=1,ndet
+                
+                    grad_fin%vars(diff_state,j)=grad_fin%vars(diff_state,j)+dvec%d(p)*dh_temp(p)+&
+                        (dham(p)*dvec%d_diff(p,diff_state,j))
+                end do
+    
+            end do
+          
+        else 
+
+            dh_temp=dvec%d*haml%diff_hjk(diff_state,orb,:)   
             dh_temp(diff_state)=0
 
             do p=1,ndet
-                dh_temp(diff_state)=dh_temp(diff_state)+(dvec%d(p)*haml%diff_hjk(diff_state,j,p))
+                dh_temp(diff_state)=dh_temp(diff_state)+(dvec%d(p)*haml%diff_hjk(diff_state,orb,p))
             end do
                 
             do p=1,ndet
             
-                grad_fin%vars(diff_state,j)=grad_fin%vars(diff_state,j)+dvec%d(p)*dh_temp(p)+&
-                    (dham(p)*dvec%d_diff(p,diff_state,j))
+                grad_fin%vars(diff_state,orb)=grad_fin%vars(diff_state,orb)+dvec%d(p)*dh_temp(p)+&
+                    (dham(p)*dvec%d_diff(p,diff_state,orb))
             end do
+          
+        end if
+  
 
-        end do
+       
 
         ! if(orb.eq.0)then
         !     if(typ.eq.0) then
