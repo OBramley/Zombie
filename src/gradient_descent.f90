@@ -150,16 +150,16 @@ MODULE gradient_descent
         allocate(pickerorb(norb),stat=ierr)
         if(ierr==0) allocate(chng_trk(ndet-1),stat=ierr)
         if(ierr==0) allocate(chng_trk2(norb),stat=ierr)
-        ! if(ierr==0) allocate(fibs(12),stat=ierr)
-        if(ierr==0) allocate(fibs(5),stat=ierr)
+        if(ierr==0) allocate(fibs(12),stat=ierr)
+        ! if(ierr==0) allocate(fibs(5),stat=ierr)
         if (ierr/=0) then
             write(0,"(a,i0)") "Gradient descent allocations . ierr had value ", ierr
             errorflag=1
             return
         end if 
 
-        ! fibs=[0,1,2,3,5,8,13,21,34,55,89,144]
-        fibs=[0,1,5,34,144]
+        fibs=[0,1,2,3,5,8,13,21,34,55,89,144]
+        ! fibs=[0,1,5,34,144]
 
         lralt_zs=0    ! power alpha is raised to 
         chng_trk2=0 !stores which orbitals in the ZS have changed 
@@ -199,7 +199,7 @@ MODULE gradient_descent
                     grad_fin%grad_avlb=0
                     call grad_calc(haml,zstore,elect,an_cr,an2_cr2,pick,dvecs,grad_fin,en,pickorb)
 
-                    do lralt_zs=1,5!13
+                    do lralt_zs=1,12!5
 
                         t=b*(alphain**fibs(lralt_zs))
                         
@@ -251,7 +251,7 @@ MODULE gradient_descent
                             haml%diff_ovrlp(pick,:,:)=0
                             haml%diff_ovrlp(:,:,pick)=0
                             dvecs(1)%d_diff=0
-                            grad_fin%prev_mmntm(pick,pickerorb)=(t*grad_fin%vars(pick,pickorb))
+                            ! grad_fin%prev_mmntm(pick,pickerorb)=(t*grad_fin%vars(pick,pickorb))
                             grad_fin%prev_erg=fxtdk
                             rjct_cnt_in=0
                             EXIT 
@@ -349,7 +349,7 @@ MODULE gradient_descent
         integer,intent(in)::epoc_max
         real(kind=8),intent(in)::b,alphain
         type(zombiest),dimension(:),allocatable::temp_zom
-        integer::lralt,rjct_cnt,acpt_cnt,pick,lralt_temp,loop_max,orb_cnt,ierr
+        integer::lralt,rjct_cnt,rjct_cnt2,acpt_cnt,pick,lralt_temp,loop_max,orb_cnt,ierr
         real(kind=8)::newb,t,fxtdk,alpha,mmntma
         integer::j,k,l
         integer,dimension(:),allocatable::chng_trk,fibs,picker
@@ -367,8 +367,8 @@ MODULE gradient_descent
         if(ierr==0) allocate(lr_chng_trk(ndet-1),stat=ierr)
         if(ierr==0) allocate(erg_chng_trk(ndet-1),stat=ierr)
         allocate(picker(ndet-1),stat=ierr)
-        ! if(ierr==0) allocate(fibs(12),stat=ierr)
-        if(ierr==0) allocate(fibs(5),stat=ierr)
+        if(ierr==0) allocate(fibs(12),stat=ierr)
+        ! if(ierr==0) allocate(fibs(5),stat=ierr)
         if (ierr/=0) then
             write(0,"(a,i0)") "Gradient descent allocations . ierr had value ", ierr
             errorflag=1
@@ -377,8 +377,8 @@ MODULE gradient_descent
        
         call alloczs(temp_zom,int(ndet,kind=16))
 
-        ! fibs=[0,1,2,3,5,8,13,21,34,55,89,144]
-        fibs=[0,1,5,34,144]
+        fibs=[0,1,2,3,5,8,13,21,34,55,89,144]
+        ! fibs=[0,1,5,34,144]
         
 
 
@@ -387,7 +387,7 @@ MODULE gradient_descent
         newb=b
         rjct_cnt=0 !tracks how many rejections 
         acpt_cnt=0  !counts how many ZS have been changed
-        loop_max=5!13
+        loop_max=12!5!
         mmntma=0.9
         orb_cnt=100  
 
@@ -404,7 +404,7 @@ MODULE gradient_descent
             chng_trk=0
             lr_chng_trk=0
             erg_chng_trk=0
-           
+            rjct_cnt2=0
             do j=1,(ndet-1)
                 
                
@@ -439,9 +439,14 @@ MODULE gradient_descent
                    
                     if((is_nan(fxtdk).eqv..true.))then 
                         dvecs(1)%d_diff=0.0d0
+                        dvecs(1)%d=0.0d0
+                        call imgtime_prop(dvecs,en,haml,0,0)
                         grad_fin%grad_avlb(:,0)=0
                         grad_fin%vars=0
+                        haml%diff_hjk=0
+                        haml%diff_ovrlp=0
                         fxtdk=0.0
+                        rjct_cnt2=loop_max
                         EXIT
                         ! call emergency(haml,dvecs,temp_dvecs,en)
                         ! call grad_calc(haml,zstore,elect,an_cr,an2_cr2,pick,dvecs,grad_fin,en,0)
@@ -454,6 +459,7 @@ MODULE gradient_descent
                         ! call he_full_row(temp_ham,temp_zom,elect,ndet,an_cr,an2_cr2,pick)
                         ! fxtdk=en%erg(1,timesteps+1)
                         ! if(is_nan(fxtdk).eqv..true.)then
+                        !     rjct_cnt=rjct_cnt+1
                         !     EXIT
                         ! end if 
                     end if 
@@ -471,6 +477,7 @@ MODULE gradient_descent
                         haml%kinvh=temp_ham%kinvh
                         dvecs(1)%d=temp_dvecs(1)%d
                         rjct_cnt=0
+                        rjct_cnt2=0
                         grad_fin%grad_avlb(:,0)=0
                         grad_fin%grad_avlb(pick,:)=0
                         grad_fin%grad_avlb(:,pick)=0
@@ -480,17 +487,17 @@ MODULE gradient_descent
                         haml%diff_ovrlp(pick,:,:)=0
                         haml%diff_ovrlp(:,:,pick)=0
                         dvecs(1)%d_diff=0
-                        grad_fin%prev_mmntm(pick,:)=t*mmntm
+                        ! grad_fin%prev_mmntm(pick,:)=t*mmntm
                         write(6,"(a,i3,a,f21.16,a,f21.16,a,f21.16,a,i3,a,i3)") '       ', pick,'              ', &
                         grad_fin%prev_erg,'               ',fxtdk,'             ',t,'        ',acpt_cnt,'          ',rjct_cnt
                         grad_fin%prev_erg=fxtdk
                         Exit
 
                     end if 
-
+                    rjct_cnt2=rjct_cnt2+1
                 end do
 
-                if(rjct_cnt.ne.0)then
+                if(rjct_cnt2.eq.loop_max)then
                     rjct_cnt=rjct_cnt+1
                     write(6,"(a,i3,a,f21.16,a,f21.16,a,f21.16,a,i3,a,i3)") '       ', pick,'              ', &
                 grad_fin%prev_erg,'               ',fxtdk,'             ',0.0,'        ',acpt_cnt,'          ',rjct_cnt
@@ -628,7 +635,7 @@ MODULE gradient_descent
             write(0,"(a,i0)") "Epoc read in as ", epoc_cnt
         
             call epoc_writer(grad_fin%prev_erg,epoc_cnt,0,0.0d0,1)
-           
+            epoc_cnt=epoc_cnt+1
         end if
 
         alpha=0.8  ! learning rate reduction
