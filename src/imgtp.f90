@@ -19,8 +19,9 @@ MODULE imgtp
         !DOUBLE PRECISION, external::ZBQLU01,ZBQLUAB
 
         if (errorflag .ne. 0) return
-
+    
         do j=1,size(dvecs)
+            dvecs(j)%d=0.0
             if(imagflg=='n') then
                 dvecs(j)%d(j)=(1.0,0.0)
                 if(zst=='HF') then
@@ -82,7 +83,6 @@ MODULE imgtp
         real(kind=8),intent(in),dimension(:,:)::bham
         ! complex(kind=8)::result
         real(kind=8)::result
-      
         
         if (errorflag .ne. 0) return
         !$omp parallel
@@ -91,6 +91,7 @@ MODULE imgtp
         ergcalc=result
         !$omp end workshare
         !$omp end parallel
+   
         return
        
     end function ergcalc
@@ -112,6 +113,7 @@ MODULE imgtp
         !$omp end parallel
        
         dvec%norm=norm
+   
         if(GDflg.eq.'y')then
             call d_normalise_diff(dvec,haml,step,diff_state,orb)
         end if
@@ -191,6 +193,105 @@ MODULE imgtp
         return
 
     end subroutine gs
+
+
+    subroutine imaginary_time_prop2(dvecs,en,haml,diff_state,orb)
+
+        implicit none
+
+        type(dvector),dimension(:),intent(inout)::dvecs
+        type(energy),intent(inout)::en
+        type(hamiltonian),intent(in)::haml
+        integer,intent(in)::diff_state,orb
+        integer::j,k,l
+        real::db
+        real(kind=8)::norm,result,temp
+        real(kind=8),dimension(ndet)::ddot
+
+
+        if (errorflag .ne. 0) return
+
+        dvecs(1)%d=0.0
+        dvecs(1)%d(1)=1.0
+        !$acc enter data create(norm,db,result,temp)
+        norm=0
+       
+        !$acc parallel loop gang vector reduction(+:norm) present(haml,dvecs) private (temp,l)   
+        do j=1,ndet
+            temp=0
+            !$acc loop reduction(+:temp)
+            do l=1,ndet 
+                temp=temp+haml%ovrlp(j,l)*dvecs(1)%d(l)
+            end do 
+            norm=norm+(temp*dvecs(1)%d(j))
+        end do 
+       !$acc end parallel loop
+        norm = sqrt(abs(norm))
+       
+        dvecs(1)%norm=norm
+       
+        call d_normalise_diff(dvecs(1),haml,0,diff_state,orb)
+      
+        
+        dvecs(1)%d=dvecs(1)%d/norm
+       
+        db=beta/timesteps
+       
+        do k=1,timesteps+1
+
+            en%t(k)=db*(k-1)
+            result=0
+            !$acc parallel loop gang vector reduction(+:result) present(haml,dvecs) private(temp,l)   
+            do j=1,ndet
+                temp=0
+                !$acc loop reduction(+:temp)
+                do l=1,ndet 
+                    temp=temp+haml%hjk(j,l)*dvecs(1)%d(l)
+                end do 
+                result = result + (dvecs(1)%d(j)*temp)
+            end do
+            !$acc end parallel loop 
+            en%erg(1,k)=result
+    
+            ddot=0
+            call timestep_diff(dvecs(1),haml,db,diff_state,orb)
+          
+            !$acc parallel loop gang vector present(haml,dvecs) private(temp,l)
+            do j=1,ndet 
+                temp=0
+                 !$acc loop reduction(+:temp)
+                do l=1,ndet 
+                    temp= temp + haml%kinvh(j,l)*dvecs(1)%d(l)
+                end do 
+                ddot(j)=temp
+            end do
+            !$acc end parallel loop 
+            dvecs(1)%d=dvecs(1)%d-(db*ddot)
+        
+            norm=0   
+            !$acc parallel loop gang vector reduction(+:norm) present(haml,dvecs) private(temp,l)     
+            do j=1,ndet
+                temp=0
+                !$acc loop reduction(+:temp)
+                do l=1,ndet 
+                    temp=temp+haml%ovrlp(j,l)*dvecs(1)%d(l)
+                end do 
+                norm=norm+(temp*dvecs(1)%d(j))
+            end do 
+            !$acc end parallel loop 
+            norm = sqrt(abs(norm))
+            dvecs(1)%norm=norm
+        
+            call d_normalise_diff(dvecs(1),haml,k,diff_state,orb)
+               
+            dvecs(1)%d=dvecs(1)%d/norm
+
+        end do
+        !$acc exit data delete(norm,db,result)
+
+        return
+
+    end subroutine imaginary_time_prop2
 
 
 

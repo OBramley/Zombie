@@ -21,21 +21,17 @@ MODULE ham
         integer::ierr
 
       
-        ! integer(kind=8)::beginning,rate,end
+        
 
         if (errorflag .ne. 0) return
         ierr=0
-
+        ! integer(kind=8)::beginning,rate,end
         ! call system_clock(beginning, rate)
-        call ovrlp_make(haml%ovrlp,zstore)
         ! call system_clock(end)
         ! print *, "elapsed time: ", real(end - beginning) / real(rate)
-     
-        
-        haml%hjk=haml%ovrlp*elecs%hnuc
-       
-        call haml_make(haml%hjk,zstore,elecs,an_cr%ham,an2_cr2%ham,verb)
 
+        call haml_ovrlp_comb(haml,zstore,elecs,an_cr%ham,an2_cr2%ham,verb)
+        !$acc update host(haml)
         haml%inv=haml%ovrlp
         allocate(WORK1(size),IPIV1(size),stat=ierr)
         if (ierr/=0) then
@@ -65,68 +61,42 @@ MODULE ham
     
     !Level 1 Routines to make the Hamiltonian and Overlap matrices
 
-    ! hamliltonian calcualtion - calcualtes the whole hamliltonian 
-    subroutine haml_make(haml,zstore,elecs,an_cr,an2_cr2,verb) 
-
+    subroutine haml_ovrlp_comb(haml,zstore,elecs,an_cr,an2_cr2,verb)
         implicit none
-        
-        real(kind=8),dimension(:,:),intent(inout)::haml 
+
+        type(hamiltonian), intent(inout)::haml 
+        ! real(kind=8),dimension(:,:),intent(inout)::haml 
         type(zombiest),dimension(:),intent(in)::zstore
         type(elecintrgl),intent(in)::elecs
         type(oprts_2),intent(in)::an_cr,an2_cr2
         integer,intent(in)::verb
-        integer::j,ierr
-      
+        integer::j,k,ierr
+        real(kind=8)::h1etot,h2etot
     
         if (errorflag .ne. 0) return 
         ierr=0
 
-        call omp_set_nested(.true.)
-    
-        !$omp parallel do schedule(guided) num_threads(6) &
-        !$omp & private(j) &
+        !$omp parallel do &
+        !$omp & private(j,k,h1etot,h2etot) &
         !$omp & shared(elecs,zstore,an_cr,an2_cr2,haml) 
-
-        do j=ndet,1,-1
-            call haml_column(haml(j:,j),zstore(j)%val,zstore,an_cr,an2_cr2,elecs,j) 
+        do j=1,ndet
+            do k=j,ndet
+                haml%ovrlp(j,k)=overlap_1(zstore(j)%val,zstore(k)%val);haml%ovrlp(k,j)=haml%ovrlp(j,k)
+                h1etot = haml_vals(zstore(j)%val,zstore(k)%val,an_cr,elecs%h1ei,elecs%h1_num)
+                h2etot = haml_vals(zstore(j)%val,zstore(k)%val,an2_cr2,elecs%h2ei,elecs%h2_num)
+                haml%hjk(j,k)=h1etot+(0.5*h2etot)+(haml%ovrlp(j,k)*elecs%hnuc);haml%hjk(k,j)=haml%hjk(j,k)
+                
+            end do 
             if(verb.eq.1)then
                 write(6,"(a,i0,a)") "hamliltonian column ",j, " completed"
             end if 
         end do
-      
-        !$omp end parallel do
+        !$omp end parallel do 
 
-        do j=1,ndet
-            haml(j,:)=haml(:,j)
-        end do
 
-        return
-        
-    end subroutine haml_make
+    end subroutine haml_ovrlp_comb
 
-    !subroutine calcualates whole overlap matrix
-    subroutine ovrlp_make(ovrlp,zstore)
-
-        implicit none
-        
-        real(kind=8),dimension(:,:),intent(inout)::ovrlp
-        type(zombiest),dimension(:),intent(in)::zstore
-        integer::j,k
-        
-        if (errorflag .ne. 0) return
-        ovrlp=1.0d0
-        !!$omp parallel do private(j,k) shared(ovrlp,zstore)
-        do j=1,ndet
-            do k=j+1,ndet
-                ovrlp(j,k)=overlap_1(zstore(j)%val,zstore(k)%val); ovrlp(k,j)=ovrlp(j,k)
-            end do
-        end do  
-        !!$omp end parallel do 
-  
-
-        return
-
-    end subroutine ovrlp_make
+    
 
     !##############################################################################################################################
 
@@ -205,23 +175,25 @@ MODULE ham
         type(oprts_2),intent(in)::ops
         real(kind=8)::ov
         integer::j,k
-
+        
         if (errorflag .ne. 0) return
 
         haml_vals=0.0
-        !!$omp parallel do reduction(+:haml_vals) private(j,k,ov) shared(ops,z1d,z2d,el)  
-        !!$omp do simd 
+        
+     
+        !$acc parallel loop gang vector independent &
+        !$acc & present(z1d,z2d,ops,el) &
+        !$acc & private(k,ov) reduction(+:haml_vals) 
+        
         do j=1,len
             ov=1.0
-            !!$omp do simd reduction(*:ov)
+            !$acc loop reduction(*:ov)
             do k=1, norb
                 ov=ov*((z1d(k)*z2d(ops%alive(k,j))*ops%neg_alive(k,j))+(z1d(k+norb)*z2d(ops%dead(k,j))*ops%neg_dead(k,j))) 
             end do
-            !!$omp end do simd
             haml_vals=haml_vals+(ov*el(j))
         end do
-        !!$omp end do 
-        !!$omp end parallel do
+        !$acc end parallel loop
         
         return 
       
@@ -235,14 +207,14 @@ MODULE ham
         integer::j
 
         if (errorflag .ne. 0) return
-    
+
         overlap_1=1.0
-        !!$omp parallel do simd reduction(*:overlap_1)
+        !$acc parallel loop gang vector independent &
+        !$acc & present(z1d,z2d) reduction(*:overlap_1)
         do j=1,norb
-           
             overlap_1=overlap_1*((z1d(j)*z2d(j))+(z1d(j+norb)*z2d(norb+j)))
         end do
-        !!$omp end parallel do simd
+        !$acc end parallel loop
         
 
         return 
@@ -279,23 +251,11 @@ MODULE ham
         if (loop_num.eq.0) return
 
         if(orb.eq.0)then
-            ! call ovrlp_make_grad(zstore,state,haml%diff_ovrlp(state,:,:),cmplt_2,loop_num)
-            ! haml%diff_hjk(state,:,:)=haml%diff_ovrlp(state,:,:)*elecs%hnuc
-            ! call haml_grad(haml%diff_hjk(state,:,:),zstore,elecs,an_cr,an2_cr2,state,cmplt_2,loop_num)
             call haml_ovrlp_grad_comb(haml,zstore,elecs,an_cr,an2_cr2,state,loop_num,cmplt_2)
         else
             call haml_ovrlp_grad_comb_one_elec(haml,zstore,elecs,an_cr,an2_cr2,state,orb,loop_num,cmplt_2)
-
-            ! call ovrlp_make_grad_one_elec(zstore,state,haml%diff_ovrlp(state,:,:),orb,cmplt_2,loop_num)
-            ! haml%diff_hjk(state,:,:)=haml%diff_ovrlp(state,:,:)*elecs%hnuc
-            ! call haml_grad_one_elec(haml%diff_hjk(state,:,:),zstore,elecs,an_cr,an2_cr2,state,orb,cmplt_2,loop_num) 
         end if 
        
-        ! call ovrlp_make_hessian(zstore,state,haml%hess_ovrlp(state,:,:,:),cmplt)
-        ! haml%hess_hjk(state,:,:,:)=haml%hess_ovrlp(state,:,:,:)*elecs%hnuc
-        ! call haml_hessian(haml%hess_hjk(state,:,:,:),zstore,elecs,an_cr,an2_cr2,state,cmplt)
-      
-        
         return
 
     end subroutine gradient_zs
@@ -511,6 +471,69 @@ MODULE ham
 
     !##############################################################################################################################
 
+
+    ! ! hamliltonian calcualtion - calcualtes the whole hamliltonian 
+    ! subroutine haml_make(haml,zstore,elecs,an_cr,an2_cr2,verb) 
+
+    !     implicit none
+        
+    !     real(kind=8),dimension(:,:),intent(inout)::haml 
+    !     type(zombiest),dimension(:),intent(in)::zstore
+    !     type(elecintrgl),intent(in)::elecs
+    !     type(oprts_2),intent(in)::an_cr,an2_cr2
+    !     integer,intent(in)::verb
+    !     integer::j,ierr
+      
+    
+    !     if (errorflag .ne. 0) return 
+    !     ierr=0
+
+    !     call omp_set_nested(.true.)
+    
+    !     !$omp parallel do schedule(guided) num_threads(6) &
+    !     !$omp & private(j) &
+    !     !$omp & shared(elecs,zstore,an_cr,an2_cr2,haml) 
+
+    !     do j=ndet,1,-1
+    !         call haml_column(haml(j:,j),zstore(j)%val,zstore,an_cr,an2_cr2,elecs,j) 
+    !         if(verb.eq.1)then
+    !             write(6,"(a,i0,a)") "hamliltonian column ",j, " completed"
+    !         end if 
+    !     end do
+      
+    !     !$omp end parallel do
+
+    !     do j=1,ndet
+    !         haml(j,:)=haml(:,j)
+    !     end do
+
+    !     return
+        
+    ! end subroutine haml_make
+
+    ! !subroutine calcualates whole overlap matrix
+    ! subroutine ovrlp_make(ovrlp,zstore)
+
+    !     implicit none
+        
+    !     real(kind=8),dimension(:,:),intent(inout)::ovrlp
+    !     type(zombiest),dimension(:),intent(in)::zstore
+    !     integer::j,k
+        
+    !     if (errorflag .ne. 0) return
+    !     ovrlp=1.0d0
+    !     !!$omp parallel do private(j,k) shared(ovrlp,zstore)
+    !     do j=1,ndet
+    !         do k=j+1,ndet
+    !             ovrlp(j,k)=overlap_1(zstore(j)%val,zstore(k)%val); ovrlp(k,j)=ovrlp(j,k)
+    !         end do
+    !     end do  
+    !     !!$omp end parallel do 
+  
+
+    !     return
+
+    ! end subroutine ovrlp_make
     !Level 2 routines to calcualte overlap and hamiltonian gradient and hessian matrices
 
     ! ! subroutine that finds the gradient of the overlap w.r.t a specified state

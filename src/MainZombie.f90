@@ -115,7 +115,8 @@ program MainZombie
                 errorflag=1
         end if
      
-        
+        !$acc data copyin(zstore,elect,an_cr,an2_cr2) create(haml,dvecs)
+        !!$acc cache(zstore,elect,an_cr,an2_cr2,haml,dvecs)
         if(hamgflg=='y')then
             if(GPUflg.eq.'y')then
                 ! Maybe specificy conditons but maybe not needed?!
@@ -128,6 +129,7 @@ program MainZombie
         else if (hamgflg=='n')then
             call read_ham(haml,ndet)
             write(6,"(a)") "Hamiltonian successfully read in"
+            !!$acc update device(haml)
         end if
        
         ! Imaginary time propagation
@@ -179,7 +181,7 @@ program MainZombie
            
             call sd_anal(zstore,nel,dvecs(1),2)
         end if
-
+        !$acc end data
         call deallocerg(en)
         write(6,"(a)") "Energy deallocated"
         call deallocham(haml)

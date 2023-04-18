@@ -279,6 +279,8 @@ elif(inputs.run['language']=="fortran"):
         print(os.getcwd())
         if(inputs.run['cores']!=1):
             os.environ["OMP_NUM_THREADS"]=str(inputs.run['cores'])
+            os.environ["ACC_CACHE_READ_MOSTLY"] = "true"
+            os.environ["ACC_CACHE_SHARED"] = "true"
         subprocess.run(["./ZOMBIE.exe"])
  
         
