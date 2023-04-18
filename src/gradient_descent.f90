@@ -410,8 +410,8 @@ MODULE gradient_descent
         temp_ham=haml
         ! temp_dvecs=dvecs
           
-        call system_clock(beginning, rate)
-        !$acc data copyin(temp_zom,temp_ham) create(grad_fin,en,temp_dvecs)
+        ! call system_clock(beginning, rate)
+        !$acc data copyin(temp_zom(1:ndet),temp_ham,grad_fin,en,temp_dvecs(1)) !create(grad_fin,en,temp_dvecs)
         !!$acc update device(dvecs)
         do while(rjct_cnt.lt.(ndet-1)*50)
             ! call system_clock(beginning, rate)
@@ -423,6 +423,7 @@ MODULE gradient_descent
             lr_chng_trk=0
             erg_chng_trk=0
             rjct_cnt2=0
+            call system_clock(beginning, rate)
             do j=1,(ndet-1)
                 
                
@@ -438,7 +439,7 @@ MODULE gradient_descent
                     ! Setup temporary zombie state
                     temp_zom=zstore
                     !!$acc update device(temp_zom)
-                    !$acc parallel loop gang vector independent present(temp_zom,zstore,grad_fin)
+                    !$acc parallel loop gang vector independent !present(temp_zom,zstore,grad_fin)
                     do orno=1,norb
                         temp_zom(pick)%phi(orno)=zstore(pick)%phi(orno)-t*grad_fin%vars(pick,orno)
                         temp_zom(pick)%sin(orno)=sin(temp_zom(pick)%phi(orno))
@@ -544,7 +545,7 @@ MODULE gradient_descent
 
             call system_clock(end)
             print *, "elapsed time: ", real(end - beginning) / real(rate)
-            stop
+      
             if(acpt_cnt.gt.0)then
                 picker=scramble(ndet-1)
                 call epoc_writer(grad_fin%prev_erg,epoc_cnt,chng_trk,erg_chng_trk,lr_chng_trk,0) 

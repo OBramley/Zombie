@@ -115,7 +115,7 @@ program MainZombie
                 errorflag=1
         end if
      
-        !$acc data copyin(zstore,elect,an_cr,an2_cr2) create(haml,dvecs)
+        !$acc data copyin(zstore(1:ndet),elect,an_cr,an2_cr2) create(haml,dvecs(1))
         !!$acc cache(zstore,elect,an_cr,an2_cr2,haml,dvecs)
         if(hamgflg=='y')then
             if(GPUflg.eq.'y')then

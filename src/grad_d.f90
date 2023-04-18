@@ -32,7 +32,7 @@ Module grad_d
             orblim=orb
         end if
 
-        !$acc update host(dvec%d,dvec%d_diff(:,diff_state,:))
+        !$acc update host(dvec)
         call diff_of_norm_ovrlp_cmpndt(dvec,haml,diff_ovrlp_cmpnt,diff_state,orbsrt,orblim)
 
         if(step.eq.0)then
@@ -49,7 +49,7 @@ Module grad_d
                 ! end do
             end do
         end if
-        !$acc update device(dvec%d,dvec%d_diff(:,diff_state,:))
+        !$acc update device(dvec)
 
         return
 
@@ -168,7 +168,7 @@ Module grad_d
             orblim=orb
         end if
    
-         !$acc update host(dvec%d,dvec%d_diff(:,diff_state,:))
+         !$acc update host(dvec)
         
         call timestep_diff_invovrlp_cmpnt(dvec,haml,diff_ts_invo,diff_state)
         call timestep_diff_ham_cmpnt(dvec,haml,diff_ts_ham,diff_state,orbsrt,orblim)
@@ -177,7 +177,7 @@ Module grad_d
             !Differentiate with respect to each ZS_{j}
             dvec%d_diff(k,diff_state,:)=dvec%d_diff(k,diff_state,:)-((diff_ts_invo(k,:)+diff_ts_ham(k,:)+diff_ts_d(k,:))*db)
         end do
-          !$acc update device(dvec%d,dvec%d_diff(:,diff_state,:))
+          !$acc update device(dvec)
 
         return
 
@@ -297,14 +297,11 @@ Module grad_d
         dham=2*matmul(dvec%d,haml%hjk)
         
         if(orb.eq.0)then
-            !$acc enter data create(dham,dh_temp) 
-            !$acc parallel loop gang vector independent present(haml,dvec)&
-            !$acc private(dh_temp,ov,p)
+            !$acc enter data copyin(dham(1:ndet)) create(dh_temp)
+            !$acc parallel loop gang vector independent private(ov,p) present(haml,dvec) 
             do j=1, norb
-
                 dh_temp=dvec%d*haml%diff_hjk(diff_state,j,:)
                 ov=0   
-                
                 !$acc loop reduction(+:ov)
                 do p=1,ndet
                     ov=ov+(dvec%d(p)*haml%diff_hjk(diff_state,j,p))
@@ -324,7 +321,7 @@ Module grad_d
             !$acc end parallel loop 
             !$acc exit data delete(dham,dh_temp)
         else 
-            !$acc enter data create(dham,dh_temp)
+            !$acc data copyin(dham)
             dh_temp=dvec%d*haml%diff_hjk(diff_state,orb,:)   
             ov=0
         
@@ -342,7 +339,7 @@ Module grad_d
             !$acc end parallel loop
             grad_fin%vars(diff_state,orb)=ov
            
-            !$acc exit data delete(dham,dh_temp)
+            !$acc end data
         end if
   
 
