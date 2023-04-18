@@ -411,7 +411,7 @@ MODULE gradient_descent
                 pick=picker(j)
                 call grad_calc(haml,zstore,elect,an_cr,an2_cr2,pick,dvecs,grad_fin,en,0)
 
-                mmntm=((grad_fin%vars(pick,:))+(mmntma*grad_fin%prev_mmntm(pick,:)))
+                mmntm=((grad_fin%vars(pick,:)))!+(mmntma*grad_fin%prev_mmntm(pick,:)))
                 do lralt_temp=1,loop_max
 
                     t=newb*(alpha**fibs(lralt_temp))
