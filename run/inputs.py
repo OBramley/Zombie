@@ -239,7 +239,7 @@ zombs={
     'spin':0,
 
     # Number of Zombie states
-    'ndet':30,#pyscf['norb']*3, 
+    'ndet':10,#pyscf['norb']*3, 
 
     # Type of zombie states. Random (ran), Hartree Fock (HF) or biased (bb)
     'zomtyp':'bb',

@@ -184,7 +184,7 @@ MODULE ham
         !$acc parallel loop gang vector independent &
         !$acc & present(z1d,z2d,ops,el) &
         !$acc & private(k,ov) reduction(+:haml_vals) 
-        
+        !!$omp parallel do reduction(+:haml_vals) private(k,ov)
         do j=1,len
             ov=1.0
             !$acc loop reduction(*:ov)
@@ -193,6 +193,7 @@ MODULE ham
             end do
             haml_vals=haml_vals+(ov*el(j))
         end do
+        !!$omp end parallel do 
         !$acc end parallel loop
         
         return 
@@ -211,9 +212,11 @@ MODULE ham
         overlap_1=1.0
         !$acc parallel loop gang vector independent &
         !$acc & present(z1d,z2d) reduction(*:overlap_1)
+        !!$omp parallel do reduction(*:overlap_1)
         do j=1,norb
             overlap_1=overlap_1*((z1d(j)*z2d(j))+(z1d(j+norb)*z2d(norb+j)))
         end do
+        !!$omp end parallel do 
         !$acc end parallel loop
         
 
