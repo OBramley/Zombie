@@ -81,6 +81,7 @@ MODULE gradient_descent
 
         if (errorflag .ne. 0) return
         if(grad_fin%grad_avlb(0,pick).eq.2) return
+        ! if(grad_fin%grad_avlb(0,pick).eq.1) return
 
         typ=0
     
@@ -428,7 +429,7 @@ MODULE gradient_descent
                 
                
                 pick=picker(j)
-                
+                rjct_cnt2=0
                 call grad_calc(haml,zstore,elect,an_cr,an2_cr2,pick,dvecs,grad_fin,en,0)
 
                 ! mmntm=((grad_fin%vars(pick,:)))!+(mmntma*grad_fin%prev_mmntm(pick,:)))
@@ -529,7 +530,7 @@ MODULE gradient_descent
                     end if 
                     rjct_cnt2=rjct_cnt2+1
                 end do
-                
+               
                 if(rjct_cnt2.eq.loop_max)then
                     rjct_cnt=rjct_cnt+1
                     write(6,"(a,i3,a,f21.16,a,f21.16,a,f21.16,a,i3,a,i3)") '       ', pick,'              ', &
@@ -543,9 +544,8 @@ MODULE gradient_descent
             write(6,"(a,i0,a,f21.16,a,i0,a)") "Energy after epoc no. ",epoc_cnt,": ", &
             grad_fin%prev_erg, ". ", acpt_cnt, " Zombie state(s) altered."
 
-            call system_clock(end)
-            print *, "elapsed time: ", real(end - beginning) / real(rate)
-      
+            
+    
             if(acpt_cnt.gt.0)then
                 picker=scramble(ndet-1)
                 call epoc_writer(grad_fin%prev_erg,epoc_cnt,chng_trk,erg_chng_trk,lr_chng_trk,0) 
@@ -569,7 +569,8 @@ MODULE gradient_descent
                 end do
             end if
            
-            if((rjct_cnt.ge.((ndet-1)*2)))then
+            if(acpt_cnt.eq.0)then
+                ! if((rjct_cnt.ge.((ndet-1)*2)))then
                 call orbital_gd(zstore,temp_zom,grad_fin,elect,dvecs,temp_dvecs,en,haml,temp_ham,&
                 epoc_cnt,alphain,b,picker,1,an_cr,an2_cr2,rjct_cnt)
                 orb_cnt=150
