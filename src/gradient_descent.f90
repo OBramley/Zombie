@@ -400,7 +400,7 @@ MODULE gradient_descent
         acpt_cnt=0  !counts how many ZS have been changed
         loop_max=12!5!
         mmntma=0.9
-        orb_cnt=100 
+        orb_cnt=0 
          
         call alloczs(temp_zom,int(ndet,kind=16))
         call allocdv(temp_dvecs,1,ndet,norb)
@@ -570,13 +570,13 @@ MODULE gradient_descent
             end if
            
             if(acpt_cnt.eq.0)then
-                ! if((rjct_cnt.ge.((ndet-1)*2)))then
+            ! if(rjct_cnt.ge.(ndet*2)+1)then
                 call orbital_gd(zstore,temp_zom,grad_fin,elect,dvecs,temp_dvecs,en,haml,temp_ham,&
                 epoc_cnt,alphain,b,picker,1,an_cr,an2_cr2,rjct_cnt)
                 ! orb_cnt=20
             else if((orb_cnt.le.0))then !(epoc_cnt.eq.2).or.
                 call orbital_gd(zstore,temp_zom,grad_fin,elect,dvecs,temp_dvecs,en,haml,temp_ham,&
-                epoc_cnt,alphain,b,picker,20,an_cr,an2_cr2,rjct_cnt)
+                epoc_cnt,alphain,b,picker,30,an_cr,an2_cr2,rjct_cnt)
                 orb_cnt=20
             end if
  
@@ -679,7 +679,7 @@ MODULE gradient_descent
         alpha=0.8  ! learning rate reduction
         b=1.0D0 !starting learning rate
         
-        epoc_max=10000
+        epoc_max=20000
       
     
         if(epoc_cnt.lt.epoc_max)then

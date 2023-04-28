@@ -1,0 +1,276 @@
+MODULE GPU_setup
+
+    use devvars
+    use globabl
+    use alarrays_dev
+
+    contains 
+
+    subroutine initial_stuff(h1_num,h2_num,h1ei,h2ei,hnuc,sin,cos,phi,val,&
+        hjk,ovrlp,inv,kinvh,d_vec,d_diff,norm,t,erg,&
+        an_cr_ham_alive,an_cr_ham_dead,an_cr_ham_neg_alive,an_cr_ham_neg_dead,&
+        an2_cr2_ham_alive,an2_cr2_ham_dead,an2_cr2_ham_neg_alive,an2_cr2_ham_neg_dead,&
+        haml,zstore,an_cr,an2_cr2,elecs)
+
+        implicit none
+
+        integer,device::h1_num
+        integer,device::h2_num
+        real(kind=8), dimension(:), allocatable,device::h1ei
+        real(kind=8), dimension(:), allocatable,device::h2ei
+        real(kind=8) :: hnuc
+        real(kind=8), dimension(:,:), allocatable,device::sin
+        real(kind=8), dimension(:,:), allocatable,device::cos
+        real(kind=8),dimension(:,:),allocatable,device::phi
+        real(kind=8),dimension(:,:),allocatable,device::val
+
+        real(kind=8), dimension(:,:), allocatable,device::hjk
+        real(kind=8), dimension(:,:), allocatable,device::ovrlp
+        real(kind=8), dimension(:,:), allocatable,device::inv
+        real(kind=8), dimension(:,:), allocatable,device::kinvh
+        real(kind=8), dimension(:), allocatable,device::d_vec
+        real(kind=8), dimension(:,:,:),allocatable,device::d_diff
+        real(kind=8):: norm
+        real(kind=8), dimension(:),allocatable,device::t
+        real(kind=8), dimension(:,:),allocatable,device::erg 
+
+        integer(kind=2),dimension(:,:), allocatable,device::an_cr_ham_alive,an_cr_ham_dead
+        integer(kind=1),dimension(:,:), allocatable,device::an_cr_ham_neg_alive,an_cr_ham_neg_dead
+        integer(kind=2),dimension(:,:), allocatable,device::an2_cr2_ham_alive,an2_cr2_ham_dead
+        integer(kind=1),dimension(:,:), allocatable,device::an2_cr2_ham_neg_alive,an2_cr2_ham_neg_dead
+
+        type(zombiest), dimension(:):: zstore
+        type(elecintrgl)::elecs
+        type(hamiltonian)::haml
+        type(oprts)::an_cr,an2_cr2
+        integer:: j
+        
+        if (errorflag .ne. 0) return
+
+        h1_num=elecs%h1_num
+        h2_num=elecs%h2_num
+
+        call subroutine allocintgrl_dev(h1_num,h2_num,h1ei,h2ei)
+        h1ei=elecs%h1ei
+        h2ei=elecs%h2ei
+        hnuc=elecs%hnuc
+
+        call subroutine alloczs_dev(sin,cos,phi,val,ndet)
+        do j=1,ndet
+            sin(:,j)=elecs%sin(:,j)
+            cos(:,j)=elecs%cos(:,j)
+            phi(:,j)=elecs%phi(:,j)
+            val(:,j)=elecs%val(:,j)
+        end do
+
+        call subroutine allocham_dev(hjk,ovrlp,inv,kinvh,ndet)
+        hjk=haml%hjk
+        ovrlp=haml%ovrlp
+        inv=haml%inv
+        kinvh=haml%kinvh
+
+
+        call subroutine allocdv_dev(d_vec,d_diff,ndet,norb)
+
+        call subroutine allocerg_dev(t,erg)
+
+        call subroutine alloc_oprts_ham_dev(an_cr_ham_alive,an_cr_ham_dead,an_cr_ham_neg_alive,an_cr_ham_neg_dead,h1_num)
+
+        do j=1,h1_num
+            an_cr_ham_alive(:,j)=an_cr%alive(:,j)
+            an_cr_ham_dead(:,j)=an_cr%dead(:,j)
+            an_cr_ham_neg_alive(:,j)=an_cr%neg_alive(:,j)
+            an_cr_ham_neg_dead(:,j)=an_cr%neg_dead(:,j)
+        end do
+
+        call subroutine alloc_oprts_ham_dev(an2_cr2_ham_alive,an2_cr2_ham_dead,an2_cr2_ham_neg_alive,an2_cr2_ham_neg_dead,h2_num)
+
+        do j=1,h2_num
+            an2_cr2_alive(:,j)=an2_cr2%alive(:,j)
+            an2_cr2_dead(:,j)=an2_cr2%dead(:,j)
+            an2_cr2_neg_alive(:,j)=an2_cr2%neg_alive(:,j)
+            an2_cr2_neg_dead(:,j)=an2_cr2%neg_dead(:,j)
+        end do
+        
+        
+    end subroutine initial_stuff
+
+    subroutine initial_stuff_dealloc(h1_num,h2_num,h1ei,h2ei,hnuc,sin,cos,phi,val,&
+        hjk,ovrlp,inv,kinvh,d_vec,d_diff,norm,t,erg,&
+        an_cr_ham_alive,an_cr_ham_dead,an_cr_ham_neg_alive,an_cr_ham_neg_dead,&
+        an2_cr2_ham_alive,an2_cr2_ham_dead,an2_cr2_ham_neg_alive,an2_cr2_ham_neg_dead)
+
+        implicit none
+
+        integer,device::h1_num
+        integer,device::h2_num
+        real(kind=8), dimension(:), allocatable,device::h1ei
+        real(kind=8), dimension(:), allocatable,device::h2ei
+        real(kind=8) :: hnuc
+        real(kind=8), dimension(:,:), allocatable,device::sin
+        real(kind=8), dimension(:,:), allocatable,device::cos
+        real(kind=8),dimension(:,:),allocatable,device::phi
+        real(kind=8),dimension(:,:),allocatable,device::val
+
+        real(kind=8), dimension(:,:), allocatable,device::hjk
+        real(kind=8), dimension(:,:), allocatable,device::ovrlp
+        real(kind=8), dimension(:,:), allocatable,device::inv
+        real(kind=8), dimension(:,:), allocatable,device::kinvh
+        real(kind=8), dimension(:), allocatable,device::d_vec
+        real(kind=8), dimension(:,:,:),allocatable,device::d_diff
+        real(kind=8):: norm
+        real(kind=8), dimension(:),allocatable,device::t
+        real(kind=8), dimension(:,:),allocatable,device::erg 
+
+        integer(kind=2),dimension(:,:), allocatable,device::an_cr_ham_alive,an_cr_ham_dead
+        integer(kind=1),dimension(:,:), allocatable,device::an_cr_ham_neg_alive,an_cr_ham_neg_dead
+        integer(kind=2),dimension(:,:), allocatable,device::an2_cr2_ham_alive,an2_cr2_ham_dead
+        integer(kind=1),dimension(:,:), allocatable,device::an2_cr2_ham_neg_alive,an2_cr2_ham_neg_dead
+      
+        if (errorflag .ne. 0) return
+
+        call subroutine deallocintgrl_dev(h1ei,h2ei)
+  
+        call subroutine dealloczs_dev(sin,cos,phi,val)
+    
+        call subroutine deallocham_dev(hjk,ovrlp,inv,kinvh)
+        
+        call subroutine deallocdv_dev(d_vec,d_diff,ndet,norb)
+
+        call subroutine deallocerg_dev(t,erg)
+
+        call subroutine dealloc_oprts_ham_dev(an_cr_ham_alive,an_cr_ham_dead,an_cr_ham_neg_alive,an_cr_ham_neg_dead)
+
+        call subroutine dealloc_oprts_ham_dev(an2_cr2_ham_alive,an2_cr2_ham_dead,an2_cr2_ham_neg_alive,an2_cr2_ham_neg_dead)
+
+      
+
+    end subroutine initial_stuff_dealloc
+
+
+    subroutine gradient_intialise(hjk_temp,ovrlp_temp,kinvh_temp,diff_hjk,diff_ovrlp,diff_kinvh,diff_ov_dov,diff_in_dhjk,&
+        d_temp,d_diff_temp,norm_temp,an_cr_diff_alive,an_cr_diff_dead,an_cr_diff_neg_alive,an_cr_diff_neg_dead,an_cr_dcnt,&
+        an2_cr2_diff_alive,an2_cr2_diff_dead,an2_cr2_diff_neg_alive,an2_cr2_diff_neg_dead,an2_cr2_dcnt,&
+        grad_vars,grad_avlb,an_cr,an2_cr2)
+
+        implicit none 
+
+        real(kind=8), dimension(:,:), allocatable,device::hjk_temp
+        real(kind=8), dimension(:,:), allocatable,device::ovrlp_temp
+        real(kind=8), dimension(:,:), allocatable,device::ovrlp_temp
+        real(kind=8), dimension(:,:), allocatable,device::kinvh_temp
+        real(kind=8), dimension(:,:,:), allocatable,device::diff_hjk
+        real(kind=8), dimension(:,:,:), allocatable,device::diff_hjk
+        real(kind=8), dimension(:,:,:,:), allocatable,device::diff_invh
+        real(kind=8), dimension(:,:,:,:),allocatable,device::diff_ov_dov
+        real(kind=8), dimension(:,:,:,:),allocatable,device::diff_in_dhjk
+
+        real(kind=8), dimension(:), allocatable,device::d_temp
+        real(kind=8), dimension(:,:,:),allocatable,device::d_diff_temp
+        real(kind=8):: norm_temp
+
+        integer(kind=2),dimension(:,:,:), allocatable,device::an_cr_diff_alive,an_cr_diff_dead
+        integer(kind=1),dimension(:,:,:), allocatable,device::an_cr_diff_neg_alive,an_cr_diff_neg_dead
+        integer,dimension(:,:), allocatable,device::an_cr_dcnt
+        integer(kind=2),dimension(:,:,:), allocatable,device::an2_cr2_diff_alive,an2_cr2_diff_dead
+        integer(kind=1),dimension(:,:,:), allocatable,device::an2_cr2_diff_neg_alive,an2_cr2_diff_neg_dead
+        integer,dimension(:,:), allocatable,device::an2_cr2_dcnt
+
+        real(kind=8),dimension(:,:), allocatable,device::grad_vars
+        integer,dimension(:,:),allocatable,device::grad_avlb
+        type(oprts)::an_cr,an2_cr2
+        if (errorflag .ne. 0) return
+
+        call subroutine allocham_dev(hjk_temp,ovrlp_temp,kinvh_temp)
+        call subroutine allocham_diff_dev(diff_hjk,diff_ovrlp,diff_invh,diff_ov_dov,diff_in_dhjk)
+        call subroutine allocdv_dev(d_temp,d_diff_temp,ndet,norb)
+
+        call subroutine alloc_oprts_diff_dev(an_cr_diff_alive,an_cr_diff_dead,an_cr_diff_neg_alive,&
+        an_cr_diff_neg_dead,an_cr_dcnt,size(an_cr%dcnt,1))
+
+        an_cr_dcnt = an_cr%dcnt
+
+        do j=1,norb
+            an_cr_diff_alive(j,:,:) = an_cr%diff(j)%alive
+            an_cr_diff_dead(j,:,:) = an_cr%diff(j)%dead
+            an_cr_diff_neg_alive(j,:,:) = an_cr%diff(j)%neg_alive
+            an_cr_diff_neg_dead(j,:,:) = an_cr%diff(j)%neg_dead
+        end do
+
+        call subroutine alloc_oprts_diff_dev(an2_cr2_diff_alive,an2_cr2_diff_dead,an2_cr2_diff_neg_alive,&
+        an2_cr2_diff_neg_dead,an2_cr2_dcnt,size(an2_cr2%dcnt,1))
+
+        an2_cr2_dcnt = an2_cr2%dcnt
+
+        do j=1,norb
+            an2_cr2_diff_alive(j,:,:) = an2_cr2%diff(j)%alive
+            an2_cr2_diff_dead(j,:,:) = an2_cr2%diff(j)%dead
+            an2_cr2_diff_neg_alive(j,:,:) = an2_cr2%diff(j)%neg_alive
+            an2_cr2_diff_neg_dead(j,:,:) = an2_cr2%diff(j)%neg_dead
+        end do
+
+        call subroutine allocgrad_dev(grad_vars,grad_avlb)
+
+        return 
+
+
+
+    end subroutine gradient_intialise
+
+
+    subroutine gradient_dealloc(hjk_temp,ovrlp_temp,kinvh_temp,diff_hjk,diff_ovrlp,diff_kinvh,diff_ov_dov,diff_in_dhjk,&
+        d_temp,d_diff_temp,norm_temp,an_cr_diff_alive,an_cr_diff_dead,an_cr_diff_neg_alive,an_cr_diff_neg_dead,an_cr_dcnt,&
+        an2_cr2_diff_alive,an2_cr2_diff_dead,an2_cr2_diff_neg_alive,an2_cr2_diff_neg_dead,an2_cr2_dcnt,&
+        grad_vars,grad_avlb)
+
+        implicit none 
+
+        real(kind=8), dimension(:,:), allocatable,device::hjk_temp
+        real(kind=8), dimension(:,:), allocatable,device::ovrlp_temp
+        real(kind=8), dimension(:,:), allocatable,device::ovrlp_temp
+        real(kind=8), dimension(:,:), allocatable,device::kinvh_temp
+        real(kind=8), dimension(:,:,:), allocatable,device::diff_hjk
+        real(kind=8), dimension(:,:,:), allocatable,device::diff_hjk
+        real(kind=8), dimension(:,:,:,:), allocatable,device::diff_invh
+        real(kind=8), dimension(:,:,:,:),allocatable,device::diff_ov_dov
+        real(kind=8), dimension(:,:,:,:),allocatable,device::diff_in_dhjk
+
+        real(kind=8), dimension(:), allocatable,device::d_temp
+        real(kind=8), dimension(:,:,:),allocatable,device::d_diff_temp
+        real(kind=8):: norm_temp
+
+        integer(kind=2),dimension(:,:,:), allocatable,device::an_cr_diff_alive,an_cr_diff_dead
+        integer(kind=1),dimension(:,:,:), allocatable,device::an_cr_diff_neg_alive,an_cr_diff_neg_dead
+        integer,dimension(:,:), allocatable,device::an_cr_dcnt
+        integer(kind=2),dimension(:,:,:), allocatable,device::an2_cr2_diff_alive,an2_cr2_diff_dead
+        integer(kind=1),dimension(:,:,:), allocatable,device::an2_cr2_diff_neg_alive,an2_cr2_diff_neg_dead
+        integer,dimension(:,:), allocatable,device::an2_cr2_dcnt
+
+        real(kind=8),dimension(:,:), allocatable,device::grad_vars
+        integer,dimension(:,:),allocatable,device::grad_avlb
+     
+        if (errorflag .ne. 0) return
+
+        call subroutine deallocham_dev(hjk_temp,ovrlp_temp,kinvh_temp)
+        call subroutine deallocham_diff_dev(diff_hjk,diff_ovrlp,diff_invh,diff_ov_dov,diff_in_dhjk)
+        call subroutine deallocdv_dev(d_temp,d_diff_temp,ndet,norb)
+
+        call subroutine dealloc_oprts_diff_dev(an_cr_diff_alive,an_cr_diff_dead,an_cr_diff_neg_alive,&
+        an_cr_diff_neg_dead,an_cr_dcnt)
+
+       
+        call subroutine dealloc_oprts_diff_dev(an2_cr2_diff_alive,an2_cr2_diff_dead,an2_cr2_diff_neg_alive,&
+        an2_cr2_diff_neg_dead,an2_cr2_dcnt)
+
+       
+        call subroutine deallocgrad_dev(grad_vars,grad_avlb)
+
+        return 
+
+    end subroutine gradient_dealloc
+
+
+
+
+END MODULE GPU_setup
+

@@ -19,14 +19,14 @@ run={
     'language':'fortran',
 
     # What is the name of the run
-    'runfolder':'N2_20_orb',
+    'runfolder':'N2',
 
     # Amount of time to request on HPC 
     'runtime': "48:00:00",
 
     'nodes':1,
 
-    'cores':12,
+    'cores':16,
 
     # Set the numpy random seed for Zombie state generation
     'seed':1,
