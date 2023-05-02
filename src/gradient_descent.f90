@@ -101,7 +101,8 @@ MODULE gradient_descent
 
         en%erg=0
         en%t=0
-        grad_fin%vars(pick,:)=modulo(grad_fin%vars(pick,:), 2.0 * pirl)
+       
+        ! grad_fin%vars(pick,:)=modulo(grad_fin%vars(pick,:), 2.0 * pirl)
         if( grad_fin%grad_avlb(0,pick).eq.0)then 
             grad_fin%grad_avlb(0:,pick)=1
         else if( grad_fin%grad_avlb(0,pick).eq.1)then 
@@ -148,7 +149,7 @@ MODULE gradient_descent
         type(oprts),intent(in)::an_cr,an2_cr2
         integer,intent(inout)::epoc_cnt,rjct_cnt_in
         integer,intent(in)::maxloop
-        real(kind=8),intent(in)::b,alphain
+        real(kind=8),intent(in)::alphain,b
         integer,dimension(:),intent(inout)::picker
         type(zombiest)::temp_zom
         integer::rjct_cnt,acpt_cnt,pick,pickorb,rjct_cnt2,loops,lralt_zs,acpt_cnt_2,ierr
@@ -209,7 +210,7 @@ MODULE gradient_descent
                 do n=1,norb
                     rjct_cnt=0
                     pickorb=pickerorb(n)
-                    ! grad_fin%grad_avlb=0
+                    grad_fin%grad_avlb=0
                     call grad_calc(haml,zstore,elect,an_cr,an2_cr2,pick,dvecs,grad_fin,en,pickorb)
                     
                     temp_zom=zstore(pick)
@@ -297,8 +298,6 @@ MODULE gradient_descent
                 call epoc_writer(grad_fin%prev_erg,epoc_cnt,chng_trk,0)
                 epoc_cnt=epoc_cnt+1
                 picker=scramble(ndet-1)
-            else 
-                grad_fin%prev_erg=grad_fin%prev_erg+abs(grad_fin%prev_erg-grad_fin%current_erg)*5
             end if
             
             
@@ -320,9 +319,9 @@ MODULE gradient_descent
 
             if(rjct_cnt_in.ne.0)then
                 grad_fin%grad_avlb=0
-                ! haml%diff_hjk=0
-                ! haml%diff_ovrlp=0
-                ! dvecs(1)%d_diff=0
+                haml%diff_hjk=0
+                haml%diff_ovrlp=0
+                dvecs(1)%d_diff=0
             end if
 
             if(loops.ge.maxloop)then
@@ -332,7 +331,7 @@ MODULE gradient_descent
             acpt_cnt_2=0
         end do
 
-        grad_fin%grad_avlb(:,0)=0
+        grad_fin%grad_avlb=0
         call dealloczf(temp_zom)
         deallocate(pickerorb,stat=ierr)
         if(ierr==0) deallocate(chng_trk,stat=ierr)
@@ -519,8 +518,6 @@ MODULE gradient_descent
                 picker=scramble(ndet-1)
                 call epoc_writer(grad_fin%prev_erg,epoc_cnt,chng_trk,erg_chng_trk,lr_chng_trk,0) 
                 epoc_cnt=epoc_cnt+1
-            else 
-                grad_fin%prev_erg=grad_fin%prev_erg+abs(grad_fin%prev_erg-grad_fin%current_erg)*5
             end if 
            
             orb_cnt=orb_cnt-1
@@ -547,7 +544,7 @@ MODULE gradient_descent
                 orb_cnt=orb_cnt+1
             else if((orb_cnt.le.0))then
                 call orbital_gd(zstore,grad_fin,elect,dvecs,temp_dvecs,en,haml,temp_ham,&
-                epoc_cnt,alphain,newb,picker,20,an_cr,an2_cr2,rjct_cnt)
+                epoc_cnt,alphain,newb,picker,100,an_cr,an2_cr2,rjct_cnt)
                 orb_cnt=20
             end if
  
@@ -648,7 +645,7 @@ MODULE gradient_descent
         end if
 
         alpha=0.8  ! learning rate reduction
-        b=1.0D0 !starting learning rate
+        b=1.D0 !starting learning rate
         
         epoc_max=20000
       
