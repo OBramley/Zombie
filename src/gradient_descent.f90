@@ -303,20 +303,20 @@ MODULE gradient_descent
             
             
             !Every 100 epoc brings phi values back within the normal 0-2pi range
-            if(modulo(epoc_cnt,100).eq.0)then 
-                do k=2,ndet 
-                    do l=1,norb 
-                        if((zstore(k)%phi(l).gt.2*pirl).or.(zstore(k)%phi(l).lt.0))then 
-                            zstore(k)%phi(l)=asin(real(zstore(k)%sin(l)))
-                            if((zstore(k)%phi(l).gt.2*pirl))then
-                                zstore(k)%phi(l)=zstore(k)%phi(l)-2*pirl
-                            else if((zstore(k)%phi(l).lt.0))then
-                                zstore(k)%phi(l)=zstore(k)%phi(l)+2*pirl
-                            end if
-                        end if
-                    end do
-                end do
-            end if
+            ! if(modulo(epoc_cnt,100).eq.0)then 
+            !     do k=2,ndet 
+            !         do l=1,norb 
+            !             if((zstore(k)%phi(l).gt.2*pirl).or.(zstore(k)%phi(l).lt.0))then 
+            !                 zstore(k)%phi(l)=asin(real(zstore(k)%sin(l)))
+            !                 if((zstore(k)%phi(l).gt.2*pirl))then
+            !                     zstore(k)%phi(l)=zstore(k)%phi(l)-2*pirl
+            !                 else if((zstore(k)%phi(l).lt.0))then
+            !                     zstore(k)%phi(l)=zstore(k)%phi(l)+2*pirl
+            !                 end if
+            !             end if
+            !         end do
+            !     end do
+            ! end if
 
             if(rjct_cnt_in.ne.0)then
                 grad_fin%grad_avlb=0
@@ -525,20 +525,20 @@ MODULE gradient_descent
            
             orb_cnt=orb_cnt-1
             !Every 100 epoc brings phi values back within the normal 0-2pi range
-            if(modulo(epoc_cnt,100).eq.0)then 
-                do k=2,ndet 
-                    do l=1,norb 
-                        if((zstore(k)%phi(l).gt.2*pirl).or.(zstore(k)%phi(l).lt.0))then 
-                            zstore(k)%phi(l)=asin(real(zstore(k)%sin(l)))
-                            if((zstore(k)%phi(l).gt.2*pirl))then
-                                zstore(k)%phi(l)=zstore(k)%phi(l)-2*pirl
-                            else if((zstore(k)%phi(l).lt.0))then
-                                zstore(k)%phi(l)=zstore(k)%phi(l)+2*pirl
-                            end if
-                        end if
-                    end do
-                end do
-            end if
+            ! if(modulo(epoc_cnt,100).eq.0)then 
+            !     do k=2,ndet 
+            !         do l=1,norb 
+            !             if((zstore(k)%phi(l).gt.2*pirl).or.(zstore(k)%phi(l).lt.0))then 
+            !                 zstore(k)%phi(l)=asin(real(zstore(k)%sin(l)))
+            !                 if((zstore(k)%phi(l).gt.2*pirl))then
+            !                     zstore(k)%phi(l)=zstore(k)%phi(l)-2*pirl
+            !                 else if((zstore(k)%phi(l).lt.0))then
+            !                     zstore(k)%phi(l)=zstore(k)%phi(l)+2*pirl
+            !                 end if
+            !             end if
+            !         end do
+            !     end do
+            ! end if
            
             ! if(acpt_cnt.eq.0)then
             if(rjct_cnt.ge.(ndet*2)+1)then
