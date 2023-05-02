@@ -1,4 +1,4 @@
-MODULE ham 
+MODULE ham_gpu 
 
     use globvars
     use devvars
@@ -6,7 +6,7 @@ MODULE ham
     use cublas 
     contains
  
-    subroutine hamgen(hjk,ovrlp,inv,kinvh,val,h1_num,h2_num,h1ei,h2ei,hnuc,&
+    subroutine hamgen_gpu(hjk,ovrlp,inv,kinvh,val,h1_num,h2_num,h1ei,h2ei,hnuc,&
         an_cr_ham_alive,an_cr_ham_dead,an_cr_ham_neg_alive,an_cr_ham_neg_dead,&
         an2_cr2_ham_alive,an2_cr2_ham_dead,an2_cr2_ham_neg_alive,an2_cr2_ham_neg_dead)
 
@@ -28,9 +28,10 @@ MODULE ham
             integer(kind=1),dimension(:,:)::an2_cr2_ham_neg_alive,an2_cr2_ham_neg_dead
             real(kind=8),dimension(:,:),allocatable,device::h1etot,h2etot
             integer, device :: stream1, stream2, stream3
-            integer, allocatable,dimension(:)::IPIV1
+            integer, allocatable,dimension(:),device::IPIV1
+            type(cublasHandle_t)::handle
             real(kind=8),allocatable,dimension(:)::WORK1
-            integer::ierr
+            integer::ierr,batchCount
             real(kind=8), dimension(:,:) ::h1ei
             real(kind=8), dimension(:,:) ::h2ei
             integer::threads_per_block
@@ -66,118 +67,42 @@ MODULE ham
             call cudaStreamDestroy(stream3)            
 
 
-          
-            inv=ovrlp
-            allocate(WORK1(ndet_d),IPIV1(ndet_d),stat=ierr)
-            if (ierr/=0) then
-                write(0,"(a,i0)") "Error in IPIV or WORK1 vector allocation . ierr had value ", ierr
-                errorflag=1
-            end if 
+            batchCount=1
 
-            Call dgetrf(ndet_d, ndet_d, inv, size, IPIV1, ierr)
-            if (ierr/=0) then
-                write(0,"(a,i0)")"Error in DGETRF",ierr
-            end if
-            if (ierr==0) call dgetri(ndet_d,inv,ndet_d,IPIV1,WORK1,ndet_d,ierr)
-            if (ierr/=0) then
-                write(0,"(a,i0)")"Error in DGETRF",ierr
-            end if
+             ! Allocate device memory for pivoting information
+            allocate(d_ipiv(n), stat=ierr)
+            if (info /= 0) stop "Error allocating device memory"
 
-            deallocate(WORK1,IPIV1)
+            ! Create cuBLAS handle
+            call cublasCreate_v2(handle)
+       
+            ! Compute LU factorization of input matrix
+            call cublasSgetrfBatched(handle, ndet_d, ovrlp, ndet_d, IPIV1, ierr, batchCount)
+            if (info /= 0) stop "Error computing LU factorization"
+  
+            ! Compute inverse of input matrix
+            call cublasSgetriBatched(handle, ndet_d, ovrlp, ndet_d, IPIV1, inv, ndet_d, ierr, batchCount)
+            if (info /= 0) stop "Error computing matrix inverse"
+  
 
-            call DGEMM("N","N",ndet_d,ndet_d,ndet_d,1.d0,inv,ndet_d,hjk,ndet_d,0.d0,kinvh,ndet_d)
+            call cudaFree(d_ipiv)
+  
+           
+            call cublasDgemm(handle, CUBLAS_OP_N, CUBLAS_OP_N, ndet_d, ndet_d, ndet_d, 1.0d0, &
+            inv, ndet_d, hjk, ndet_d, 0.0d0, kinvh, ndet_d)
+
+            ! Destroy cuBLAS handle
+            call cublasDestroy_v2(handle)
+
+
 
             return 
 
-        end subroutine hamgen
+        end subroutine hamgen_gpu
+        
 
         !##############################################################################################################################
         
-        
-        !Level 1 Routines to make the Hamiltonian and Overlap matrices
-
-        subroutine haml_ovrlp_comb(hjk,ovrlp,inv,kinvh,val,h1_num,h2_num,h1ei,h2ei,hnuc,&
-            an_cr_ham_alive,an_cr_ham_dead,an_cr_ham_neg_alive,an_cr_ham_neg_dead,&
-            an2_cr2_ham_alive,an2_cr2_ham_dead,an2_cr2_ham_neg_alive,an2_cr2_ham_neg_dead,size,verb)
-            implicit none
-
-            real(kind=8), dimension(:,:)::hjk
-            real(kind=8), dimension(:,:)::ovrlp
-            real(kind=8), dimension(:,:)::inv
-            real(kind=8), dimension(:,:)::kinvh
-            real(kind=8),dimension(:,:),::val
-            integer,::h1_num
-            integer,::h2_num
-            real(kind=8), dimension(:,:) ::h1ei
-            real(kind=8), dimension(:,:) ::h2ei
-            real(kind=8):: hnuc
-            integer(kind=2),dimension(:,:)::an_cr_ham_alive,an_cr_ham_dead
-            integer(kind=1),dimension(:,:)::an_cr_ham_neg_alive,an_cr_ham_neg_dead
-            integer(kind=2),dimension(:,:)::an2_cr2_ham_alive,an2_cr2_ham_dead
-            integer(kind=1),dimension(:,:)::an2_cr2_ham_neg_alive,an2_cr2_ham_neg_dead
-
-            
-            integer,intent(in)::verb
-            integer::j,k,ierr
-            real(kind=8),dimension(:),allocatable,device::h1etot,h2etot
-        
-            if (errorflag .ne. 0) return 
-            ierr=0
-
-            allocate(h1etot(ndet,ndet),h2etot(ndet,ndet),stat=ierr)
-            ovrlp=1.0d0 
-            do j=1,ndet
-                do k=j,ndet
-                    do l=1,norb
-                        ovrlp(j,k)=ovrlp(j,k)*(val(j,l)*val(k,l)+val(j,l+norb)*val(k,l+norb))
-                    end do
-                    ovrlp(k,j)=ovrlp(j,k)
-                    hjk(j,k)=ovrlp(j,k)*hnuc
-                end do 
-            end do
-
-           
-            j=1
-            k=1
-            do n=1,(ndet*(ndet+1))/2
-                do p=1,h1_num
-                    ov=1.0d0
-                    do l=1,norb 
-                        ov=ov*((val(j,l)*val((an_cr_alive(l,p)),k)*an_cr_neg_alive(l,p))+(val(j,l+norb)*val((an_cr_dead(l,p)),k))*an_cr_neg_dead(l,p))
-                    end do 
-                    h1etot(n)=h1etot(n)+(ov*h1ei(p))
-                end do
-                k=k+1
-                if(k.gt.ndet) then
-                    j=j+1
-                    k=j
-                end if
-            end do
-           
-              
-         
-
-            do j=1,ndet
-                do k=j,ndet
-                    do p=1,h2_num
-                        ov=1.0d0 
-                        do l=1,norb 
-                            ov=ov*((val(j,l)*val((an2_cr2_alive(l,p)),k)*an2_cr2_neg_alive(l,p))+(val(j,l+norb)*val((an2_cr2_dead(l,p)),k))*an2_cr2_neg_dead(l,p))
-                        end do 
-                        h2etot=h2etot+(ov*h2ei(p))
-                    end do
-                    hjk(j,k)=hjk(j,k)+h1etot+h2etot*0.5d0
-                    hjk(k,j)=hjk(j,k)
-
-                end do 
-            end do
-         
-            if(verb.eq.1)then
-                write(6,"(a,i0,a)") "hamliltonian column ",j, " completed"
-            end if
-
-        end subroutine haml_ovrlp_comb
-
         attributes(global) subroutine ham_val_kernel(val,h1etot,ops_ham_alive,ops_ham_dead,ops_ham_neg_alive,&
         ops_ham_neg_dead,el,len)
 
@@ -198,9 +123,8 @@ MODULE ham
 
             if (j > ndet_d .or. k > ndet_d .or. j > k) return
 
-           
+        
             do p = 1, len
-            
                 ov=1.0d0
                 do l=1,norb 
                     ov=ov*((val(j,l)*val((an_cr_alive(l,p)),k)*an_cr_neg_alive(l,p))+&
@@ -260,7 +184,6 @@ MODULE ham
             
         end subroutine sum_kernel
 
-    
 
         !##############################################################################################################################
 
@@ -268,129 +191,72 @@ MODULE ham
 
         ! Calcualates a column of a hamiltonian Start specifies the row the column
         ! is started to be calcualted 
-        subroutine haml_column(hcol,z1d,h1_num,h2_num,h1ei,h2ei,an_cr_ham_alive,an_cr_ham_dead,&
-            an_cr_ham_neg_alive,an_cr_ham_neg_dead,an2_cr2_ham_alive,an2_cr2_ham_dead,&
-            an2_cr2_ham_neg_alive,an2_cr2_ham_neg_dead,start)
+        attributes(global) subroutine ham_val_column_kernel(val,h1etot,ops_ham_alive,ops_ham_dead,ops_ham_neg_alive,&
+        ops_ham_neg_dead,el,len,row)
 
             implicit none
-
-            real(kind=8),dimension(:),intent(inout)::hcol
-            real(kind=8),dimension(:,:),::val
-            integer,::h1_num
-            integer,::h2_num
-            real(kind=8), dimension(:) ::h1ei
-            real(kind=8), dimension(:) ::h2ei
-            real(kind=8):: hnuc
-            integer(kind=2),dimension(:,:)::an_cr_ham_alive,an_cr_ham_dead
-            integer(kind=1),dimension(:,:)::an_cr_ham_neg_alive,an_cr_ham_neg_dead
-            integer(kind=2),dimension(:,:)::an2_cr2_ham_alive,an2_cr2_ham_dead
-            integer(kind=1),dimension(:,:)::an2_cr2_ham_neg_alive,an2_cr2_ham_neg_dead
-            real(kind=8),dimension(0:),intent(in)::z1d
-       
-            integer,intent(in)::start
-            real(kind=8)::h1etot,h2etot
-            integer::j
-
-            if (errorflag .ne. 0) return
-            
-          
-            do j=1,(ndet-(start-1))
-                h1etot = haml_vals(z1d,val(0:,start+j-1),&
-                    an_cr_ham_alive,an_cr_ham_dead,an_cr_ham_neg_alive,an_cr_ham_neg_dead,h1ei,h1_num)
-                
-        
-                hcol(j)=hcol(j)+h1etot
-
-                h2etot = haml_vals(z1d,val(0:,start+j-1),&
-                an2_cr2_ham_alive,an2_cr2_ham_dead,an2_cr2_ham_neg_alive,an2_cr2_ham_neg_dead,h2ei,h2_num)
-               
-                hcol(j)=hcol(j)+(0.5*h2etot)
-            end do 
+            real(kind=8), dimension(:, :), intent(in):: val
+            integer(kind=2),dimension(:,:), intent(in)::ops_ham_alive,ops_ham_dead
+            integer(kind=1),dimension(:,:), intent(in)::ops_ham_neg_alive,ops_ham_neg_dead
+            real(kind=8), dimension(:), intent(in)::el
+            integer, intent(in):: len
+            real(kind=8), dimension(:, :), intent(inout):: h1etot
+            integer :: j, l
       
-            
-            return
+            integer, intent(in) :: row
+            j = (blockIdx%x - 1)*blockDim%x + threadIdx%x
+           
 
-        end subroutine haml_column
+            if (j > ndet_d) return
+           
+            do p = 1, len
+                ov=1.0d0
+                do l=1,norb 
+                    ov=ov*((val(j,l)*val((an_cr_alive(l,p)),row)*an_cr_neg_alive(l,p))+&
+                        (val(j,l+norb)*val((an_cr_dead(l,p)),row))*an_cr_neg_dead(l,p))
+                end do 
+
+                h1etot(j,k)=h1etot(j,k)+(ov*el(p))
+            end do
+
+            return
+        end subroutine ham_val_column_kernel
 
         ! function to calcualte an entire column of the overlap 
-        function ovrlp_column(z1d,val,row)
 
-            implicit none
+        attributes(global) subroutine ovrlp_column_kernel(val, row, ovrlp)
+    
+            real(kind=8), dimension(:,:), intent(in) :: val
+            real(kind=8), dimension(:,:), intent(inout) :: ovrlp
+            integer, intent(in) :: row
+
+            integer :: j, l
+            real(kind=8) :: prod
+
+            j = (blockIdx%x - 1)*blockDim%x + threadIdx%x
             
-            real(kind=8),dimension(:,:),::val
-            real(kind=8),dimension(0:),intent(in)::z1d
-            integer,intent(in)::row
-            real(kind=8),dimension(ndet)::ovrlp_column
-            integer::j
+            ovrlp(j,row) = 1.0d0
+
+            if(j==row.or.j>ndet_d)return 
             
-            if (errorflag .ne. 0) return
-        
-            ovrlp_column=1.0
-         
-            do j=1,ndet
-                if(j.ne.row)then 
-                    ovrlp_column(j)=overlap_1(z1d,val(0:,j))
-                else
-                    ovrlp_column(j)=1.0
-                end if 
-            end do 
-          
-            return
+            do l = 1, norb_n
+                ovrlp(j,row) = ovrlp(j,row) * (val(j,l)*val(row,l) + val(j,l+norb_n)*val(row,l+norb_n))
+            end do
+           
+            ovrlp(row,j)=ovrlp(j,row)
+            
+            return 
 
-        end function ovrlp_column
+        end subroutine ovrlp_kernel
 
+       
         !##############################################################################################################################
 
         !Level 3 routine to make individual value in overlap and hamiltonian matrix
 
         ! calculates indvidual hamiltonian elements taking in two Zombie states and a set of 
         ! creation and annihilation operations
-        attributes(device) real(kind=8) function haml_vals(z1d,z2d,ops_ham_alive,ops_ham_dead,ops_ham_neg_alive,&
-        ops_ham_neg_dead,el,len)
-
-            implicit none 
-            real(kind=8),dimension(0:),intent(in)::z1d,z2d
-            integer(kind=2),dimension(:,:)::ops_ham_alive,ops_ham_dead
-            integer(kind=1),dimension(:,:)::ops_ham_neg_alive,ops_ham_neg_dead
-            real(kind=8),dimension(:),intent(in)::el
-            integer,intent(in)::len
-            real(kind=8)::ov
-            integer::j,k
-            
-            if (errorflag .ne. 0) return
-
-            haml_vals=0.0
-            
-        
-            do j=1,len
-                ov=1.0
-                do k=1, norb
-                    ov=ov*((z1d(k)*z2d(ops_alive(k,j))*ops_neg_alive(k,j))+(z1d(k+norb)*z2d(ops_dead(k,j))*ops_neg_dead(k,j))) 
-                end do
-                haml_vals=haml_vals+(ov*el(j))
-            end do
-       
-            
-            return 
-        
-        end function haml_vals
-
-        ! calculates individual overlaps where no creation and annihilation operations are needed
-        attributes(device) real(kind=8) function overlap_1(z1d,z2d)
-
-            implicit none
-            real(kind=8),dimension(0:)::z1d,z2d
-            integer::j
-
-            overlap_1=1.0
-        
-            do j=1,norb
-                overlap_1=overlap_1*((z1d(j)*z2d(j))+(z1d(j+norb_d)*z2d(norb_d+j)))
-            end do
-        
-
-            return 
-        end function overlap_1
+        ! a
 
 
         !##############################################################################################################################
@@ -628,8 +494,52 @@ MODULE ham
         end function haml_vals_mod
 
 
-END MODULE
+END MODULE ham_gpu
 
+!attributes(device) real(kind=8) function haml_vals(z1d,z2d,ops_ham_alive,ops_ham_dead,ops_ham_neg_alive,&
+        ! ops_ham_neg_dead,el,len)
+
+        !     implicit none 
+        !     real(kind=8),dimension(0:),intent(in)::z1d,z2d
+        !     integer(kind=2),dimension(:,:)::ops_ham_alive,ops_ham_dead
+        !     integer(kind=1),dimension(:,:)::ops_ham_neg_alive,ops_ham_neg_dead
+        !     real(kind=8),dimension(:),intent(in)::el
+        !     integer,intent(in)::len
+        !     real(kind=8)::ov
+        !     integer::j,k
+            
+        !     if (errorflag .ne. 0) return
+
+        !     haml_vals=0.0
+            
+        !     do j=1,len
+        !         ov=1.0
+        !         do k=1, norb
+        !             ov=ov*((z1d(k)*z2d(ops_alive(k,j))*ops_neg_alive(k,j))+(z1d(k+norb)*z2d(ops_dead(k,j))*ops_neg_dead(k,j))) 
+        !         end do
+        !         haml_vals=haml_vals+(ov*el(j))
+        !     end do
+       
+        !     return 
+        
+        ! end function haml_vals
+
+        ! ! calculates individual overlaps where no creation and annihilation operations are needed
+        ! attributes(device) real(kind=8) function overlap_1(z1d,z2d)
+
+        !     implicit none
+        !     real(kind=8),dimension(0:)::z1d,z2d
+        !     integer::j
+
+        !     overlap_1=1.0
+        
+        !     do j=1,norb
+        !         overlap_1=overlap_1*((z1d(j)*z2d(j))+(z1d(j+norb_d)*z2d(norb_d+j)))
+        !     end do
+        
+
+        !     return 
+        ! end function overlap_1
 
 ! attributes(global) subroutine ham_val_kernel(val,h1etot,ops_ham_alive,ops_ham_dead,ops_ham_neg_alive,&
 !         ops_ham_neg_dead,el,len)

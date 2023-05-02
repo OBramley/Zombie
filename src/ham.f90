@@ -31,7 +31,7 @@ MODULE ham
         ! print *, "elapsed time: ", real(end - beginning) / real(rate)
 
         call haml_ovrlp_comb(haml,zstore,elecs,an_cr%ham,an2_cr2%ham,verb)
-        !$acc update host(haml)
+        
         haml%inv=haml%ovrlp
         allocate(WORK1(size),IPIV1(size),stat=ierr)
         if (ierr/=0) then
@@ -80,7 +80,11 @@ MODULE ham
         !$omp & private(j,k,h1etot,h2etot) &
         !$omp & shared(elecs,zstore,an_cr,an2_cr2,haml) 
         do j=1,ndet
-            do k=j,ndet
+            haml%ovrlp(j,j)=1.d0
+            h1etot = haml_vals(zstore(j)%val,zstore(j)%val,an_cr,elecs%h1ei,elecs%h1_num)
+            h2etot = haml_vals(zstore(j)%val,zstore(j)%val,an2_cr2,elecs%h2ei,elecs%h2_num)
+            haml%hjk(j,j)=h1etot+(0.5*h2etot)+(haml%ovrlp(j,j)*elecs%hnuc)
+            do k=j+1,ndet
                 haml%ovrlp(j,k)=overlap_1(zstore(j)%val,zstore(k)%val);haml%ovrlp(k,j)=haml%ovrlp(j,k)
                 h1etot = haml_vals(zstore(j)%val,zstore(k)%val,an_cr,elecs%h1ei,elecs%h1_num)
                 h2etot = haml_vals(zstore(j)%val,zstore(k)%val,an2_cr2,elecs%h2ei,elecs%h2_num)
@@ -104,32 +108,76 @@ MODULE ham
 
     ! Calcualates a column of a hamiltonian Start specifies the row the column
     ! is started to be calcualted 
-    subroutine haml_column(hcol,z1d,zstore,an_cr,an2_cr2,elecs,start)
+
+    subroutine haml_ovrlp_column(haml,z1d,zstore,an_cr,an2_cr2,elecs,row)
 
         implicit none
-        real(kind=8),dimension(:),intent(inout)::hcol 
         type(zombiest),dimension(:),intent(in)::zstore
         real(kind=8),dimension(0:),intent(in)::z1d
         type(elecintrgl),intent(in)::elecs
         type(oprts_2),intent(in)::an_cr,an2_cr2
-        integer,intent(in)::start
+        type(hamiltonian),intent(inout)::haml
+        integer,intent(in)::row
         real(kind=8)::h1etot,h2etot
         integer::j
 
         if (errorflag .ne. 0) return
-        
-        !$omp parallel do private(h1etot,h2etot,j) shared(zstore,hcol,an_cr,an2_cr2,elecs,z1d,start)
-        do j=1,(ndet-(start-1))
-            h1etot = haml_vals(z1d,zstore(start+j-1)%val,an_cr,elecs%h1ei,elecs%h1_num)
-            hcol(j)=hcol(j)+h1etot
-            h2etot = haml_vals(z1d,zstore(start+j-1)%val,an2_cr2,elecs%h2ei,elecs%h2_num)
-            hcol(j)=hcol(j)+(0.5*h2etot)
+
+        !$omp parallel do private(h1etot,h2etot,j) shared(haml,zstore,an_cr,an2_cr2,elecs,z1d,row)
+        do j=1,ndet
+            if (j.ne.row) then
+                haml%ovrlp(j,row)=overlap_1(z1d,zstore(j)%val)
+                haml%ovrlp(row,j)=haml%ovrlp(j,row)
+                h1etot = haml_vals(z1d,zstore(j)%val,an_cr,elecs%h1ei,elecs%h1_num)
+                h2etot = haml_vals(z1d,zstore(j)%val,an2_cr2,elecs%h2ei,elecs%h2_num)
+                haml%hjk(j,row)=h1etot+(0.5*h2etot)+(haml%ovrlp(j,row)*elecs%hnuc)
+                haml%hjk(row,j)=haml%hjk(j,row)
+            else 
+                haml%ovrlp(row,row)=1.d0
+                h1etot = haml_vals(z1d,z1d,an_cr,elecs%h1ei,elecs%h1_num)
+                h2etot = haml_vals(z1d,z1d,an2_cr2,elecs%h2ei,elecs%h2_num)
+                haml%hjk(row,row)=h1etot+(0.5*h2etot)+elecs%hnuc
+            end if 
+        end do 
+        !$omp end parallel do
+
+        return
+
+    end subroutine haml_ovrlp_column
+
+    function haml_column(z1d,zstore,an_cr,an2_cr2,elecs,row)
+
+        implicit none
+        type(zombiest),dimension(:),intent(in)::zstore
+        real(kind=8),dimension(0:),intent(in)::z1d
+        type(elecintrgl),intent(in)::elecs
+        type(oprts_2),intent(in)::an_cr,an2_cr2
+        real(kind=8),dimension(ndet)::haml_column
+        integer,intent(in)::row
+        real(kind=8)::h1etot,h2etot
+        integer::j
+
+        if (errorflag .ne. 0) return
+        haml_column=0.d0
+       !$omp parallel do private(h1etot,h2etot,j) shared(zstore,an_cr,an2_cr2,elecs,z1d,row)
+        do j=1,ndet
+            if (j.ne.row) then 
+                h1etot = haml_vals(z1d,zstore(j)%val,an_cr,elecs%h1ei,elecs%h1_num)
+                haml_column(j)=haml_column(j)+h1etot
+                h2etot = haml_vals(z1d,zstore(j)%val,an2_cr2,elecs%h2ei,elecs%h2_num)
+                haml_column(j)=haml_column(j)+(0.5*h2etot)
+            else 
+                h1etot = haml_vals(z1d,z1d,an_cr,elecs%h1ei,elecs%h1_num)
+                haml_column(j)=haml_column(j)+h1etot
+                h2etot = haml_vals(z1d,z1d,an2_cr2,elecs%h2ei,elecs%h2_num)
+                haml_column(j)=haml_column(j)+(0.5*h2etot)
+            end if 
         end do 
         !$omp end parallel do
         
         return
 
-    end subroutine haml_column
+    end function haml_column
 
     ! function to calcualte an entire column of the overlap 
     function ovrlp_column(z1d,zstore,row)
@@ -181,20 +229,17 @@ MODULE ham
         haml_vals=0.0
         
      
-        !$acc parallel loop gang vector independent &
-        !$acc & present(z1d,z2d,ops,el) &
-        !$acc & private(k,ov) reduction(+:haml_vals) 
+       
         !!$omp parallel do reduction(+:haml_vals) private(k,ov)
         do j=1,len
             ov=1.0
-            !$acc loop reduction(*:ov)
             do k=1, norb
                 ov=ov*((z1d(k)*z2d(ops%alive(k,j))*ops%neg_alive(k,j))+(z1d(k+norb)*z2d(ops%dead(k,j))*ops%neg_dead(k,j))) 
             end do
             haml_vals=haml_vals+(ov*el(j))
         end do
         !!$omp end parallel do 
-        !$acc end parallel loop
+     
         
         return 
       
@@ -210,14 +255,13 @@ MODULE ham
         if (errorflag .ne. 0) return
 
         overlap_1=1.0
-        !$acc parallel loop gang vector independent &
-        !$acc & present(z1d,z2d) reduction(*:overlap_1)
+      
         !!$omp parallel do reduction(*:overlap_1)
         do j=1,norb
             overlap_1=overlap_1*((z1d(j)*z2d(j))+(z1d(j+norb)*z2d(norb+j)))
         end do
         !!$omp end parallel do 
-        !$acc end parallel loop
+      
         
 
         return 

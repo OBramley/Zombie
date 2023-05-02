@@ -70,4 +70,4 @@ MainZombie.o:MainZombie.f90 vars.o alarrays.o readpars.o electrons.o zom.o ham.o
 # all object and module files
 
 clean:
-	rm -rf f_{files,modd}* *.o *.mod *.exe *~ ../run/*.exe ../run/*~ ../src_2/*~
+	rm -rf f_{files,modd}* *.o *.mod *.exe *~ ../run/*.exe ../run/*~ ../src/*~

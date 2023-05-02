@@ -32,7 +32,7 @@ Module grad_d
             orblim=orb
         end if
 
-        !$acc update host(dvec)
+       
         call diff_of_norm_ovrlp_cmpndt(dvec,haml,diff_ovrlp_cmpnt,diff_state,orbsrt,orblim)
 
         if(step.eq.0)then
@@ -49,7 +49,7 @@ Module grad_d
                 ! end do
             end do
         end if
-        !$acc update device(dvec)
+      
 
         return
 
@@ -168,7 +168,7 @@ Module grad_d
             orblim=orb
         end if
    
-         !$acc update host(dvec)
+       
         
         call timestep_diff_invovrlp_cmpnt(dvec,haml,diff_ts_invo,diff_state)
         call timestep_diff_ham_cmpnt(dvec,haml,diff_ts_ham,diff_state,orbsrt,orblim)
@@ -177,7 +177,7 @@ Module grad_d
             !Differentiate with respect to each ZS_{j}
             dvec%d_diff(k,diff_state,:)=dvec%d_diff(k,diff_state,:)-((diff_ts_invo(k,:)+diff_ts_ham(k,:)+diff_ts_d(k,:))*db)
         end do
-          !$acc update device(dvec)
+      
 
         return
 
@@ -282,9 +282,9 @@ Module grad_d
         type(hamiltonian),intent(in)::haml
         type(grad),intent(inout)::grad_fin
         integer,intent(in)::diff_state,orb
-        integer::j,p!,ierr,k
-        real(kind=8),dimension(ndet)::dh_temp!,dh_temp_hess
-        real(kind=8),dimension(ndet)::dham
+        integer::j,p,ierr
+        real(kind=8),dimension(:),allocatable::dh_temp!,dh_temp_hess
+        real(kind=8),dimension(:),allocatable::dham
         real(kind=8)::ov
         ! real(kind=8),allocatable,dimension(:,:)::temp
         ! integer, allocatable,dimension(:)::IPIV1
@@ -292,25 +292,29 @@ Module grad_d
 
         if (errorflag .ne. 0) return
 
+        ierr=0
+        allocate(dh_temp(ndet),dham(ndet),stat=ierr)
+        if (ierr/=0) then
+            write(0,"(a,i0)")"In dh_temp, dham allocation",ierr
+            errorflag=1
+        end if
        
         grad_fin%vars(diff_state,:)=0
         dham=2*matmul(dvec%d,haml%hjk)
         
         if(orb.eq.0)then
-            !$acc enter data copyin(dham(1:ndet)) create(dh_temp)
-            !$acc parallel loop gang vector independent private(ov,p) present(haml,dvec) 
+
             do j=1, norb
                 dh_temp=dvec%d*haml%diff_hjk(diff_state,j,:)
                 ov=0   
-                !$acc loop reduction(+:ov)
+             
                 do p=1,ndet
                     ov=ov+(dvec%d(p)*haml%diff_hjk(diff_state,j,p))
                 end do
-                !$acc wait
+              
                 dh_temp(diff_state)=ov
                 ov=0
                 
-                !$acc loop reduction(+:ov)
                 do p=1,ndet
                     ov=ov+(dvec%d(p)*dh_temp(p)+(dham(p)*dvec%d_diff(p,diff_state,j)))
                     ! grad_fin%vars(diff_state,j)=grad_fin%vars(diff_state,j)+dvec%d(p)*dh_temp(p)+&
@@ -318,31 +322,35 @@ Module grad_d
                 end do
                 grad_fin%vars(diff_state,j)=ov
             end do
-            !$acc end parallel loop 
-            !$acc exit data delete(dham,dh_temp)
+           
         else 
-            !$acc data copyin(dham)
+         
             dh_temp=dvec%d*haml%diff_hjk(diff_state,orb,:)   
             ov=0
         
-            !$acc parallel loop gang vector present(haml,dvec) reduction(+:ov) 
+         
             do p=1,ndet
                 ov=ov+(dvec%d(p)*haml%diff_hjk(diff_state,orb,p))
             end do
-            !$acc end parallel loop
+            
             dh_temp(diff_state)=ov
             ov=0
-            !$acc parallel loop gang vector present(haml,dvec) reduction(+:ov)
+      
             do p=1,ndet
                 ov=ov+dvec%d(p)*dh_temp(p)+(dham(p)*dvec%d_diff(p,diff_state,orb))
             end do
-            !$acc end parallel loop
-            grad_fin%vars(diff_state,orb)=ov
            
-            !$acc end data
+            grad_fin%vars(diff_state,orb)=ov
+        
         end if
-  
+        
+        deallocate(dh_temp,dham,stat=ierr)
+        if (ierr/=0) then
+            write(0,"(a,i0)")"In dh_temp, dham deallocation",ierr
+            errorflag=1
+        end if
 
+        return 
        
 
         ! if(orb.eq.0)then

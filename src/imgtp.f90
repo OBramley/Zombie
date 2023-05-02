@@ -213,19 +213,18 @@ MODULE imgtp
 
         dvecs(1)%d=0.0
         dvecs(1)%d(1)=1.0
-        !$acc enter data create(norm,db,result,temp)
+      
         norm=0
        
-        !$acc parallel loop gang vector reduction(+:norm) present(haml,dvecs) private (temp,l)   
+    
         do j=1,ndet
             temp=0
-            !$acc loop reduction(+:temp)
             do l=1,ndet 
                 temp=temp+haml%ovrlp(j,l)*dvecs(1)%d(l)
             end do 
             norm=norm+(temp*dvecs(1)%d(j))
         end do 
-       !$acc end parallel loop
+     
         norm = sqrt(abs(norm))
        
         dvecs(1)%norm=norm
@@ -241,44 +240,44 @@ MODULE imgtp
 
             en%t(k)=db*(k-1)
             result=0
-            !$acc parallel loop gang vector reduction(+:result) present(haml,dvecs) private(temp,l)   
+          
             do j=1,ndet
                 temp=0
-                !$acc loop reduction(+:temp)
+              
                 do l=1,ndet 
                     temp=temp+haml%hjk(j,l)*dvecs(1)%d(l)
                 end do 
                 result = result + (dvecs(1)%d(j)*temp)
             end do
-            !$acc end parallel loop 
+          
             en%erg(1,k)=result
     
             ddot=0
             call timestep_diff(dvecs(1),haml,db,diff_state,orb)
           
-            !$acc parallel loop gang vector present(haml,dvecs) private(temp,l)
+         
             do j=1,ndet 
                 temp=0
-                 !$acc loop reduction(+:temp)
+           
                 do l=1,ndet 
                     temp= temp + haml%kinvh(j,l)*dvecs(1)%d(l)
                 end do 
                 ddot(j)=temp
             end do
-            !$acc end parallel loop 
+        
             dvecs(1)%d=dvecs(1)%d-(db*ddot)
         
             norm=0   
-            !$acc parallel loop gang vector reduction(+:norm) present(haml,dvecs) private(temp,l)     
+      
             do j=1,ndet
                 temp=0
-                !$acc loop reduction(+:temp)
+           
                 do l=1,ndet 
                     temp=temp+haml%ovrlp(j,l)*dvecs(1)%d(l)
                 end do 
                 norm=norm+(temp*dvecs(1)%d(j))
             end do 
-            !$acc end parallel loop 
+    
             norm = sqrt(abs(norm))
             dvecs(1)%norm=norm
         
@@ -287,8 +286,7 @@ MODULE imgtp
             dvecs(1)%d=dvecs(1)%d/norm
 
         end do
-        !$acc exit data delete(norm,db,result)
-
+      
         return
 
     end subroutine imaginary_time_prop2
