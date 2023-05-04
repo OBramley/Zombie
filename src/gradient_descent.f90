@@ -298,7 +298,7 @@ MODULE gradient_descent
                 epoc_cnt=epoc_cnt+1
                 picker=scramble(ndet-1)
             else 
-                grad_fin%prev_erg=grad_fin%prev_erg+abs(grad_fin%prev_erg-grad_fin%current_erg)*5
+                grad_fin%prev_erg=grad_fin%prev_erg+abs(grad_fin%prev_erg-grad_fin%current_erg)*0.5
             end if
             
             
@@ -520,7 +520,7 @@ MODULE gradient_descent
                 call epoc_writer(grad_fin%prev_erg,epoc_cnt,chng_trk,erg_chng_trk,lr_chng_trk,0) 
                 epoc_cnt=epoc_cnt+1
             else 
-                grad_fin%prev_erg=grad_fin%prev_erg+abs(grad_fin%prev_erg-grad_fin%current_erg)*5
+                grad_fin%prev_erg=grad_fin%prev_erg+abs(grad_fin%prev_erg-grad_fin%current_erg)*0.5
             end if 
            
             orb_cnt=orb_cnt-1
@@ -541,7 +541,7 @@ MODULE gradient_descent
             ! end if
            
             ! if(acpt_cnt.eq.0)then
-            if(rjct_cnt.ge.(ndet*2)+1)then
+            if(rjct_cnt.ge.(ndet*2)-1)then
                 call orbital_gd(zstore,grad_fin,elect,dvecs,temp_dvecs,en,haml,temp_ham,&
                 epoc_cnt,alphain,newb,picker,1,an_cr,an2_cr2,rjct_cnt)
                 orb_cnt=orb_cnt+1
