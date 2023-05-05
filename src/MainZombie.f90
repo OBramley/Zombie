@@ -57,8 +57,7 @@ program MainZombie
     else                   ! to zero which forces the date to be used
         randseed=0
     end if
-
-    randseed = abs(randseed)    ! Negative seed values seem to cause instability
+    randseed =  abs(randseed)    ! Negative seed values seem to cause instability
   
     call ZBQLINI(randseed,0)   ! Generates the seed value using the UCL random library
    
@@ -81,11 +80,14 @@ program MainZombie
         call electronintegrals(elect,an_cr,an2_cr2)
         write(6,"(a)") "Electrons allocated"
         ! end if
+        ! call partial_correlation(10000,elect,an_cr,an2_cr2)
+        
         ! generate zombie states
         call alloczs(zstore,int(ndet,kind=16))
         write(6,"(a)") "Zombie states allocated"
         if(zomgflg=='y')then
-            call genzf(zstore,ndet)
+            call best_start_zom(10,zstore,elect,an_cr,an2_cr2)
+            ! call genzf(zstore,ndet)
             do j=1,ndet
                 call zombiewriter(zstore(j),j,0)
             end do
@@ -114,9 +116,7 @@ program MainZombie
             write(0,"(a,i0)") "Error in gramflg setting. This should have been caught ", ierr
                 errorflag=1
         end if
-     
-        !$acc data copyin(zstore(1:ndet),elect,an_cr,an2_cr2) create(haml,dvecs(1))
-        !!$acc cache(zstore,elect,an_cr,an2_cr2,haml,dvecs)
+    
         if(hamgflg=='y')then
             if(GPUflg.eq.'y')then
                 ! Maybe specificy conditons but maybe not needed?!
@@ -179,9 +179,9 @@ program MainZombie
             call matrixwriter(haml%hjk,ndet,"data/ham_final.csv")
             call matrixwriter(haml%ovrlp,ndet,"data/ovlp_final.csv")
            
-            call sd_anal(zstore,nel,dvecs(1),2)
+            ! call sd_anal(zstore,nel,dvecs(1),2)
         end if
-        !$acc end data
+     
         call deallocerg(en)
         write(6,"(a)") "Energy deallocated"
         call deallocham(haml)

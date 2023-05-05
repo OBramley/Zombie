@@ -15,6 +15,7 @@ MODULE zom
         integer::j,k
         real(kind=8)::dummy
         real::r
+        DOUBLE PRECISION, external::ZBQLU01
         if (errorflag .ne. 0) return
 
         
@@ -25,8 +26,8 @@ MODULE zom
                     dummy=-1
                     !$omp critical
                     do while((dummy.lt.0))
-                        call random_number(r)
-                       dummy=2*pirl*r 
+                        ! call random_number(r)
+                       dummy=2*pirl*(ZBQLU01(1)) 
                     end do
                     !$omp end critical
                     zstore(j)%phi(k)=dummy
@@ -45,7 +46,7 @@ MODULE zom
                 zstore(1)%cos=1
                 zstore(1)%sin(1:nel)=1
                 zstore(1)%cos(1:nel)=0
-                zstore(1)%val(nel:norb)=zstore(1)%sin
+                zstore(1)%val(1:norb)=zstore(1)%sin
                 zstore(1)%val(norb+1:)=zstore(1)%cos
                 ! zstore(1)%sin(1:nel)=cmplx(1,0.0d0,kind=8)
                 ! zstore(1)%cos(1:nel)=cmplx(0,0.0d0,kind=8)
@@ -278,7 +279,7 @@ MODULE zom
 
         implicit none
         type(zombiest),dimension(:),intent(inout)::zstore
-        !DOUBLE PRECISION, external::ZBQLNOR,ZBQLUAB,ZBQLU01
+        DOUBLE PRECISION, external::ZBQLNOR,ZBQLUAB,ZBQLU01
         real(kind=8)::mu((norb/2)),sig(norb/2)
         real(kind=8)::val
         integer::j,k
@@ -306,6 +307,7 @@ MODULE zom
                     do while(val.lt.0)
         
                         ! val=2*pirl*mu(k)*ZBQLU01(1)    ! 
+                        ! val=2*pirl*ZBQLNOR(mu(k),sig(k))
                         val=2*pirl*random_normal(mu(k),sig(k)) !ZBQLNOR(mu(k),sig(k))
                         ! if((val.gt.0.5*pirl))then
                         !     val=-1
@@ -320,12 +322,14 @@ MODULE zom
                     val=-1
                     do while(val.lt.0)
                         ! val=2*pirl*mu(k)*ZBQLU01(1)
+                        ! val=2*pirl*ZBQLNOR(mu(k),sig(k))
                         val=2*pirl*random_normal(mu(k),sig(k))
                     
                     end do
                     if((is_nan(val).eqv..true.))then
-                        call random_number(val)
-                        val=2*pirl*val 
+                        ! call random_number(val)
+                        val=2*pirl*(ZBQLU01(1)) 
+                        ! val=2*pirl*val 
                     end if 
                     zstore(j)%phi(2*k)=val
                     ! print*,val(2*k-1),val(2*k)
@@ -424,6 +428,8 @@ MODULE zom
         return
     
     end subroutine genzf
+
+
 
     FUNCTION random_normal(MU,SIGMA)
         !

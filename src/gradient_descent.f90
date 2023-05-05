@@ -7,6 +7,7 @@ MODULE gradient_descent
     use imgtp
     use outputs
     use infnan_mod
+   
     ! use ieee_arithmetic
     contains
 
@@ -33,7 +34,7 @@ MODULE gradient_descent
         if (errorflag .ne. 0) return
         ierr=0
        
-        call haml_ovrlp_column(haml,zs_diff%val,zstore,an_cr%ham,an2_cr2%ham,elecs,diff_state)
+        call haml_ovrlp_column(haml,zs_diff%val,zstore,ndet,an_cr%ham,an2_cr2%ham,elecs,diff_state)
         
         haml%inv=haml%ovrlp
         allocate(WORK1(size),IPIV1(size),stat=ierr)
@@ -60,7 +61,7 @@ MODULE gradient_descent
     end subroutine he_full_row
 
 
-    subroutine grad_calc(haml,zstore,elect,an_cr,an2_cr2,pick,dvec,grad_fin,en,orb)
+    subroutine grad_calc(haml,zstore,elect,an_cr,an2_cr2,pick,dvec,grad_fin,en,orb,epoc_cnt)
 
         implicit none 
 
@@ -70,19 +71,28 @@ MODULE gradient_descent
         type(dvector),dimension(:),intent(inout)::dvec
         type(hamiltonian),intent(inout)::haml
         type(oprts),intent(in)::an_cr,an2_cr2
-        integer,intent(in)::pick,orb
+        integer,intent(in)::pick,orb,epoc_cnt
         DOUBLE PRECISION, external::ZBQLU01
         type(energy),intent(inout)::en
-        integer::j
-
+        integer::j,strt
        
         if (errorflag .ne. 0) return
+
+        strt=0
+        if(epoc_cnt.ne.0)then
+            if(modulo(epoc_cnt,2).eq.0)then
+                strt=1
+            else 
+                strt=2
+            end if 
+        end if
+
        
         grad_fin%vars(pick,:)=0
 
         if(grad_fin%grad_avlb(0,pick).eq.0)then
             dvec(1)%d_diff(:,pick,:)=0
-            call gradient_zs(haml,zstore,elect,an_cr,an2_cr2,pick,orb,grad_fin%grad_avlb(1:ndet,pick))
+            call gradient_zs(haml,zstore,elect,an_cr,an2_cr2,pick,orb,grad_fin%grad_avlb(1:ndet,pick),strt)
             if(ZBQLU01(1).lt.0.4.and.(orb.ne.0))then
                 grad_fin%grad_avlb(0,pick)=1
             end if
@@ -90,14 +100,14 @@ MODULE gradient_descent
        
         if(grad_fin%grad_avlb(0,pick).eq.1)then
             dvec(1)%d_diff(:,pick,:)=0
-            call sub_matrices(haml,pick)
-            call imaginary_time_prop2(dvec,en,haml,pick,0)
+            call sub_matrices(haml,pick,strt)
+            call imaginary_time_prop2(dvec,en,haml,ndet,pick,0)
         else if(grad_fin%grad_avlb(0,pick).eq.2)then
             dvec(1)%d_diff(:,pick,:)=0
         end if
         
     
-        call final_grad(dvec(1),haml,grad_fin,pick,orb)
+        call final_grad(dvec(1),haml,grad_fin,pick,orb,strt)
 
         en%erg=0
         en%t=0
@@ -225,7 +235,7 @@ MODULE gradient_descent
                     grad_fin%grad_avlb=0
                     haml%diff_hjk=0
                     haml%diff_ovrlp=0
-                    call grad_calc(haml,zstore,elect,an_cr,an2_cr2,pick,dvecs,grad_fin,en,pickorb)
+                    call grad_calc(haml,zstore,elect,an_cr,an2_cr2,pick,dvecs,grad_fin,en,pickorb,0)
                     global_min_fxtdk=grad_fin%prev_erg
                     global_min_fxtdk_idx=-1
                     !$OMP PARALLEL DEFAULT(NONE) SHARED(loop_max, b, alphain, zstore, grad_fin, haml, elect, ndet, &
@@ -235,9 +245,9 @@ MODULE gradient_descent
                     !$OMP & thread_d,temp_dvecs,t)
                     min_fxtdk = grad_fin%prev_erg !0
                     min_fxtdk_idx = -1
-                    !$omp do
+                    !$omp do 
                     do lralt_zs=1,45!24!loop_max !45
-
+                        !$omp cancellation point do
                         ! t=b*(alphain**fibs(lralt_zs))
                         t=b*0.5**(lralt_zs-1)
                         temp_zom=zstore(pick)
@@ -257,7 +267,7 @@ MODULE gradient_descent
                         en%erg=0
                         en%t=0
 
-                        call imaginary_time_prop2(temp_dvecs,en,temp_ham,0,0)
+                        call imaginary_time_prop2(temp_dvecs,en,temp_ham,ndet,0,0)
                         fxtdk=en%erg(1,timesteps+1)
                         ! print*,fxtdk,t
                         if((fxtdk .lt. min_fxtdk))then
@@ -267,7 +277,8 @@ MODULE gradient_descent
                             ! thread_ham%hjk=temp_ham%hjk
                             ! thread_ham%ovrlp=temp_ham%ovrlp
                             thread_zom = temp_zom
-                            thread_d(1)%d = temp_dvecs(1)%d 
+                            thread_d(1)%d = temp_dvecs(1)%d
+                             !$omp cancel do
                         end if
                     end do  
                     !$omp end do
@@ -371,9 +382,12 @@ MODULE gradient_descent
             if(acpt_cnt_2.gt.0)then
                 call epoc_writer(grad_fin%prev_erg,epoc_cnt,chng_trk,0)
                 epoc_cnt=epoc_cnt+1
-                picker=scramble(ndet-1)
+                ! picker=scramble(ndet-1)
+            else 
+                grad_fin%prev_erg=grad_fin%prev_erg+1.0d-8
             end if
-            
+
+            picker=scramble(ndet-1)
             
             !Every 100 epoc brings phi values back within the normal 0-2pi range
             ! if(modulo(epoc_cnt,100).eq.0)then 
@@ -487,11 +501,11 @@ MODULE gradient_descent
         rjct_cnt=0 !tracks how many rejections 
         acpt_cnt=0  !counts how many ZS have been changed
         loop_max=13!5
-        ! if(epoc_cnt.eq.1)then
-        !     orb_cnt=100
-        ! else
+        if(epoc_cnt.eq.1)then
+            orb_cnt=10
+        else
             orb_cnt=0
-        ! end if 
+        end if 
         
         call alloczf(temp_zom)
         call alloczf(thread_zom)
@@ -526,7 +540,7 @@ MODULE gradient_descent
                
                 pick=picker(j)
                 rjct_cnt2=0
-                call grad_calc(haml,zstore,elect,an_cr,an2_cr2,pick,dvecs,grad_fin,en,0)
+                call grad_calc(haml,zstore,elect,an_cr,an2_cr2,pick,dvecs,grad_fin,en,0,epoc_cnt)
                 global_min_fxtdk= grad_fin%prev_erg
                 ! g_grad=dot_product(grad_fin%vars(pick,:),grad_fin%vars(pick,:))
                 global_min_fxtdk_idx=-1
@@ -539,7 +553,7 @@ MODULE gradient_descent
                 min_fxtdk_idx = -1
                 !$omp do
                 do lralt_temp=1,45!24!loop_max
-
+                    !$omp cancellation point do
                     ! t=newb*(alpha**fibs(lralt_temp))
                     t=newb*(0.5**(lralt_temp-1))
                    
@@ -560,7 +574,7 @@ MODULE gradient_descent
                     en%erg=0
                     en%t=0
 
-                    call imaginary_time_prop2(temp_dvecs,en,temp_ham,0,0)
+                    call imaginary_time_prop2(temp_dvecs,en,temp_ham,ndet,0,0)
 
                     fxtdk=en%erg(1,timesteps+1)
             
@@ -574,6 +588,7 @@ MODULE gradient_descent
                         ! thread_ham%ovrlp=temp_ham%ovrlp
                         thread_zom = temp_zom
                         thread_d(1)%d = temp_dvecs(1)%d 
+                        !$omp cancel do
                     end if
                     
                 end do 
@@ -593,14 +608,15 @@ MODULE gradient_descent
                 end if
                 !$OMP END PARALLEL
                
-                
+
                 if(global_min_fxtdk_idx .eq. -1)then
                     rjct_cnt=rjct_cnt+1
                     write(6,"(a,i3,a,f21.16,a,f21.16,a,f21.16,a,i3,a,i3)") '       ', pick,'              ', &
                     grad_fin%prev_erg,'               ',0.0,'             ',0.0,'        ',acpt_cnt,'          ',rjct_cnt
                 else 
-                    t=newb*(0.5**(global_min_fxtdk_idx-1))
+                 
                     ! t=newb*(alpha**fibs(global_min_fxtdk_idx))
+                    t=newb*(0.5**(global_min_fxtdk_idx-1))
                     acpt_cnt=acpt_cnt+1
                     chng_trk(acpt_cnt)=pick
                     lr_chng_trk(acpt_cnt)=t
@@ -679,12 +695,14 @@ MODULE gradient_descent
             grad_fin%prev_erg, ". ", acpt_cnt, " Zombie state(s) altered."
 
            
-    
+            picker=scramble(ndet-1)
             if(acpt_cnt.gt.0)then
-                picker=scramble(ndet-1)
+                ! picker=scramble(ndet-1)
                 call epoc_writer(grad_fin%prev_erg,epoc_cnt,chng_trk,erg_chng_trk,lr_chng_trk,0) 
                 epoc_cnt=epoc_cnt+1
-            end if 
+            else 
+                grad_fin%prev_erg=grad_fin%prev_erg+1.0d-10
+            end if
            
             orb_cnt=orb_cnt-1
             !Every 100 epoc brings phi values back within the normal 0-2pi range
@@ -704,7 +722,7 @@ MODULE gradient_descent
             ! end if
            
             ! if(acpt_cnt.eq.0)then
-            if(rjct_cnt.ge.(ndet*2)-1)then
+            if(rjct_cnt.ge.(ndet*4))then
                 call orbital_gd(zstore,grad_fin,elect,dvecs,temp_dvecs,en,haml,temp_ham,&
                 epoc_cnt,alphain,newb,picker,1,an_cr,an2_cr2,rjct_cnt)
                 orb_cnt=orb_cnt+1
@@ -986,6 +1004,304 @@ MODULE gradient_descent
             return 
     
         end subroutine emergency
+
+    subroutine best_start_zom(num_tries,zstore,elect,an_cr,an2_cr2)
+        
+        implicit none
+        type(zombiest),dimension(:),intent(inout)::zstore
+        real(kind=8),dimension(:,:),allocatable::test_randoms
+        integer,intent(in) :: num_tries
+        real(kind=8)::erg_min
+        type(zombiest),dimension(:),allocatable::zstore_try
+        type(hamiltonian)::haml
+        type(elecintrgl),intent(in)::elect
+        type(dvector),dimension(:),allocatable::dvecs
+        type(oprts),intent(in)::an_cr,an2_cr2
+        type(energy)::en
+        DOUBLE PRECISION, external::ZBQLU01
+        integer :: l, j, k,ierr,choice
+        
+
+        ierr=0
+        allocate(test_randoms(norb, num_tries),stat=ierr)
+        
+        call alloczs(zstore_try,int(2,kind=16))
+
+       
+        
+        call allocham(haml,2,norb)
+        call allocdv(dvecs,1,2,norb)
+        call allocerg(en,1)
+        !$omp parallel private(j,k,l,choice,test_randoms,zstore_try,erg_min,haml,dvecs,en) &
+        !$omp & shared(zstore,elect,an_cr,an2_cr2,num_tries)
+        zstore_try(1)%phi(1:nel)=0.5*pirl
+        zstore_try(1)%phi(nel+1:)=0
+        zstore_try(1)%sin=0
+        zstore_try(1)%cos=1
+        zstore_try(1)%sin(1:nel)=1
+        zstore_try(1)%cos(1:nel)=0
+        zstore_try(1)%val(1:norb)=zstore_try(1)%sin
+        zstore_try(1)%val(norb+1:)=zstore_try(1)%cos
+        !$omp do
+        do l=2,ndet 
+            do j=1,num_tries 
+                do k=1,nel
+                    test_randoms(k,j)=0.25*pirl+(0.75*pirl*(ZBQLU01(1)))
+                end do 
+                do k=nel+1,norb
+                    test_randoms(k,j)=(ZBQLU01(1)) 
+                end do 
+            end do
+            choice=1
+            do j=1,num_tries
+        
+                zstore_try(2)%phi(:)=test_randoms(:,j)
+                zstore_try(2)%sin=sin(zstore_try(2)%phi)
+                zstore_try(2)%cos=cos(zstore_try(2)%phi)
+                zstore_try(2)%val(1:)=zstore_try(2)%sin
+                zstore_try(2)%val(norb+1:)=zstore_try(2)%cos
+            
+                call hamgen(haml,zstore_try,elect,2,an_cr,an2_cr2,0)
+                call imaginary_time_prop2(dvecs,en,haml,2,0,0)
+                if(j.eq.1)then
+                    erg_min=en%erg(1,timesteps+1)
+                else 
+                    if(en%erg(1,timesteps+1).lt.erg_min)then
+                        erg_min=en%erg(1,timesteps+1)
+                        choice=j
+                    end if
+                end if
+            end do
+           
+            zstore(l)%phi(:)=test_randoms(:,choice)
+            zstore(l)%sin=sin(zstore(l)%phi)
+            zstore(l)%cos=cos(zstore(l)%phi)
+            zstore(l)%val(1:)=zstore(l)%sin
+            zstore(l)%val(norb+1:)=zstore(l)%cos
+        end do 
+        !$omp end do
+        !$omp end parallel 
+        
+        zstore(1)=zstore_try(1)
+
+        call dealloczs(zstore_try)
+        call deallocham(haml)
+        call deallocdv(dvecs)
+        call deallocerg(en)
+        deallocate(test_randoms)
+
+    end subroutine best_start_zom
+
+
+    ! subroutine partial_correlation(num_observations,elect,an_cr,an2_cr2)
+    !         implicit none
+            
+    !         real(kind=8),dimension(:),allocatable::dependent_variable
+    !         real(kind=8),dimension(:,:),allocatable::independent_variables
+    !         integer,intent(in) :: num_observations
+    !         real(kind=8):: partial_correlations(norb)
+    !         type(zombiest),dimension(:),allocatable::zstore
+    !         type(hamiltonian)::haml
+    !         type(elecintrgl),intent(in)::elect
+    !         type(dvector),dimension(:),allocatable::dvecs
+    !         type(oprts),intent(in)::an_cr,an2_cr2
+    !         type(energy)::en
+    !         DOUBLE PRECISION, external::ZBQLU01
+    !         real(kind=8):: r(norb+1,norb+1), r_inv(norb+1,norb+1)
+    !         real(kind=8):: r_lj, r_lk, r_jk, r_pk, numerator, denominator
+    !         integer :: l, j, k, p,ierr
+    !         integer, allocatable,dimension(:)::IPIV1
+    !         real(kind=8),allocatable,dimension(:)::WORK1
+
+    !         ierr=0
+    !         allocate(dependent_variable(num_observations),independent_variables(norb, num_observations))
+    !         allocate(WORK1(norb+1),IPIV1(norb+1),stat=ierr)
+
+    !         do j=1,num_observations 
+    !             do k=1,norb
+    !                 independent_variables(k,j)=2*pirl*(ZBQLU01(1)) 
+    !             end do 
+    !         end do
+            
+    !         call alloczs(zstore,int(2,kind=16))
+    !         zstore(1)%phi(1:nel)=0.5*pirl
+    !         zstore(1)%phi(nel+1:)=0
+    !         zstore(1)%sin=0
+    !         zstore(1)%cos=1
+    !         zstore(1)%sin(1:nel)=1
+    !         zstore(1)%cos(1:nel)=0
+    !         zstore(1)%val(1:norb)=zstore(1)%sin
+    !         zstore(1)%val(norb+1:)=zstore(1)%cos
+           
+    !         call allocham(haml,2,norb)
+    !         call allocdv(dvecs,1,2,norb)
+    !         call allocerg(en,1)
+            
+    !         do j=1,num_observations
+               
+    !             zstore(2)%phi(:)=independent_variables(:,j)
+              
+              
+    !             zstore(2)%sin=sin(zstore(2)%phi)
+    !             zstore(2)%cos=cos(zstore(2)%phi)
+    !             zstore(2)%val(1:)=zstore(2)%sin
+    !             zstore(2)%val(norb+1:)=zstore(2)%cos
+              
+    !             call hamgen(haml,zstore,elect,2,an_cr,an2_cr2,0)
+    !             call imaginary_time_prop2(dvecs,en,haml,2,0,0)
+
+    !             dependent_variable(j)=abs(en%erg(1,timesteps+1))
+    !         end do
+            
+    !         ! print*,dependent_variable
+    !         ! print*,independent_variables(:,1)
+    !         ! print*,independent_variables(:,2)
+    !         ! Compute correlation matrix
+    !         do l = 1, norb
+    !           do j = 1, norb
+    !             r(l,j) = corr(independent_variables(l,:), independent_variables(j,:), num_observations)
+    !             ! r(j,l) = r(l,j)
+    !           end do
+    !         end do
+
+    !         do j = 1, norb
+    !             r(norb+1,j) = corr(dependent_variable, independent_variables(j,:), num_observations)
+    !             r(j,norb+1) = corr(independent_variables(j,:),dependent_variable,  num_observations)
+    !         end do
+           
+    !         r_inv=r
+    !         ! print*,r
+            
+    !         ! Compute inverse of correlation matrix
+    !         Call dgetrf(norb+1, norb+1, r_inv, norb+1, IPIV1, ierr)
+    !         if (ierr/=0) then
+    !             write(0,"(a,i0)")"Error in DGETRF",ierr
+    !         end if
+    !         call dgetri(norb+1,r_inv,norb+1,IPIV1,WORK1,norb+1,ierr)
+    !         if (ierr/=0) then
+    !             write(0,"(a,i0)")"Error in DGETRF",ierr
+    !         end if
+    !         ! print*,'************'
+    !         ! print*,r_inv
+        
+    !         do j=1,norb
+    !             print*,r_inv(j,norb+1),r_inv(j,j),r_inv(norb+1,norb+1)
+    !             ! partial_correlations(j)=(-1)*r_inv(j,norb+1)/sqrt(r_inv(j,j)*r_inv(norb+1,norb+1))
+    !             partial_correlations(j)=(-1)*r_inv(j,norb+1)/((r_inv(j,j)*r_inv(norb+1,norb+1))-(r_inv(j,norb+1)**2))
+    !         end do
+    !         ! ! Compute partial correlations for each independent variable
+    !         ! do l = 1, norb
+    !         !   numerator = 0.0
+    !         !   denominator = 1.0
+    !         !   do j = 1, 10
+    !         !     if (l /= j) then
+    !         !       do k = 1, 10
+    !         !         if (l /= k .and. j /= k) then
+    !         !           numerator = numerator + r(l,j) * r(j,k) * r(k,l)
+    !         !           denominator = denominator * sqrt(1.0 - r(k,j)**2)
+    !         !         end if
+    !         !       end do
+    !         !     end if
+    !         !   end do
+    !         !   partial_correlations(l) = numerator / denominator
+    !         ! end do
+
+    !         print*, partial_correlations
+    !         deallocate(WORK1,IPIV1)
+    !         deallocate(dependent_variable,independent_variables)
+
+    !         return 
+            
+    ! end subroutine partial_correlation
+          
+    ! function corr(x, y, n) result(r)
+    !     implicit none
+        
+    !     real(kind=8), intent(in) :: x(n), y(n)
+    !     integer, intent(in) :: n
+    !     real(kind=8):: x_mean, y_mean
+    !     real(kind=8) :: r, r_num, r_denom, x_sum, y_sum, x_sq_sum, y_sq_sum
+    !     integer :: j
+        
+    !     ! Compute means if not provided
+       
+    !     x_sum = sum(x)
+    !     x_mean = x_sum / n
+    !     y_sum = sum(y)
+    !     y_mean = y_sum / n
+       
+        
+    !     ! Compute numerator and denominator of correlation coefficient
+    !     r_num = 0.0
+    !     x_sq_sum = 0.0
+    !     y_sq_sum = 0.0
+    !     do j = 1, n
+    !         r_num = r_num + (x(j) - x_mean) * (y(j) - y_mean)
+    !         x_sq_sum = x_sq_sum + (x(j) - x_mean)**2
+    !         y_sq_sum = y_sq_sum + (y(j) - y_mean)**2
+    !     end do
+    !     r_denom = sqrt(x_sq_sum * y_sq_sum)
+        
+    !     ! Compute correlation coefficient
+    !     r = r_num / r_denom
+    !     ! print*,'final',x_sq_sum,y_sq_sum,r_denom,r_num,r
+    !     return 
+    
+    ! end function corr
+
+    ! subroutine predict_dependent_variable(x, coeffs, n, y_pred)
+    !     implicit none
+        
+    !     real, intent(in) :: x(n,norb), coeffs(norb,norb), y_mean, y_sd
+    !     integer, intent(in) :: n
+    !     real, intent(out) :: y_pred(n)
+    !     real :: x_mean(norb), x_sd(norb), x_partial(norb)
+    !     integer :: l, j
+        
+    !     ! Compute means and standard deviations of independent variables
+    !     do j = 1, 10
+    !         x_mean(j) = mean(x(:,j))
+    !         x_sd(j) = std_dev(x(:,j))
+    !     end do
+        
+    !     ! Compute mean and standard deviation of dependent variable
+    !     y_mean = mean(x(:,11))
+    !     y_sd = std_dev(x(:,11))
+        
+    !     ! Compute predicted values of dependent variable
+    !     do l = 1, n
+    !         do j = 1, 10
+    !         x_partial(j) = (x(l,j) - x_mean(j)) / x_sd(j)
+    !         end do
+    !         y_pred(l) = y_mean + y_sd * dot_product(x_partial, coeffs(:,11))
+    !     end do
+        
+    
+
+    ! end subroutine predict_dependent_variable
+    
+    ! ! Compute the mean of an array
+    ! function mean(a) result(m)
+    ! implicit none
+    ! real(kind=8), intent(in) :: a(:)
+    ! real(kind=8):: m
+    ! integer :: n
+    
+    ! n = size(a)
+    ! m = sum(a) / real(n)
+    ! end function mean
+          
+    !       ! Compute the standard deviation of an array
+    ! function std_dev(a) result(sd)
+    ! implicit none
+    ! real, intent(in) :: a(:)
+    ! real :: sd, m
+    ! integer :: n
+    
+    ! n = size(a)
+    ! m = mean(a)
+    ! sd = sqrt(sum((a - m)**2) / real(n))
+    ! end function std_dev
 
 
 
