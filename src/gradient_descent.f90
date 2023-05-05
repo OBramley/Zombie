@@ -1032,8 +1032,7 @@ MODULE gradient_descent
         call allocham(haml,2,norb)
         call allocdv(dvecs,1,2,norb)
         call allocerg(en,1)
-        !$omp parallel private(j,k,l,choice,test_randoms,zstore_try,erg_min,haml,dvecs,en) &
-        !$omp & shared(zstore,elect,an_cr,an2_cr2,num_tries)
+        
         zstore_try(1)%phi(1:nel)=0.5*pirl
         zstore_try(1)%phi(nel+1:)=0
         zstore_try(1)%sin=0
@@ -1042,19 +1041,17 @@ MODULE gradient_descent
         zstore_try(1)%cos(1:nel)=0
         zstore_try(1)%val(1:norb)=zstore_try(1)%sin
         zstore_try(1)%val(norb+1:)=zstore_try(1)%cos
-        !$omp do
+      
         do l=2,ndet 
             do j=1,num_tries 
-                do k=1,nel
-                    test_randoms(k,j)=0.25*pirl+(0.75*pirl*(ZBQLU01(1)))
+              
+                do k=1,norb
+                    test_randoms(k,j)=2*pirl*(ZBQLU01(1))
                 end do 
-                do k=nel+1,norb
-                    test_randoms(k,j)=(ZBQLU01(1)) 
-                end do 
+              
             end do
             choice=1
             do j=1,num_tries
-        
                 zstore_try(2)%phi(:)=test_randoms(:,j)
                 zstore_try(2)%sin=sin(zstore_try(2)%phi)
                 zstore_try(2)%cos=cos(zstore_try(2)%phi)
@@ -1079,8 +1076,7 @@ MODULE gradient_descent
             zstore(l)%val(1:)=zstore(l)%sin
             zstore(l)%val(norb+1:)=zstore(l)%cos
         end do 
-        !$omp end do
-        !$omp end parallel 
+       
         
         zstore(1)=zstore_try(1)
 

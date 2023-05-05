@@ -23,7 +23,7 @@ MODULE readpars
         read(140,*,iostat=ierr)LINE1, LINE2, LINE3, LINE4, LINE5, LINE6, LINE7, LINE8,LINE9, LINE10
         read(140,*,iostat=ierr)LINE11, LINE12, LINE13,LINE14, LINE15, LINE16, LINE17
         if (ierr.ne.0) then
-            write(0,"(a)") "Error reading rundata.csv of input file"
+            write(0,"(a,i0)") "Error reading rundata.csv of input file",ierr
             errorflag = 1
             return
         end if
