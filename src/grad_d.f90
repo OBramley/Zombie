@@ -274,21 +274,31 @@ Module grad_d
             
     end subroutine timestep_diff_d_cmpnt
 
-    subroutine final_grad(dvec,haml,grad_fin,diff_state,orb)
+    subroutine final_grad(dvec,haml,grad_fin,diff_state,orb,strt)
 
         implicit none
 
         type(dvector),intent(in)::dvec
         type(hamiltonian),intent(in)::haml
         type(grad),intent(inout)::grad_fin
-        integer,intent(in)::diff_state,orb
-        integer::j,p,ierr
+        integer,intent(in)::diff_state,orb,strt
+        integer::j,p,ierr,bgn,end
         real(kind=8),dimension(:),allocatable::dh_temp!,dh_temp_hess
         real(kind=8),dimension(:),allocatable::dham
         real(kind=8)::ov
         ! real(kind=8),allocatable,dimension(:,:)::temp
         ! integer, allocatable,dimension(:)::IPIV1
         ! real(kind=8),allocatable,dimension(:)::WORK1
+        if(strt.eq.0)then
+            bgn=1
+            end=norb
+        else if(strt.eq.1)then 
+            bgn=1
+            end=norb/2
+        elseif(strt.eq.2)then  
+            bgn=(norb/2)+1
+            end=norb
+        end if
 
         if (errorflag .ne. 0) return
 
@@ -304,7 +314,8 @@ Module grad_d
         
         if(orb.eq.0)then
 
-            do j=1, norb
+            do j=bgn,end
+            ! do j=1, norb
                 dh_temp=dvec%d*haml%diff_hjk(diff_state,j,:)
                 ov=0   
              

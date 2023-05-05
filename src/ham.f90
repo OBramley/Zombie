@@ -30,7 +30,7 @@ MODULE ham
         ! call system_clock(end)
         ! print *, "elapsed time: ", real(end - beginning) / real(rate)
 
-        call haml_ovrlp_comb(haml,zstore,elecs,an_cr%ham,an2_cr2%ham,verb)
+        call haml_ovrlp_comb(haml,zstore,elecs,size,an_cr%ham,an2_cr2%ham,verb)
         
         haml%inv=haml%ovrlp
         allocate(WORK1(size),IPIV1(size),stat=ierr)
@@ -61,7 +61,7 @@ MODULE ham
     
     !Level 1 Routines to make the Hamiltonian and Overlap matrices
 
-    subroutine haml_ovrlp_comb(haml,zstore,elecs,an_cr,an2_cr2,verb)
+    subroutine haml_ovrlp_comb(haml,zstore,elecs,size,an_cr,an2_cr2,verb)
         implicit none
 
         type(hamiltonian), intent(inout)::haml 
@@ -69,7 +69,7 @@ MODULE ham
         type(zombiest),dimension(:),intent(in)::zstore
         type(elecintrgl),intent(in)::elecs
         type(oprts_2),intent(in)::an_cr,an2_cr2
-        integer,intent(in)::verb
+        integer,intent(in)::verb,size
         integer::j,k,ierr
         real(kind=8)::h1etot,h2etot
     
@@ -79,17 +79,16 @@ MODULE ham
         !$omp parallel do &
         !$omp & private(j,k,h1etot,h2etot) &
         !$omp & shared(elecs,zstore,an_cr,an2_cr2,haml) 
-        do j=1,ndet
+        do j=1,size
             haml%ovrlp(j,j)=1.d0
             h1etot = haml_vals(zstore(j)%val,zstore(j)%val,an_cr,elecs%h1ei,elecs%h1_num)
             h2etot = haml_vals(zstore(j)%val,zstore(j)%val,an2_cr2,elecs%h2ei,elecs%h2_num)
             haml%hjk(j,j)=h1etot+(0.5*h2etot)+(haml%ovrlp(j,j)*elecs%hnuc)
-            do k=j+1,ndet
+            do k=j+1,size
                 haml%ovrlp(j,k)=overlap_1(zstore(j)%val,zstore(k)%val);haml%ovrlp(k,j)=haml%ovrlp(j,k)
                 h1etot = haml_vals(zstore(j)%val,zstore(k)%val,an_cr,elecs%h1ei,elecs%h1_num)
                 h2etot = haml_vals(zstore(j)%val,zstore(k)%val,an2_cr2,elecs%h2ei,elecs%h2_num)
                 haml%hjk(j,k)=h1etot+(0.5*h2etot)+(haml%ovrlp(j,k)*elecs%hnuc);haml%hjk(k,j)=haml%hjk(j,k)
-                
             end do 
             if(verb.eq.1)then
                 write(6,"(a,i0,a)") "hamliltonian column ",j, " completed"
@@ -109,7 +108,7 @@ MODULE ham
     ! Calcualates a column of a hamiltonian Start specifies the row the column
     ! is started to be calcualted 
 
-    subroutine haml_ovrlp_column(haml,z1d,zstore,an_cr,an2_cr2,elecs,row)
+    subroutine haml_ovrlp_column(haml,z1d,zstore,size,an_cr,an2_cr2,elecs,row)
 
         implicit none
         type(zombiest),dimension(:),intent(in)::zstore
@@ -117,14 +116,14 @@ MODULE ham
         type(elecintrgl),intent(in)::elecs
         type(oprts_2),intent(in)::an_cr,an2_cr2
         type(hamiltonian),intent(inout)::haml
-        integer,intent(in)::row
+        integer,intent(in)::row,size
         real(kind=8)::h1etot,h2etot
         integer::j
 
         if (errorflag .ne. 0) return
 
         !$omp parallel do private(h1etot,h2etot,j) shared(haml,zstore,an_cr,an2_cr2,elecs,z1d,row)
-        do j=1,ndet
+        do j=1,size
             if (j.ne.row) then
                 haml%ovrlp(j,row)=overlap_1(z1d,zstore(j)%val)
                 haml%ovrlp(row,j)=haml%ovrlp(j,row)
@@ -145,7 +144,7 @@ MODULE ham
 
     end subroutine haml_ovrlp_column
 
-    function haml_column(z1d,zstore,an_cr,an2_cr2,elecs,row)
+    function haml_column(z1d,zstore,size,an_cr,an2_cr2,elecs,row)
 
         implicit none
         type(zombiest),dimension(:),intent(in)::zstore
@@ -153,14 +152,14 @@ MODULE ham
         type(elecintrgl),intent(in)::elecs
         type(oprts_2),intent(in)::an_cr,an2_cr2
         real(kind=8),dimension(ndet)::haml_column
-        integer,intent(in)::row
+        integer,intent(in)::row,size
         real(kind=8)::h1etot,h2etot
         integer::j
 
         if (errorflag .ne. 0) return
         haml_column=0.d0
        !$omp parallel do private(h1etot,h2etot,j) shared(zstore,an_cr,an2_cr2,elecs,z1d,row)
-        do j=1,ndet
+        do j=1,size
             if (j.ne.row) then 
                 h1etot = haml_vals(z1d,zstore(j)%val,an_cr,elecs%h1ei,elecs%h1_num)
                 haml_column(j)=haml_column(j)+h1etot
@@ -180,13 +179,13 @@ MODULE ham
     end function haml_column
 
     ! function to calcualte an entire column of the overlap 
-    function ovrlp_column(z1d,zstore,row)
+    function ovrlp_column(z1d,size,zstore,row)
 
         implicit none
         
         type(zombiest),dimension(:),intent(in)::zstore
         real(kind=8),dimension(0:),intent(in)::z1d
-        integer,intent(in)::row
+        integer,intent(in)::row,size
         real(kind=8),dimension(ndet)::ovrlp_column
         integer::j
         
@@ -196,7 +195,7 @@ MODULE ham
         !!$omp parallel do & 
         !!$omp & shared(z1d,zstore,ovrlp_column,row) &
         !!$omp & private(j)
-        do j=1,ndet
+        do j=1,size
             if(j.ne.row)then 
                 ovrlp_column(j)=overlap_1(z1d,zstore(j)%val)
             else
@@ -272,7 +271,7 @@ MODULE ham
 
     !Level 1 routine to calcualate hamiltonian and overlap gradient and hessian matrix
     !subroutine to calcualte gradient of w.r.t to a specific zombie state
-    subroutine gradient_zs(haml,zstore,elecs,an_cr,an2_cr2,state,orb,cmplt)
+    subroutine gradient_zs(haml,zstore,elecs,an_cr,an2_cr2,state,orb,cmplt,strt)
 
         implicit none
 
@@ -280,7 +279,7 @@ MODULE ham
         type(zombiest),dimension(:),intent(in)::zstore
         type(elecintrgl),intent(in)::elecs
         type(oprts),intent(in)::an_cr,an2_cr2
-        integer,intent(in)::state,orb
+        integer,intent(in)::state,orb,strt
         integer,dimension(:),intent(in)::cmplt
         integer,dimension(ndet)::cmplt_2
         integer::j,loop_num
@@ -298,7 +297,7 @@ MODULE ham
         if (loop_num.eq.0) return
 
         if(orb.eq.0)then
-            call haml_ovrlp_grad_comb(haml,zstore,elecs,an_cr,an2_cr2,state,loop_num,cmplt_2)
+            call haml_ovrlp_grad_comb(haml,zstore,elecs,an_cr,an2_cr2,state,loop_num,cmplt_2,strt)
         else
             call haml_ovrlp_grad_comb_one_elec(haml,zstore,elecs,an_cr,an2_cr2,state,orb,loop_num,cmplt_2)
         end if 
@@ -310,7 +309,7 @@ MODULE ham
     !##############################################################################################################################
 
 
-    subroutine haml_ovrlp_grad_comb(haml,zstore,elecs,an_cr,an2_cr2,state,loops,cmplt)
+    subroutine haml_ovrlp_grad_comb(haml,zstore,elecs,an_cr,an2_cr2,state,loops,cmplt,strt)
 
         implicit none
 
@@ -318,16 +317,27 @@ MODULE ham
         type(zombiest),dimension(:),intent(in)::zstore
         type(elecintrgl),intent(in)::elecs
         type(oprts),intent(in)::an_cr,an2_cr2
-        integer,intent(in)::state,loops
+        integer,intent(in)::state,loops,strt
         integer,dimension(:),intent(in)::cmplt
         real(kind=8)::h1etot,h2etot
         real(kind=8),dimension(0:2*norb)::z1d
-        integer::j,k
+        integer::j,k,bgn,end
 
         if (errorflag .ne. 0) return
 
+        if(strt.eq.0)then
+            bgn=1
+            end=norb
+        else if(strt.eq.1)then 
+            bgn=1
+            end=norb/2
+        elseif(strt.eq.2)then  
+            bgn=(norb/2)+1
+            end=norb
+        end if
+        
         !$omp parallel do collapse(2) private(j,k,h1etot,h2etot,z1d) shared(cmplt,zstore,haml,state,an_cr,an2_cr2,elecs)
-        do j=1,norb 
+        do j=bgn,end 
             do k=1,loops
                 z1d(0:2*norb)=zstore(state)%val(0:2*norb)
                 z1d(j)=zstore(state)%cos(j)
@@ -394,17 +404,28 @@ MODULE ham
 
     end subroutine haml_ovrlp_grad_comb_one_elec
 
-    subroutine sub_matrices(haml,state)
+    subroutine sub_matrices(haml,state,strt)
 
         implicit none 
         type(hamiltonian), intent(inout)::haml 
-        integer,intent(in)::state!orb
+        integer,intent(in)::state,strt!orb
         real(kind=8),allocatable,dimension(:,:,:)::temp2 
-        integer::ierr,k,l,j,p!,orbsrt,orblim
+        integer::ierr,k,l,j,p,bgn,end!,orbsrt,orblim
 
         if (errorflag .ne. 0) return
 
         ierr=0
+        if(strt.eq.0)then
+            bgn=1
+            end=norb
+        else if(strt.eq.1)then 
+            bgn=1
+            end=norb/2
+        elseif(strt.eq.2)then  
+            bgn=(norb/2)+1
+            end=norb
+        end if
+        
 
         ! if(orb.eq.0)then
         !     orbsrt=1
@@ -432,7 +453,8 @@ MODULE ham
         end if
         temp2=0.0
 
-        do j=1,norb
+        ! do j=1,norb
+        do j=bgn,end
         ! do j=orbsrt,orblim
             do k=1,ndet
                 do l=1, ndet

@@ -195,18 +195,18 @@ MODULE imgtp
     end subroutine gs
 
 
-    subroutine imaginary_time_prop2(dvecs,en,haml,diff_state,orb)
+    subroutine imaginary_time_prop2(dvecs,en,haml,size,diff_state,orb)
 
         implicit none
 
         type(dvector),dimension(:),intent(inout)::dvecs
         type(energy),intent(inout)::en
         type(hamiltonian),intent(in)::haml
-        integer,intent(in)::diff_state,orb
+        integer,intent(in)::diff_state,orb,size
         integer::j,k,l
         real::db
         real(kind=8)::norm,result,temp
-        real(kind=8),dimension(ndet)::ddot
+        real(kind=8),dimension(size)::ddot
 
 
         if (errorflag .ne. 0) return
@@ -217,9 +217,9 @@ MODULE imgtp
         norm=0
        
     
-        do j=1,ndet
+        do j=1,size
             temp=0
-            do l=1,ndet 
+            do l=1,size 
                 temp=temp+haml%ovrlp(j,l)*dvecs(1)%d(l)
             end do 
             norm=norm+(temp*dvecs(1)%d(j))
@@ -241,10 +241,10 @@ MODULE imgtp
             en%t(k)=db*(k-1)
             result=0
           
-            do j=1,ndet
+            do j=1,size
                 temp=0
               
-                do l=1,ndet 
+                do l=1,size 
                     temp=temp+haml%hjk(j,l)*dvecs(1)%d(l)
                 end do 
                 result = result + (dvecs(1)%d(j)*temp)
@@ -256,10 +256,10 @@ MODULE imgtp
             call timestep_diff(dvecs(1),haml,db,diff_state,orb)
           
          
-            do j=1,ndet 
+            do j=1,size 
                 temp=0
            
-                do l=1,ndet 
+                do l=1,size 
                     temp= temp + haml%kinvh(j,l)*dvecs(1)%d(l)
                 end do 
                 ddot(j)=temp
@@ -269,10 +269,10 @@ MODULE imgtp
         
             norm=0   
       
-            do j=1,ndet
+            do j=1,size
                 temp=0
            
-                do l=1,ndet 
+                do l=1,size 
                     temp=temp+haml%ovrlp(j,l)*dvecs(1)%d(l)
                 end do 
                 norm=norm+(temp*dvecs(1)%d(j))
