@@ -19,14 +19,14 @@ run={
     'language':'fortran',
 
     # What is the name of the run
-    'runfolder':'HH',
+    'runfolder':'N2_2_det',
 
     # Amount of time to request on HPC 
     'runtime': "48:00:00",
 
     'nodes':1,
 
-    'cores':12,
+    'cores':8,
 
     # Set the numpy random seed for Zombie state generation
     'seed':1,
@@ -193,28 +193,11 @@ run={
 # }
 
 
-# pyscf={
-#      # The units the geometry of the molecule is set up in
-#     'units':'Angstrom',
-#      # The geometry of the molecule being investigated
-#     'atoms': 'N 0 0 0; N 0 0 1.094',
-#     # The type of basis used to generate the 1 and 2 electron integrals
-#     'bs' : 'cc-pVDZ',
-#     # How verbose do you want the PyScf output to be in your terminal?
-#     'verbosity' : 4,
-#     'symmetry' :True,
-#     'spin':0,
-#     'charge':0,
-#     'symmetry_subgroup' : 0, #0 is code for A1 point group
-#     'norb': 28,
-#     'nel':14
-# }
-
 pyscf={
      # The units the geometry of the molecule is set up in
     'units':'Angstrom',
      # The geometry of the molecule being investigated
-    'atoms': 'H 0 0 0; H 0 0 0.741',
+    'atoms': 'N 0 0 0; N 0 0 1.094',
     # The type of basis used to generate the 1 and 2 electron integrals
     'bs' : 'cc-pVDZ',
     # How verbose do you want the PyScf output to be in your terminal?
@@ -222,10 +205,27 @@ pyscf={
     'symmetry' :True,
     'spin':0,
     'charge':0,
-    # 'symmetry_subgroup' : 0, #0 is code for A1 point group
-    'norb': 10,
-    'nel':2
+    'symmetry_subgroup' : 0, #0 is code for A1 point group
+    'norb': 28,
+    'nel':14
 }
+
+# pyscf={
+#      # The units the geometry of the molecule is set up in
+#     'units':'Angstrom',
+#      # The geometry of the molecule being investigated
+#     'atoms': 'H 0 0 0; H 0 0 0.741',
+#     # The type of basis used to generate the 1 and 2 electron integrals
+#     'bs' : 'cc-pVDZ',
+#     # How verbose do you want the PyScf output to be in your terminal?
+#     'verbosity' : 4,
+#     'symmetry' :True,
+#     'spin':0,
+#     'charge':0,
+#     # 'symmetry_subgroup' : 0, #0 is code for A1 point group
+#     'norb': 10,
+#     'nel':2
+# }
 
 zombs={
     # Number of orbitals
@@ -242,7 +242,7 @@ zombs={
     'ndet':pyscf['norb']*3, 
 
     # Type of zombie states. Random (ran), Hartree Fock (HF) or biased (bb)
-    'zomtyp':'ran',
+    'zomtyp':'bb',
     
     # Make the first Zombie state the RHF det? Takes y or n
     'rhf_1':'y',
