@@ -399,7 +399,7 @@ MODULE zom
             ! mu(j+1+alive)=((dend-dsrt)/(((norb/2)-alive)-1)*j)+dsrt
             sig(j+1+alive)=((dend-dsrt)/(((norb/2)-alive)-1)*j)+dsrt
         end do
-
+ 
         return
 
     end subroutine

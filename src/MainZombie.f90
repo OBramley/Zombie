@@ -37,7 +37,7 @@ program MainZombie
     write(6,"(a)") " ________________________________________________________________ "
     write(6,"(a)") "|                                                                |"
     write(6,"(a)") "|                                                                |"
-    write(6,"(a)") "|               Zombie State Simulation Program v3.00            |"
+    write(6,"(a)") "|               Zombie State Simulation Program v3.10            |"
     write(6,"(a)") "|                                                                |"
     write(6,"(a)") "|________________________________________________________________|"
     write(6,"(a)") ""
@@ -86,8 +86,8 @@ program MainZombie
         call alloczs(zstore,int(ndet,kind=16))
         write(6,"(a)") "Zombie states allocated"
         if(zomgflg=='y')then
-            ! call best_start_zom(10,zstore,elect,an_cr,an2_cr2)
-            call genzf(zstore,ndet)
+            call best_start_zom(zstore,elect,an_cr,an2_cr2)
+            ! call genzf(zstore,ndet)
             do j=1,ndet
                 call zombiewriter(zstore(j),j,0)
             end do
