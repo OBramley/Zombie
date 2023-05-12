@@ -242,7 +242,7 @@ zombs={
     'ndet':pyscf['norb']*3, 
 
     # Type of zombie states. Random (ran), Hartree Fock (HF) or biased (bb)
-    'zomtyp':'ran',
+    'zomtyp':'bb',
     
     # Make the first Zombie state the RHF det? Takes y or n
     'rhf_1':'y',
