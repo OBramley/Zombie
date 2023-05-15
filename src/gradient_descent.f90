@@ -247,9 +247,9 @@ MODULE gradient_descent
                     !$OMP & thread_d,temp_dvecs,t)
                     min_fxtdk = grad_fin%prev_erg !0
                     min_fxtdk_idx = -1
-                    !$omp do ordered schedule(static,1)
+                    !$omp do !ordered schedule(static,1)
                     do lralt_zs=1,45!24!loop_max !45
-                        !$omp cancellation point do
+                       
                         ! t=b*(alphain**fibs(lralt_zs))
                         t=b*0.5**(lralt_zs-1)
                         temp_zom=zstore(pick)
@@ -280,9 +280,9 @@ MODULE gradient_descent
                             ! thread_ham%ovrlp=temp_ham%ovrlp
                             thread_zom = temp_zom
                             thread_d(1)%d = temp_dvecs(1)%d
-                             !$omp cancel do
+                             !!$omp cancel do
                         end if
-                        !$omp cancellation point do
+                       ! !$omp cancellation point do
                     end do  
                     !$omp end do
                     if(min_fxtdk_idx.ne.-1)then
@@ -521,9 +521,9 @@ MODULE gradient_descent
                 !$OMP & thread_d,temp_dvecs,t,g_grad)
                 min_fxtdk = grad_fin%prev_erg !0
                 min_fxtdk_idx = -1
-                !$omp do ordered schedule(static,1)
+                !$omp do !ordered schedule(static,1)
                 do lralt_temp=1,45!24!loop_max
-                    !$omp cancellation point do
+                    !!$omp cancellation point do
                     ! t=newb*(alpha**fibs(lralt_temp))
                     t=newb*(0.5**(lralt_temp-1))
                  
@@ -559,9 +559,9 @@ MODULE gradient_descent
                         ! thread_ham%ovrlp=temp_ham%ovrlp
                         thread_zom = temp_zom
                         thread_d(1)%d = temp_dvecs(1)%d 
-                        !$omp cancel do
+                       ! !$omp cancel do
                     end if
-                     !$omp cancellation point do
+                    ! !$omp cancellation point do
                 end do 
                 !$omp end do
                 if(min_fxtdk_idx.ne.-1)then
@@ -671,6 +671,7 @@ MODULE gradient_descent
             errorflag=1
             return
         end if 
+
         call dealloczf(temp_zom)
         call dealloczf(thread_zom)
         call dealloczf(global_zom)

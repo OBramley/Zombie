@@ -137,9 +137,8 @@ MODULE outputs
                 errorflag=1
                 return
             end if
-            if(pass.eq.1)then
-                write(zomnum,*)' '
-            end if
+           
+            write(zomnum,*)' '
             if(imagflg=='n') then
                 write(zomnum,'(*(e25.17e3 :", "))') ((zom%phi(j)),j=1,norb)
                 write(zomnum,'(*(e25.17e3 :", "))') (REAL(zom%cos(j)),j=1,norb)
