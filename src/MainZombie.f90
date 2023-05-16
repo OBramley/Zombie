@@ -80,7 +80,7 @@ program MainZombie
         call electronintegrals(elect,an_cr,an2_cr2)
         write(6,"(a)") "Electrons allocated"
         ! end if
-        ! call partial_correlation(10000,elect,an_cr,an2_cr2)
+        
         
         ! generate zombie states
         call alloczs(zstore,int(ndet,kind=16))
@@ -88,6 +88,7 @@ program MainZombie
         if(zomgflg=='y')then
             call best_start_zom(zstore,elect,an_cr,an2_cr2)
             ! call genzf(zstore,ndet)
+            stop
             do j=1,ndet
                 call zombiewriter(zstore(j),j,0)
             end do

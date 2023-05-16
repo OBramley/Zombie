@@ -207,7 +207,7 @@ MODULE gradient_descent
         loops=0
         loop_max=13!5
         p=70-norb
-
+       
         do while(rjct_cnt2.lt.(norb*100))
             loops=loops+1
             if(write_flg.eq.1)then
@@ -339,8 +339,8 @@ MODULE gradient_descent
                 if(acpt_cnt.gt.0)then
                     zstore(pick)%update_num=zstore(pick)%update_num+1
                     if(write_flg.eq.1)then
-                    write(6,"(a,i3,a,f21.16,a,f21.16,a,*(i0:','))")'  ', pick,'          ', &
-                    erg_str,'             ',grad_fin%prev_erg,'          ',chng_trk2(1:acpt_cnt) 
+                        write(6,"(a,i3,a,f21.16,a,f21.16,a,*(i0:','))")'  ', pick,'          ', &
+                        erg_str,'             ',grad_fin%prev_erg,'          ',chng_trk2(1:acpt_cnt) 
                    
 
                         call zombiewriter(zstore(pick),pick,0)
@@ -365,8 +365,8 @@ MODULE gradient_descent
                 end if
                 epoc_cnt=epoc_cnt+1
                 ! picker=scramble(ndet-1)
-            else 
-                grad_fin%prev_erg=grad_fin%prev_erg+1.0d-8
+            ! else 
+                ! grad_fin%prev_erg=grad_fin%prev_erg+1.0d-8
             end if
 
             picker=scramble(ndet-1)
@@ -378,7 +378,7 @@ MODULE gradient_descent
             ! dvecs(1)%d_diff=0
             ! end if
 
-
+    
             if(loops.ge.maxloop)then
                 grad_fin%grad_avlb=0
                 exit
@@ -933,20 +933,23 @@ MODULE gradient_descent
         ! real(kind=8),dimension(:,:),allocatable::test_randoms
         real(kind=8)::erg_min
         type(zombiest),dimension(:),allocatable::zstore_try
-        type(hamiltonian)::haml
+        type(hamiltonian)::haml,temp_ham
         type(elecintrgl),intent(in)::elect
-        type(dvector),dimension(:),allocatable::dvecs
+        type(dvector),dimension(:),allocatable::dvecs,dvecs_temp
         type(oprts),intent(in)::an_cr,an2_cr2
         type(energy)::en
         type(grad)::grad_fin
         DOUBLE PRECISION, external::ZBQLU01
         integer :: l, j, k,ierr,choice,ndet_store
-        integer::epoc_cnt,epoc_max,cnt,alive
+        integer::epoc_cnt,epoc_max,cnt,alive,reject_cnt
         real(kind=8)::alpha,b
         real(kind=8)::mu((norb/2)),sig(norb/2)
+        integer,dimension(:),allocatable::picker
         
         ierr=0
         ! allocate(test_randoms(norb, num_tries),stat=ierr)
+        allocate(picker(1),stat=ierr)
+        picker(1)=2
         ndet_store=ndet
         ndet=2
         call alloczs(zstore_try,int(ndet,kind=16))
@@ -955,12 +958,14 @@ MODULE gradient_descent
        
  
         epoc_max=5
-
+        reject_cnt=0
         alpha=0.8  ! learning rate reduction
         b=1.D1 !starting learning rate
         call allocgrad(grad_fin,ndet,norb)
        
         call allocham(haml,ndet,norb)
+        call allocham(temp_ham,ndet,norb)
+        call allocdv(dvecs_temp,1,ndet,norb)
         call allocdv(dvecs,1,ndet,norb)
         call allocerg(en,1)
         !!$omp parallel do private(l,haml,zstore_try,dvecs,en,grad_fin) shared(elect,ndet,an_cr,an2_cr2,alpha,b,epoc_max,zstore)
@@ -971,8 +976,11 @@ MODULE gradient_descent
          
             grad_fin%prev_erg=en%erg(1,timesteps+1) 
             ! call epoc_writer(grad_fin%prev_erg,0,0,0.0d0,0)
-            epoc_cnt=2
-            call full_zs_gd(zstore_try,grad_fin,elect,dvecs,en,haml,epoc_cnt,alpha,b,an_cr,an2_cr2,epoc_max,0)
+            epoc_cnt=1
+
+            call orbital_gd(zstore_try,grad_fin,elect,dvecs,dvecs_temp,en,haml,temp_ham,&
+                epoc_cnt,alpha,b,picker,epoc_max,an_cr,an2_cr2,reject_cnt,epoc_max,0) 
+
             zstore(l)=zstore_try(2)
             write(0,"(a,i0,a)")"Zombie state ",l," generated"
         end do 
@@ -994,7 +1002,8 @@ MODULE gradient_descent
         zstore(1)=zstore_try(1)
         ndet=ndet_store
         call dealloczs(zstore_try)
-        call deallocham(haml)
+        call deallocham(haml) 
+        call deallocdv(dvecs_temp)
         call deallocdv(dvecs)
         call deallocerg(en)
         ! deallocate(test_randoms)
