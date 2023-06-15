@@ -10,7 +10,7 @@ MODULE grad_calc
 
     !Level 1 routine to calcualate hamiltonian and overlap gradient and hessian matrix
     !subroutine to calcualte gradient of w.r.t to a specific zombie state
-    subroutine gradient_zs(haml,zstore,elecs,an_cr,an2_cr2,state,orb,cmplt,strt)
+    subroutine gradient_zs(haml,zstore,elecs,grad_fin,an_cr,an2_cr2,state,orb,cmplt)!,strt)
 
         implicit none
 
@@ -18,7 +18,8 @@ MODULE grad_calc
         type(zombiest),dimension(:),intent(in)::zstore
         type(elecintrgl),intent(in)::elecs
         type(oprts),intent(in)::an_cr,an2_cr2
-        integer,intent(in)::state,orb,strt
+        type(grad),intent(inout)::grad_fin
+        integer,intent(in)::state,orb!,strt
         integer,dimension(:),intent(in)::cmplt
         integer,dimension(ndet)::cmplt_2
         integer::j,loop_num
@@ -36,11 +37,12 @@ MODULE grad_calc
         if (loop_num.eq.0) return
 
         if(orb.eq.0)then
-            call haml_ovrlp_grad_comb(haml,zstore,elecs,an_cr,an2_cr2,state,loop_num,cmplt_2,strt)
+            call haml_ovrlp_grad_comb(haml,zstore,elecs,an_cr,an2_cr2,state,loop_num,cmplt_2)!,strt)
         else
-            call haml_ovrlp_grad_comb_one_elec(haml,zstore,elecs,an_cr,an2_cr2,state,orb,loop_num,cmplt_2)
+            call grad_zom_grad(zstore,grad_fin,haml,elecs,state,orb,an_cr,an2_cr2) 
+            ! call haml_ovrlp_grad_comb_one_elec(haml,zstore,elecs,an_cr,an2_cr2,state,orb,loop_num,cmplt_2)
         end if 
-       
+    
         return
 
     end subroutine gradient_zs
@@ -48,7 +50,7 @@ MODULE grad_calc
     !##############################################################################################################################
 
 
-    subroutine haml_ovrlp_grad_comb(haml,zstore,elecs,an_cr,an2_cr2,state,loops,cmplt,strt)
+    subroutine haml_ovrlp_grad_comb(haml,zstore,elecs,an_cr,an2_cr2,state,loops,cmplt)!,strt)
 
         implicit none
 
@@ -56,7 +58,7 @@ MODULE grad_calc
         type(zombiest),dimension(:),intent(in)::zstore
         type(elecintrgl),intent(in)::elecs
         type(oprts),intent(in)::an_cr,an2_cr2
-        integer,intent(in)::state,loops,strt
+        integer,intent(in)::state,loops!,strt
         integer,dimension(:),intent(in)::cmplt
         real(kind=8)::h1etot,h2etot
         real(kind=8),dimension(0:2*norb)::z1d
@@ -65,8 +67,8 @@ MODULE grad_calc
         if (errorflag .ne. 0) return
 
         ! if(strt.eq.0)then
-            bgn=1
-            end=norb
+            ! bgn=1
+            ! end=norb
         ! else if(strt.eq.1)then 
         !     bgn=1
         !     end=norb/2
@@ -76,7 +78,7 @@ MODULE grad_calc
         ! end if
         
         !$omp parallel do collapse(2) private(j,k,h1etot,h2etot,z1d) shared(cmplt,zstore,haml,state,an_cr,an2_cr2,elecs)
-        do j=bgn,end 
+        do j=1,norb !j=bgn,end 
             do k=1,loops
                 z1d(0:2*norb)=zstore(state)%val(0:2*norb)
                 z1d(j)=zstore(state)%cos(j)
@@ -143,27 +145,27 @@ MODULE grad_calc
 
     end subroutine haml_ovrlp_grad_comb_one_elec
 
-    subroutine sub_matrices(haml,state,strt)
+    subroutine sub_matrices(haml,state)!,strt)
 
         implicit none 
         type(hamiltonian), intent(inout)::haml 
-        integer,intent(in)::state,strt!orb
+        integer,intent(in)::state!,strt!orb
         real(kind=8),allocatable,dimension(:,:,:)::temp2 
         integer::ierr,k,l,j,p,bgn,end!,orbsrt,orblim
 
         if (errorflag .ne. 0) return
 
         ierr=0
-        if(strt.eq.0)then
-            bgn=1
-            end=norb
-        else if(strt.eq.1)then 
-            bgn=1
-            end=norb/2
-        elseif(strt.eq.2)then  
-            bgn=(norb/2)+1
-            end=norb
-        end if
+        ! if(strt.eq.0)then
+        !     bgn=1
+        !     end=norb
+        ! else if(strt.eq.1)then 
+        !     bgn=1
+        !     end=norb/2
+        ! elseif(strt.eq.2)then  
+        !     bgn=(norb/2)+1
+        !     end=norb
+        ! end if
         
 
         ! if(orb.eq.0)then
@@ -387,7 +389,7 @@ MODULE grad_calc
         alive=zstore(state)%cos(orb)
         dead=zstore(state)%sin(orb)*(-1)
 
-        !$omp do private(h1etot,h2etot,j,l) shared(grad_fin,haml,elect,an_cr,an2_cr2,zstore,alive,dead)
+        !$omp parallel do private(h1etot,h2etot,j,l) shared(grad_fin,haml,elect,an_cr,an2_cr2,zstore,alive,dead)
         do l=1,ndet
             if(l.ne.state)then 
                 haml%diff_ovrlp(state,orb,l)=grad_fin%ovrlp_div(l)*(alive*zstore(l)%val(orb)+dead*zstore(l)%val(orb+norb))
@@ -414,7 +416,7 @@ MODULE grad_calc
             
             
         end do 
-        !$omp end do 
+        !$omp end parallel do 
         return 
     
     end subroutine grad_zom_grad
