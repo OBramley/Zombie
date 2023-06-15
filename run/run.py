@@ -284,7 +284,7 @@ elif(inputs.run['language']=="fortran"):
     #     subprocess.run(["./ZOMBIE.exe"])
  
     if(inputs.run['cores']!=1):
-            os.environ["OMP_NUM_THREADS"]=str(inputs.run['cores'])      
+        os.environ["OMP_NUM_THREADS"]=str(inputs.run['cores'])      
     subprocess.run(["./ZOMBIE.exe"])
  
 
