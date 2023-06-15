@@ -283,8 +283,9 @@ elif(inputs.run['language']=="fortran"):
     #         # os.environ["ACC_CACHE_SHARED"] = "true"
     #     subprocess.run(["./ZOMBIE.exe"])
  
-    if(inputs.run['cores']!=1):
-            os.environ["OMP_NUM_THREADS"]=str(inputs.run['cores'])      
+    if(inputs.run['cores']!=1): 
+        os.environ["OMP_NUM_THREADS"]=str(inputs.run['cores'])   
+    os.environ["OMP_CANCELLATION"]="TRUE"   
     subprocess.run(["./ZOMBIE.exe"])
  
 

@@ -9,7 +9,7 @@ MODULE gradient_descent
     use infnan_mod
     use grad_calc
     use zom 
-  
+    
     contains
 
     ! Subroutine to calcualte Hamiltonian elements combines 1st and 2nd electron integral calcualations so remove double 
@@ -234,8 +234,8 @@ MODULE gradient_descent
         real(kind=8),dimension(:,:),allocatable::try_one_elc_store,try_two_elc_store
 
         if (errorflag .ne. 0) return
-        ierr=0
-
+       
+       
         call alloczf(temp_zom)
         call alloczf(thread_zom)
         call alloczf(global_zom)
