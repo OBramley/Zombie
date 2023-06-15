@@ -16,6 +16,7 @@ MODULE globvars
         integer::update_num
     end type zombiest
 
+   
     ! Type defining the Hamiltonian matrix and the overlap matrix
     type hamiltonian
         real(kind=8), dimension(:,:), allocatable::hjk
@@ -58,8 +59,6 @@ MODULE globvars
     type elecintrgl
         integer::h1_num
         integer::h2_num
-        ! real(kind=8), dimension(:,:), allocatable::h1ei
-        ! real(kind=8), dimension(:,:,:,:), allocatable::h2ei
         real(kind=8), dimension(:), allocatable::h1ei
         real(kind=8), dimension(:), allocatable::h2ei
         real(kind=8) :: hnuc
@@ -90,6 +89,9 @@ MODULE globvars
         integer,dimension(:,:),allocatable::grad_avlb
         ! real(kind=8),dimension(:,:),allocatable::prev_mmntm
         ! real(kind=8),dimension(:),allocatable::hess_sum
+        real(kind=8),dimension(:,:,:),allocatable::one_elec
+        real(kind=8),dimension(:,:,:),allocatable::two_elec
+        real(kind=8),dimension(:),allocatable::ovrlp_div
     end type grad
 
     

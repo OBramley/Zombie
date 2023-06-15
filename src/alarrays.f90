@@ -700,6 +700,61 @@ MODULE alarrays
 
     end subroutine dealloc_oprts
 
+    subroutine grad_new_alloc(grad_fin,num,e1,e2)
+
+        implicit none
+        type(grad),intent(inout)::grad_fin
+        integer,intent(in)::e1,e2,num
+        integer::ierr
+        
+        ierr=0
+        allocate(grad_fin%one_elec(num,2,e1),stat=ierr)
+        if(ierr/=0)then
+            write(0,"(a,i0)") "Error in grad_new_setup one_elec array allocation . ierr had value ", ierr
+            errorflag=1
+            return
+        end if
+        allocate(grad_fin%two_elec(num,2,e2),stat=ierr)
+        if(ierr/=0)then
+            write(0,"(a,i0)") "Error in grad_new_setup two_elec array allocation . ierr had value ", ierr
+            errorflag=1
+            return
+        end if
+        allocate(grad_fin%ovrlp_div(num),stat=ierr)
+        if(ierr/=0)then
+            write(0,"(a,i0)") "Error in grad_new_setup ovrlp_div array allocation . ierr had value ", ierr
+            errorflag=1
+            return
+        end if
+
+        return 
+
+    end subroutine grad_new_alloc
+
+    subroutine grad_new_dealloc(grad_fin)
+
+        implicit none
+        type(grad),intent(inout)::grad_fin
+        integer::ierr
+        
+        ierr=0
+        deallocate(grad_fin%one_elec,stat=ierr)
+        if(ierr/=0)then
+            write(0,"(a,i0)") "Error in grad_new_setup one_elec array deallocation . ierr had value ", ierr
+            errorflag=1
+            return
+        end if
+        deallocate(grad_fin%two_elec,stat=ierr)
+        if(ierr/=0)then
+            write(0,"(a,i0)") "Error in grad_new_setup two_elec array deallocation . ierr had value ", ierr
+            errorflag=1
+            return
+        end if
+
+        return 
+
+    end subroutine grad_new_dealloc
+
 
 
 END MODULE alarrays

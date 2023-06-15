@@ -21,7 +21,7 @@ MODULE zom
         
         if(imagflg=='n') then
             do j=1,num
-    
+                
                 do k=1,norb
                     dummy=-1
                     !$omp critical
@@ -339,6 +339,14 @@ MODULE zom
                 !$omp end critical
                 zstore(j)%sin=sin(zstore(j)%phi)
                 zstore(j)%cos=cos(zstore(j)%phi)
+                ! zstore(j)%sin(1)=1
+                ! zstore(j)%cos(1)=0
+                ! zstore(j)%sin(2)=1
+                ! zstore(j)%cos(2)=0
+                ! zstore(j)%sin(3)=1
+                ! zstore(j)%cos(3)=0
+                ! zstore(j)%sin(4)=1
+                ! zstore(j)%cos(4)=0
                 zstore(j)%val(1:)=zstore(j)%sin
                 zstore(j)%val(norb+1:)=zstore(j)%cos
                 ! zstore(j)%sin=sin(cmplx(zstore(j)%phi,0.0d0,kind=8))
