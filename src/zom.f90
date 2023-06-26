@@ -14,7 +14,6 @@ MODULE zom
         integer, intent(in)::num
         integer::j,k
         real(kind=8)::dummy
-        real::r
         DOUBLE PRECISION, external::ZBQLU01
         if (errorflag .ne. 0) return
 
@@ -26,7 +25,6 @@ MODULE zom
                     dummy=-1
                     !$omp critical
                     do while((dummy.lt.0))
-                        ! call random_number(r)
                        dummy=2*pirl*(ZBQLU01(1)) 
                     end do
                     !$omp end critical
@@ -224,6 +222,7 @@ MODULE zom
                 return
             end if 
         end do
+        
         deallocate(co)
         if(ierr/=0) then
             write(0,"(a,i0)") "Error in co matrix deallocation. ierr had value ", ierr
@@ -286,15 +285,7 @@ MODULE zom
         ! real::r
 
         if (errorflag .ne. 0) return
-        ! mu and sigma values for Li2 10 spin orbitals used in OG paper
-        ! mu=(/0.25,0.25,0.25,0.0,0.0/)
-        ! sig=(/0.0001,0.0001,0.175,0.351,0.120/)
-
-        ! mu and sigma values for BH with 38 spin orbtials
-        ! mu=(/0.25,0.213632469,0.193380738,0.001262455,0.000505343,0.00062495,0.000530594,9.57371E-06,0.000169358,3.27753E-05, &
-        ! 0.004644281,0.000396432,0.000387224,5.15685E-05,0.004644276,0.000396434,0.000387213,5.16551E-05,9.58165E-06/)
-        ! sig(1:norb/2)=0.15
-        ! mu(1:(nel/2))=0.25
+ 
         call musig(mu,sig)
         
         if(imagflg=='n') then
@@ -305,14 +296,7 @@ MODULE zom
                 do k=1,norb/2
                     val=-1
                     do while(val.lt.0)
-        
-                        ! val=2*pirl*mu(k)*ZBQLU01(1)    ! 
-                        ! val=2*pirl*ZBQLNOR(mu(k),sig(k))
-                        val=2*pirl*random_normal(mu(k),sig(k)) !ZBQLNOR(mu(k),sig(k))
-                        ! if((val.gt.0.5*pirl))then
-                        !     val=-1
-                        ! end if
-                        
+                        val=2*pirl*random_normal(mu(k),sig(k)) 
                     end do
                     if((is_nan(val).eqv..true.))then
                         call random_number(val)
@@ -321,32 +305,16 @@ MODULE zom
                     zstore(j)%phi(2*k-1)=val
                     val=-1
                     do while(val.lt.0)
-                        ! val=2*pirl*mu(k)*ZBQLU01(1)
-                        ! val=2*pirl*ZBQLNOR(mu(k),sig(k))
                         val=2*pirl*random_normal(mu(k),sig(k))
-                    
                     end do
                     if((is_nan(val).eqv..true.))then
-                        ! call random_number(val)
                         val=2*pirl*(ZBQLU01(1)) 
-                        ! val=2*pirl*val 
                     end if 
                     zstore(j)%phi(2*k)=val
-                    ! print*,val(2*k-1),val(2*k)
-                    ! val(2*k-1)=2*pirl*mu(k)*exp(-ZBQLUAB(0,0.1))
-                    ! val(2*k)=2*pirl*mu(k)*exp(-ZBQLUAB(0,0.1))
                 end do
                 !$omp end critical
                 zstore(j)%sin=sin(zstore(j)%phi)
                 zstore(j)%cos=cos(zstore(j)%phi)
-                ! zstore(j)%sin(1)=1
-                ! zstore(j)%cos(1)=0
-                ! zstore(j)%sin(2)=1
-                ! zstore(j)%cos(2)=0
-                ! zstore(j)%sin(3)=1
-                ! zstore(j)%cos(3)=0
-                ! zstore(j)%sin(4)=1
-                ! zstore(j)%cos(4)=0
                 zstore(j)%val(1:)=zstore(j)%sin
                 zstore(j)%val(norb+1:)=zstore(j)%cos
                 ! zstore(j)%sin=sin(cmplx(zstore(j)%phi,0.0d0,kind=8))
@@ -367,10 +335,6 @@ MODULE zom
                 ! zstore(1)%sin(1:nel)=cmplx(1,0.0d0,kind=8)
                 ! zstore(1)%cos(1:nel)=cmplx(0,0.0d0,kind=8)
             end if 
-            ! do j=1, ndet
-            !     zstore(j)%sin(:)=zstore(j)%sin(:)*100
-            !     ! zstore(j)%cos(:)=zstore(j)%cos(:)*100
-            ! end do
         else if(imagflg=='y')then
             print*,"not yet written"
         end if
@@ -445,36 +409,33 @@ MODULE zom
         !       MU and standard deviation |SIGMA|, using the Box-Muller
         !       algorithm
         !
-              DOUBLE PRECISION THETA,R,ZBQLNOR,random_normal,PI,MU,SIGMA
-              DOUBLE PRECISION SPARE
-              INTEGER STATUS
-              SAVE STATUS,SPARE,PI
-              DOUBLE PRECISION p
-              DATA STATUS /-1/
-              
-        !      write (*,*) 'ZBQLNOR started'
+        DOUBLE PRECISION THETA,R,ZBQLNOR,random_normal,PI,MU,SIGMA
+        DOUBLE PRECISION SPARE
+        INTEGER STATUS
+        SAVE STATUS,SPARE,PI
+        DOUBLE PRECISION p
+        DATA STATUS /-1/
         
-              IF (STATUS.EQ.-1) PI = 4.0D0*DATAN(1.0D0)
-        
-              IF (STATUS.LE.0) THEN
-                call random_number(p)
-               THETA = 2.0D0*PI*p 
-               call random_number(p)
-        !       write (*,*) 'first call to ZQBLU01 completed'
-               R = DSQRT( -2.0D0*DLOG(p) )
-        !       write (*,*) 'second call to ZQBLU01 completed'
-               ZBQLNOR = (R*DCOS(THETA))
-               SPARE = (R*DSIN(THETA))
-               STATUS = 1
-              ELSE
-               ZBQLNOR = SPARE
-               STATUS = 0
-              ENDIF
-        !      write(*,*) 'ready to return. ZBQLNOR = ', ZBQLNOR, 'MU = ', MU
-        !      write(*,*) 'SIGMA = ', SIGMA
-              ZBQLNOR = MU + (SIGMA*ZBQLNOR)
-              random_normal=ZBQLNOR
-        !      write(*,*) 'about to return. ZBQLNOR = ', ZBQLNOR
-              END
+        IF (STATUS.EQ.-1) PI = 4.0D0*DATAN(1.0D0)
+
+        IF (STATUS.LE.0) THEN
+        call random_number(p)
+        THETA = 2.0D0*PI*p 
+        call random_number(p)
+
+        R = DSQRT( -2.0D0*DLOG(p) )
+
+        ZBQLNOR = (R*DCOS(THETA))
+        SPARE = (R*DSIN(THETA))
+        STATUS = 1
+        ELSE
+        ZBQLNOR = SPARE
+        STATUS = 0
+        ENDIF
+
+        ZBQLNOR = MU + (SIGMA*ZBQLNOR)
+        random_normal=ZBQLNOR
+
+    END
 
 END MODULE zom

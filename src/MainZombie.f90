@@ -31,6 +31,7 @@ program MainZombie
     character(LEN=100) :: CWD
     real(kind=8):: starttime, stoptime, runtime
     integer(kind=8):: randseed
+   
     ! DOUBLE PRECISION, external::ZBQLU01
 
     call CPU_TIME(starttime) !used to calculate the runtime, which is output at the end
@@ -48,6 +49,7 @@ program MainZombie
     istat=0
     call initialise
     call readrunconds
+    call restart_chk
 
     open(unit=570, file="/dev/urandom", access="stream", &
     form="unformatted", action="read", status="old", iostat=istat)
@@ -74,19 +76,15 @@ program MainZombie
     ! generate 1 and 2 electron integrals
     if((cleanflg=="y").or.(cleanflg=="f").or.((hamgflg=='y')).or.(GDflg=='y'))then
        
-        ! if((cleanflg=="y").or.((hamgflg=='y')))then
-            ! call allocintgrl(elect)
+
         write(6,"(a)") "Setting electron"
         call electronintegrals(elect,an_cr,an2_cr2)
         write(6,"(a)") "Electrons allocated"
-        ! end if
-        
-        
+      
         ! generate zombie states
         call alloczs(zstore,int(ndet,kind=16))
         write(6,"(a)") "Zombie states allocated"
         if(zomgflg=='y')then
-            ! call best_start_zom(zstore,elect,an_cr,an2_cr2)
             call genzf(zstore,ndet)
             do j=1,ndet
                 call zombiewriter(zstore(j),j,0)
@@ -118,9 +116,6 @@ program MainZombie
         end if
     
         if(hamgflg=='y')then
-            if(GPUflg.eq.'y')then
-                ! Maybe specificy conditons but maybe not needed?!
-            end if
             write(6,"(a)") "To hamiltonian gen"
             call hamgen(haml,zstore,elect,ndet,an_cr,an2_cr2,1)
             call matrixwriter(haml%hjk,ndet,"data/ham.csv")
@@ -129,7 +124,6 @@ program MainZombie
         else if (hamgflg=='n')then
             call read_ham(haml,ndet)
             write(6,"(a)") "Hamiltonian successfully read in"
-            !!$acc update device(haml)
         end if
        
         ! Imaginary time propagation
@@ -148,14 +142,11 @@ program MainZombie
                 call energywriter(en%t,en%erg(j,:),"energy_state_"//trim(stateno)//".csv",j)
             end do
         end if
-        print*,en%erg(1,timesteps+1)
-        ! print*,real(en%erg(1,timesteps+1))
+        
         
         if(GDflg.eq."y")then
-            if(rstrtflg.eq.'n')then
-                ! call sd_anal(zstore,nel,dvecs(1),1)
-            end if
-            ! gradients%prev_erg=real(en%erg(1,timesteps+1))
+            
+
             gradients%prev_erg=en%erg(1,timesteps+1)
             write(6,"(a,f20.16)") "Initial energy: ", gradients%prev_erg
            

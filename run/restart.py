@@ -89,7 +89,7 @@ cleanstat='n'
 if(inputs.run['grad']=='n'):
     if(inputs.run['hamgen']=='y'):
         if os.path.exists('data/ham.csv'):
-            if os.path.exists('data/ ovlp.csv'):
+            if os.path.exists('data/ovlp.csv'):
                 hamstat='n'
             else:
                 os.remove("data/ham.csv")
@@ -103,11 +103,11 @@ if(inputs.run['grad']=='n'):
                 hamstat='y'
 
  
-with open("rundata.csv",'w',newline='')as file:
-    writer = csv.writer(file)
-    writer.writerow([zomstat,hamstat,inputs.run['imagprop'],inputs.run['beta'],inputs.run['timesteps'],inputs.run['clean'],inputs.run['gram'],inputs.run['gramnum'],inputs.run['grad'],'y'])
-    writer.writerow(inputs.zombs.values())
-    writer.writerow([inputs.run['hamfile'],inputs.run['ovrlfile'],inputs.run['cleanham']])
+# with open("rundata.csv",'w',newline='')as file:
+#     writer = csv.writer(file)
+#     writer.writerow([zomstat,hamstat,inputs.run['imagprop'],inputs.run['beta'],inputs.run['timesteps'],inputs.run['clean'],inputs.run['gram'],inputs.run['gramnum'],inputs.run['grad'],'y'])
+#     writer.writerow(inputs.zombs.values())
+#     writer.writerow([inputs.run['hamfile'],inputs.run['ovrlfile'],inputs.run['cleanham']])
    
 os.environ["OMP_CANCELLATION"]="TRUE" 
 if(HPCFLG==1):
