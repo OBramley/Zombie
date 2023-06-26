@@ -9,7 +9,7 @@ MODULE gradient_descent
     use infnan_mod
     use grad_calc
     use zom 
-  
+    
     contains
 
     ! Subroutine to calcualte Hamiltonian elements combines 1st and 2nd electron integral calcualations so remove double 
@@ -140,14 +140,14 @@ MODULE gradient_descent
 
         grad_fin%vars(pick,:)=0
 
-        if(grad_fin%grad_avlb(0,pick).eq.0)then
+        if((grad_fin%grad_avlb(0,pick).eq.0).or.(orb.ne.0))then
             dvec(1)%d_diff(:,pick,:)=0
             
             call gradient_zs(haml,zstore,elect,grad_fin,an_cr,an2_cr2,pick,orb,grad_fin%grad_avlb(1:ndet,pick))!,strt)
             
-            if(ZBQLU01(1).lt.0.4.and.(orb.ne.0))then
-                grad_fin%grad_avlb(0,pick)=1
-            end if
+            ! if(ZBQLU01(1).lt.0.9.and.(orb.ne.0))then
+            !     grad_fin%grad_avlb(0,pick)=1
+            ! end if
         end if 
        
         if(grad_fin%grad_avlb(0,pick).eq.1)then
@@ -165,15 +165,22 @@ MODULE gradient_descent
         ! grad_fin%vars(pick,:)=grad_fin%vars(pick,:)+ (8.0 * pirl)
        
         grad_fin%vars(pick,:)=modulo(grad_fin%vars(pick,:), 2.0 * pirl)
-        if( grad_fin%grad_avlb(0,pick).eq.0)then 
-            grad_fin%grad_avlb(0:,pick)=1
-        else if( grad_fin%grad_avlb(0,pick).eq.1)then 
-            grad_fin%grad_avlb(0:,pick)=2
-        else if( grad_fin%grad_avlb(0,pick).eq.2)then 
-            grad_fin%grad_avlb(0:,pick)=1
-        end if 
+        ! if( grad_fin%grad_avlb(0,pick).eq.0)then 
+        !     grad_fin%grad_avlb(0:,pick)=1
+        ! else if( grad_fin%grad_avlb(0,pick).eq.1)then 
+        !     grad_fin%grad_avlb(0:,pick)=2
+        ! else if( grad_fin%grad_avlb(0,pick).eq.2)then 
+        !     grad_fin%grad_avlb(0:,pick)=1
+        ! end if 
 
         if(orb.eq.0)then
+            if( grad_fin%grad_avlb(0,pick).eq.0)then 
+                grad_fin%grad_avlb(0:,pick)=1
+            else if( grad_fin%grad_avlb(0,pick).eq.1)then 
+                grad_fin%grad_avlb(0:,pick)=2
+            else if( grad_fin%grad_avlb(0,pick).eq.2)then 
+                grad_fin%grad_avlb(0:,pick)=1
+            end if
             do j=1,norb
                 if(is_nan(grad_fin%vars(pick,j)).eqv..true.)then
                     ! write(0,"(a,i0,a,i0)")"nan detected in zombie state ",pick, " orbtial ",j
@@ -227,8 +234,8 @@ MODULE gradient_descent
         real(kind=8),dimension(:,:),allocatable::try_one_elc_store,try_two_elc_store
 
         if (errorflag .ne. 0) return
-        ierr=0
-
+       
+       
         call alloczf(temp_zom)
         call alloczf(thread_zom)
         call alloczf(global_zom)
@@ -269,7 +276,7 @@ MODULE gradient_descent
         loops=0
         loop_max=13!5
         p=70-norb
-       
+        grad_fin%grad_avlb=0
         do while(rjct_cnt2.lt.(norb*100))
             loops=loops+1
             if(write_flg.eq.1)then
@@ -297,10 +304,7 @@ MODULE gradient_descent
                 do n=1,norb
                     rjct_cnt=0
                     pickorb=pickerorb(n)
-                    if((pickorb.eq.1).or.(pickorb.eq.2))then
-                        cycle
-                    end if
-                    grad_fin%grad_avlb=0
+                    ! grad_fin%grad_avlb=0
                     haml%diff_hjk=0
                     haml%diff_ovrlp=0
                     call grad_zom_div(zstore,grad_fin,haml,elect,an_cr%ham,an2_cr2%ham,pick,pickorb)
@@ -352,9 +356,9 @@ MODULE gradient_descent
                             thread_d(1)%d = temp_dvecs(1)%d
                             thread_one_elc_store=try_one_elc_store
                             thread_two_elc_store=try_two_elc_store
-                             !!$omp cancel do
+                            !$omp cancel do
                         end if
-                       ! !$omp cancellation point do
+                       !$omp cancellation point do
                     end do  
                     !$omp end do
                     if(min_fxtdk_idx.ne.-1)then
@@ -391,7 +395,7 @@ MODULE gradient_descent
                         haml%ovrlp(:,pick)=global_ham%ovrlp(:,pick); haml%ovrlp(pick,:)=haml%ovrlp(:,pick)
                         haml%hjk(:,pick)=global_ham%hjk(:,pick); haml%hjk(pick,:)=haml%hjk(:,pick)
                         haml%kinvh=global_ham%kinvh
-                        grad_fin%grad_avlb=0
+                        ! grad_fin%grad_avlb=0
                         haml%diff_hjk=0
                         haml%diff_ovrlp=0
                         ! grad_fin%grad_avlb(:,0)=0
@@ -404,10 +408,6 @@ MODULE gradient_descent
                         ! haml%diff_ovrlp(:,:,pick)=0
                         dvecs(1)%d_diff=0.0d0
                         grad_fin%prev_erg=global_min_fxtdk
-                        if(grad_fin%prev_erg .lt. -15)then
-                            print*,grad_fin%prev_erg
-                            stop
-                        end if
                         rjct_cnt_in=0
                     end if 
                     
@@ -415,7 +415,7 @@ MODULE gradient_descent
                     write(6,'(1a)',advance='no') '|'
                     end if
                 end do
-                
+               
                 if(acpt_cnt.gt.0)then
                     zstore(pick)%update_num=zstore(pick)%update_num+1
                     if(write_flg.eq.1)then
@@ -435,6 +435,8 @@ MODULE gradient_descent
                     rjct_cnt2=rjct_cnt2+1
                 end if
 
+                grad_fin%grad_avlb(0,pick)=modulo(grad_fin%grad_avlb(0,pick)+1,2)
+            
             end do
         
             write(6,"(a,i0,a,f21.16)") "Energy after epoch no. ",epoc_cnt,": ",grad_fin%prev_erg
@@ -447,9 +449,9 @@ MODULE gradient_descent
             end if
 
             picker=scramble(ndet-1)
-            
+           
           
-            grad_fin%grad_avlb=0
+            ! grad_fin%grad_avlb=0
 
             if(loops.ge.maxloop)then
                 grad_fin%grad_avlb=0
@@ -550,11 +552,11 @@ MODULE gradient_descent
         rjct_cnt=0 !tracks how many rejections 
         acpt_cnt=0  !counts how many ZS have been changed
         loop_max=13!5
-        ! if(epoc_cnt.eq.1)then
-            ! orb_cnt=20
-        ! else
-            ! orb_cnt=1
-        ! end if 
+        if(epoc_cnt.eq.1)then
+            orb_cnt=20
+        else
+            orb_cnt=5
+        end if 
         
         call alloczf(temp_zom)
         call alloczf(thread_zom)
@@ -565,7 +567,7 @@ MODULE gradient_descent
         call allocham(temp_ham,ndet,norb)
         call allocham(thread_ham,ndet,norb)
         call allocham(global_ham,ndet,norb)
-        call grad_new_alloc(grad_fin,ndet,elect%h1_num,elect%h2_num)
+       
         ! picker=scramble(ndet-1)
 
         temp_ham=haml
@@ -730,7 +732,7 @@ MODULE gradient_descent
                 orb_cnt=orb_cnt+1
             else if((orb_cnt.le.0))then
                 call orbital_gd(zstore,grad_fin,elect,dvecs,en,haml,&
-                epoc_cnt,alpha,newb,picker,20,an_cr,an2_cr2,rjct_cnt,epoc_max,write_flg)
+                epoc_cnt,alpha,newb,picker,100,an_cr,an2_cr2,rjct_cnt,epoc_max,write_flg)
                 orb_cnt=20
             end if
  
@@ -835,14 +837,14 @@ MODULE gradient_descent
 
         alpha=0.8  ! learning rate reduction
         b=1.D1 !starting learning rate
-        
+       
         epoc_max=2000
         allocate(picker(ndet-1),stat=ierr)
-    
+        call grad_new_alloc(grad_fin,ndet,elect%h1_num,elect%h2_num)
         if(epoc_cnt.lt.epoc_max)then
             rjct_cnt=0
             picker=scramble(ndet-1)
-            call orbital_gd(zstore,grad_fin,elect,dvecs,en,haml,epoc_cnt,alpha,b,picker,20,an_cr,an2_cr2,rjct_cnt,epoc_max,1) 
+            call orbital_gd(zstore,grad_fin,elect,dvecs,en,haml,epoc_cnt,alpha,b,picker,100,an_cr,an2_cr2,rjct_cnt,epoc_max,1) 
             call full_zs_gd(zstore,grad_fin,elect,dvecs,en,haml,epoc_cnt,alpha,b,an_cr,an2_cr2,epoc_max,1,picker)
         end if 
 

@@ -4,7 +4,7 @@
 # subsequent streamlining alterations have been made 
 
 F90=gfortran
-FFLAGS= -g #-Wall -Wextra -ffast-math -ftree-vectorize -funroll-loops -march=native -Ofast -O5 -fopenmp #-fopenacc -O3 -Ofast
+FFLAGS= -g -Wall -Wextra -ffast-math -ftree-vectorize -funroll-loops -march=native -Ofast -O5 -fopenmp #-fopenacc -O3 -Ofast
 FLINKS= $(ARC_LINALG_FFLAGS)
 VPATH=../src
 
