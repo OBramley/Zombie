@@ -1,7 +1,6 @@
 import inputs
 import numpy 
 import csv 
-from math import isclose
 
 
 
@@ -95,49 +94,17 @@ def two_elec_setup(norb,H2ei,EXDIR1):
 
     return 
 
-# def two_elec_setup_grad(norb,H2ei,EXDIR1):
-
-    
-#     h2count=0
-#     g=numpy.zeros(((norb*norb*norb*norb),5))
-#     for i in range(norb):
-#         for j in range(norb):
-#             if(i!=j):
-#                 for k in range(norb):
-#                     for l in range(norb):
-#                         if(k!=l):
-#                             if(H2ei[i,j,k,l]!=0.0):
-#                                 h2count=h2count+1  
-#                                 g[h2count,0]=H2ei[i,j,k,l]
-#                                 g[h2count,1]=i+1
-#                                 g[h2count,2]=j+1
-#                                 g[h2count,3]=k+1
-#                                 g[h2count,4]=l+1
-#     g[0,0]=h2count
-    
-#     with open(EXDIR1+"/integrals/h2e_grad.csv",'w', newline='')as csvfile:
-#         spamwriter=csv.writer(csvfile, delimiter=',')
-#         spamwriter.writerows(g[0:h2count+1,:])
 
 
-#     return 
-
-
-
-def ham_writer(h1e,eri_full,EXDIR1):
+def elec_writer(h1e,eri_full,EXDIR1):
 
     norb=int(inputs.zombs['norb']*2)
-
-    
-    
     H1ei = spatospin1(h1e,norb)
     H2ei = spatospin2(eri_full,norb)
 
-   
-
     one_elec_setup(norb,H1ei,EXDIR1)
     two_elec_setup(norb,H2ei,EXDIR1)
-    # two_elec_setup_grad(norb,H2ei,EXDIR1)
+   
     
 
    
