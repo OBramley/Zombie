@@ -92,6 +92,7 @@ program MainZombie
             write(6,"(a)") "Zombie states generated"
         else if (zomgflg=='n') then
             call read_zombie(zstore)
+            write(6,"(a)") "Zombie read in"
         end if
         call flush(6)
         call flush(0)
@@ -146,7 +147,6 @@ program MainZombie
         
         if(GDflg.eq."y")then
             
-
             gradients%prev_erg=en%erg(1,timesteps+1)
             write(6,"(a,f20.16)") "Initial energy: ", gradients%prev_erg
            

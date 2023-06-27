@@ -274,8 +274,10 @@ elif(inputs.run['language']=="fortran"):
         # f.write('time ./d_check.exe')
         f.write('time ./ZOMBIE.exe')
         f.close()
-        
-        subprocess.call(['qsub',file1])
+        command=['qsub','-N',"zombie"+str(number)+"_1",file1]
+        for i in range(1,6):
+            subprocess.call(command)
+            command=['qsub','-N',"zombie"+str(number)+"_"+str(i+1),'-hold_jid',"zombie"+str(number)+"_"+str(i),file1]
     else:
         print(os.getcwd())
         if(inputs.run['cores']!=1):
