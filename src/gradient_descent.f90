@@ -227,7 +227,7 @@ MODULE gradient_descent
         integer::rjct_cnt,acpt_cnt,pick,pickorb,rjct_cnt2,loops,lralt_zs,acpt_cnt_2,ierr
         real(kind=8)::t,fxtdk,erg_str
         integer::j,k,l,n,p,loop_max
-        integer,dimension(:),allocatable::chng_trk,fibs,chng_trk2,pickerorb
+        integer,dimension(:),allocatable::chng_trk,chng_trk2,pickerorb
         real(kind=8)::global_min_fxtdk,min_fxtdk,g_grad
         integer::global_min_fxtdk_idx,min_fxtdk_idx
         real(kind=8),dimension(:,:),allocatable::thread_one_elc_store,global_one_elc_store,thread_two_elc_store,global_two_elc_store
@@ -248,8 +248,7 @@ MODULE gradient_descent
         allocate(pickerorb(norb),stat=ierr)
         if(ierr==0) allocate(chng_trk(ndet-1),stat=ierr)
         if(ierr==0) allocate(chng_trk2(norb),stat=ierr)
-        ! if(ierr==0) allocate(fibs(13),stat=ierr)
-        ! if(ierr==0) allocate(fibs(5),stat=ierr)
+       
         if (ierr/=0) then
             write(0,"(a,i0)") "Gradient descent allocations . ierr had value ", ierr
             errorflag=1
@@ -264,8 +263,7 @@ MODULE gradient_descent
             errorflag=1
             return
         end if
-        ! fibs=[0,1,2,3,5,8,13,21,34,55,89,144,160]
-        ! fibs=[0,1,5,34,144]
+      
 
         lralt_zs=0    ! power alpha is raised to 
         chng_trk2=0 !stores which orbitals in the ZS have changed 
@@ -319,9 +317,9 @@ MODULE gradient_descent
                     min_fxtdk = grad_fin%prev_erg !0
                     min_fxtdk_idx = -1
                     !$omp do !ordered schedule(static,1)
-                    do lralt_zs=1,45!24!loop_max !45
+                    do lralt_zs=1,45
                        
-                        ! t=b*(alpha**fibs(lralt_zs))
+                       
                         t=b*0.5**(lralt_zs-1)
                         temp_zom=zstore(pick)
                         ! Setup temporary zombie state
@@ -380,7 +378,7 @@ MODULE gradient_descent
                 
                     
                     if(global_min_fxtdk_idx .ne. -1)then
-                        ! t=b*(alpha**fibs(global_min_fxtdk_idx))
+                      
                         grad_fin%one_elec(:,1,:)=global_one_elc_store
                         grad_fin%two_elec(:,1,:)=global_two_elc_store
                         t=b*0.5**(global_min_fxtdk_idx-1)
@@ -475,7 +473,7 @@ MODULE gradient_descent
         deallocate(pickerorb,stat=ierr)
         if(ierr==0) deallocate(chng_trk,stat=ierr)
         if(ierr==0) deallocate(chng_trk2,stat=ierr)
-        ! if(ierr==0) deallocate(fibs,stat=ierr)
+       
         if (ierr/=0) then
             write(0,"(a,i0)") "Gradient descent deallocations . ierr had value ", ierr
             errorflag=1
@@ -516,7 +514,7 @@ MODULE gradient_descent
         integer::lralt,rjct_cnt,rjct_cnt2,acpt_cnt,pick,lralt_temp,loop_max,orb_cnt,ierr
         real(kind=8)::newb,t,fxtdk
         integer::j,k,l
-        integer,dimension(:),allocatable::chng_trk,fibs
+        integer,dimension(:),allocatable::chng_trk
         real(kind=8),dimension(:),allocatable::lr_chng_trk,erg_chng_trk
         DOUBLE PRECISION, external::ZBQLU01
 
@@ -534,8 +532,7 @@ MODULE gradient_descent
         if(ierr==0) allocate(lr_chng_trk(ndet-1),stat=ierr)
         if(ierr==0) allocate(erg_chng_trk(ndet-1),stat=ierr)
        
-        ! if(ierr==0) allocate(fibs(13),stat=ierr)
-        ! if(ierr==0) allocate(fibs(5),stat=ierr)
+       
         if (ierr/=0) then
             write(0,"(a,i0)") "Gradient descent allocations . ierr had value ", ierr
             errorflag=1
@@ -544,8 +541,7 @@ MODULE gradient_descent
        
         
 
-        ! fibs=[0,1,2,3,5,8,13,21,34,55,89,144,150]
-        ! fibs=[0,1,5,34,144]
+       
         
         lralt=1    ! power alpha is raised to  
         newb=b
@@ -606,7 +602,7 @@ MODULE gradient_descent
                 !$omp do !ordered schedule(static,1)
                 do lralt_temp=1,45!24!loop_max
                     !!$omp cancellation point do
-                    ! t=newb*(alpha**fibs(lralt_temp))
+                
                     t=newb*(0.5**(lralt_temp-1))
                  
                     temp_zom%phi=zstore(pick)%phi(:)-(t*grad_fin%vars(pick,:))
@@ -670,7 +666,7 @@ MODULE gradient_descent
                     end if
                 else 
                  
-                    ! t=newb*(alpha**fibs(global_min_fxtdk_idx))
+               
                     t=newb*(0.5**(global_min_fxtdk_idx-1))
                     acpt_cnt=acpt_cnt+1
                     chng_trk(acpt_cnt)=pick
@@ -747,7 +743,7 @@ MODULE gradient_descent
         deallocate(chng_trk,stat=ierr)
         if(ierr==0) deallocate(lr_chng_trk,stat=ierr)
         if(ierr==0) deallocate(erg_chng_trk,stat=ierr)
-        ! if(ierr==0) deallocate(fibs,stat=ierr)
+       
         if (ierr/=0) then
             write(0,"(a,i0)") "Gradient descent deallocations . ierr had value ", ierr
             errorflag=1
