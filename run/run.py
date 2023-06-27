@@ -254,39 +254,40 @@ elif(inputs.run['language']=="fortran"):
 
     
     os.chdir(EXDIR1)
-   
-    # if(HPCFLG==1):
-    #     if(inputs.run['cores']!=1):
-    #         os.environ["OMP_NUM_THREADS"]=str(inputs.run['cores'])
-    #     number=random.randint(99999,1000000)
-    #     file1="zombie"+str(number)+".sh"
-    #     f=open(file1,"w")
-    #     f.write("#$ -cwd -V \n")
-    #     if(inputs.run['cores']!=1):
-    #         f.write("#$ -pe smp "+str(inputs.run['cores'])+" \n") #Use shared memory parallel environemnt 
-    #     if(inputs.run['GPU']=='y'):
-    #         f.write("#$ -l coproc_v100=1 \n")
-    #         f.write("#$ -P feps-gpu \n")
-    #     f.write("#$ -l h_rt="+inputs.run['runtime']+"\n")
-    #     f.write("#$ -l h_vmem=5G \n")
-    #     f.write("module add mkl \n")
-    #     # f.write('time ./d_check.exe')
-    #     f.write('time ./ZOMBIE.exe')
-    #     f.close()
-        
-    #     subprocess.call(['qsub',file1])
-    # else:
-    #     print(os.getcwd())
-    #     if(inputs.run['cores']!=1):
-    #         os.environ["OMP_NUM_THREADS"]=str(inputs.run['cores'])
-    #         # os.environ["ACC_CACHE_READ_MOSTLY"] = "true"
-    #         # os.environ["ACC_CACHE_SHARED"] = "true"
-    #     subprocess.run(["./ZOMBIE.exe"])
+    os.environ["OMP_CANCELLATION"]="TRUE" 
+    if(HPCFLG==1):
+        if(inputs.run['cores']!=1):
+            os.environ["OMP_NUM_THREADS"]=str(inputs.run['cores'])
+        number=random.randint(99999,1000000)
+        file1="zombie"+str(number)+".sh"
+        f=open(file1,"w")
+        f.write("#$ -cwd -V \n")
+        if(inputs.run['cores']!=1):
+            f.write("#$ -pe smp "+str(inputs.run['cores'])+" \n") #Use shared memory parallel environemnt 
+        if(inputs.run['GPU']=='y'):
+            f.write("#$ -l coproc_v100=1 \n")
+            f.write("#$ -P feps-gpu \n")
+        f.write("#$ -l h_rt="+inputs.run['runtime']+"\n")
+        f.write("#$ -l h_vmem=5G \n")
+        f.write("export OMP_CANCELLATION=true \n")
+        f.write("module add mkl \n")
+        # f.write('time ./d_check.exe')
+        f.write('time ./ZOMBIE.exe')
+        f.close()
+        command=['qsub','-N',"zombie"+str(number)+"_1",file1]
+        for i in range(1,inputs.run['submissions']+1):
+            subprocess.call(command)
+            command=['qsub','-N',"zombie"+str(number)+"_"+str(i+1),'-hold_jid',"zombie"+str(number)+"_"+str(i),file1]
+    else:
+        print(os.getcwd())
+        if(inputs.run['cores']!=1):
+            os.environ["OMP_NUM_THREADS"]=str(inputs.run['cores'])
+        subprocess.run(["./ZOMBIE.exe"])
  
-    if(inputs.run['cores']!=1): 
-        os.environ["OMP_NUM_THREADS"]=str(inputs.run['cores'])   
-    os.environ["OMP_CANCELLATION"]="TRUE"   
-    subprocess.run(["./ZOMBIE.exe"])
+    # if(inputs.run['cores']!=1): 
+    #     os.environ["OMP_NUM_THREADS"]=str(inputs.run['cores'])   
+    # os.environ["OMP_CANCELLATION"]="TRUE"   
+    # subprocess.run(["./ZOMBIE.exe"])
  
 
     

@@ -631,4 +631,27 @@ MODULE readpars
     end subroutine read_ham_c
 
 
+    subroutine restart_chk()
+        implicit none
+
+        logical::file_exists
+
+
+        inquire(file="data/zombie_1001.csv",exist=file_exists)
+        if(file_exists.eqv..false.)then 
+            return
+        else 
+            zomgflg ='n'
+        end if 
+        
+        inquire(file="epoc.csv",exist=file_exists)
+        if(file_exists.eqv..True.)then
+            rstrtflg='y'
+        end if 
+
+        return
+
+    end subroutine
+
+
 END MODULE readpars
