@@ -644,11 +644,6 @@ MODULE readpars
             zomgflg ='n'
         end if 
         
-        inquire(file="data/ham.csv",exist=file_exists)
-        if(file_exists.eqv..True.)then
-            hamgflg ='n'
-        end if 
-
         inquire(file="epoc.csv",exist=file_exists)
         if(file_exists.eqv..True.)then
             rstrtflg='y'

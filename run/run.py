@@ -275,7 +275,7 @@ elif(inputs.run['language']=="fortran"):
         f.write('time ./ZOMBIE.exe')
         f.close()
         command=['qsub','-N',"zombie"+str(number)+"_1",file1]
-        for i in range(1,6):
+        for i in range(1,inputs.run['submissions']+1):
             subprocess.call(command)
             command=['qsub','-N',"zombie"+str(number)+"_"+str(i+1),'-hold_jid',"zombie"+str(number)+"_"+str(i),file1]
     else:

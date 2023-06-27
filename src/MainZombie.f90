@@ -126,7 +126,7 @@ program MainZombie
             call read_ham(haml,ndet)
             write(6,"(a)") "Hamiltonian successfully read in"
         end if
-       
+         
         ! Imaginary time propagation
         write(6,"(a)") "Imaginary time propagation started"
         ! call imgtime_prop(dvecs,en,haml,diff_state,0)
@@ -135,6 +135,7 @@ program MainZombie
        
         if(gramflg.eq."n")then
             call dvec_writer(dvecs(1)%d,ndet,0)
+            
             call energywriter(en%t,en%erg(1,:),"energy.csv",0)
         else if(gramflg.eq."y")then
             do j=1, 1+gramnum
@@ -154,7 +155,7 @@ program MainZombie
                 ! call epoc_writer(gradients%prev_erg,0,chng_trk,0.0d0,0)
                 call epoc_writer(gradients%prev_erg,0,0,0.0d0,0)
             end if
-           
+          
             call zombie_alter(zstore,gradients,haml,elect,en,dvecs,an_cr,an2_cr2)
             
             GDflg='n'
