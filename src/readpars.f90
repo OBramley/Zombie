@@ -223,30 +223,30 @@ MODULE readpars
                 filenm="data/zombie_"//trim(num)//".csv"
                 zomnum=500+j
                 
-                if(rstrtflg.eq.'y')then
-                    open(unit=zomnum,file=trim(filenm),status="old",iostat=ierr)
-                    if(ierr/=0)then
-                        write(0,"(a,i0)") "Error in opening zombie state file to read in. ierr had value ", ierr
+                ! if(rstrtflg.eq.'y')then
+                open(unit=zomnum,file=trim(filenm),status="old",iostat=ierr)
+                if(ierr/=0)then
+                    write(0,"(a,i0)") "Error in opening zombie state file to read in. ierr had value ", ierr
+                    errorflag=1
+                    return
+                end if
+                lines=0
+                do 
+                    read(zomnum,*,iostat=ierr)
+                    
+                    if(ierr<0)then
+                        close(zomnum)
+                        exit
+                    else if (ierr/=0) then
+                        write(0,"(a,i0)") "Error in counting zombie rows. ierr had value ", ierr
                         errorflag=1
                         return
                     end if
-                    lines=0
-                    do 
-                        read(zomnum,*,iostat=ierr)
-                        
-                        if(ierr<0)then
-                            close(zomnum)
-                            exit
-                        else if (ierr/=0) then
-                            write(0,"(a,i0)") "Error in counting zombie rows. ierr had value ", ierr
-                            errorflag=1
-                            return
-                        end if
-                        lines=lines+1
-                    end do
-                    close(zomnum) 
+                    lines=lines+1
+                end do
+                close(zomnum) 
     
-                end if 
+                ! end if 
                 ierr=0
                 open(unit=zomnum,file=trim(filenm),status="old",iostat=ierr)
                 if(ierr/=0)then
@@ -254,13 +254,13 @@ MODULE readpars
                     errorflag=1
                     return
                 end if
-                if(rstrtflg.eq.'y')then
-                    if(lines.gt.3)then
-                        do k=1,lines-3
-                            read(zomnum,*)
-                        end do
-                    end if 
-                end if
+                ! if(rstrtflg.eq.'y')then
+                if(lines.gt.3)then
+                    do k=1,lines-3
+                        read(zomnum,*)
+                    end do
+                end if 
+                ! end if
    
                 read(zomnum,*) phi
                 read(zomnum,*) cos

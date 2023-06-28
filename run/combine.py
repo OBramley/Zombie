@@ -81,8 +81,8 @@ shutil.copy2(EXDIR+'/node_1/data/zombie_1001.csv',EXDIR+'/data')
 cnt=2
 for i in range(multflg):
     floc=EXDIR+'/node_'+str(i+1)+'/data/zombie_1'
-    for j in range(2,inputs.zombs['ndet']):
-        shutil.copy2(floc+"{:03d}".format(j)+".csv",EXDIR+'/data/'+"{:03d}".format(cnt)+".csv")
+    for j in range(2,inputs.zombs['ndet']+1):
+        shutil.copy2(floc+"{:03d}".format(j)+".csv",EXDIR+'/data/zombie_1'+"{:03d}".format(cnt)+".csv")
         cnt+=1
 
 
@@ -109,7 +109,7 @@ if(inputs.run['grad']=='n'):
  
 with open("rundata.csv",'w',newline='')as file:
     writer = csv.writer(file)
-    writer.writerow([zomstat,hamstat,inputs.run['imagprop'],inputs.run['beta'],inputs.run['timesteps'],inputs.run['clean'],inputs.run['gram'],inputs.run['gramnum'],inputs.run['grad'],'y'])
+    writer.writerow([zomstat,hamstat,inputs.run['imagprop'],inputs.run['beta'],inputs.run['timesteps'],inputs.run['clean'],inputs.run['gram'],inputs.run['gramnum'],inputs.run['grad'],'n'])
     writer.writerow([inputs.zombs['norb'],inputs.zombs['nel'],inputs.zombs['spin'],cnt,inputs.zombs['zomtyp'],inputs.zombs['rhf_1'],inputs.zombs['imagflg']])
     writer.writerow([inputs.run['hamfile'],inputs.run['ovrlfile'],inputs.run['cleanham']])
    

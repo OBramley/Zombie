@@ -244,21 +244,22 @@ if(HPCFLG==1):
     f.close()
     if(multflg>1):
         for j in range(multflg):
+            inputs.run['runfolder']
             file2=EXDIR1+'/node_'+str(j+1)+"/zombie"+str(number)+"_"+str(j+1)+".sh"
             shutil.copy2(file1,file2)
 
         for j in range(multflg):
             os.chdir(EXDIR1+'/node_'+str(j+1))
             file2="zombie"+str(number)+"_"+str(j+1)+".sh"
-            command=['qsub','-N',"zombie"+str(number)+"_"+str(j+1)+"_1",file2]
+            command=['qsub','-N', inputs.run['runfolder']+"_"+str(j+1)+"_1",file2]
             for i in range(1,inputs.run['submissions']+1):
                 subprocess.call(command)
-                command=['qsub','-N',"zombie"+str(number)+"_"+str(j+1)+"_"+str(i+1),'-hold_jid',"zombie"+str(number)+"_"+str(j+1)+"_"+str(i),file2]
+                command=['qsub','-N',inputs.run['runfolder']+"_"+str(j+1)+"_"+str(i+1),'-hold_jid',inputs.run['runfolder']+"_"+str(j+1)+"_"+str(i),file2]
     else:
-        command=['qsub','-N',"zombie"+str(number)+"_1",file1]
+        command=['qsub','-N',inputs.run['runfolder']+"_1",file1]
         for i in range(1,inputs.run['submissions']+1):
             subprocess.call(command)
-            command=['qsub','-N',"zombie"+str(number)+"_"+str(i+1),'-hold_jid',"zombie"+str(number)+"_"+str(i),file1]     
+            command=['qsub','-N',inputs.run['runfolder']+"_"+str(i+1),'-hold_jid',inputs.run['runfolder']+"_"+str(i),file1]     
 else:
     print(os.getcwd())
     if(inputs.run['cores']!=1):
