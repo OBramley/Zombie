@@ -131,35 +131,58 @@ elif((inputs.run['elecs']=='mol')):
     shutil.copy2('../'+ inputs.run['elecfile'],EXDIR1+"/integrals")
 if(inputs.run['elecs']=='pyscf'):
     os.mkdir(EXDIR1+"/integrals")
-    mol = gto.M(
-    unit = inputs.pyscf['units'],
-    atom = inputs.pyscf['atoms'],
-    basis = inputs.pyscf['bs'],
-    verbose = inputs.pyscf['verbosity'],
-    symmetry = inputs.pyscf['symmetry'],
-    spin=inputs.pyscf['spin'],
-    charge=inputs.pyscf['charge'],
-    # symmetry_subgroup = inputs.pyscf['symmetry_subgroup'], #0 is code for A1 point group
-    )
-    myhf=scf.RHF(mol)
-    myhf.kernel()
-    """Obtaining one and two electron integrals from pyscf calculation
-    Code adapted from George Booth"""
-    # Extract AO->MO transformation matrix
-    c = myhf.mo_coeff
-    # Get 1-electron integrals and convert to MO basis
-    h1e = reduce(numpy.dot, (c.T, myhf.get_hcore(), c))
-    # Get 2-electron integrals and transform them
-    eri = ao2mo.kernel(mol, c)
-    # Ignore all permutational symmetry, and write as four-index tensor, in chemical notation
-    eri_full = ao2mo.restore(1, eri, c.shape[1])
-    # Scalar nuclear repulsion energy
-    Hnuc = myhf.energy_nuc()
+    if(inputs.pyscf['units']=='atom'):
+        mol = gto.M(
+        atom = inputs.pyscf['atoms'],
+        basis = inputs.pyscf['bs'],
+        verbose = inputs.pyscf['verbosity'],
+        spin=inputs.pyscf['spin'],
+        charge=inputs.pyscf['charge'],
+        # symmetry_subgroup = inputs.pyscf['symmetry_subgroup'], #0 is code for A1 point group
+        )
+        myhf=scf.RHF(mol)
+        myhf.kernel()
+        c = myhf.mo_coeff
+        # Get 1-electron integrals and convert to MO basis
+        h1e = reduce(numpy.dot, (c.T, myhf.get_hcore(), c))
+        # Get 2-electron integrals and transform them
+        eri = ao2mo.kernel(mol, c)
+        # Ignore all permutational symmetry, and write as four-index tensor, in chemical notation
+        eri_full = ao2mo.restore(1, eri, c.shape[1])
+        # Scalar nuclear repulsion energy
+        Hnuc = myhf.energy_nuc()
+       
+    else:
+        mol = gto.M(
+        unit = inputs.pyscf['units'],
+        atom = inputs.pyscf['atoms'],
+        basis = inputs.pyscf['bs'],
+        verbose = inputs.pyscf['verbosity'],
+        symmetry = inputs.pyscf['symmetry'],
+        spin=inputs.pyscf['spin'],
+        charge=inputs.pyscf['charge'],
+        # symmetry_subgroup = inputs.pyscf['symmetry_subgroup'], #0 is code for A1 point group
+        )
+        myhf=scf.RHF(mol)
+        myhf.kernel()
+        """Obtaining one and two electron integrals from pyscf calculation
+        Code adapted from George Booth"""
+        # Extract AO->MO transformation matrix
+        c = myhf.mo_coeff
+        # Get 1-electron integrals and convert to MO basis
+        h1e = reduce(numpy.dot, (c.T, myhf.get_hcore(), c))
+        # Get 2-electron integrals and transform them
+        eri = ao2mo.kernel(mol, c)
+        # Ignore all permutational symmetry, and write as four-index tensor, in chemical notation
+        eri_full = ao2mo.restore(1, eri, c.shape[1])
+        # Scalar nuclear repulsion energy
+        Hnuc = myhf.energy_nuc()
 
     
     with open(EXDIR1+"/integrals/hnuc.csv",'w', newline='')as csvfile:
         spamwriter=csv.writer(csvfile)
         spamwriter.writerow([Hnuc,0])
+
 
 multflg=0
 

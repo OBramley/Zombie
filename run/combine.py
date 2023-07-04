@@ -85,6 +85,7 @@ for i in range(multflg):
         shutil.copy2(floc+"{:03d}".format(j)+".csv",EXDIR+'/data/zombie_1'+"{:03d}".format(cnt)+".csv")
         cnt+=1
 
+cnt=cnt-1
 
 zomstat='n'
 hamstat='y'
