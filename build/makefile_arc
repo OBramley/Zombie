@@ -1,18 +1,18 @@
-# Makefile for use on arcx computers.
+# Makefile for use on chmlinxx computers.
 # Adapted from make file written by C. Symmonds for the MCE program which was inturn
 # made with the aid of the fmkmf utility (Copyright (c) The University of Edinburgh)
-# subsequent streamlining alterations have been made
+# subsequent streamlining alterations have been made 
 
 F90=gfortran
-FFLAGS= #-fopenmp -O3
-FLINKS=$(ARC_LINALG_FFLAGS)
-VPATH=../src_2
+FFLAGS= -Wall -Wextra -ffast-math -ftree-vectorize -funroll-loops -march=native -Ofast -O5 #-fopenmp -O3 -Ofast
+FLINKS= $(ARC_LINALG_FFLAGS)
+VPATH=../src
 
 # Link step
 
 all: ZOMBIE.exe
 
-ZOMBIE.exe:randgen.o vars.o alarrays.o readpars.o operators.o electrons.o zom.o ham.o outputs.o imgtp.o clean.o infnan.o grad_d.o gradient_descent.o MainZombie.o
+ZOMBIE.exe:randgen.o vars.o alarrays.o readpars.o electrons.o zom.o ham.o grad_calc.o outputs.o imgtp.o clean.o infnan_constants.o inf.o infnan.o grad_d.o gradient_descent.o MainZombie.o
 		 $(F90) $(FFLAGS) -o $@ $^ $(FLINKS)
 
 
@@ -21,9 +21,15 @@ ZOMBIE.exe:randgen.o vars.o alarrays.o readpars.o operators.o electrons.o zom.o 
 randgen.o:randgen.f
 	 $(F90) $(FFLAGS) -c $<
 
-infnan.o:infnan.f90 
+infnan_constants.o:infnan_constants.f90
 	 $(F90) $(FFLAGS) -c $<
 
+inf.o:inf.f90 infnan_constants.o 
+	 $(F90) $(FFLAGS) -c $<
+	 
+infnan.o:infnan.f90 infnan_constants.o inf.o
+	 $(F90) $(FFLAGS) -c $<
+	 
 vars.o:vars.f90
 	 $(F90) $(FFLAGS) -c $<
 
@@ -33,38 +39,38 @@ alarrays.o:alarrays.f90 vars.o
 readpars.o:readpars.f90 vars.o
 	 $(F90) $(FFLAGS) -c $<
 
+electrons.o:electrons.f90 vars.o alarrays.o
+	 $(F90) $(FFLAGS) -c $<
+
+zom.o:zom.f90 vars.o infnan.o
+	 $(F90) $(FFLAGS) -c $<
+	 
+ham.o:ham.f90 vars.o alarrays.o
+	 $(F90) $(FFLAGS) -c $<
+
+grad_calc.o:grad_calc.f90 vars.o alarrays.o ham.o
+	 $(F90) $(FFLAGS) -c $<
+
 outputs.o:outputs.f90 vars.o
 	 $(F90) $(FFLAGS) -c $<
 
-operators.o:operators.f90 vars.o alarrays.o
-	 $(F90) $(FFLAGS) -c $<
-
-electrons.o:electrons.f90 vars.o
-	 $(F90) $(FFLAGS) -c $<
-
-zom.o:zom.f90 vars.o
-	 $(F90) $(FFLAGS) -c $<
-	 
-ham.o:ham_arc.f90 vars.o alarrays.o operators.o
-	 $(F90) $(FFLAGS) -c -o ham.o $<
-
-grad_d.o:grad_d.f90 vars.o
+grad_d.o:grad_d.f90 vars.o infnan.o
 	 $(F90) $(FFLAGS) -c $<
 
 imgtp.o:imgtp.f90 vars.o alarrays.o grad_d.o
 	 $(F90) $(FFLAGS) -c $<
 
-gradient_descent.o:gradient_descent_arc.f90 vars.o alarrays.o ham.o operators.o grad_d.o imgtp.o outputs.o
-	 $(F90) $(FFLAGS) -c -o gradient_descent.o $<
-
-clean.o:clean.f90 vars.o alarrays.o zom.o ham.o operators.o outputs.o readpars.o
+gradient_descent.o:gradient_descent.f90 vars.o alarrays.o ham.o grad_d.o imgtp.o outputs.o infnan.o grad_calc.o
 	 $(F90) $(FFLAGS) -c $<
 
-MainZombie.o:MainZombie.f90 vars.o alarrays.o readpars.o operators.o electrons.o zom.o ham.o outputs.o imgtp.o clean.o infnan.o grad_d.o gradient_descent.o
+clean.o:clean.f90 vars.o alarrays.o zom.o ham.o outputs.o readpars.o
+	 $(F90) $(FFLAGS) -c $<
+
+MainZombie.o:MainZombie.f90 vars.o alarrays.o readpars.o electrons.o zom.o ham.o grad_calc.o outputs.o imgtp.o clean.o infnan_constants.o inf.o infnan.o grad_d.o gradient_descent.o
 	 $(F90) $(FFLAGS) -c $<
 
 # This entry allows you to type " make clean " to get rid of
 # all object and module files
 
 clean:
-	rm -rf f_{files,modd}* *.o *.mod *.exe *~ ../run/*.exe ../run/*~ ../src_2/*~
+	rm -rf f_{files,modd}* *.o *.mod *.exe *~ ../run/*.exe ../run/*~ ../src/*~

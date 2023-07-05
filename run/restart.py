@@ -30,8 +30,8 @@ elif(inputs.run['nodes']<1):
     sys.exit("Not enough nodes selected. Must be 1 or greater")
 elif(inputs.run['nodes']>100):
     sys.exit("Too many nodes. Maximum of 100 simultaneous submisions")
-elif(inputs.run['cores']>30):
-    sys.exit("Too many cores selected. Maximum of 8 available")
+elif(inputs.run['cores']>40):
+    sys.exit("Too many cores selected. Maximum of 40 available")
 elif(inputs.run['cores']<1):
     sys.exit("Not enough cores selected. Must be 1 or greater")
 elif(inputs.zombs['norb']<1):
@@ -63,7 +63,7 @@ elif(inputs.run['clean'] not in {'y','n','f'}):
 print("Arguments checked")
 # Check if on HPC
 Hostname=socket.gethostname()
-if((Hostname==("login2.arc4.leeds.ac.uk"))or(Hostname==("login1.arc4.leeds.ac.uk"))):
+if((Hostname==("login2.arc4.leeds.ac.uk"))or(Hostname==("login1.arc4.leeds.ac.uk"))or(Hostname==("login2.arc3.leeds.ac.uk"))or(Hostname==("login1.arc3.leeds.ac.uk"))):
     HPCFLG=1
 else:
     HPCFLG=0
@@ -89,7 +89,7 @@ cleanstat='n'
 if(inputs.run['grad']=='n'):
     if(inputs.run['hamgen']=='y'):
         if os.path.exists('data/ham.csv'):
-            if os.path.exists('data/ ovlp.csv'):
+            if os.path.exists('data/ovlp.csv'):
                 hamstat='n'
             else:
                 os.remove("data/ham.csv")
@@ -103,13 +103,13 @@ if(inputs.run['grad']=='n'):
                 hamstat='y'
 
  
-with open("rundata.csv",'w',newline='')as file:
-    writer = csv.writer(file)
-    writer.writerow([zomstat,hamstat,inputs.run['imagprop'],inputs.run['beta'],inputs.run['timesteps'],inputs.run['clean'],inputs.run['gram'],inputs.run['gramnum'],inputs.run['grad'],'y'])
-    writer.writerow(inputs.zombs.values())
-    writer.writerow([inputs.run['hamfile'],inputs.run['ovrlfile'],inputs.run['cleanham']])
+# with open("rundata.csv",'w',newline='')as file:
+#     writer = csv.writer(file)
+#     writer.writerow([zomstat,hamstat,inputs.run['imagprop'],inputs.run['beta'],inputs.run['timesteps'],inputs.run['clean'],inputs.run['gram'],inputs.run['gramnum'],inputs.run['grad'],'y'])
+#     writer.writerow(inputs.zombs.values())
+#     writer.writerow([inputs.run['hamfile'],inputs.run['ovrlfile'],inputs.run['cleanham']])
    
-
+os.environ["OMP_CANCELLATION"]="TRUE" 
 if(HPCFLG==1):
     if(inputs.run['cores']!=1):
         os.environ["OMP_NUM_THREADS"]=str(inputs.run['cores'])
@@ -120,7 +120,8 @@ if(HPCFLG==1):
     if(inputs.run['cores']!=1):
         f.write("#$ -pe smp "+str(inputs.run['cores'])+" \n") #Use shared memory parallel environemnt 
     f.write("#$ -l h_rt="+inputs.run['runtime']+"\n")
-    f.write("#$ -l h_vmem=12G \n")
+    f.write("#$ -l h_vmem=5G \n")
+    f.write("export OMP_CANCELLATION=true \n")
     f.write("module add mkl \n")
     # f.write('time ./d_check.exe')
     f.write('time ./ZOMBIE.exe')
