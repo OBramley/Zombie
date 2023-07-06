@@ -9,35 +9,29 @@ MODULE imgtp
 
         implicit none
 
-        type(dvector),dimension(:),intent(inout)::dvecs
-        type(energy),intent(inout)::en
+        type(dvector),intent(inout)::dvecs
+        real(kind=8), dimension(:),intent(inout)::erg
         type(hamiltonian),intent(in)::haml
         integer,intent(in)::diff_state,orb
         integer::j,k,states
-        ! real(kind=8)::p
         real::db,r
-        !DOUBLE PRECISION, external::ZBQLU01,ZBQLUAB
-
+     
         if (errorflag .ne. 0) return
     
-        do j=1,size(dvecs)
-            dvecs(j)%d=0.0
-            if(imagflg=='n') then
-                dvecs(j)%d(j)=(1.0,0.0)
-                if(zst=='HF') then
-                    do k=1, ndet
-                    ! k=int(ZBQLUAB(1,ndet))
-                        call random_number(r)
-                        ! dvecs(j)%d(k)=cmplx(p,0.0,kind=8)
-                        dvecs(j)%d(k)=r
-                    end do
-                end if
-                
-            else if(imagflg=='y') then
-                dvecs(j)%d(j)=1.0
-                ! dvecs(j)%d(j)=(1.0,1.0)
-             end if
-        end do
+       
+        dvecs%d=0.0
+        if(imagflg=='n') then
+            dvecs(j)%d(j)=(1.0,0.0)
+            if(zst=='HF') then
+                do k=1, ndet
+                    call random_number(r)
+                    dvecs(j)%d(k)=r
+                end do
+            end if 
+        else if(imagflg=='y') then
+            dvecs%d(1)=1.0
+        end if
+        
        
        
         states=1
@@ -45,25 +39,19 @@ MODULE imgtp
             states=gramnum+1
             call gs(dvecs,haml,diff_state,orb)
         else
-            call d_norm(dvecs(1),haml,0,diff_state,orb)
+            call d_norm(dvecs,haml,0,diff_state,orb)
         end if 
         db=beta/timesteps
        
     
-        do j=1,timesteps+1
-            en%t(j)=db*(j-1)
-            !!$omp parallel shared(en,j,haml,dvecs) private(k)
-            !!$omp do
-            do k=1,states
-                en%erg(k,j)=ergcalc(haml%hjk,dvecs(k)%d)
-                call timestep(haml,dvecs(k),db,diff_state,orb)
-            end do
-            !!$omp end do
-            !!$omp end parallel
+        do j=1,timesteps+1     
+            erg(j)=ergcalc(haml%hjk,dvecs%d)
+            call timestep(haml,dvecs,db,diff_state,orb)
+           
             if(gramflg.eq."y")then
                 call gs(dvecs,haml,diff_state,orb)
             else
-                call d_norm(dvecs(1),haml,j,diff_state,orb)
+                call d_norm(dvecs,haml,j,diff_state,orb)
             end if
    
         end do
@@ -77,11 +65,8 @@ MODULE imgtp
 
         implicit none
 
-        ! complex(kind=8),intent(in),dimension(:)::dvec
-        ! complex(kind=8),intent(in),dimension(:,:)::bham
         real(kind=8),intent(in),dimension(:)::dvec
         real(kind=8),intent(in),dimension(:,:)::bham
-        ! complex(kind=8)::result
         real(kind=8)::result
         
         if (errorflag .ne. 0) return
@@ -133,7 +118,6 @@ MODULE imgtp
         type(hamiltonian),intent(in)::haml
         real,intent(in)::db
         integer,intent(in)::diff_state,orb
-        ! complex(kind=8),dimension(ndet)::ddot
         real(kind=8),dimension(ndet)::ddot
 
    
@@ -154,65 +138,23 @@ MODULE imgtp
 
     end subroutine timestep
 
-    !Gram-Schmidt orthogonalisation 
-    subroutine gs(dvecs,haml,diff_state,orb)
-
-        implicit none
-        type(dvector), intent(inout),dimension(:)::dvecs
-        type(hamiltonian),intent(in)::haml
-        integer,intent(in)::diff_state,orb
-        type(dvector), allocatable,dimension(:)::dvecs_copy
-        ! complex(kind=8)::numer,den
-        real(kind=8)::numer,den
-        ! complex(kind=8),dimension(ndet)::temp
-        integer::states,j,k
-
-        if (errorflag .ne. 0) return
-    
-        states = gramnum+1
-        call allocdv(dvecs_copy,states,ndet,norb)
-        
-        ! do j=1, states
-        !     dvecs_copy(j)%d(:)=dvecs(j)%d(:)
-        ! end do
-        dvecs_copy=dvecs
-        do j=2,states
-            do k=1, j-1
-                numer=dot_product(dvecs(j)%d,matmul(haml%ovrlp,dvecs_copy(k)%d))
-                den=dot_product(dvecs_copy(k)%d,matmul(haml%ovrlp,dvecs_copy(k)%d))
-                dvecs_copy(j)%d = dvecs_copy(j)%d - (dvecs_copy(k)%d*(numer/den))
-            end do
-        end do
-
-        do j=1,states
-            call d_norm(dvecs_copy(j),haml,1,diff_state,orb)  
-        end do
-        dvecs=dvecs_copy
-        call deallocdv(dvecs_copy)
-
-        return
-
-    end subroutine gs
-
-
-    subroutine imaginary_time_prop2(dvecs,en,haml,size,diff_state,orb)
+    subroutine imaginary_time_prop2(dvecs,erg,haml,size,diff_state,orb)
 
         implicit none
 
-        type(dvector),dimension(:),intent(inout)::dvecs
-        type(energy),intent(inout)::en
+        type(dvector),intent(inout)::dvecs
+        real(kind=8), dimension(:),intent(inout)::erg
         type(hamiltonian),intent(in)::haml
         integer,intent(in)::diff_state,orb,size
         integer::j,k,l
-        real::db
-        real(kind=8)::norm,result,temp
+        real(kind=8)::norm,result,temp,db
         real(kind=8),dimension(size)::ddot
 
 
         if (errorflag .ne. 0) return
 
-        dvecs(1)%d=0.0
-        dvecs(1)%d(1)=1.0
+        dvecs%d=0.0
+        dvecs%d(1)=1.0
       
         norm=0
        
@@ -220,52 +162,52 @@ MODULE imgtp
         do j=1,size
             temp=0
             do l=1,size 
-                temp=temp+haml%ovrlp(j,l)*dvecs(1)%d(l)
+                temp=temp+haml%ovrlp(j,l)*dvecs%d(l)
             end do 
-            norm=norm+(temp*dvecs(1)%d(j))
+            norm=norm+(temp*dvecs%d(j))
         end do 
      
         norm = sqrt(abs(norm))
        
-        dvecs(1)%norm=norm
+        dvecs%norm=norm
        
-        call d_normalise_diff(dvecs(1),haml,0,diff_state,orb)
+        call d_normalise_diff(dvecs,haml,0,diff_state,orb)
       
         
-        dvecs(1)%d=dvecs(1)%d/norm
+        dvecs%d=dvecs%d/norm
        
         db=beta/timesteps
        
         do k=1,timesteps+1
 
-            en%t(k)=db*(k-1)
+            ! en%t(k)=db*(k-1)
             result=0
           
             do j=1,size
                 temp=0
               
                 do l=1,size 
-                    temp=temp+haml%hjk(j,l)*dvecs(1)%d(l)
+                    temp=temp+haml%hjk(j,l)*dvecs%d(l)
                 end do 
-                result = result + (dvecs(1)%d(j)*temp)
+                result = result + (dvecs%d(j)*temp)
             end do
           
-            en%erg(1,k)=result
+            erg(k)=result
     
             ddot=0
-            call timestep_diff(dvecs(1),haml,db,diff_state,orb)
+            call timestep_diff(dvecs,haml,db,diff_state,orb)
           
          
             do j=1,size 
                 temp=0
            
                 do l=1,size 
-                    temp= temp + haml%kinvh(j,l)*dvecs(1)%d(l)
+                    temp= temp + haml%kinvh(j,l)*dvecs%d(l)
                 end do 
                 ddot(j)=temp
             end do
         
-            dvecs(1)%d=dvecs(1)%d-(db*ddot)
+            dvecs%d=dvecs%d-(db*ddot)
         
             norm=0   
       
@@ -273,17 +215,17 @@ MODULE imgtp
                 temp=0
            
                 do l=1,size 
-                    temp=temp+haml%ovrlp(j,l)*dvecs(1)%d(l)
+                    temp=temp+haml%ovrlp(j,l)*dvecs%d(l)
                 end do 
-                norm=norm+(temp*dvecs(1)%d(j))
+                norm=norm+(temp*dvecs%d(j))
             end do 
     
             norm = sqrt(abs(norm))
-            dvecs(1)%norm=norm
+            dvecs%norm=norm
         
-            call d_normalise_diff(dvecs(1),haml,k,diff_state,orb)
+            call d_normalise_diff(dvecs,haml,k,diff_state,orb)
                
-            dvecs(1)%d=dvecs(1)%d/norm
+            dvecs%d=dvecs%d/norm
 
         end do
       

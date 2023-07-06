@@ -206,9 +206,9 @@ MODULE outputs
         implicit none
 
         real(kind=8), dimension(:),intent(in)::time
-        ! complex(kind=8), dimension(:),intent(in)::erg 
         real(kind=8), dimension(:),intent(in)::erg 
         character(LEN=*),intent(in)::filenm
+        real::db
         integer,intent(in)::j
         integer::ergnum,ierr,k
         logical :: file_exists
@@ -217,6 +217,8 @@ MODULE outputs
 
         ergnum=400+j
         ierr=0
+        db=beta/timesteps
+      
         inquire(file=trim(filenm),exist=file_exists)
         if(file_exists.eqv..false.) then
             open(unit=ergnum,file=trim(filenm),status="new",iostat=ierr)
@@ -226,7 +228,7 @@ MODULE outputs
                 close(ergnum)
                 return
             end if
-            write(ergnum,'(*(e25.17e3 :", "))') (time(k),k=1,timesteps+1)
+            write(ergnum,'(*(e25.17e3 :", "))') (db*(k-1),k=1,timesteps+1)
         else 
             open(unit=ergnum,file=trim(filenm),status="old",access='append',iostat=ierr)
             if(ierr/=0)then
