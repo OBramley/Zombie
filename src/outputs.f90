@@ -81,15 +81,16 @@ MODULE outputs
 
     end subroutine matrixwriter
 
-    subroutine zombiewriter(zom,num,pass)
+    subroutine zombiewriter(zom,num,gst)
 
         implicit none
 
         type(zombiest),intent(in)::zom 
-        integer,intent(in)::num,pass
+        integer,intent(in)::num,gst
         character(LEN=20)::filenm
         integer::ierr,zomnum,j
         character(LEN=4)::nums
+        character(len=2)::gst_num
         logical :: file_exists
 
         if (errorflag .ne. 0) return
@@ -102,8 +103,13 @@ MODULE outputs
             write(nums,"(i4.4)")num
         end if
 
-        
-        filenm = "data/zombie_"//trim(nums)//".csv"
+        if(gramflg=='n')then
+            filenm="data/zombie_"//trim(num)//".csv"
+        else
+            write(gst_num,"(i2.1)")gst
+            filenm="data/zom_"//trim(gst_num)//"_"//trim(num)//".csv"
+        end if
+        !filenm = "data/zombie_"//trim(nums)//".csv"
 
         inquire(file=filenm,exist=file_exists)
         zomnum=300+num

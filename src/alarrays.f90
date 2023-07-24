@@ -309,11 +309,9 @@ MODULE alarrays
             ham%diff_ov_dov=0.0
             ham%diff_in_dhjk=0.0
         end if
-
+        ham%gram_num=0
         return
     end subroutine allocham
-
-
 
     subroutine deallocham(ham)
 
@@ -771,6 +769,94 @@ MODULE alarrays
 
     end subroutine grad_new_dealloc
 
+    subroutine allocgram(ham,num,size)
+
+        implicit none 
+        type(hamiltonian),intent(inout)::ham 
+        integer,intent(in)::num,size
+        integer::ierr
+
+        if (errorflag .ne. 0) return
+
+        ierr=0
+        ham%gram_num=num
+        allocate(ham%gs_ovrlp(num,size,size),stat=ierr)
+        if(ierr==0) allocate(ham%gs_kinvh(num,size,size),stat=ierr)
+        if(ierr==0) allocate(ham%gs_ovrlp_self(num,size,size),stat=ierr)
+        if (ierr/=0) then
+            write(0,"(a,i0)") "Error in overlap gram allocation. ierr had value ", ierr
+            errorflag=1
+            return
+        end if
+
+        return
+
+    end subroutine allocgram
+
+    subroutine deallocgram(ham)
+
+        implicit none 
+        type(hamiltonian),intent(inout)::ham 
+        integer::ierr
+
+        if (errorflag .ne. 0) return
+
+        ierr=0
+        deallocate(ham%gs_ovrlp,stat=ierr)
+        if(ierr==0) deallocate(ham%gs_kinvh,stat=ierr)
+        if(ierr==0) deallocate(ham%gs_ovrlp_self,stat=ierr)
+        if (ierr/=0) then
+            write(0,"(a,i0)") "Error in overlap gram allocation. ierr had value ", ierr
+            errorflag=1
+            return
+        end if
+
+        return
+
+    end subroutine deallocgram
+
+    subroutine allocdvgram(dvec,num,size)
+
+        implicit none 
+        type(dvector),intent(inout)::dvec
+        integer,intent(in)::num,size
+        integer::ierr
+
+        if (errorflag .ne. 0) return
+
+        ierr=0
+
+        allocate(dvec%d_gs(num,size),stat=ierr)
+        if(ierr/=0)then 
+            write(0,"(a,i0)") "Error in dvector gram allocation. ierr had value ", ierr
+            errorflag=1
+            return
+        end if
+
+        return
+
+    end subroutine allocdvgram
+
+    subroutine deallocdvgram(dvec)
+
+        implicit none 
+        type(dvector),intent(inout)::dvec
+        integer::ierr
+
+        if (errorflag .ne. 0) return
+
+        ierr=0
+
+        deallocate(dvec%d_gs,stat=ierr)
+        if(ierr/=0)then 
+            write(0,"(a,i0)") "Error in dvector gram deallocation. ierr had value ", ierr
+            errorflag=1
+            return
+        end if
+
+        return
+
+    end subroutine deallocdvgram
 
 
 END MODULE alarrays

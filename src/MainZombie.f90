@@ -10,7 +10,6 @@ program MainZombie
     use imgtp
     use clean
     use zom
-    use grad_d
     use gradient_descent
     use omp_lib
 
@@ -21,9 +20,8 @@ program MainZombie
     type(dvector):: dvecs, dvec_clean
     type(elecintrgl)::elect
     type(hamiltonian)::haml, clean_haml
-    type(grad)::gradients
     type(oprts)::an_cr,an2_cr2
-    integer:: j, istat,clean_ndet,ierr,d_state
+    integer:: j, istat,clean_ndet,ierr
     real(kind=8)::clean_norm, clean_erg
     real(kind=8), dimension(:),allocatable::erg
     character(LEN=100) :: CWD
@@ -81,7 +79,7 @@ program MainZombie
                 end do
                 write(6,"(a)") "Zombie states generated"
             else if (zomgflg=='n') then
-                call read_zombie(zstore)
+                call read_zombie(zstore,0)
                 write(6,"(a)") "Zombie read in"
             end if
             call flush(6)
@@ -124,7 +122,7 @@ program MainZombie
        
             if(GDflg.eq."y")then
                 d_state=1
-                call zombie_alter(zstore,haml,elect,erg,dvecs,an_cr,an2_cr2,d_state)
+                call zombie_alter(zstore,haml,elect,erg,dvecs,an_cr,an2_cr2)
                 
                 GDflg='n'
                 do j=1,ndet
@@ -133,7 +131,7 @@ program MainZombie
                 dvecs%d=(0.0,0.0)
                 call imgtime_prop(dvecs,erg,haml,0,0)
                 
-                write(6,"(a,f21.16)") "Final energy: ", en%erg(1,timesteps+1)
+                write(6,"(a,f21.16)") "Final energy: ", erg(1,timesteps+1)
                 call energywriter(erg,"energy_final.csv",0)
                 call matrixwriter(haml%hjk,ndet,"data/ham_final.csv")
                 call matrixwriter(haml%ovrlp,ndet,"data/ovlp_final.csv")

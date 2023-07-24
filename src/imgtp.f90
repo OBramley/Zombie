@@ -146,88 +146,208 @@ MODULE imgtp
         real(kind=8), dimension(:),intent(inout)::erg
         type(hamiltonian),intent(in)::haml
         integer,intent(in)::diff_state,orb,size
-        integer::j,k,l
+        integer::j,k,l,g
         real(kind=8)::norm,result,temp,db
         real(kind=8),dimension(size)::ddot
 
 
         if (errorflag .ne. 0) return
-
-        dvecs%d=0.0
-        dvecs%d(1)=1.0
-      
-        norm=0
-       
-    
-        do j=1,size
-            temp=0
-            do l=1,size 
-                temp=temp+haml%ovrlp(j,l)*dvecs%d(l)
-            end do 
-            norm=norm+(temp*dvecs%d(j))
-        end do 
-     
-        norm = sqrt(abs(norm))
-       
-        dvecs%norm=norm
-       
-        call d_normalise_diff(dvecs,haml,0,diff_state,orb)
-      
+        ! Imaginary time Propagation if no gram-schmidt orthogonalization is needed
+        if(haml%gram_num.eq.0)then
+            dvecs%d=0.0
+            dvecs%d(1)=1.0
         
-        dvecs%d=dvecs%d/norm
-       
-        db=beta/timesteps
-       
-        do k=1,timesteps+1
-
-            ! en%t(k)=db*(k-1)
-            result=0
-          
+            norm=0
+        
+        
             do j=1,size
                 temp=0
-              
-                do l=1,size 
-                    temp=temp+haml%hjk(j,l)*dvecs%d(l)
-                end do 
-                result = result + (dvecs%d(j)*temp)
-            end do
-          
-            erg(k)=result
-    
-            ddot=0
-            call timestep_diff(dvecs,haml,db,diff_state,orb)
-          
-         
-            do j=1,size 
-                temp=0
-           
-                do l=1,size 
-                    temp= temp + haml%kinvh(j,l)*dvecs%d(l)
-                end do 
-                ddot(j)=temp
-            end do
-        
-            dvecs%d=dvecs%d-(db*ddot)
-        
-            norm=0   
-      
-            do j=1,size
-                temp=0
-           
                 do l=1,size 
                     temp=temp+haml%ovrlp(j,l)*dvecs%d(l)
                 end do 
                 norm=norm+(temp*dvecs%d(j))
             end do 
-    
+        
             norm = sqrt(abs(norm))
+        
             dvecs%norm=norm
         
-            call d_normalise_diff(dvecs,haml,k,diff_state,orb)
-               
+            call d_normalise_diff(dvecs,haml,0,diff_state,orb)
+        
+            
             dvecs%d=dvecs%d/norm
+        
+            db=beta/timesteps
+        
+            do k=1,timesteps+1
+                result=0
+            
+                do j=1,size
+                    temp=0
+                
+                    do l=1,size 
+                        temp=temp+haml%hjk(j,l)*dvecs%d(l)
+                    end do 
+                    result = result + (dvecs%d(j)*temp)
+                end do
+            
+                erg(k)=result
+        
+                ddot=0
+                call timestep_diff(dvecs,haml,db,diff_state,orb)
+            
+            
+                do j=1,size 
+                    temp=0
+            
+                    do l=1,size 
+                        temp= temp + haml%kinvh(j,l)*dvecs%d(l)
+                    end do 
+                    ddot(j)=temp
+                end do
+            
+                dvecs%d=dvecs%d-(db*ddot)
+            
+                norm=0   
+        
+                do j=1,size
+                    temp=0
+            
+                    do l=1,size 
+                        temp=temp+haml%ovrlp(j,l)*dvecs%d(l)
+                    end do 
+                    norm=norm+(temp*dvecs%d(j))
+                end do 
+        
+                norm = sqrt(abs(norm))
+                dvecs%norm=norm
+            
+                call d_normalise_diff(dvecs,haml,k,diff_state,orb)
+                
+                dvecs%d=dvecs%d/norm
 
-        end do
+            end do
+        else !Imaginary time propagation with GSO
+            
+            ! Set up gs dvectors
+            do k=1, haml%gram_num
+                dvecs%d_gs=0.0
+                dvecs%d_gs(k,k)=1.0
+            end do
+            dvecs%d(haml%gram_num+1)=1.0
+            !Orthogonalise
+            call gs(dvecs,haml)
+            
+            ! Normalise vectors
+            do k=1, haml%gram_num
+                norm=0
+                do j=1,size
+                    temp=0
+                    do l=1,size 
+                        temp=temp+haml%gs_ovrlp(k,j,l)*dvecs%d_gs(k,l)
+                    end do 
+                    norm=norm+(temp*dvecs%d_gs(k,j))
+                end do 
+            
+                norm = sqrt(abs(norm))    
+                dvecs%d_gs(k,:)=dvecs%d_gs(k,:)/norm
+    
+            end do
+            !Normalise dvector of interest
+            do j=1,size
+                temp=0
+                do l=1,size 
+                    temp=temp+haml%ovrlp(j,l)*dvecs%d(l)
+                end do 
+                norm=norm+(temp*dvecs%d(j))
+            end do 
+        
+            norm = sqrt(abs(norm))
+        
+            dvecs%norm=norm
+            
+            !Propagate derivative of dvector
+            call d_normalise_diff(dvecs,haml,0,diff_state,orb)
+        
+            db=beta/timesteps
+           
+            !Begin time steps
+            do k=1,timesteps+1
+                
+                ! Calculate energy of system being looked at
+                result=0
+                do j=1,size
+                    temp=0
+                    do l=1,size 
+                        temp=temp+haml%hjk(j,l)*dvecs%d(l)
+                    end do 
+                    result = result + (dvecs%d(j)*temp)
+                end do
+            
+                erg(k)=result
+                ! Take a time step for dvector and propagate derivative
+                ddot=0
+                call timestep_diff(dvecs,haml,db,diff_state,orb)
+            
+                do j=1,size 
+                    temp=0
+                    do l=1,size 
+                        temp= temp + haml%kinvh(j,l)*dvecs%d(l)
+                    end do 
+                    ddot(j)=temp
+                end do
+            
+                dvecs%d=dvecs%d-(db*ddot)
+
+                ! Make gs vectors take time step
+                do g=1, haml%gram_num
+                    ddot=0
+                    do j=1,size 
+                        temp=0
+                        do l=1,size 
+                            temp= temp + haml%gs_kinvh(g,j,l)*dvecs%d_gs(g,l)
+                        end do 
+                        ddot(j)=temp
+                    end do
+                    dvecs%d_gs(g,:)=dvecs%d_gs(g,:)-(db*ddot)
+                end do 
+
+                ! Orthogonalise 
+                call gs(dvecs,haml)
+                
+                !Normnalise gs dvectors
+                do g=1, haml%gram_num
+                    norm=0
+                    do j=1,size
+                        temp=0
+                        do l=1,size 
+                            temp=temp+haml%gs_ovrlp(g,j,l)*dvecs%d_gs(g,l)
+                        end do 
+                        norm=norm+(temp*dvecs%d_gs(g,j))
+                    end do 
+                    norm = sqrt(abs(norm))    
+                    dvecs%d_gs(g,:)=dvecs%d_gs(g,:)/norm
+                end do
+                
+                !Normalise dvector
+                do j=1,size
+                    temp=0
+                    do l=1,size 
+                        temp=temp+haml%ovrlp(j,l)*dvecs%d(l)
+                    end do 
+                    norm=norm+(temp*dvecs%d(j))
+                end do 
+            
+                norm = sqrt(abs(norm))
+            
+                dvecs%norm=norm
+                
+                ! Propagate derivative 
+                call d_normalise_diff(dvecs,haml,k,diff_state,orb)
+    
+               
+            end do
+        end if 
       
         return
 

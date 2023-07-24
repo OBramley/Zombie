@@ -28,12 +28,18 @@ MODULE globvars
         real(kind=8), dimension(:,:,:,:),allocatable::diff_ov_dov
         real(kind=8), dimension(:,:,:,:),allocatable::diff_in_dhjk
         !The inverse of the overlap matrix multiplied by the hamiltonian
-        !diff_invh(j,l,k,m) j specifies the dependnce on zs_j, l,k give the 
+        !diff_invh(j,l,k,m) j specifies the dependnce on zs_j, l,k give the
+
+        real(kind=8), dimension(:,:,:), allocatable::gs_ovrlp
+        real(kind=8), dimension(:,:,:), allocatable::gs_kinvh
+        real(kind=8), dimension(:,:,:), allocatable::gs_ovrlp_self
+        integer::gram_num
     end type hamiltonian
 
     type dvector
         real(kind=8), dimension(:), allocatable::d
         real(kind=8), dimension(:,:,:),allocatable::d_diff
+        real(kind=8), dimension(:,:),allocatable::d_gs
         ! d_diff(k,j,m) strucutred k specifies the position in the vector d
         ! j specifies the dependence on ZS j. m corresponds to the coeffcient m within 
         ! zombie stae j
@@ -71,13 +77,6 @@ MODULE globvars
         real(kind=8),dimension(:,:,:),allocatable::two_elec
         real(kind=8),dimension(:),allocatable::ovrlp_div
     end type grad
-
-    type grams
-        real(kind=8),dimension(:,:,:),allocatable::ovrlps_denom
-        real(kind=8),dimension(:,:),allocatable::zombie_vals
-
-
-    end type grams
 
     
     integer::ndet       ! Number of Zombie states
