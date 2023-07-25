@@ -27,6 +27,8 @@ run={
 
     'multiple':20,
 
+    'subnodes':4,
+
     # Set the numpy random seed for Zombie state generation
     'seed':1,
 
