@@ -278,7 +278,7 @@ MODULE zom
 
         implicit none
         type(zombiest),dimension(:),intent(inout)::zstore
-        DOUBLE PRECISION, external::ZBQLNOR,ZBQLUAB,ZBQLU01
+        DOUBLE PRECISION, external::ZBQLU01
         real(kind=8)::mu((norb/2)),sig(norb/2)
         real(kind=8)::val
         integer::j,k
@@ -299,8 +299,7 @@ MODULE zom
                         val=2*pirl*random_normal(mu(k),sig(k)) 
                     end do
                     if((is_nan(val).eqv..true.))then
-                        call random_number(val)
-                        val=2*pirl*val 
+                        val=2*pirl*(ZBQLU01(1))
                     end if 
                     zstore(j)%phi(2*k-1)=val
                     val=-1
