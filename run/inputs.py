@@ -14,10 +14,10 @@
 run={
     
     # What is the name of the run
-    'runfolder':'montec',
+    'runfolder':'BH_10_6',
 
     # Amount of time to request on HPC 
-    'runtime': "05:00:00",
+    'runtime': "03:00:00",
 
     'nodes':1,
 
@@ -25,7 +25,9 @@ run={
 
     'submissions':1,
 
-    'multiple':1,
+    'multiple':6,
+
+    'subnode':3,
 
     # Set the numpy random seed for Zombie state generation
     'seed':1,
@@ -284,7 +286,7 @@ zombs={
     'spin':pyscf['spin'],
 
     # Number of Zombie states
-    'ndet':15,#pyscf['norb'], 
+    'ndet':10,#pyscf['norb']*2, 
 
     # Type of zombie states. Random (ran), Hartree Fock (HF) or biased (bb)
     'zomtyp':'bb',

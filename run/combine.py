@@ -72,7 +72,7 @@ else:
 
 
 
-subnodes=inputs.run['subnodes'] 
+subnodes=inputs.run['subnode'] 
 multflg=inputs.run['multiple']
 stp1flg=1
 

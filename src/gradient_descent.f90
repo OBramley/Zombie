@@ -246,10 +246,10 @@ MODULE gradient_descent
         call allocham(global_ham,ndet,norb)
         call allocdv(temp_dvecs,1,ndet,norb)
         allocate(pickerorb(norb),stat=ierr)
-        allocate(montec(norb+1),stat=ierr)
-        allocate(montec_pick(norb),stat=ierr)
-        allocate(zrange(2,norb),stat=ierr)
-        allocate(store_temp(ndet,norb),stat=ierr)
+        ! allocate(montec(norb+1),stat=ierr)
+        ! allocate(montec_pick(norb),stat=ierr)
+        ! allocate(zrange(2,norb),stat=ierr)
+        ! allocate(store_temp(ndet,norb),stat=ierr)
         if(ierr==0) allocate(chng_trk(ndet-1),stat=ierr)
         if(ierr==0) allocate(chng_trk2(norb),stat=ierr)
        
@@ -268,14 +268,14 @@ MODULE gradient_descent
             return
         end if
         ! montec=scramble_norb(norb)
-        montec_pick=0
-        epoc_bck=0
-        erg_store=0
-        epoc_bck2=0
+        ! montec_pick=0
+        ! epoc_bck=0
+        ! erg_store=0
+        ! epoc_bck2=0
         ! montec_pick=scramble(ndet-1)
-        mc=1
-        mc_val=1d0
-        mc_pick=0
+        ! mc=1
+        ! mc_val=1d0
+        ! mc_pick=0
 
         lralt_zs=0    ! power alpha is raised to 
         chng_trk2=0 !stores which orbitals in the ZS have changed 
@@ -288,25 +288,25 @@ MODULE gradient_descent
         p=70-norb
         grad_fin%grad_avlb=0
 
-        do j=1,norb
-            if(zstore(2)%phi(j)>zstore(3)%phi(j))then
-                zrange(1,j)=zstore(2)%phi(j)
-                zrange(2,j)=zstore(3)%phi(j)
-            else
-                zrange(1,j)=zstore(3)%phi(j)
-                zrange(2,j)=zstore(2)%phi(j)
-            end if
-            do l=4,ndet
-                if(zstore(l)%phi(j)>zrange(1,j))then
-                    zrange(1,j)=zstore(l)%phi(j)
-                else if(zstore(l)%phi(j)<zrange(2,j))then
-                    zrange(2,j)=zstore(l)%phi(j)
-                end if
-            end do
-        end do 
+        ! do j=1,norb
+        !     if(zstore(2)%phi(j)>zstore(3)%phi(j))then
+        !         zrange(1,j)=zstore(2)%phi(j)
+        !         zrange(2,j)=zstore(3)%phi(j)
+        !     else
+        !         zrange(1,j)=zstore(3)%phi(j)
+        !         zrange(2,j)=zstore(2)%phi(j)
+        !     end if
+        !     do l=4,ndet
+        !         if(zstore(l)%phi(j)>zrange(1,j))then
+        !             zrange(1,j)=zstore(l)%phi(j)
+        !         else if(zstore(l)%phi(j)<zrange(2,j))then
+        !             zrange(2,j)=zstore(l)%phi(j)
+        !         end if
+        !     end do
+        ! end do 
        
         
-        ! open(unit=205,file='grad.csv',status="new",iostat=ierr)
+        
         do while(rjct_cnt2.lt.(norb*100))
             loops=loops+1
            
@@ -441,7 +441,7 @@ MODULE gradient_descent
                         grad_fin%grad_avlb=0
                         haml%diff_hjk=0
                         haml%diff_ovrlp=0
-                        montec_pick(pickorb)=montec_pick(pickorb)+1
+                        ! montec_pick(pickorb)=montec_pick(pickorb)+1
                         ! grad_fin%grad_avlb(:,0)=0
                         ! grad_fin%grad_avlb(pick,:)=0
                         ! grad_fin%grad_avlb(:,pick)=0
@@ -453,11 +453,11 @@ MODULE gradient_descent
                         dvecs(1)%d_diff=0.0d0
                         grad_fin%prev_erg=global_min_fxtdk
                         rjct_cnt_in=0
-                        if(zstore(pick)%phi(pickorb)>zrange(1,pickorb))then
-                            zrange(1,pickorb)=zstore(pick)%phi(pickorb)
-                        else if(zstore(pick)%phi(pickorb)<zrange(2,pickorb))then
-                            zrange(2,pickorb)=zstore(pick)%phi(pickorb)
-                        end if
+                        ! if(zstore(pick)%phi(pickorb)>zrange(1,pickorb))then
+                        !     zrange(1,pickorb)=zstore(pick)%phi(pickorb)
+                        ! else if(zstore(pick)%phi(pickorb)<zrange(2,pickorb))then
+                        !     zrange(2,pickorb)=zstore(pick)%phi(pickorb)
+                        ! end if
                     end if 
                     
                  
@@ -491,191 +491,191 @@ MODULE gradient_descent
                 call epoc_writer(grad_fin%prev_erg,epoc_cnt,chng_trk,0)
                 epoc_cnt=epoc_cnt+1
                 mc_pick=0
-            else
-                loops=loops-1
-                mc_pick=mc_pick+1
+            ! else
+                ! loops=loops-1
+                ! mc_pick=mc_pick+1
             end if 
 
-            if(mc_pick.ge.2)then
-                if(grad_fin%prev_erg<erg_store)then
-                    epoc_bck2=0
-                    erg_store=grad_fin%prev_erg
-                    epoc_bck=epoc_cnt
-                    do j=2,ndet
-                        do k=1,norb
-                            store_temp(j,k)=zstore(j)%phi(k)
-                        end do
-                    end do
-                    mc=1
-                else
-                    epoc_bck2=epoc_bck2+1 
-                    !loops=epoc_bck !loops-int((epoc_cnt-epoc_bck)/2)
-                    epoc_cnt=epoc_bck
-                    do j=2,ndet
-                        zstore(j)%phi=0
-                        do k=1,norb
-                            zstore(j)%phi(k)=store_temp(j,k)
-                        end do
-                        zstore(j)%sin=sin(zstore(j)%phi)
-                        zstore(j)%cos=cos(zstore(j)%phi)
-                        zstore(j)%val(1:)=zstore(j)%sin
-                        zstore(j)%val(norb+1:)=zstore(j)%cos
-                    end do
+            ! if(mc_pick.ge.2)then
+            !     if(grad_fin%prev_erg<erg_store)then
+            !         epoc_bck2=0
+            !         erg_store=grad_fin%prev_erg
+            !         epoc_bck=epoc_cnt
+            !         do j=2,ndet
+            !             do k=1,norb
+            !                 store_temp(j,k)=zstore(j)%phi(k)
+            !             end do
+            !         end do
+            !         mc=1
+            !     else
+            !         epoc_bck2=epoc_bck2+1 
+            !         !loops=epoc_bck !loops-int((epoc_cnt-epoc_bck)/2)
+            !         epoc_cnt=epoc_bck
+            !         do j=2,ndet
+            !             zstore(j)%phi=0
+            !             do k=1,norb
+            !                 zstore(j)%phi(k)=store_temp(j,k)
+            !             end do
+            !             zstore(j)%sin=sin(zstore(j)%phi)
+            !             zstore(j)%cos=cos(zstore(j)%phi)
+            !             zstore(j)%val(1:)=zstore(j)%sin
+            !             zstore(j)%val(norb+1:)=zstore(j)%cos
+            !         end do
                 
-                    do j=1,norb
-                        if(zstore(2)%phi(j)>zstore(3)%phi(j))then
-                            zrange(1,j)=zstore(2)%phi(j)
-                            zrange(2,j)=zstore(3)%phi(j)
-                        else
-                            zrange(1,j)=zstore(3)%phi(j)
-                            zrange(2,j)=zstore(2)%phi(j)
-                        end if
-                        do l=4,ndet
-                            if(zstore(l)%phi(j)>zrange(1,j))then
-                                zrange(1,j)=zstore(l)%phi(j)
-                            else if(zstore(l)%phi(j)<zrange(2,j))then
-                                zrange(2,j)=zstore(l)%phi(j)
-                            end if
-                        end do
-                    end do
-                    ! if(epoc_bck2.gt.10)then
-                        epoc_bck2=0
+            !         do j=1,norb
+            !             if(zstore(2)%phi(j)>zstore(3)%phi(j))then
+            !                 zrange(1,j)=zstore(2)%phi(j)
+            !                 zrange(2,j)=zstore(3)%phi(j)
+            !             else
+            !                 zrange(1,j)=zstore(3)%phi(j)
+            !                 zrange(2,j)=zstore(2)%phi(j)
+            !             end if
+            !             do l=4,ndet
+            !                 if(zstore(l)%phi(j)>zrange(1,j))then
+            !                     zrange(1,j)=zstore(l)%phi(j)
+            !                 else if(zstore(l)%phi(j)<zrange(2,j))then
+            !                     zrange(2,j)=zstore(l)%phi(j)
+            !                 end if
+            !             end do
+            !         end do
+            !         ! if(epoc_bck2.gt.10)then
+            !             epoc_bck2=0
                         
-                        montec(3:)=0
-                        if(mc.eq.1)then
-                            mc=montec(1)
-                            do while((mc.eq.montec(1)))
-                                mc=int(1+(norb-1)*ZBQLU01(1))
-                            end do 
-                            montec(2)=mc
-                        else
-                            mc=montec(1)
-                            do while((mc.eq.montec(1)).or.(mc.eq.montec(2)))
-                                mc=int(1+(norb-1)*ZBQLU01(1))
-                            end do
-                            if(ZBQLU01(1).lt.0.5)then
-                                montec(1)=mc
-                            else 
-                                montec(2)=mc
-                            end if
-                        end if
-                    ! end if 
-                    mc=0
-                end if
+            !             montec(3:)=0
+            !             if(mc.eq.1)then
+            !                 mc=montec(1)
+            !                 do while((mc.eq.montec(1)))
+            !                     mc=int(1+(norb-1)*ZBQLU01(1))
+            !                 end do 
+            !                 montec(2)=mc
+            !             else
+            !                 mc=montec(1)
+            !                 do while((mc.eq.montec(1)).or.(mc.eq.montec(2)))
+            !                     mc=int(1+(norb-1)*ZBQLU01(1))
+            !                 end do
+            !                 if(ZBQLU01(1).lt.0.5)then
+            !                     montec(1)=mc
+            !                 else 
+            !                     montec(2)=mc
+            !                 end if
+            !             end if
+            !         ! end if 
+            !         mc=0
+            !     end if
               
 
-                if(mc.eq.1)then
-                    mc=1
-                    do while(montec(mc).ne.0)
-                        montec_pick(montec(mc))=0
-                        mc=mc+1
-                    end do
+            !     if(mc.eq.1)then
+            !         mc=1
+            !         do while(montec(mc).ne.0)
+            !             montec_pick(montec(mc))=0
+            !             mc=mc+1
+            !         end do
               
-                    montec=0
-                    if(maxval(montec_pick).eq.0)then
-                        montec(1)=int(1+(norb-1)*ZBQLU01(1))
-                        montec(2)=int(1+(norb-1)*ZBQLU01(1))
-                    else
-                        mc=1
-                        do l=1,norb
-                            if(montec_pick(l).eq.maxval(montec_pick))then
-                                montec(mc)=l 
-                                mc=mc+1
-                            end if
-                        end do
-                        if(mc.eq.2)then 
-                            montec_pick(maxloc(montec_pick))=0
-                            if(maxval(montec_pick).eq.0)then
-                                do while((montec(2).eq.0).or.(montec(2).eq.montec(1)))
-                                    montec(2)=int(1+(norb-1)*ZBQLU01(1))
-                                end do
-                            else
-                                do l=1,norb
-                                    if(montec_pick(l).eq.maxval(montec_pick))then
-                                        montec(2)=l 
-                                    end if
-                                end do
-                            end if
-                        end if 
-                    end if 
+            !         montec=0
+            !         if(maxval(montec_pick).eq.0)then
+            !             montec(1)=int(1+(norb-1)*ZBQLU01(1))
+            !             montec(2)=int(1+(norb-1)*ZBQLU01(1))
+            !         else
+            !             mc=1
+            !             do l=1,norb
+            !                 if(montec_pick(l).eq.maxval(montec_pick))then
+            !                     montec(mc)=l 
+            !                     mc=mc+1
+            !                 end if
+            !             end do
+            !             if(mc.eq.2)then 
+            !                 montec_pick(maxloc(montec_pick))=0
+            !                 if(maxval(montec_pick).eq.0)then
+            !                     do while((montec(2).eq.0).or.(montec(2).eq.montec(1)))
+            !                         montec(2)=int(1+(norb-1)*ZBQLU01(1))
+            !                     end do
+            !                 else
+            !                     do l=1,norb
+            !                         if(montec_pick(l).eq.maxval(montec_pick))then
+            !                             montec(2)=l 
+            !                         end if
+            !                     end do
+            !                 end if
+            !             end if 
+            !         end if 
             
             
-                    montec_pick=0
-                    mc_pick=0
-                    if(mc_pick.ge.(ndet-1))then
-                        montec_pick=scramble(ndet-1)
-                        mc_pick=1
-                    end if
-                    if(mc.ge.norb) then 
-                        mc=montec(norb)
-                        montec=scramble_norb(norb)
-                        if(montec(1).eq.mc)then
-                            do while(montec(1).eq.mc)
-                                montec=scramble_norb(norb)
-                            end do
-                        end if 
-                        mc=1
-                        ! mc_val=mc_val*0.1
-                    end if
-                end if
+            !         montec_pick=0
+            !         mc_pick=0
+            !         if(mc_pick.ge.(ndet-1))then
+            !             montec_pick=scramble(ndet-1)
+            !             mc_pick=1
+            !         end if
+            !         if(mc.ge.norb) then 
+            !             mc=montec(norb)
+            !             montec=scramble_norb(norb)
+            !             if(montec(1).eq.mc)then
+            !                 do while(montec(1).eq.mc)
+            !                     montec=scramble_norb(norb)
+            !                 end do
+            !             end if 
+            !             mc=1
+            !             ! mc_val=mc_val*0.1
+            !         end if
+            !     end if
         
-                do j=2,ndet
-                    mc=1
-                    ! mc_pick=maxloc(grad_fin%vars(j,:),dim=1)
-                    do while(montec(mc).ne.0)
-                        ! if(montec(mc).eq.mc_pick)then 
-                        !     mc_pick=0
-                        ! end if
-                        posneg=1
-                        if(grad_fin%vars(j,(mc)).gt.0) then
-                            posneg=-1
-                        end if
-                        ! zstore(j)%phi(mc)=zstore(j)%phi(mc) + posneg*(mc_val)*(ZBQLU01(1))
-                        ! zstore(j)%sin(mc)=sin(zstore(j)%phi(mc))
-                        ! zstore(j)%cos(mc)=cos(zstore(j)%phi(mc))
-                        ! zstore(j)%val(mc)=zstore(j)%sin(mc)
-                        ! zstore(j)%val(norb+mc)=zstore(j)%cos(mc)
-                        ! zstore(j)%phi(montec(mc))= zstore(j)%phi(montec(mc))+ (posneg*(mc_val)*(ZBQLU01(1)))
-                        zstore(j)%phi(montec(mc))= (zrange(2,montec(mc)))+(zrange(1,montec(mc))-zrange(2,montec(mc)))*ZBQLU01(1)
-                        ! zstore(j)%phi(montec(mc))=zstore(j)%phi(montec(mc)) + posneg*(mc_val)*(ZBQLU01(1))
-                        zstore(j)%sin(montec(mc))=sin(zstore(j)%phi(montec(mc)))
-                        zstore(j)%cos(montec(mc))=cos(zstore(j)%phi(montec(mc)))
-                        zstore(j)%val(montec(mc))=zstore(j)%sin(montec(mc))
-                        zstore(j)%val(norb+montec(mc))=zstore(j)%cos(montec(mc))
+            !     do j=2,ndet
+            !         mc=1
+            !         ! mc_pick=maxloc(grad_fin%vars(j,:),dim=1)
+            !         do while(montec(mc).ne.0)
+            !             ! if(montec(mc).eq.mc_pick)then 
+            !             !     mc_pick=0
+            !             ! end if
+            !             posneg=1
+            !             if(grad_fin%vars(j,(mc)).gt.0) then
+            !                 posneg=-1
+            !             end if
+            !             ! zstore(j)%phi(mc)=zstore(j)%phi(mc) + posneg*(mc_val)*(ZBQLU01(1))
+            !             ! zstore(j)%sin(mc)=sin(zstore(j)%phi(mc))
+            !             ! zstore(j)%cos(mc)=cos(zstore(j)%phi(mc))
+            !             ! zstore(j)%val(mc)=zstore(j)%sin(mc)
+            !             ! zstore(j)%val(norb+mc)=zstore(j)%cos(mc)
+            !             ! zstore(j)%phi(montec(mc))= zstore(j)%phi(montec(mc))+ (posneg*(mc_val)*(ZBQLU01(1)))
+            !             zstore(j)%phi(montec(mc))= (zrange(2,montec(mc)))+(zrange(1,montec(mc))-zrange(2,montec(mc)))*ZBQLU01(1)
+            !             ! zstore(j)%phi(montec(mc))=zstore(j)%phi(montec(mc)) + posneg*(mc_val)*(ZBQLU01(1))
+            !             zstore(j)%sin(montec(mc))=sin(zstore(j)%phi(montec(mc)))
+            !             zstore(j)%cos(montec(mc))=cos(zstore(j)%phi(montec(mc)))
+            !             zstore(j)%val(montec(mc))=zstore(j)%sin(montec(mc))
+            !             zstore(j)%val(norb+montec(mc))=zstore(j)%cos(montec(mc))
               
-                        mc=mc+1
-                    end do 
-                    ! if((mc_pick.ne.0))then
-                    !     print*,mc_pick, grad_fin%vars(j,(mc_pick))
-                    !     posneg=1
-                    !     if(grad_fin%vars(j,(mc_pick)).gt.0) then
-                    !         posneg=-1
-                    !     end if
-                    !     zstore(j)%phi(mc_pick)=zstore(j)%phi(mc_pick) + posneg*(mc_val)*grad_fin%vars(j,(mc_pick))*10d-5
-                    !     zstore(j)%sin(mc_pick)=sin(zstore(j)%phi(mc_pick))
-                    !     zstore(j)%cos(mc_pick)=cos(zstore(j)%phi(mc_pick))
-                    !     zstore(j)%val(mc_pick)=zstore(j)%sin(mc_pick)
-                    !     zstore(j)%val(norb+mc_pick)=zstore(j)%cos(mc_pick)
-                    ! end if
-                end do 
-                mc_pick=0
-                ! mc_pick=mc_pick+1
-                ! call he_full_row(haml,zstore,zstore(montec_pick(mc_pick)),elect,ndet,an_cr,an2_cr2,montec_pick(mc_pick))
-                call hamgen(haml,zstore,elect,ndet,an_cr,an2_cr2,0)
-                call imaginary_time_prop2(dvecs,en,haml,ndet,0,0)
-                grad_fin%prev_erg=en%erg(1,timesteps+1)
-                print*,"Energy after monte carlo move: ",grad_fin%prev_erg,montec
-                ! do while(montec(mc).ne.0)
-                !     if(montec(mc).eq.4)then
-                !         write(205,*),zstore(pick)%phi(4),',',fxtdk
-                !     end if
-                !     mc=mc+1
-                ! end do 
-                ! mc=mc+1
-                grad_fin%grad_avlb=0
-                grad_fin%vars=0
-                dvecs(1)%d_diff=0.0d0
-            end if
+            !             mc=mc+1
+            !         end do 
+            !         ! if((mc_pick.ne.0))then
+            !         !     print*,mc_pick, grad_fin%vars(j,(mc_pick))
+            !         !     posneg=1
+            !         !     if(grad_fin%vars(j,(mc_pick)).gt.0) then
+            !         !         posneg=-1
+            !         !     end if
+            !         !     zstore(j)%phi(mc_pick)=zstore(j)%phi(mc_pick) + posneg*(mc_val)*grad_fin%vars(j,(mc_pick))*10d-5
+            !         !     zstore(j)%sin(mc_pick)=sin(zstore(j)%phi(mc_pick))
+            !         !     zstore(j)%cos(mc_pick)=cos(zstore(j)%phi(mc_pick))
+            !         !     zstore(j)%val(mc_pick)=zstore(j)%sin(mc_pick)
+            !         !     zstore(j)%val(norb+mc_pick)=zstore(j)%cos(mc_pick)
+            !         ! end if
+            !     end do 
+            !     mc_pick=0
+            !     ! mc_pick=mc_pick+1
+            !     ! call he_full_row(haml,zstore,zstore(montec_pick(mc_pick)),elect,ndet,an_cr,an2_cr2,montec_pick(mc_pick))
+            !     call hamgen(haml,zstore,elect,ndet,an_cr,an2_cr2,0)
+            !     call imaginary_time_prop2(dvecs,en,haml,ndet,0,0)
+            !     grad_fin%prev_erg=en%erg(1,timesteps+1)
+            !     print*,"Energy after monte carlo move: ",grad_fin%prev_erg,montec
+            !     ! do while(montec(mc).ne.0)
+            !     !     if(montec(mc).eq.4)then
+            !     !         write(205,*),zstore(pick)%phi(4),',',fxtdk
+            !     !     end if
+            !     !     mc=mc+1
+            !     ! end do 
+            !     ! mc=mc+1
+            !     grad_fin%grad_avlb=0
+            !     grad_fin%vars=0
+            !     dvecs(1)%d_diff=0.0d0
+            ! end if
 
             picker=scramble(ndet-1)
            
@@ -692,21 +692,21 @@ MODULE gradient_descent
             end if
         end do
 
-        if(grad_fin%prev_erg>erg_store)then
-            do j=2,ndet
-                do k=1,norb
-                    zstore(j)%phi(k)=store_temp(j,k)
-                end do
-                zstore(j)%sin=sin(zstore(j)%phi)
-                zstore(j)%cos=cos(zstore(j)%phi)
-                zstore(j)%val(1:)=zstore(j)%sin
-                zstore(j)%val(norb+1:)=zstore(j)%cos
-            end do
-            call hamgen(haml,zstore,elect,ndet,an_cr,an2_cr2,0)
-            call imaginary_time_prop2(dvecs,en,haml,ndet,0,0)
-            grad_fin%prev_erg=en%erg(1,timesteps+1)
-            print*,"Final energy: ",grad_fin%prev_erg
-        end if
+        ! if(grad_fin%prev_erg>erg_store)then
+        !     do j=2,ndet
+        !         do k=1,norb
+        !             zstore(j)%phi(k)=store_temp(j,k)
+        !         end do
+        !         zstore(j)%sin=sin(zstore(j)%phi)
+        !         zstore(j)%cos=cos(zstore(j)%phi)
+        !         zstore(j)%val(1:)=zstore(j)%sin
+        !         zstore(j)%val(norb+1:)=zstore(j)%cos
+        !     end do
+        !     call hamgen(haml,zstore,elect,ndet,an_cr,an2_cr2,0)
+        !     call imaginary_time_prop2(dvecs,en,haml,ndet,0,0)
+        !     grad_fin%prev_erg=en%erg(1,timesteps+1)
+        !     print*,"Final energy: ",grad_fin%prev_erg
+        ! end if
 
         ! close(205)
         grad_fin%grad_avlb=0
