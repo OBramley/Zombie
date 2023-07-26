@@ -17,7 +17,7 @@ run={
     'runfolder':'montec',
 
     # Amount of time to request on HPC 
-    'runtime': "04:00:00",
+    'runtime': "05:00:00",
 
     'nodes':1,
 

@@ -90,6 +90,15 @@ if(inputs.run['gram']=='y'):
     elif(inputs.run['gramnum']<2):
         sys.exit("If using Gram Schmidt more than one state must investigated")
 
+if(inputs.run['multiple']>1):
+    if(isinstance(inputs.run['multiple'],int)==False):
+        sys.exit("Multiple runs must be an integer")
+    if(inputs.run['subnode']>1):
+        if(isinstance(inputs.run['subnode'],int)==False):
+            sys.exit("Subnodes runs must be an integer")
+        if((inputs.run['multiple']%inputs.run['subnode'])!=0):
+            sys.exit("Number of multiple basis sets must be divisible by number of subnodes so the program can split the basis evenly")
+
 
 print("Arguments checked")
 # Check if on HPC
