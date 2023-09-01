@@ -82,7 +82,7 @@ if(subnodes>1):
     if not os.path.exists("node_1_1"):
         stp1flg=2
         # Step 1
-        for l in range(1,subnodes):
+        for l in range(subnodes):
             os.mkdir(EXDIR+'/node_'+str(l+1)+'_1')
             os.mkdir(EXDIR+'/node_'+str(l+1)+'_1/data')
             shutil.copytree((EXDIR+'/integrals'),(EXDIR+'/node_'+str(l+1)+'_1/integrals'))
@@ -160,12 +160,13 @@ if(HPCFLG==1):
     if(stp1flg==1):
         subprocess.call(['qsub',file1])
     else:
-        shutil.copy2(file1, EXDIR+'/node_'+str(l+1)+'_1')
-        shutil.copy2("rundata.csv", EXDIR+'/node_'+str(l+1)+'_1')
-        shutil.copy2("ZOMBIE.exe", EXDIR+'/node_'+str(l+1)+'_1')
-        os.chdir(EXDIR+'/node_'+str(l+1)+'_1')
-        command=['qsub',file1]
-        subprocess.call(command)
+        for l in range(subnodes):
+            shutil.copy2(file1, EXDIR+'/node_'+str(l+1)+'_1')
+            shutil.copy2("rundata.csv", EXDIR+'/node_'+str(l+1)+'_1')
+            shutil.copy2("ZOMBIE.exe", EXDIR+'/node_'+str(l+1)+'_1')
+            os.chdir(EXDIR+'/node_'+str(l+1)+'_1')
+            command=['qsub',file1]
+            subprocess.call(command)
 
 else:
     print(os.getcwd())
