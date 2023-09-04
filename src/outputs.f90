@@ -81,15 +81,16 @@ MODULE outputs
 
     end subroutine matrixwriter
 
-    subroutine zombiewriter(zom,num,pass)
+    subroutine zombiewriter(zom,num,gst)
 
         implicit none
 
         type(zombiest),intent(in)::zom 
-        integer,intent(in)::num,pass
+        integer,intent(in)::num,gst
         character(LEN=20)::filenm
         integer::ierr,zomnum,j
         character(LEN=4)::nums
+        character(len=2)::gst_num
         logical :: file_exists
 
         if (errorflag .ne. 0) return
@@ -102,8 +103,13 @@ MODULE outputs
             write(nums,"(i4.4)")num
         end if
 
-        
-        filenm = "data/zombie_"//trim(nums)//".csv"
+        if(gramflg=='n')then
+            filenm="data/zombie_"//trim(num)//".csv"
+        else
+            write(gst_num,"(i2.1)")gst
+            filenm="data/zom_"//trim(gst_num)//"_"//trim(num)//".csv"
+        end if
+        !filenm = "data/zombie_"//trim(nums)//".csv"
 
         inquire(file=filenm,exist=file_exists)
         zomnum=300+num
@@ -206,9 +212,9 @@ MODULE outputs
         implicit none
 
         real(kind=8), dimension(:),intent(in)::time
-        ! complex(kind=8), dimension(:),intent(in)::erg 
         real(kind=8), dimension(:),intent(in)::erg 
         character(LEN=*),intent(in)::filenm
+        real::db
         integer,intent(in)::j
         integer::ergnum,ierr,k
         logical :: file_exists
@@ -217,6 +223,8 @@ MODULE outputs
 
         ergnum=400+j
         ierr=0
+        db=beta/timesteps
+      
         inquire(file=trim(filenm),exist=file_exists)
         if(file_exists.eqv..false.) then
             open(unit=ergnum,file=trim(filenm),status="new",iostat=ierr)
@@ -226,7 +234,7 @@ MODULE outputs
                 close(ergnum)
                 return
             end if
-            write(ergnum,'(*(e25.17e3 :", "))') (time(k),k=1,timesteps+1)
+            write(ergnum,'(*(e25.17e3 :", "))') (db*(k-1),k=1,timesteps+1)
         else 
             open(unit=ergnum,file=trim(filenm),status="old",access='append',iostat=ierr)
             if(ierr/=0)then

@@ -309,11 +309,9 @@ MODULE alarrays
             ham%diff_ov_dov=0.0
             ham%diff_in_dhjk=0.0
         end if
-
+        ham%gram_num=0
         return
     end subroutine allocham
-
-
 
     subroutine deallocham(ham)
 
@@ -354,75 +352,110 @@ MODULE alarrays
 
     end subroutine deallocham
 
-    subroutine allocdv(dvecs,x,length,diff_length)
+    subroutine allocdv(dvecs,length,diff_length)
 
         implicit none
 
-        type(dvector),intent(inout),allocatable,dimension(:)::dvecs
+        type(dvector),intent(inout)::dvecs
         integer, intent(in)::x,length,diff_length
         integer::j,ierr
 
         if (errorflag .ne. 0) return
 
         ierr=0
-        if(allocated(dvecs).eqv..false.)then
-            allocate(dvecs(x),stat=ierr)
-            if (ierr/=0) then
-                write(0,"(a,i0)") "Error in dvecs allocation. ierr had value ", ierr
-                errorflag=1
-                return
-            end if
+    
+        
+        allocate(dvecs%d(length),stat=ierr)
+        if (ierr/=0) then
+            write(0,"(a,i0)") "Error in d allocation. ierr had value ", ierr
+            errorflag=1
+            return
         end if
-
-        do j=1, x
-            allocate(dvecs(j)%d(length),stat=ierr)
-            if (ierr/=0) then
-                write(0,"(a,i0)") "Error in d allocation. ierr had value ", ierr
-                errorflag=1
-                return
-            end if
-            ! dvecs(j)%d(1:length)=(0.0,0.0)
-            dvecs(j)%d(1:length)=0.0
-            dvecs(j)%norm = 0.0d0
-        end do
+        dvecs%d(1:length)=0.0
+        dvecs%norm = 0.0d0
+        
 
         if(GDflg.eq.'y')then
-            allocate(dvecs(1)%d_diff(length,length,diff_length))
+            allocate(dvecs%d_diff(length,length,diff_length))
             if (ierr/=0) then
                 write(0,"(a,i0)") "Error in d_diff allocation. ierr had value ", ierr
                 errorflag=1
                 return
             end if
-            dvecs(1)%d_diff=0.0
+            dvecs%d_diff=0.0
         end if
 
-        
-     
         return
 
     end subroutine allocdv
 
+    ! subroutine allocdv(dvecs,x,length,diff_length)
+
+    !     implicit none
+
+    !     type(dvector),intent(inout),allocatable,dimension(:)::dvecs
+    !     integer, intent(in)::x,length,diff_length
+    !     integer::j,ierr
+
+    !     if (errorflag .ne. 0) return
+
+    !     ierr=0
+    !     if(allocated(dvecs).eqv..false.)then
+    !         allocate(dvecs(x),stat=ierr)
+    !         if (ierr/=0) then
+    !             write(0,"(a,i0)") "Error in dvecs allocation. ierr had value ", ierr
+    !             errorflag=1
+    !             return
+    !         end if
+    !     end if
+
+    !     do j=1, x
+    !         allocate(dvecs(j)%d(length),stat=ierr)
+    !         if (ierr/=0) then
+    !             write(0,"(a,i0)") "Error in d allocation. ierr had value ", ierr
+    !             errorflag=1
+    !             return
+    !         end if
+    !         ! dvecs(j)%d(1:length)=(0.0,0.0)
+    !         dvecs(j)%d(1:length)=0.0
+    !         dvecs(j)%norm = 0.0d0
+    !     end do
+
+    !     if(GDflg.eq.'y')then
+    !         allocate(dvecs(1)%d_diff(length,length,diff_length))
+    !         if (ierr/=0) then
+    !             write(0,"(a,i0)") "Error in d_diff allocation. ierr had value ", ierr
+    !             errorflag=1
+    !             return
+    !         end if
+    !         dvecs(1)%d_diff=0.0
+    !     end if
+
+    !     return
+
+    ! end subroutine allocdv
+
     subroutine deallocdv(dvecs)
 
         implicit none 
-        type(dvector),intent(inout),allocatable,dimension(:)::dvecs
+        type(dvector),intent(inout),dimension(:)::dvecs
         integer::j,ierr
 
         if (errorflag .ne. 0) return
 
         ierr=0
 
-        do j=1, size(dvecs)
-            deallocate(dvecs(j)%d,stat=ierr)
-            if (ierr/=0) then
-                write(0,"(a,i0)") "Error in d deallocation. ierr had value ", ierr
-                errorflag=1
-                return
-            end if
-        end do
+       
+        deallocate(dvecs%d,stat=ierr)
+        if (ierr/=0) then
+            write(0,"(a,i0)") "Error in d deallocation. ierr had value ", ierr
+            errorflag=1
+            return
+        end if
+        
 
         if(GDflg.eq.'y')then
-            deallocate(dvecs(1)%d_diff)
+            deallocate(dvecs%d_diff)
             if (ierr/=0) then
                 write(0,"(a,i0)") "Error in d_diff deallocation. ierr had value ", ierr
                 errorflag=1
@@ -430,69 +463,50 @@ MODULE alarrays
             end if
         end if
     
-        deallocate(dvecs,stat=ierr)
-        if (ierr/=0) then
-            write(0,"(a,i0)") "Error in dvecs deallocation. ierr had value ", ierr
-            errorflag=1
-            return
-        end if
-
-        
-        
         return
        
     end subroutine deallocdv
 
+    ! subroutine deallocdv(dvecs)
 
-    subroutine allocerg(en,x)
+    !     implicit none 
+    !     type(dvector),intent(inout),allocatable,dimension(:)::dvecs
+    !     integer::j,ierr
 
-        implicit none
+    !     if (errorflag .ne. 0) return
 
-        type(energy),intent(inout)::en
-        integer, intent(in)::x
-        integer::ierr
+    !     ierr=0
 
-        if (errorflag .ne. 0) return
+    !     do j=1, size(dvecs)
+    !         deallocate(dvecs(j)%d,stat=ierr)
+    !         if (ierr/=0) then
+    !             write(0,"(a,i0)") "Error in d deallocation. ierr had value ", ierr
+    !             errorflag=1
+    !             return
+    !         end if
+    !     end do
 
-        ierr=0
+    !     if(GDflg.eq.'y')then
+    !         deallocate(dvecs(1)%d_diff)
+    !         if (ierr/=0) then
+    !             write(0,"(a,i0)") "Error in d_diff deallocation. ierr had value ", ierr
+    !             errorflag=1
+    !             return
+    !         end if
+    !     end if
+    
+    !     deallocate(dvecs,stat=ierr)
+    !     if (ierr/=0) then
+    !         write(0,"(a,i0)") "Error in dvecs deallocation. ierr had value ", ierr
+    !         errorflag=1
+    !         return
+    !     end if
 
         
-        allocate(en%t(timesteps+1),stat=ierr)
-        if(ierr==0) allocate(en%erg(x,timesteps+1))
-        if (ierr/=0) then
-            write(0,"(a,i0)") "Error in energy allocation. ierr had value ", ierr
-            errorflag=1
-            return
-        end if
-        ! en%erg=(0.0,0.0)
-        en%erg=0.0
-        en%t=0.0
-        return
-     
-    end subroutine allocerg
-
-    subroutine deallocerg(en)
-
-        implicit none
-
-        type(energy),intent(inout)::en
-        integer::ierr
-
-        if (errorflag .ne. 0) return
-
-        ierr=0
         
-        deallocate(en%t,stat=ierr)
-        if(ierr==0) deallocate(en%erg)
-        if (ierr/=0) then
-            write(0,"(a,i0)") "Error in energy deallocation. ierr had value ", ierr
-            errorflag=1
-            return
-        end if
-
-        return
-     
-    end subroutine deallocerg
+    !     return
+       
+    ! end subroutine deallocdv
 
     subroutine allocgrad(gradients,num,length)
 
@@ -755,6 +769,94 @@ MODULE alarrays
 
     end subroutine grad_new_dealloc
 
+    subroutine allocgram(ham,num,size)
+
+        implicit none 
+        type(hamiltonian),intent(inout)::ham 
+        integer,intent(in)::num,size
+        integer::ierr
+
+        if (errorflag .ne. 0) return
+
+        ierr=0
+        ham%gram_num=num
+        allocate(ham%gs_ovrlp(num,size,size),stat=ierr)
+        if(ierr==0) allocate(ham%gs_kinvh(num,size,size),stat=ierr)
+        if(ierr==0) allocate(ham%gs_ovrlp_self(num,size,size),stat=ierr)
+        if (ierr/=0) then
+            write(0,"(a,i0)") "Error in overlap gram allocation. ierr had value ", ierr
+            errorflag=1
+            return
+        end if
+
+        return
+
+    end subroutine allocgram
+
+    subroutine deallocgram(ham)
+
+        implicit none 
+        type(hamiltonian),intent(inout)::ham 
+        integer::ierr
+
+        if (errorflag .ne. 0) return
+
+        ierr=0
+        deallocate(ham%gs_ovrlp,stat=ierr)
+        if(ierr==0) deallocate(ham%gs_kinvh,stat=ierr)
+        if(ierr==0) deallocate(ham%gs_ovrlp_self,stat=ierr)
+        if (ierr/=0) then
+            write(0,"(a,i0)") "Error in overlap gram allocation. ierr had value ", ierr
+            errorflag=1
+            return
+        end if
+
+        return
+
+    end subroutine deallocgram
+
+    subroutine allocdvgram(dvec,num,size)
+
+        implicit none 
+        type(dvector),intent(inout)::dvec
+        integer,intent(in)::num,size
+        integer::ierr
+
+        if (errorflag .ne. 0) return
+
+        ierr=0
+
+        allocate(dvec%d_gs(num,size),stat=ierr)
+        if(ierr/=0)then 
+            write(0,"(a,i0)") "Error in dvector gram allocation. ierr had value ", ierr
+            errorflag=1
+            return
+        end if
+
+        return
+
+    end subroutine allocdvgram
+
+    subroutine deallocdvgram(dvec)
+
+        implicit none 
+        type(dvector),intent(inout)::dvec
+        integer::ierr
+
+        if (errorflag .ne. 0) return
+
+        ierr=0
+
+        deallocate(dvec%d_gs,stat=ierr)
+        if(ierr/=0)then 
+            write(0,"(a,i0)") "Error in dvector gram deallocation. ierr had value ", ierr
+            errorflag=1
+            return
+        end if
+
+        return
+
+    end subroutine deallocdvgram
 
 
 END MODULE alarrays
