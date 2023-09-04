@@ -199,19 +199,21 @@ MODULE readpars
 
     end subroutine readrunconds
 
-    subroutine read_zombie(zstore)
+    subroutine read_zombie(zstore,gst)
 
         implicit none
         type(zombiest),dimension(:),intent(inout)::zstore
         real(kind=8),dimension(norb)::cos,sin,phi,img
         real(kind=8),dimension(norb*2)::ccos,csin
+        integer,intent(in)::gst
         character(len=4)::num
-        integer::ierr,j,k,zomnum,lines
+        character(len=2)::gst_num
+        integer::ierr,j,k,l,zomnum,lines,gram_st
         character(LEN=20)::filenm
-
         ierr=0
         lines=0
-      
+        
+     
         if(imagflg=='n') then
             do j=1, ndet
                 if(GDflg.eq.'y')then
@@ -220,7 +222,13 @@ MODULE readpars
                 else
                     write(num,"(i4.4)")j
                 end if
-                filenm="data/zombie_"//trim(num)//".csv"
+                if(gramflg=='n')then
+                    filenm="data/zombie_"//trim(num)//".csv"
+                else
+                    write(gst_num,"(i2.1)")gst
+                    filenm="data/zom_"//trim(gst_num)//"_"//trim(num)//".csv"
+                end if
+                ! filenm="data/zombie_"//trim(num)//".csv"
                 zomnum=500+j
                 
                 ! if(rstrtflg.eq.'y')then
@@ -261,7 +269,7 @@ MODULE readpars
                     end do
                 end if 
                 ! end if
-   
+
                 read(zomnum,*) phi
                 read(zomnum,*) cos
                 read(zomnum,*) sin
@@ -306,6 +314,7 @@ MODULE readpars
                 zstore(j)%update_num=0
             end do
         end if
+        
         
         write(6,"(a)") "Zombie states succeffuly read in"
         return

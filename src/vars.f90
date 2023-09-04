@@ -37,24 +37,23 @@ MODULE globvars
         ! real(wp), dimension(:,:,:,:),allocatable::diff_ov_dov
         ! real(wp), dimension(:,:,:,:),allocatable::diff_in_dhjk
         !The inverse of the overlap matrix multiplied by the hamiltonian
-        !diff_invh(j,l,k,m) j specifies the dependnce on zs_j, l,k give the 
+        !diff_invh(j,l,k,m) j specifies the dependnce on zs_j, l,k give the
+
+        real(wp), dimension(:,:,:), allocatable::gs_ovrlp
+        real(wp), dimension(:,:,:), allocatable::gs_kinvh
+        real(wp), dimension(:,:,:), allocatable::gs_ovrlp_self
+        integer::gram_num
     end type hamiltonian
 
     type dvector
-        !complex(wp), dimension(:), allocatable::d
         real(wp), dimension(:), allocatable::d
         real(wp), dimension(:,:,:),allocatable::d_diff
+        real(wp), dimension(:,:),allocatable::d_gs
         ! d_diff(k,j,m) strucutred k specifies the position in the vector d
         ! j specifies the dependence on ZS j. m corresponds to the coeffcient m within 
         ! zombie stae j
         real(wp):: norm
     end type dvector
-
-    type energy
-        real(wp), dimension(:),allocatable::t
-        real(wp), dimension(:,:),allocatable::erg 
-        ! complex(wp), dimension(:,:),allocatable::erg 
-    end type energy
 
     ! Type defining the 1&2 electron integrals
     type elecintrgl
@@ -74,22 +73,15 @@ MODULE globvars
     type oprts
         type(oprts_2)::ham 
         type(oprts_2),allocatable,dimension(:)::diff
-        ! type(oprts_2),allocatable,dimension(:,:)::hess
         integer,dimension(:,:), allocatable::dcnt
-        ! integer,dimension(:,:,:), allocatable::hcnt
     end type oprts
 
     
-
     type grad 
         real(wp),dimension(:,:), allocatable::vars
-        ! real(wp),dimension(:,:), allocatable::vars_hess
-        ! real(wp),dimension(:,:,:), allocatable::hessian
         real(wp):: prev_erg
         real(wp):: current_erg
         integer,dimension(:,:),allocatable::grad_avlb
-        ! real(wp),dimension(:,:),allocatable::prev_mmntm
-        ! real(wp),dimension(:),allocatable::hess_sum
         real(wp),dimension(:,:,:),allocatable::one_elec
         real(wp),dimension(:,:,:),allocatable::two_elec
         real(wp),dimension(:),allocatable::ovrlp_div
