@@ -309,11 +309,11 @@ Module grad_d
             errorflag=1
         end if
        
-        grad_fin%vars(diff_state,:)=0
+        ! grad_fin%vars(diff_state,:)=0
         dham=2*matmul(dvec%d,haml%hjk)
         
         if(orb.eq.0)then
-
+            grad_fin%vars(diff_state,:)=0
             do j=1,norb!bgn,end
             ! do j=1, norb
                 dh_temp=dvec%d*haml%diff_hjk(diff_state,j,:)
