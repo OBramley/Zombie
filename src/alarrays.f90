@@ -755,6 +755,19 @@ MODULE alarrays
 
     end subroutine grad_new_dealloc
 
+    subroutine allocdual(D, n)
+        type(dual), intent(inout) :: D
+        integer, intent(in) :: n
+
+        allocate(D%dx(n))
+    end subroutine allocdual 
+
+    subroutine deallocdual(D)
+        type(dual), intent(inout) :: D
+
+        deallocate(D%dx)
+    end subroutine deallocdual
+
 
 
 END MODULE alarrays
