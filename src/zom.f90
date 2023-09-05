@@ -74,7 +74,7 @@ MODULE zom
         implicit none
         type(zombiest),dimension(:),intent(inout)::zstore
         integer::ierr,count,j
-        integer(kind=16)::total,k
+        integer::total,k
         integer, allocatable, dimension(:,:)::combs
         integer, dimension(ndet,norb)::combs2
 
@@ -135,9 +135,9 @@ MODULE zom
        
         implicit none
 
-        integer(kind=16) :: choose
+        integer :: choose
         integer, intent(in) :: n, k
-        integer(kind=16):: jmax, j, jmin
+        integer:: jmax, j, jmin
      
     
         if ( (n < 0 ) .or. (k < 0 ) ) then
@@ -173,11 +173,11 @@ MODULE zom
             integer, dimension(:), allocatable :: combs
         end type comb_result
 
-        integer(kind=16), intent(in)::tot
+        integer, intent(in)::tot
         integer, intent(in)::n_max,m_max
         integer,dimension(:,:),intent(inout)::final
         type(comb_result), dimension(:), pointer :: co
-        integer(kind=16)::j, k, jx, t
+        integer::j, k, jx, t
         integer :: ierr,s,kx
 
      

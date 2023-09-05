@@ -1,6 +1,6 @@
 program MainZombie
     
-    use mod_types, only: wp=>dp
+    use mod_types
     use dnad
     use globvars
     use readpars
@@ -18,16 +18,21 @@ program MainZombie
     
   
     type(zombiest), dimension(:), allocatable:: zstore, cstore
-    type(dvector):: dvecs, dvec_clean
+    type(dvector):: dvecs
     type(elecintrgl)::elect
-    type(hamiltonian)::haml, clean_haml
+    type(hamiltonian)::haml
     type(oprts)::an_cr,an2_cr2
     integer:: j, istat,clean_ndet,ierr
-    real(kind=8)::clean_norm, clean_erg
-    real(kind=8), dimension(:),allocatable::erg
+    
+    type(dual), dimension(:),allocatable::erg
+
+    type(hamiltonian)::clean_haml
+    type(dvector)::dvec_clean
+    real(wp)::clean_norm, clean_erg
+
     character(LEN=100) :: CWD
-    real(kind=8):: starttime, stoptime, runtime
-    integer(kind=8):: randseed
+    real(wp):: starttime, stoptime, runtime
+    integer(wp):: randseed
    
     ! DOUBLE PRECISION, external::ZBQLU01
 
@@ -71,7 +76,7 @@ program MainZombie
         write(6,"(a)") "Electrons allocated"
         if (gramflg.eq."n") then 
             ! generate zombie states
-            call alloczs(zstore,int(ndet,kind=16))
+            call alloczs(zstore,ndet)
             write(6,"(a)") "Zombie states allocated"
             if(zomgflg=='y')then
                 call genzf(zstore,ndet)
@@ -81,6 +86,13 @@ program MainZombie
                 write(6,"(a)") "Zombie states generated"
             else if (zomgflg=='n') then
                 call read_zombie(zstore,0)
+                if (GDflg=='y')then 
+                    call dual_grad_setup(zstore,ndet)
+                end if 
+                do j=1,ndet
+                    zstore(j)%val(1:norb)=sin(zstore(j)%phi)
+                    zstore(j)%val(norb+1:2*norb)=cos(zstore(j)%phi)
+                end do
                 write(6,"(a)") "Zombie read in"
             end if
             call flush(6)
@@ -94,7 +106,7 @@ program MainZombie
             ! generate Hamiltonian and overlap
             call allocham(haml,ndet,norb)
             write(6,"(a)") "Hamiltonian allocated"
-            call allocdv(dvecs,ndet,norb)
+            call allocdv(dvecs,ndet)
             allocate(erg(timesteps+1),stat=ierr)
             if(ierr/=0)then 
                 errorflag=1
@@ -105,8 +117,8 @@ program MainZombie
             if(hamgflg=='y')then
                 write(6,"(a)") "To hamiltonian gen"
                 call hamgen(haml,zstore,elect,ndet,an_cr,an2_cr2,1)
-                call matrixwriter(haml%hjk,ndet,"data/ham.csv")
-                call matrixwriter(haml%ovrlp,ndet,"data/ovlp.csv")
+                call matrixwriter(haml%hjk%x,ndet,"data/ham.csv")
+                call matrixwriter(haml%ovrlp%x,ndet,"data/ovlp.csv")
                 write(6,"(a)") "Hamiltonian successfully generated"
             else if (hamgflg=='n')then
                 call read_ham(haml,ndet)
@@ -114,7 +126,7 @@ program MainZombie
             end if
             ! Imaginary time propagation
             write(6,"(a)") "Imaginary time propagation started"
-            call imgtime_prop(dvecs,erg,haml,0,0)
+            call imgtime_prop(dvecs,erg,haml)
             write(6,"(a)") "Imaginary time propagation finished"
        
         
@@ -122,20 +134,19 @@ program MainZombie
             call energywriter(erg,"energy.csv",0)
        
             if(GDflg.eq."y")then
-                d_state=1
                 call zombie_alter(zstore,haml,elect,erg,dvecs,an_cr,an2_cr2)
                 
                 GDflg='n'
                 do j=1,ndet
                     call zombiewriter(zstore(j),j,0)
                 end do
-                dvecs%d=(0.0,0.0)
-                call imgtime_prop(dvecs,erg,haml,0,0)
+                dvecs%d=0.0d0
+                call imgtime_prop(dvecs,erg,haml)
                 
-                write(6,"(a,f21.16)") "Final energy: ", erg(1,timesteps+1)
+                write(6,"(a,f21.16)") "Final energy: ", erg(timesteps+1)%x
                 call energywriter(erg,"energy_final.csv",0)
-                call matrixwriter(haml%hjk,ndet,"data/ham_final.csv")
-                call matrixwriter(haml%ovrlp,ndet,"data/ovlp_final.csv")
+                call matrixwriter(haml%hjk%x,ndet,"data/ham_final.csv")
+                call matrixwriter(haml%ovrlp%x,ndet,"data/ovlp_final.csv")
                 
                 ! call sd_anal(zstore,nel,dvecs(1),2)
             end if
@@ -165,7 +176,7 @@ program MainZombie
             call flush(6)
             call flush(0)
         else if(gramflg.eq."n") then 
-            call gram_schmidt_control(elect,ndet,an_cr,an2_cr2)
+            ! call gram_schmidt_control(elect,ndet,an_cr,an2_cr2)
         else
             write(0,"(a,i0)") "Error in gramflg setting. This should have been caught ", ierr
             errorflag=1
@@ -174,11 +185,11 @@ program MainZombie
     else if((propflg=="n"))then
         if((cleanflg=="y").or.(cleanflg=="f"))then
             if(gramflg.eq."n")then
-                call allocdv(dvecs,ndet,norb)
-                call dvec_read(dvecs(1)%d,ndet,0,'dvec_0000.csv')
+                call allocdv(dvecs,ndet)
+                call dvec_read(dvecs%d%x,ndet,0,'dvec_0000.csv')
                 write(6,"(a)") "d-vector read in"
             else if(gramflg.eq."y")then
-                call gram_schmidt_control(elect,ndet,an_cr,an2_cr2)
+                ! call gram_schmidt_control(elect,ndet,an_cr,an2_cr2)
             else
                 write(0,"(a,i0)") "Error in gramflg setting. This should have been caught ", ierr
                     errorflag=1
@@ -204,13 +215,13 @@ program MainZombie
             write(6,"(a)") "Cleaning hamiltonian read in"
         end if
         
-        call allocdv(dvec_clean,clean_ndet,1)
+        call allocdv(dvec_clean,clean_ndet)
         call cleaner(zstore,cstore,dvecs,dvec_clean,clean_ndet,clean_norm)
         ! clean_erg=dot_product(dvec_clean(1)%d,matmul(clean_haml%hjk,dvec_clean(1)%d))
         clean_erg=ergcalc(clean_haml%hjk,dvec_clean%d)
         write(6,"(a)") "Cleaning process complete"
         call clean_erg_write(clean_ndet,clean_erg,clean_norm,99)
-        call dvec_writer_c(dvec_clean(1)%d,clean_ndet,0)
+        call dvec_writer_c(dvec_clean%d,clean_ndet,0)
         call deallocdv(dvec_clean)
         write(6,"(a)") "Cleaning d-vector dealocated"
         call deallocham(clean_haml)

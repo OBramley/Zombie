@@ -297,8 +297,12 @@ MODULE ham
         type(dual2),intent(in)::hamtot,ovlptot
         integer,intent(in)::j,k
 
-        hjk(j,k)=hamtot%x; hjk(k,j)=hjk(j,k)
-        ovrlp(j,k)=ovlptot%x; ovrlp(k,j)=ovrlp(j,k)
+        hjk(j,k)%x=hamtot%x; hjk(j,k)%dx=hamtot%dx(1:norb)
+        hjk(k,j)=hjk(j,k)
+        
+        ovrlp(j,k)=ovlptot%x; ovrlp(j,k)%dx=ovlptot%dx(1:norb)
+        ovrlp(k,j)=ovrlp(j,k)
+
         diff_hjk(j,k,:)=hamtot%dx(1:norb) 
         diff_hjk(k,j,:)=hamtot%dx(1+norb:2*norb)
         diff_ovrlp(j,k,:)=ovlptot%dx(1:norb)

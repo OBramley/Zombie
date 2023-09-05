@@ -273,8 +273,8 @@ MODULE readpars
 
                 read(zomnum,*) phi
                 zstore(j)%phi=phi
-                zstore(j)%val(1:norb)=sin(zstore(j)%phi)
-                zstore(j)%val(norb+1:2*norb)=cos(zstore(j)%phi)
+                ! zstore(j)%val(1:norb)=sin(zstore(j)%phi)
+                ! zstore(j)%val(norb+1:2*norb)=cos(zstore(j)%phi)
                 
                
                 close(zomnum)

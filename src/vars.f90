@@ -68,7 +68,7 @@ MODULE globvars
         real(wp),dimension(:,:), allocatable::vars
         real(wp):: prev_erg
         real(wp):: current_erg
-        integer(int8),dimension(:),allocatable::grad_avlb
+        integer,dimension(:),allocatable::grad_avlb
     end type grad
 
     

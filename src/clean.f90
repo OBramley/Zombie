@@ -1,5 +1,7 @@
 MODULE clean
 
+    use mod_types
+    use dnad
     use globvars
     use alarrays
     use zom
@@ -19,13 +21,13 @@ MODULE clean
         type(dvector),intent(in)::dvec
         integer, intent(in)::nume,pass
         integer, allocatable, dimension(:,:)::combs2
-        integer(kind=16), allocatable, dimension(:)::position
-        real(kind=8), allocatable, dimension(:)::magovrlp,temporary
+        integer, allocatable, dimension(:)::position
+        real, allocatable, dimension(:)::magovrlp,temporary
         integer::ierr,s,kx
-        integer(kind=16)::total,total2,j,k,l,temp_t2,jx, t
-        real(kind=8)::norm,checker
+        integer::total,total2,j,k,l,temp_t2,jx, t
+        real(wp)::norm,checker
         logical,allocatable,dimension(:)::excld
-        real(kind=8)::ovrlp1, ovrlp2      
+        real(wp)::ovrlp1, ovrlp2      
         integer, dimension(:), allocatable :: combins
 
     
@@ -87,12 +89,13 @@ MODULE clean
                 !$omp flush(total2,magovrlp,temp_t2)
                 call zomhfc(zs,combins)
                 do k=1,ndet
-                    ovrlp1=product((zs%sin*zstore(k)%sin)+(zs%cos*zstore(k)%cos))*dvec%d(k)
+                    ovrlp1=product((zs%val(1:norb)%x*zstore(k)%val(1:norb)%x)+&
+                    (zs%val(1+norb:)%x*zstore(k)%val(1+norb:)%x))*dvec%d(k)
                     if(pass.ne.1)then
                         magovrlp(total2)=magovrlp(total2)+ovrlp1
                     end if
                     do l=1,ndet
-                        ovrlp2=product((zs%sin*zstore(l)%sin)+(zs%cos*zstore(l)%cos))
+                        ovrlp2=product((zs%val(1:norb)%x*zstore(l)%val(1:norb)%x)+(zs%val(1+norb:)%x*zstore(l)%val(1+norb:)%x))
                         norm=norm + (dvec%d(l)*ovrlp1*ovrlp2)
                     end do
                 end do
@@ -178,10 +181,10 @@ MODULE clean
         integer, intent(in)::nume
         type(zombiest),dimension(:),allocatable::cstoretemp
         integer, allocatable, dimension(:,:)::combs,combs2,combsfix
-        integer(kind=16), allocatable, dimension(:)::magovrlp
-        integer(kind=16)::j,k,ierr,total,total2,total3,totalf
+        integer, allocatable, dimension(:)::magovrlp
+        integer::j,k,ierr,total,total2,total3,totalf
         ! complex(kind=8)::magnitude
-        real(kind=8)::magnitude,checker
+        real(wp)::magnitude,checker
 
 
         if (errorflag .ne. 0) return
@@ -288,7 +291,8 @@ MODULE clean
                 magnitude=0.0
                 ! magnitude=(0.0,0.0)
                 do k=1, ndet
-                    magnitude=magnitude+product((cstore(j)%sin*zstore(k)%sin)+(cstore(j)%cos*zstore(k)%cos))    
+                    magnitude=magnitude+product((cstore(j)%val(1:norb)%x*zstore(k)%val(1:norb)%x)+&
+                    (cstore(j)%val(1+norb:)%x*zstore(k)%val(1+norb:)%x))    
                     ! overlap(cstoretemp(j),zstore(k))
                 end do
                 ! if(abs(REAL(magnitude))>0.0005) then
@@ -313,7 +317,7 @@ MODULE clean
         end if
         !$omp end parallel
         
-        call alloczs(cstore,int(clean_ndet,kind=16))
+        call alloczs(cstore,clean_ndet)
         if(total2>99)then
             !$omp parallel do
             do j=1, total3
@@ -343,7 +347,7 @@ MODULE clean
         call allocham(cleanham,clean_ndet,1)
         call hamgen(cleanham,cstore,elecs,ndet,an_cr,an2_cr2,1)
         ! call hamgen(cleanham,cstore,elecs,clean_ndet,1)
-        call matrixwriter(cleanham%hjk,clean_ndet,"data/clean_ham.csv")
+        call matrixwriter(cleanham%hjk%x,clean_ndet,"data/clean_ham.csv")
         
         
         return
@@ -360,28 +364,15 @@ MODULE clean
 
         if (errorflag .ne. 0) return
 
-        ! zoms%dead(1:norb)=(1.0d0,0.0d0)
-        ! zoms%cos(1:norb)=(1.0d0,0.0d0)
-        ! zoms%sin(1:norb)=(0.0d0,0.0d0)
-        ! zoms%alive(1:norb)=(0.0d0,0.0d0)
-        ! zoms%phi(1:norb)=0.0
+     
+        zoms%val(1+norb:2*norb)=1.0d0
+        zoms%val(1:norb)=0.0d0
+        zoms%phi(1:norb)=0
 
-        zoms%dead(1:norb)=1.0d0
-        zoms%cos(1:norb)=1.0d0
-        zoms%sin(1:norb)=0.0d0
-        zoms%alive(1:norb)=0.0d0
-        zoms%phi(1:norb)=0.0
 
         do j=1, size(occ)
-            ! zoms%alive(occ(j))=(1.0d0,0.0d0)
-            ! zoms%dead(occ(j))=(0.0d0,0.0d0)
-            ! zoms%sin(occ(j))=(1.0d0,0.0d0)
-            ! zoms%cos(occ(j))=(0.0d0,0.0d0)
-            ! zoms%phi(occ(j))=0.5*pirl
-            zoms%alive(occ(j))=1.0d0
-            zoms%dead(occ(j))=0.0d0
-            zoms%sin(occ(j))=1.0d0
-            zoms%cos(occ(j))=0.0d0
+            zoms%val(occ(j))=1.0d0
+            zoms%val(norb+occ(j))=0.0d0
             zoms%phi(occ(j))=0.5*pirl
         end do
 
@@ -410,12 +401,14 @@ MODULE clean
         do j=1,cleantot
             do k=1, ndet
                 ! ovrlp1=overlap(cleanzom(j),zstore(k))
-                ovrlp1=product((cleanzom(j)%sin*zstore(k)%sin)+(cleanzom(j)%cos*zstore(k)%cos))
+                ovrlp1=product((cleanzom(j)%val(1:norb)%x*zstore(k)%val(1:norb)%x)+&
+                (cleanzom(j)%val(1+norb:)%x*zstore(k)%val(1+norb:)%x))
                 dvec_clean%d(j)=dvec_clean%d(j)+(dvec%d(k)*ovrlp1)
                 
                 do l=1, ndet
                     ! ovrlp2=overlap(zstore(l),cleanzom(j))
-                    ovrlp2=product((cleanzom(j)%sin*zstore(l)%sin)+(cleanzom(j)%cos*zstore(l)%cos))
+                    ovrlp2=product((cleanzom(j)%val(1:norb)%x*zstore(l)%val(1:norb)%x)+&
+                    (cleanzom(j)%val(1+norb:)%x*zstore(l)%val(1+norb:)%x))
                     ! norm = norm + (conjg(dvec%d(l))*dvec%d(k)*ovrlp2*ovrlp1)
                     norm = norm + (dvec%d(l))*dvec%d(k)*ovrlp2*ovrlp1
                 end do
@@ -448,10 +441,10 @@ MODULE clean
             call allocham(cleanham,clean_ndet,1)
             call hamgen(cleanham,cstore,elecs,ndet,an_cr,an2_cr2,1)
             ! call hamgen(cleanham,cstore,elecs,clean_ndet,1)
-            call matrixwriter(cleanham%hjk,clean_ndet,"data/clean_ham.csv")
+            call matrixwriter(cleanham%hjk%x,clean_ndet,"data/clean_ham.csv")
         else
             clean_ndet = lines_clean(clean_ndet)        
-            call alloczs(cstore,int(clean_ndet,kind=16))
+            call alloczs(cstore,clean_ndet)
             call read_zombie_c(cstore,clean_ndet)
             call allocham(cleanham,clean_ndet,1)
             call read_ham_c(cleanham,clean_ndet)
@@ -538,7 +531,7 @@ MODULE clean
         end do
         ierr=0
         print*, clean_ndet
-        call alloczs(cstore,int(clean_ndet,kind=16))
+        call alloczs(cstore,clean_ndet)
         allocate(combs(clean_ndet,nume),stat=ierr)
         if (ierr.ne.0) then
             write(0,"(a,i0)") 'Error in combination matrix allocation',ierr
