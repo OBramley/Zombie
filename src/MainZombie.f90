@@ -1,6 +1,7 @@
 program MainZombie
     
-    
+    use mod_types, only: wp=>dp
+    use dnad
     use globvars
     use readpars
     use alarrays

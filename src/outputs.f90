@@ -1,5 +1,7 @@
 MODULE outputs
+    use mod_types
     use globvars
+    use dnad
 
     interface epoc_writer
 
@@ -13,7 +15,7 @@ MODULE outputs
 
         implicit none
 
-        real(kind=8),dimension(:,:),intent(in)::out
+        real(wp),dimension(:,:),intent(in)::out
         integer,intent(in)::size
         character(LEN=*),intent(in)::filenm
         integer::ierr,j,k
@@ -45,8 +47,7 @@ MODULE outputs
 
         implicit none
 
-        ! complex(kind=8),dimension(:,:),intent(in)::out
-        real(kind=8),dimension(:,:),intent(in)::out
+        real(wp),dimension(:,:),intent(in)::out
         integer,intent(in)::size
         character(LEN=*),intent(in)::filenm
         integer::ierr,j,k
@@ -104,12 +105,11 @@ MODULE outputs
         end if
 
         if(gramflg=='n')then
-            filenm="data/zombie_"//trim(num)//".csv"
+            filenm="data/zombie_"//trim(nums)//".csv"
         else
             write(gst_num,"(i2.1)")gst
-            filenm="data/zom_"//trim(gst_num)//"_"//trim(num)//".csv"
+            filenm="data/zom_"//trim(gst_num)//"_"//trim(nums)//".csv"
         end if
-        !filenm = "data/zombie_"//trim(nums)//".csv"
 
         inquire(file=filenm,exist=file_exists)
         zomnum=300+num
@@ -124,15 +124,13 @@ MODULE outputs
         
             if(imagflg=='n') then
                 write(zomnum,'(*(e25.17e3 :", "))') ((zom%phi(j)),j=1,norb)
-                ! write(zomnum,'(*(e25.17e3 :", "))') (REAL(zom%cos(j)),j=1,norb)
-                ! write(zomnum,'(*(e25.17e3 :", "))') (REAL(zom%sin(j)),j=1,norb)
-                write(zomnum,'(*(e25.17e3 :", "))') ((zom%cos(j)),j=1,norb)
-                write(zomnum,'(*(e25.17e3 :", "))') ((zom%sin(j)),j=1,norb)
+                write(zomnum,'(*(e25.17e3 :", "))') ((zom%val(j)),j=1+norb,2*norb)
+                write(zomnum,'(*(e25.17e3 :", "))') ((zom%val(j)),j=1,norb)
             else if(imagflg=='y') then
                 write(zomnum,'(*(e25.17e3 :", ": ))') ((zom%phi(j)),j=1,norb)
-                write(zomnum,'(*(e25.17e3 :", ": ))') ((zom%img(j)),j=1,norb)
-                write(zomnum,'(*(1x,es25.17e3 :", "))') ((zom%cos(j)),j=1,norb)
-                write(zomnum,'(*(1x,es25.17e3 :", "))') ((zom%sin(j)),j=1,norb)
+                ! write(zomnum,'(*(e25.17e3 :", ": ))') ((zom%img(j)),j=1,norb)
+                write(zomnum,'(*(e25.17e3 :", "))') ((zom%val(j)),j=1+norb,2*norb)
+                write(zomnum,'(*(e25.17e3 :", "))') ((zom%val(j)),j=1,norb)
             end if
             close(zomnum)
         else if(file_exists.eqv..true.) then
@@ -147,13 +145,13 @@ MODULE outputs
             write(zomnum,*)' '
             if(imagflg=='n') then
                 write(zomnum,'(*(e25.17e3 :", "))') ((zom%phi(j)),j=1,norb)
-                write(zomnum,'(*(e25.17e3 :", "))') (REAL(zom%cos(j)),j=1,norb)
-                write(zomnum,'(*(e25.17e3 :", "))') (REAL(zom%sin(j)),j=1,norb)
+                write(zomnum,'(*(e25.17e3 :", "))') ((zom%val(j)),j=1+norb,2*norb)
+                write(zomnum,'(*(e25.17e3 :", "))') ((zom%val(j)),j=1,norb)
             else if(imagflg=='y') then
-                write(zomnum,'(*(e25.17e3 :", ": ))') ((zom%phi(j)),j=1,norb)
-                write(zomnum,'(*(e25.17e3 :", ": ))') ((zom%img(j)),j=1,norb)
-                write(zomnum,'(*(1x,es25.17e3 :", "))') ((zom%cos(j)),j=1,norb)
-                write(zomnum,'(*(1x,es25.17e3 :", "))') ((zom%sin(j)),j=1,norb)
+                ! write(zomnum,'(*(e25.17e3 :", ": ))') ((zom%phi(j)),j=1,norb)
+                ! write(zomnum,'(*(e25.17e3 :", ": ))') ((zom%img(j)),j=1,norb)
+                ! write(zomnum,'(*(1x,es25.17e3 :", "))') ((zom%cos(j)),j=1,norb)
+                ! write(zomnum,'(*(1x,es25.17e3 :", "))') ((zom%sin(j)),j=1,norb)
             end if 
             close(zomnum)
         end if
@@ -192,13 +190,13 @@ MODULE outputs
         end if
 
         if(imagflg=='n') then
-            write(zomnum,'(*(e25.17e3 :", "))') ((zom%dead(j)),j=1,norb)
-            write(zomnum,'(*(e25.17e3 :", "))') ((zom%alive(j)),j=1,norb)
+            write(zomnum,'(*(e25.17e3 :", "))') ((zom%val(j)),j=1+norb,2*norb)
+            write(zomnum,'(*(e25.17e3 :", "))') ((zom%val(j)),j=1,norb)
             ! write(zomnum,'(*(e25.17e3 :", "))') (REAL(zom%dead(j)),j=1,norb)
             ! write(zomnum,'(*(e25.17e3 :", "))') (REAL(zom%alive(j)),j=1,norb)
         else if(imagflg=='y') then
-            write(zomnum,'(*(1x,es25.17e3 :", "))') ((zom%dead(j)),j=1,norb)
-            write(zomnum,'(*(1x,es25.17e3 :", "))') ((zom%alive(j)),j=1,norb)
+            ! write(zomnum,'(*(1x,es25.17e3 :", "))') ((zom%dead(j)),j=1,norb)
+            ! write(zomnum,'(*(1x,es25.17e3 :", "))') ((zom%alive(j)),j=1,norb)
         end if
 
         close(zomnum)
@@ -207,12 +205,11 @@ MODULE outputs
 
     end subroutine zombiewriter_c
 
-    subroutine energywriter(time,erg,filenm,j)
+    subroutine energywriter(erg,filenm,j)
 
         implicit none
 
-        real(kind=8), dimension(:),intent(in)::time
-        real(kind=8), dimension(:),intent(in)::erg 
+        type(dual), dimension(:),intent(in)::erg 
         character(LEN=*),intent(in)::filenm
         real::db
         integer,intent(in)::j
@@ -246,8 +243,7 @@ MODULE outputs
             write(ergnum,*)' '
         end if
         
-        ! write(ergnum,'(*(e25.17e3 :", "))') (REAL(erg(k)),k=1,timesteps+1)
-        write(ergnum,'(*(e25.17e3 :", "))') ((erg(k)),k=1,timesteps+1)
+        write(ergnum,'(*(e25.17e3 :", "))') ((erg(k)%x),k=1,timesteps+1)
         if(imagflg=='y')then
             ! write(ergnum,'(*(e25.17e3 :", "))') (CMPLX(erg(k)),k=1,timesteps+1)
         end if
@@ -261,7 +257,7 @@ MODULE outputs
     subroutine epoc_writer_int(erg,step,chng_trk,lr,pass)
 
         implicit none
-        real(kind=8),intent(in)::erg,lr 
+        real(wp),intent(in)::erg,lr 
         integer,intent(in)::step,pass
         integer,intent(in)::chng_trk
         integer::epoc,ierr
@@ -304,7 +300,7 @@ MODULE outputs
     subroutine epoc_writer_array_orbital(erg,step,chng_trk,pass)
 
         implicit none
-        real(kind=8),intent(in)::erg
+        real(wp),intent(in)::erg
         integer,intent(in)::step,pass
         integer,dimension(:),intent(in)::chng_trk
         integer::epoc,ierr,k
@@ -323,23 +319,10 @@ MODULE outputs
         end if
         if(pass.eq.1)then
             write(epoc,'(i0,",",e25.17e3,",",a,",",*(i0:", "))') step,erg,"   ",(chng_trk(k),k=1,ndet-1)
-            ! do k=1,ndet-1
-            !     write(epoc,'(i0,",",e25.17e3,",",e25.17e3,",",*(i0:", "))') step,erg,(chng_trk(k),k=1,ndet-1)
-            !     if(chng_trk(k).eq.0)then
-            !         EXIT 
-            !     end if 
-            !     write(epoc,'(a,",",e25.17e3,",",e25.17e3,",",i0)') "   ",erg_dim(k),lr(k),chng_trk(k)
-            ! end do
+         
         else
             write(epoc,'(i0,",",e25.17e3,",",a,",",*(i0:", "))') step,erg,"   ",(chng_trk(k),k=1,ndet-1)
-            ! do k=1,ndet-1
-            !     write(epoc,'(i0,",",e25.17e3,",",e25.17e3,",",*(i0:", "))') step,erg,(chng_trk(k),k=1,ndet-1)
-            !     if(chng_trk(k).eq.0)then
-            !         EXIT 
-            !     end if 
-            !     write(epoc,'(a,",",e25.17e3,",",e25.17e3,",",i0)') "   ",erg_dim(k),lr(k),chng_trk(k)
-            ! end do
-            ! write(epoc,'(i0,",",e25.17e3,",",e25.17e3,",",*(i0:", "))') step,erg,lr,(chng_trk(k),k=1,ndet-1)
+        
         end if
         close(epoc)
        
@@ -350,8 +333,8 @@ MODULE outputs
     subroutine epoc_writer_array(erg,step,chng_trk,erg_dim,lr,pass)
 
         implicit none
-        real(kind=8),intent(in)::erg
-        real(kind=8),dimension(:),intent(in)::lr,erg_dim 
+        real(wp),intent(in)::erg
+        real(wp),dimension(:),intent(in)::lr,erg_dim 
         integer,intent(in)::step,pass
         integer,dimension(:),intent(in)::chng_trk
         integer::epoc,ierr,k
@@ -385,7 +368,6 @@ MODULE outputs
                 write(epoc,'(a,",",e25.17e3,",",e25.17e3,",",i0)') "   ",erg_dim(k),lr(k),chng_trk(k)
             end do
             write(epoc,'(i0,",",e25.17e3,",",a,",",*(i0:", "))') step,erg,"   ",(chng_trk(k),k=1,ndet-1)
-            ! write(epoc,'(i0,",",e25.17e3,",",e25.17e3,",",*(i0:", "))') step,erg,lr,(chng_trk(k),k=1,ndet-1)
         end if
         close(epoc)
        
@@ -397,8 +379,7 @@ MODULE outputs
     subroutine dvec_writer(d,size,p)
 
         implicit none
-        ! complex(kind=8),dimension(:),intent(in)::d
-        real(kind=8),dimension(:),intent(in)::d
+        type(dual),dimension(:),intent(in)::d
         character(LEN=4)::stateno
         integer,intent(in)::size,p
         integer::ierr,j,vec
@@ -431,9 +412,9 @@ MODULE outputs
         end if
        
         if(imagflg=='n')then
-            write(vec,'(*(e25.17e3 :", "))') (REAL(d(j)),j=1,size)
+            write(vec,'(*(e25.17e3 :", "))') ((d(j)%x),j=1,size)
         else if(imagflg=='y')then
-            write(vec,'(*(1x,es25.17e3 :", "))') ((d(j)),j=1,size*2)
+            write(vec,'(*(1x,es25.17e3 :", "))') ((d(j)%x),j=1,size*2)
         end if
         close(vec)
         return
@@ -443,8 +424,8 @@ MODULE outputs
     subroutine dvec_writer_c(d,size,p)
 
         implicit none
-        ! complex(kind=8),dimension(:),intent(in)::d
-        real(kind=8),dimension(:),intent(in)::d
+        ! complex(wp),dimension(:),intent(in)::d
+        type(dual),dimension(:),intent(in)::d
         character(LEN=4)::stateno
         integer,intent(in)::size,p
         integer::ierr,j,vec
@@ -462,9 +443,9 @@ MODULE outputs
             return
         end if
         if(imagflg=='n')then
-            write(vec,'(*(e25.17e3 :", "))') (REAL(d(j)),j=1,size)
+            write(vec,'(*(e25.17e3 :", "))') ((d(j)%x),j=1,size)
         else if(imagflg=='y')then
-            write(vec,'(*(1x,es25.17e3 :", "))') ((d(j)),j=1,size*2)
+            write(vec,'(*(1x,es25.17e3 :", "))') ((d(j)%x),j=1,size*2)
         end if
         close(vec)
         return
@@ -475,8 +456,8 @@ MODULE outputs
 
         implicit none
         integer, intent(in)::clean_ndet,j
-        ! complex(kind=8),intent(in)::clean_erg,clean_norm
-        real(kind=8),intent(in)::clean_erg,clean_norm
+        ! complex(wp),intent(in)::clean_erg,clean_norm
+        real(wp),intent(in)::clean_erg,clean_norm
         integer::cleane,ierr
 
         cleane=400+j

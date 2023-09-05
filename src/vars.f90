@@ -1,20 +1,18 @@
 MODULE globvars
 
+    use mod_types
     use dnad
-    use mod_types, only: wp=>dp
+   
+    implicit none 
+
+    integer, parameter::wp = dp ! Sets the precision of the program to double precision
+
 
     ! Type defining the zombie state
     type zombiest
-        ! complex(wp), dimension(:), allocatable::sin
-        ! complex(wp), dimension(:), allocatable::cos
-        ! real(wp), dimension(:), allocatable::sin
-        ! real(wp), dimension(:), allocatable::cos
         type(dual),dimension(:),allocatable::phi
         ! real(wp),dimension(:),allocatable::img
         type(dual),dimension(:),allocatable::val
-        ! integer(kind=1),dimension(:),allocatable::dead
-        ! integer(kind=1),dimension(:),allocatable::alive
-        ! integer::update_num
     end type zombiest
 
    
@@ -24,16 +22,8 @@ MODULE globvars
         type(dual), dimension(:,:), allocatable::ovrlp
         type(dual), dimension(:,:), allocatable::inv
         type(dual), dimension(:,:), allocatable::kinvh
-        ! complex(wp), dimension(:,:), allocatable::hjk
-        ! complex(wp), dimension(:,:), allocatable::ovrlp
-        ! complex(wp), dimension(:,:), allocatable::inv
-        ! complex(wp), dimension(:,:), allocatable::kinvh
-
         real(wp), dimension(:,:,:), allocatable::diff_hjk !ZS to be differentiated,zs is bra or ket, orbital, bra/ket pairing
         real(wp), dimension(:,:,:), allocatable::diff_ovrlp!ZS to be differntiated, orbital, bra/ket pairing
-        ! real(wp), dimension(:,:,:,:), allocatable::hess_hjk !ZS to be differentiated,zs is bra or ket, orbital, bra/ket pairing
-        ! real(wp), dimension(:,:,:,:), allocatable::hess_ovrlp!ZS to be differntiated, orbital, bra/ket pairing
-        real(wp), dimension(:,:,:,:), allocatable::diff_invh
         ! real(wp), dimension(:,:,:,:),allocatable::diff_ov_dov
         ! real(wp), dimension(:,:,:,:),allocatable::diff_in_dhjk
         !The inverse of the overlap matrix multiplied by the hamiltonian
@@ -46,13 +36,10 @@ MODULE globvars
     end type hamiltonian
 
     type dvector
-        real(wp), dimension(:), allocatable::d
-        real(wp), dimension(:,:,:),allocatable::d_diff
+        integer::n
+        type(dual), dimension(:), allocatable::d
         real(wp), dimension(:,:),allocatable::d_gs
-        ! d_diff(k,j,m) strucutred k specifies the position in the vector d
-        ! j specifies the dependence on ZS j. m corresponds to the coeffcient m within 
-        ! zombie stae j
-        real(wp):: norm
+        type(dual):: norm
     end type dvector
 
     ! Type defining the 1&2 electron integrals
@@ -66,8 +53,8 @@ MODULE globvars
     end type elecintrgl
 
     type oprts_2
-        integer(kind=2),dimension(:,:), allocatable::alive,dead
-        integer(kind=1),dimension(:,:), allocatable::neg_alive,neg_dead
+        integer(int16),dimension(:,:), allocatable::alive,dead
+        integer(int8),dimension(:,:), allocatable::neg_alive,neg_dead
     end type oprts_2
 
     type oprts
@@ -81,10 +68,7 @@ MODULE globvars
         real(wp),dimension(:,:), allocatable::vars
         real(wp):: prev_erg
         real(wp):: current_erg
-        integer,dimension(:,:),allocatable::grad_avlb
-        real(wp),dimension(:,:,:),allocatable::one_elec
-        real(wp),dimension(:,:,:),allocatable::two_elec
-        real(wp),dimension(:),allocatable::ovrlp_div
+        integer(int8),dimension(:),allocatable::grad_avlb
     end type grad
 
     
@@ -107,8 +91,8 @@ MODULE globvars
     integer::gramnum             ! Number of additional states to be generated for GS orthogonalisation
     character(LEN=1)::rhf_1      ! Flag to decide if the first zombie state should be st as the RHF determinant
     character(LEN=1)::imagflg    ! Flag to decide if zombie states are imaginary or real
-    real(wp)::pirl      ! pi
-    real(wp) :: sqrtpi  ! square root of pi
+    real(wp), parameter::pirl  = ATAN(1.0d0)*4.0d0      ! pi
+    real(wp), parameter :: sqrtpi = sqrt(pirl)  ! square root of pi
     complex(wp)::i      ! The imagianry unit
 
     integer:: errorflag      ! Error flag
@@ -117,6 +101,8 @@ MODULE globvars
     integer::max_threads
     integer::max_teams
     integer::threadpteam
+
+    
 
     contains
 
@@ -134,9 +120,6 @@ MODULE globvars
         gramnum=0
 
         errorflag=0
-
-        sqrtpi = 1.7724538509055160272981674833411451827975494561223871d0
-        pirl = sqrtpi**2.0d0
 
         i = (0.0d0,1.0d0)
 

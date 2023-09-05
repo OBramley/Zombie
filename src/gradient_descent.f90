@@ -1,14 +1,17 @@
 MODULE gradient_descent
 
+    use mod_types
+    use dnad
     use globvars
     use alarrays
     use ham
-    use grad_d
     use imgtp
     use outputs
     use infnan_mod
-    use grad_calc
     use zom 
+
+    implicit none 
+    integer::d_grad=0
     
     contains
 
@@ -63,97 +66,84 @@ MODULE gradient_descent
 
     end subroutine he_full_row
 
-    subroutine he_full_row_new(haml,zstore,zs_diff,grad_fin,elecs,size,an_cr,an2_cr2,diff_state,orb,store_one,store_two)
+    ! subroutine he_full_row_new(haml,zstore,zs_diff,grad_fin,elecs,size,an_cr,an2_cr2,diff_state,orb,store_one,store_two)
 
-        implicit none 
+    !     implicit none 
 
-        type(hamiltonian), intent(inout)::haml
-        type(zombiest),dimension(:),intent(in)::zstore
-        type(zombiest),intent(in)::zs_diff
-        type(elecintrgl),intent(in)::elecs
-        type(grad),intent(inout)::grad_fin
-        type(oprts),intent(in)::an_cr,an2_cr2
-        integer,intent(in)::size,diff_state,orb
-        real(kind=8),dimension(:,:),intent(inout)::store_one,store_two
-        integer, allocatable,dimension(:)::IPIV1
-        real(kind=8),allocatable,dimension(:)::WORK1
+    !     type(hamiltonian), intent(inout)::haml
+    !     type(zombiest),dimension(:),intent(in)::zstore
+    !     type(zombiest),intent(in)::zs_diff
+    !     type(elecintrgl),intent(in)::elecs
+    !     type(grad),intent(inout)::grad_fin
+    !     type(oprts),intent(in)::an_cr,an2_cr2
+    !     integer,intent(in)::size,diff_state,orb
+    !     real(kind=8),dimension(:,:),intent(inout)::store_one,store_two
+    !     integer, allocatable,dimension(:)::IPIV1
+    !     real(kind=8),allocatable,dimension(:)::WORK1
         
-        integer::ierr
+    !     integer::ierr
 
 
-        if (errorflag .ne. 0) return
-        ierr=0
-        call grad_zom_new_vals(zstore,zs_diff,elecs,grad_fin,haml,diff_state,orb,an_cr%ham,an2_cr2%ham,store_one,store_two)
+    !     if (errorflag .ne. 0) return
+    !     ierr=0
+    !     call grad_zom_new_vals(zstore,zs_diff,elecs,grad_fin,haml,diff_state,orb,an_cr%ham,an2_cr2%ham,store_one,store_two)
         
-        haml%inv=haml%ovrlp
+    !     haml%inv=haml%ovrlp
        
-        allocate(WORK1(size),IPIV1(size),stat=ierr)
-        if (ierr/=0) then
-            write(0,"(a,i0)") "Error in IPIV or WORK1 vector allocation . ierr had value ", ierr
-            errorflag=1
-        end if 
+    !     allocate(WORK1(size),IPIV1(size),stat=ierr)
+    !     if (ierr/=0) then
+    !         write(0,"(a,i0)") "Error in IPIV or WORK1 vector allocation . ierr had value ", ierr
+    !         errorflag=1
+    !     end if 
 
       
-        Call dgetrf(size, size, haml%inv, size, IPIV1, ierr)
-        if (ierr/=0) then
-            write(0,"(a,i0)")"Error in DGETRF",ierr
-        end if
-        if (ierr==0) call dgetri(size,haml%inv,size,IPIV1,WORK1,size,ierr)
-        if (ierr/=0) then
-            write(0,"(a,i0)")"Error in DGETRF",ierr
-        end if
+    !     Call dgetrf(size, size, haml%inv, size, IPIV1, ierr)
+    !     if (ierr/=0) then
+    !         write(0,"(a,i0)")"Error in DGETRF",ierr
+    !     end if
+    !     if (ierr==0) call dgetri(size,haml%inv,size,IPIV1,WORK1,size,ierr)
+    !     if (ierr/=0) then
+    !         write(0,"(a,i0)")"Error in DGETRF",ierr
+    !     end if
 
-        deallocate(WORK1,IPIV1)
+    !     deallocate(WORK1,IPIV1)
 
-        call DGEMM("N","N",size,size,size,1.d0,haml%inv,size,haml%hjk,size,0.d0,haml%kinvh,size)
+    !     call DGEMM("N","N",size,size,size,1.d0,haml%inv,size,haml%hjk,size,0.d0,haml%kinvh,size)
 
-        return
+    !     return
 
-    end subroutine he_full_row_new
+    ! end subroutine he_full_row_new
 
 
-    subroutine grad_calculate(haml,zstore,elect,an_cr,an2_cr2,pick,dvec,grad_fin,erg,orb,epoc_cnt)
+    subroutine grad_calculate(haml,zstore,pick,dvec,grad_fin,erg)
 
         implicit none 
 
         type(zombiest),dimension(:),intent(in)::zstore
         type(grad),intent(inout)::grad_fin
-        type(elecintrgl),intent(in)::elect
         type(dvector),intent(inout)::dvec
         type(hamiltonian),intent(inout)::haml
-        type(oprts),intent(in)::an_cr,an2_cr2
-        integer,intent(in)::pick,orb,epoc_cnt
+        integer,intent(in)::pick
         DOUBLE PRECISION, external::ZBQLU01
         real(kind=8), dimension(:),intent(inout)::erg
         integer::j,strt
        
         if (errorflag .ne. 0) return
 
+        call dx_zero(haml%hjk)
+        call dx_zero(haml%ovrlp)
+        call dx_zero(haml%kinvh)
+        call dx_zero(dvec%d)
 
+        do j=1,ndet
+            haml%hjk(pick,j)%dx=haml%diff_hjk(pick,j,:); haml%hjk(j,pick)%dx=haml%diff_hjk(pick,j,:)
+            haml%ovrlp(pick,j)%dx=haml%diff_ovrlp(pick,j,:); haml%ovrlp(j,pick)%dx=haml%diff_ovrlp(pick,j,:)
+        end do
        
-        grad_fin%vars(pick,:)=0
-
-        ! strt=0
-        ! if(epoc_cnt.ne.0)then
-        !     if(modulo(epoc_cnt,2).eq.0)then
-        !         strt=1
-        !     else 
-        !         strt=2
-        !     end if 
-        ! end if
-
-        ! grad_fin%vars(pick,:)=0
-
-
-        if((grad_fin%grad_avlb(0,pick).eq.0).or.(orb.ne.0))then
-            dvec%d_diff(:,pick,:)=0
-            
-            call gradient_zs(haml,zstore,elect,grad_fin,an_cr,an2_cr2,pick,orb,grad_fin%grad_avlb(1:ndet,pick))
-        end if 
        
         if(grad_fin%grad_avlb(0,pick).eq.1)then
             dvec%d_diff(:,pick,:)=0
-            call sub_matrices(haml,pick)
+    
             call imaginary_time_prop2(dvec,erg,haml,ndet,pick,0)
         else if(grad_fin%grad_avlb(0,pick).eq.2)then
             dvec%d_diff(:,pick,:)=0
@@ -729,34 +719,35 @@ MODULE gradient_descent
     end subroutine orbital_gd
 
 
-    subroutine full_zs_gd(zstore,grad_fin,elect,dvecs,erg,haml,epoc_cnt,alpha,b,an_cr,an2_cr2,epoc_max,picker) 
+    subroutine full_zs_gd(zstore,elect,dvecs,haml,erg,epoc_cnt,alpha,b,an_cr,an2_cr2,epoc_max,picker) 
 
         implicit none 
 
         type(zombiest),dimension(:),intent(inout)::zstore
-        type(grad),intent(inout)::grad_fin
         type(elecintrgl),intent(in)::elect
-        type(dvector),dimension(:),intent(inout)::dvecs
-        type(dvector), dimension(:), allocatable:: temp_dvecs,thread_d,global_dvecs
-        real(kind=8), dimension(:),intent(inout)::erg
+        type(dvector),intent(inout)::dvecs
         type(hamiltonian),intent(inout)::haml
-        type(hamiltonian)::temp_ham,thread_ham,global_ham
+        type(dual),dimension(:), intent(inout)::erg
         type(oprts),intent(in)::an_cr,an2_cr2
+        real(kind=8),intent(in)::b,alpha
         integer,intent(inout)::epoc_cnt
         integer,intent(in)::epoc_max
         integer,dimension(:),intent(inout)::picker
-        real(kind=8),intent(in)::b,alpha
+
+        type(dvector):: temp_dvecs,thread_d,global_dvecs       
+        type(hamiltonian)::temp_ham,thread_ham,global_ham
         type(zombiest)::temp_zom,thread_zom,global_zom
+
         integer::lralt,rjct_cnt,rjct_cnt2,acpt_cnt,pick,lralt_temp,loop_max,orb_cnt,ierr
-        real(kind=8)::newb,t,fxtdk
+        real(wp)::newb,t,fxtdk
         integer::j,k,l
         integer,dimension(:),allocatable::chng_trk
-        real(kind=8),dimension(:),allocatable::lr_chng_trk,erg_chng_trk
+        real(wp),dimension(:),allocatable::lr_chng_trk,erg_chng_trk
+
         DOUBLE PRECISION, external::ZBQLU01
 
-        integer(kind=8)::beginning,rate,end
-
-        real(kind=8)::global_min_fxtdk,min_fxtdk,g_grad
+    
+        real(wp)::global_min_fxtdk,min_fxtdk,g_grad
         integer::global_min_fxtdk_idx,min_fxtdk_idx
 
         if (errorflag .ne. 0) return
@@ -780,6 +771,7 @@ MODULE gradient_descent
         rjct_cnt=0 !tracks how many rejections 
         acpt_cnt=0  !counts how many ZS have been changed
         loop_max=13!5
+
         if(epoc_cnt.eq.1)then
             orb_cnt=20
         else
@@ -789,31 +781,27 @@ MODULE gradient_descent
         call alloczf(temp_zom)
         call alloczf(thread_zom)
         call alloczf(global_zom)
-        call allocdv(temp_dvecs,ndet,norb)
-        call allocdv(thread_d,ndet,norb)
-        call allocdv(global_dvecs,ndet,norb)
+        call allocdv(temp_dvecs,ndet)
+        call allocdv(thread_d,ndet)
+        call allocdv(global_dvecs,ndet)
         call allocham(temp_ham,ndet,norb)
         call allocham(thread_ham,ndet,norb)
         call allocham(global_ham,ndet,norb)
        
        
-
         temp_ham=haml
         
-      
         do while(rjct_cnt.lt.(ndet-1)*30)
-            ! call system_clock(beginning, rate)
-            
+
             write(6,"(a)") '    Zombie state    |     Previous Energy     |    Energy after Gradient Descent step &
             &   |       Learning rate      | Acceptance count | Rejection count'
             chng_trk=0
             lr_chng_trk=0
             erg_chng_trk=0
             rjct_cnt2=0
-            ! call system_clock(beginning, rate)
+
             do j=1,(ndet-1)
                 
-               
                 pick=picker(j)
                 rjct_cnt2=0
                 call grad_calculate(haml,zstore,elect,an_cr,an2_cr2,pick,dvecs,grad_fin,erg,0,epoc_cnt)
@@ -999,7 +987,7 @@ MODULE gradient_descent
         type(elecintrgl),intent(in)::elect
         type(oprts),intent(in)::an_cr,an2_cr2
         type(dvector),dimension(:),intent(inout)::dvecs
-        real(kind=8), dimension(:),intent(inout)::erg
+        type(dual), dimension(:),intent(inout)::erg
         type(hamiltonian),intent(inout)::haml
         integer,intent(in)::d_state
         type(grad)::grad_fin

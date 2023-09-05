@@ -1,6 +1,8 @@
 MODULE readpars
 
+    use mod_types
     use globvars
+    use dnad
 
     contains
 
@@ -15,7 +17,7 @@ MODULE readpars
         open(unit=140,file='rundata.csv',status='old',iostat=ierr)
 
         if (ierr.ne.0) then
-          write(0,"(a)") 'Error in opening rundata.csv file'
+          write(stderr,"(a)") 'Error in opening rundata.csv file'
           errorflag = 1
           return
         end if
@@ -23,7 +25,7 @@ MODULE readpars
         read(140,*,iostat=ierr)LINE1, LINE2, LINE3, LINE4, LINE5, LINE6, LINE7, LINE8,LINE9, LINE10
         read(140,*,iostat=ierr)LINE11, LINE12, LINE13,LINE14, LINE15, LINE16, LINE17
         if (ierr.ne.0) then
-            write(0,"(a,i0)") "Error reading rundata.csv of input file",ierr
+            write(stderr,"(a,i0)") "Error reading rundata.csv of input file",ierr
             errorflag = 1
             return
         end if
@@ -37,7 +39,7 @@ MODULE readpars
         else if((LINE1(1:1).eq.'n').or.(LINE1(1:1).eq.'N')) then
             zomgflg="n"
         else
-            write(0,"(a,a)") "Error. zomflg value must be YES/NO. Read ", trim(LINE1)
+            write(stderr,"(a,a)") "Error. zomflg value must be YES/NO. Read ", trim(LINE1)
             errorflag=1
             return
         end if
@@ -47,7 +49,7 @@ MODULE readpars
         else if((LINE2(1:1).eq.'n').or.(LINE2(1:1).eq.'N')) then
             hamgflg="n"
         else
-            write(0,"(a,a)") "Error. hamflg value must be YES/NO. Read ", trim(LINE2)
+            write(stderr,"(a,a)") "Error. hamflg value must be YES/NO. Read ", trim(LINE2)
             errorflag=1
             return
         end if
@@ -57,21 +59,21 @@ MODULE readpars
         else if((LINE3(1:1)=='n').or.(LINE3(1:1).eq.'N')) then
             propflg="n"
         else
-            write(0,"(a,a)") "Error. imaginary time flag must be YES/NO. Read ", trim(LINE3)
+            write(stderr,"(a,a)") "Error. imaginary time flag must be YES/NO. Read ", trim(LINE3)
             errorflag=1
             return
         end if
         n=n+1
         read(LINE4,*,iostat=ierr)beta
         if(ierr/=0) then
-            write(0,"(a,a)") "Error reading beta Read ", trim(LINE4)
+            write(stderr,"(a,a)") "Error reading beta Read ", trim(LINE4)
             errorflag=1
             return
         end if
         n=n+1
         read(LINE5,*,iostat=ierr)timesteps
         if(ierr/=0) then
-            write(0,"(a,a)") "Error reading timesteps. Read ", trim(LINE5)
+            write(stderr,"(a,a)") "Error reading timesteps. Read ", trim(LINE5)
             errorflag=1
             return
         end if
@@ -83,7 +85,7 @@ MODULE readpars
         else if((LINE6(1:1)=='f').or.(LINE6(1:1).eq.'F')) then
             cleanflg="f"
         else
-            write(0,"(a,a)") "Error. cleaning flag must be YES/NO/f. Read ", trim(LINE6)
+            write(stderr,"(a,a)") "Error. cleaning flag must be YES/NO/f. Read ", trim(LINE6)
             errorflag=1
             return
         end if
@@ -93,14 +95,14 @@ MODULE readpars
         else if((LINE7(1:1)=='n').or.(LINE7(1:1).eq.'N')) then
             gramflg="n"
         else
-            write(0,"(a,a)") "Error. Gram Schmidt flag must be YES/NO. Read ", trim(LINE7)
+            write(stderr,"(a,a)") "Error. Gram Schmidt flag must be YES/NO. Read ", trim(LINE7)
             errorflag=1
             return
         end if
         n=n+1
         read(LINE8,*,iostat=ierr)gramnum
         if(ierr/=0) then
-            write(0,"(a,a)") "Error reading number of GS states. Read ", trim(LINE8)
+            write(stderr,"(a,a)") "Error reading number of GS states. Read ", trim(LINE8)
             errorflag=1
             return
         end if
@@ -110,7 +112,7 @@ MODULE readpars
         else if((LINE9(1:1)=='n').or.(LINE9(1:1).eq.'N')) then
             GDflg="n"
         else
-            write(0,"(a,a)") "Error. GDflg flag must be YES/NO. Read ", trim(LINE9)
+            write(stderr,"(a,a)") "Error. GDflg flag must be YES/NO. Read ", trim(LINE9)
             errorflag=1
             return
         end if
@@ -120,14 +122,14 @@ MODULE readpars
         else if((LINE10(1:1)=='n').or.(LINE10(1:1).eq.'N')) then
             rstrtflg="n"
         else
-            write(0,"(a,a)") "Error. Restart flag must be YES/NO. Read ", trim(LINE10)
+            write(stderr,"(a,a)") "Error. Restart flag must be YES/NO. Read ", trim(LINE10)
             errorflag=1
             return
         end if
         n=n+1
         read(LINE11,*,iostat=ierr)norb
         if(ierr/=0) then
-            write(0,"(a,a)") "Error reading number of orbitals. Read ", trim(LINE11)
+            write(stderr,"(a,a)") "Error reading number of orbitals. Read ", trim(LINE11)
             errorflag=1
             return
         end if
@@ -135,21 +137,21 @@ MODULE readpars
         n=n+1
         read(LINE12,*,iostat=ierr)nel
         if(ierr/=0) then
-            write(0,"(a,a)") "Error reading number of electrons. Read ", trim(LINE12)
+            write(stderr,"(a,a)") "Error reading number of electrons. Read ", trim(LINE12)
             errorflag=1
             return
         end if
         n=n+1
         read(LINE13,*,iostat=ierr)spin
         if(ierr/=0) then
-            write(0,"(a,a)") "Error reading spin. Read ", trim(LINE13)
+            write(stderr,"(a,a)") "Error reading spin. Read ", trim(LINE13)
             errorflag=1
             return
         end if
         n=n+1
         read(LINE14,*,iostat=ierr)ndet
         if(ierr/=0) then
-            write(0,"(a,a)") "Error reading number of zombie states. Read ", trim(LINE14)
+            write(stderr,"(a,a)") "Error reading number of zombie states. Read ", trim(LINE14)
             errorflag=1
             return
         end if
@@ -161,7 +163,7 @@ MODULE readpars
         else if((LINE15(1:1)=='b').or.(LINE15(1:1).eq.'B')) then
             zst="BB"
         else
-            write(0,"(a,a)") "Error. Zombie state type must be hf/ran/bb. Read ", trim(LINE15)
+            write(stderr,"(a,a)") "Error. Zombie state type must be hf/ran/bb. Read ", trim(LINE15)
             errorflag=1
             return
         end if
@@ -171,7 +173,7 @@ MODULE readpars
         else if((LINE16(1:1)=='n').or.(LINE16(1:1).eq.'N')) then
             rhf_1="n"
         else
-            write(0,"(a,a)") "Error. rhf_1 flag must be YES/NO. Read ", trim(LINE16)
+            write(stderr,"(a,a)") "Error. rhf_1 flag must be YES/NO. Read ", trim(LINE16)
             errorflag=1
             return
         end if
@@ -181,15 +183,15 @@ MODULE readpars
         else if((LINE17(1:1)=='n').or.(LINE17(1:1).eq.'N')) then
             imagflg="n"
         else
-            write(0,"(a,a)") "Error. imagflg flag must be YES/NO. Read ", trim(LINE17)
+            write(stderr,"(a,a)") "Error. imagflg flag must be YES/NO. Read ", trim(LINE17)
             errorflag=1
             return
         end if
         n=n+1
 
         if (n.ne.17) then
-            write(0,"(a)") "Not all required variables read in readrunconds subroutine"
-            write(0,"(a,i0,a)") "Read a total of ", n, "of an expected 17 parameters"
+            write(stderr,"(a)") "Not all required variables read in readrunconds subroutine"
+            write(stderr,"(a,i0,a)") "Read a total of ", n, "of an expected 17 parameters"
             errorflag = 1
             return
           end if
@@ -203,8 +205,8 @@ MODULE readpars
 
         implicit none
         type(zombiest),dimension(:),intent(inout)::zstore
-        real(kind=8),dimension(norb)::cos,sin,phi,img
-        real(kind=8),dimension(norb*2)::ccos,csin
+        real(wp),dimension(norb)::phi,img
+        real(wp),dimension(norb*2)::ccos,csin
         integer,intent(in)::gst
         character(len=4)::num
         character(len=2)::gst_num
@@ -234,7 +236,7 @@ MODULE readpars
                 ! if(rstrtflg.eq.'y')then
                 open(unit=zomnum,file=trim(filenm),status="old",iostat=ierr)
                 if(ierr/=0)then
-                    write(0,"(a,i0)") "Error in opening zombie state file to read in. ierr had value ", ierr
+                    write(stderr,"(a,i0)") "Error in opening zombie state file to read in. ierr had value ", ierr
                     errorflag=1
                     return
                 end if
@@ -246,7 +248,7 @@ MODULE readpars
                         close(zomnum)
                         exit
                     else if (ierr/=0) then
-                        write(0,"(a,i0)") "Error in counting zombie rows. ierr had value ", ierr
+                        write(stderr,"(a,i0)") "Error in counting zombie rows. ierr had value ", ierr
                         errorflag=1
                         return
                     end if
@@ -254,65 +256,56 @@ MODULE readpars
                 end do
                 close(zomnum) 
     
-                ! end if 
                 ierr=0
                 open(unit=zomnum,file=trim(filenm),status="old",iostat=ierr)
                 if(ierr/=0)then
-                    write(0,"(a,i0)") "Error in opening zombie state file to read in. ierr had value ", ierr
+                    write(stderr,"(a,i0)") "Error in opening zombie state file to read in. ierr had value ", ierr
                     errorflag=1
                     return
                 end if
-                ! if(rstrtflg.eq.'y')then
+              
                 if(lines.gt.3)then
                     do k=1,lines-3
                         read(zomnum,*)
                     end do
                 end if 
-                ! end if
+       
 
                 read(zomnum,*) phi
-                read(zomnum,*) cos
-                read(zomnum,*) sin
-                do k=1,norb
-                    zstore(j)%phi(k)=phi(k)
-                    ! zstore(j)%cos(k)=cmplx(cos(k),0.0,kind=8)
-                    ! zstore(j)%sin(k)=cmplx(sin(k),0.0,kind=8)
-                    zstore(j)%cos(k)=cos(k)
-                    zstore(j)%sin(k)=sin(k)
-                    
-                end do 
+                zstore(j)%phi=phi
+                zstore(j)%val(1:norb)=sin(zstore(j)%phi)
+                zstore(j)%val(norb+1:2*norb)=cos(zstore(j)%phi)
+                
+               
                 close(zomnum)
-                zstore(j)%val(1:norb)=zstore(j)%sin
-                zstore(j)%val(norb+1:2*norb)=zstore(j)%cos
-                zstore(j)%update_num=0
+               
             end do
         else if(imagflg=='y')then
-            do j=1, ndet
-                write(num,"(i4.4)")j
-                filenm="data/zombie_"//trim(num)//".csv"
-                zomnum=500+j
-                open(unit=zomnum,file=trim(filenm),status="old",iostat=ierr)
-                if(ierr/=0)then
-                    write(0,"(a,i0)") "Error in opening zombie state file to read in. ierr had value ", ierr
-                    errorflag=1
-                    return
-                end if
+            ! do j=1, ndet
+            !     write(num,"(i4.4)")j
+            !     filenm="data/zombie_"//trim(num)//".csv"
+            !     zomnum=500+j
+            !     open(unit=zomnum,file=trim(filenm),status="old",iostat=ierr)
+            !     if(ierr/=0)then
+            !         write(stderr,"(a,i0)") "Error in opening zombie state file to read in. ierr had value ", ierr
+            !         errorflag=1
+            !         return
+            !     end if
 
-                read(zomnum,*) phi
-                read(zomnum,*) img
-                read(zomnum,*) ccos
-                read(zomnum,*) csin
-                do k=1,norb
-                    zstore(j)%phi(k)=phi(k)
-                    zstore(j)%img(k)=img(k)
-                end do
-                do k=1,(norb*2),2
-                    ! zstore(j)%cos((k+1)/2)=cmplx(ccos(k),ccos(k+1),kind=8)
-                    ! zstore(j)%sin((k+1)/2)=cmplx(csin(k),csin(k+1),kind=8)
-                end do
-                close(zomnum)
-                zstore(j)%update_num=0
-            end do
+            !     read(zomnum,*) phi
+            !     read(zomnum,*) img
+            !     read(zomnum,*) ccos
+            !     read(zomnum,*) csin
+            !     do k=1,norb
+            !         zstore(j)%phi(k)=phi(k)
+            !         ! zstore(j)%img(k)=img(k)
+            !     end do
+            !     do k=1,(norb*2),2
+            !         ! zstore(j)%cos((k+1)/2)=cmplx(ccos(k),ccos(k+1),wp)
+            !         ! zstore(j)%sin((k+1)/2)=cmplx(csin(k),csin(k+1),wp)
+            !     end do
+            !     close(zomnum)
+            ! end do
         end if
         
         
@@ -327,7 +320,7 @@ MODULE readpars
         type(zombiest),dimension(:),intent(inout)::cstore
         integer,intent(in)::clean_ndet
         integer,dimension(norb)::dead,alive
-        ! real(kind=8),dimension(norb*2)::cdead,calive
+        ! real(wp),dimension(norb*2)::cdead,calive
         character(len=6)::num
         integer::ierr,j,k,zomnum
         character(LEN=28)::filenm
@@ -340,21 +333,17 @@ MODULE readpars
                 zomnum=500+j
                 open(unit=zomnum,file=trim(filenm),status="old",iostat=ierr)
                 if(ierr/=0)then
-                    write(0,"(a,i0)") "Error in opening zombie state file to read in. ierr had value ", ierr
+                    write(stderr,"(a,i0)") "Error in opening zombie state file to read in. ierr had value ", ierr
                     errorflag=1
                     return
                 end if
                 read(zomnum,*) dead
                 read(zomnum,*) alive
-                do k=1,norb
-                    cstore(j)%dead(k)=int(dead(k),kind=1)
-                    cstore(j)%alive(k)=int(alive(k),kind=1)
-                end do 
                 close(zomnum)
-                cstore(j)%cos=cstore(j)%dead
-                cstore(j)%sin=cstore(j)%alive
+                cstore(j)%val(norb+1:2*norb)=dead
+                cstore(j)%val(1:norb)=alive
                 do k=1, norb
-                    if(cstore(j)%alive(k).eq.1)then
+                    if(cstore(j)%val(k).eq.1)then
                         cstore(j)%phi(k)=0.5*pirl
                     else
                         cstore(j)%phi(k)=0
@@ -368,7 +357,7 @@ MODULE readpars
             !     zomnum=500+j
             !     open(unit=zomnum,file=trim(filenm),status="old",iostat=ierr)
             !     if(ierr/=0)then
-            !         write(0,"(a,i0)") "Error in opening zombie state file to read in. ierr had value ", ierr
+            !         write(stderr,"(a,i0)") "Error in opening zombie state file to read in. ierr had value ", ierr
             !         errorflag=1
             !         return
             !     end if
@@ -377,8 +366,8 @@ MODULE readpars
             !     read(zomnum,*) calive
             !     do k=1,(norb*2),2
 
-            !         cstore(j)%dead((k+1)/2)=cmplx(cdead(k),cdead(k+1),kind=8)
-            !         cstore(j)%alive((k+1)/2)=cmplx(calive(k),calive(k+1),kind=8)
+            !         cstore(j)%dead((k+1)/2)=cmplx(cdead(k),cdead(k+1),wp)
+            !         cstore(j)%alive((k+1)/2)=cmplx(calive(k),calive(k+1),wp)
             !     end do
             !     close(zomnum)
             ! end do
@@ -395,12 +384,12 @@ MODULE readpars
         type(hamiltonian),intent(inout)::ham
         integer,intent(in)::size
         integer::ierr,j,k
-        REAL(kind=8),dimension(size)::line
-        REAL(kind=8),dimension(size*2)::cline
+        REAL(wp),dimension(size)::line
+        REAL(wp),dimension(size*2)::cline
         character(LEN=100)::hamnm,ovrlpnm
         integer, allocatable,dimension(:)::IPIV1
-        real(kind=8),allocatable,dimension(:)::WORK1
-        ! complex(kind=8),allocatable,dimension(:)::WORK1
+        real(wp),allocatable,dimension(:)::WORK1
+        ! complex(wp),allocatable,dimension(:)::WORK1
 
         if (errorflag .ne. 0) return
         ierr=0
@@ -408,7 +397,7 @@ MODULE readpars
         open(unit=140,file='rundata.csv',status='old',iostat=ierr)
 
         if (ierr.ne.0) then
-          write(0,"(a)") 'Error in opening rundata.csv file'
+          write(stderr,"(a)") 'Error in opening rundata.csv file'
           errorflag = 1
           return
         end if
@@ -417,7 +406,7 @@ MODULE readpars
         read(140,*)
         read(140,*,iostat=ierr)hamnm, ovrlpnm
         if (ierr.ne.0) then
-            write(0,"(a)") "Error reading rundata.csv of input file"
+            write(stderr,"(a)") "Error reading rundata.csv of input file"
             errorflag = 1
             return
         end if
@@ -427,7 +416,7 @@ MODULE readpars
         if(imagflg=='n') then
             open(unit=200,file='data/'//trim(hamnm),status="old",iostat=ierr)
             if(ierr/=0)then
-                write(0,"(a,i0)") "Error in opening hamiltonian file. ierr had value ", ierr
+                write(stderr,"(a,i0)") "Error in opening hamiltonian file. ierr had value ", ierr
                 errorflag=1
                 return
             end if
@@ -435,7 +424,6 @@ MODULE readpars
             do j=1, size
                 read(200,*) line
                 do k=1, size
-                    ! ham%hjk(j,k)=cmplx(line(k),0.0,kind=8)
                     ham%hjk(j,k)=line(k)
                 end do
             end do
@@ -443,7 +431,7 @@ MODULE readpars
 
             open(unit=201,file='data/'//trim(ovrlpnm),status="old",iostat=ierr)
             if(ierr/=0)then
-                write(0,"(a,i0)") "Error in opening overlap file. ierr had value ", ierr
+                write(stderr,"(a,i0)") "Error in opening overlap file. ierr had value ", ierr
                 errorflag=1
                 return
             end if
@@ -451,7 +439,6 @@ MODULE readpars
             do j=1, size
                 read(201,*) line
                 do k=1, size
-                    ! ham%ovrlp(j,k)=cmplx(line(k),0.0,kind=8)
                     ham%ovrlp(j,k)=line(k)
                 end do
             end do
@@ -459,7 +446,7 @@ MODULE readpars
         else if (imagflg=='y')then
             open(unit=200,file='data/'//trim(hamnm),status="old",iostat=ierr)
             if(ierr/=0)then
-                write(0,"(a,i0)") "Error in opening hamiltonian file. ierr had value ", ierr
+                write(stderr,"(a,i0)") "Error in opening hamiltonian file. ierr had value ", ierr
                 errorflag=1
                 return
             end if
@@ -467,14 +454,13 @@ MODULE readpars
             do j=1, size
                 read(200,*) cline
                 do k=1, (size*2),2
-                    ! ham%hjk(j,(k+1)/2)=cmplx(cline(k),cline(k+1),kind=8)
                 end do
             end do
             close(200)
 
             open(unit=201,file='data/'//trim(ovrlpnm),status="old",iostat=ierr)
             if(ierr/=0)then
-                write(0,"(a,i0)") "Error in opening overlap file. ierr had value ", ierr
+                write(stderr,"(a,i0)") "Error in opening overlap file. ierr had value ", ierr
                 errorflag=1
                 return
             end if
@@ -482,7 +468,7 @@ MODULE readpars
             do j=1, size
                 read(201,*) line
                 do k=1, (size*2),2
-                    ! ham%ovrlp(j,(k+1)/2)=cmplx(cline(k),cline(k+1),kind=8)
+                    ! ham%ovrlp(j,(k+1)/2)=cmplx(cline(k),cline(k+1),wp)
                 end do
             end do
             close(201)
@@ -492,37 +478,37 @@ MODULE readpars
 
         allocate(IPIV1(size),stat=ierr)
         if (ierr/=0) then
-            write(0,"(a,i0)") "Error in IPIV vector allocation . ierr had value ", ierr
+            write(stderr,"(a,i0)") "Error in IPIV vector allocation . ierr had value ", ierr
             errorflag=1
             return
         end if 
         
         allocate(WORK1(size),stat=ierr)
         if (ierr/=0) then
-            write(0,"(a,i0)") "Error in WORK vector allocation . ierr had value ", ierr
+            write(stderr,"(a,i0)") "Error in WORK vector allocation . ierr had value ", ierr
             errorflag=1
             return
         end if   
 
         call ZGETRF(size,size,ham%inv,size,IPIV1,ierr)
         if (ierr/=0) then
-            write(0,"(a,i0)")"Error in ZGETRF",ierr
+            write(stderr,"(a,i0)")"Error in ZGETRF",ierr
         end if
         call ZGETRI(size,ham%inv,size,IPIV1,WORK1,size,ierr)
         if (ierr/=0) then
-            write(0,"(a,i0)")"Error in ZGETRF",ierr
+            write(stderr,"(a,i0)")"Error in ZGETRF",ierr
         end if
 
         deallocate(IPIV1,stat=ierr)
         if (ierr/=0) then
-            write(0,"(a,i0)") "Error in IPIV vector allocation . ierr had value ", ierr
+            write(stderr,"(a,i0)") "Error in IPIV vector allocation . ierr had value ", ierr
             errorflag=1
             return
         end if
 
         deallocate(WORK1,stat=ierr)
         if (ierr/=0) then
-            write(0,"(a,i0)") "Error in WORK vector allocation . ierr had value ", ierr
+            write(stderr,"(a,i0)") "Error in WORK vector allocation . ierr had value ", ierr
             errorflag=1
             return
         end if
@@ -535,12 +521,11 @@ MODULE readpars
     subroutine dvec_read(d,size,p,filenm)
 
         implicit none
-        ! complex(kind=8),dimension(:),intent(inout)::d
-        real(kind=8),dimension(:),intent(inout)::d
+        real(wp),dimension(:),intent(inout)::d
         character(LEN=13),intent(in)::filenm
         integer,intent(in)::size,p
-        REAL(kind=8),dimension(size)::line
-        REAL(kind=8),dimension(size*2)::cline
+        REAL(wp),dimension(size)::line
+        REAL(wp),dimension(size*2)::cline
         integer::ierr,j,vec
         if (errorflag .ne. 0) return
 
@@ -549,20 +534,20 @@ MODULE readpars
         vec=900+p
         open(unit=vec,file='data/'//trim(filenm),status="old",iostat=ierr)
         if(ierr/=0)then
-            write(0,"(a,i0)") "Error in opening dvector file. ierr had value ", ierr
+            write(stderr,"(a,i0)") "Error in opening dvector file. ierr had value ", ierr
             errorflag=1
             return
         end if
         if(imagflg=='n')then
             read(vec,*) line
             do j=1, size
-                ! d(j)=cmplx(line(j),0.0,kind=8)
+                ! d(j)=cmplx(line(j),0.0,wp)
                 d(j)=line(j)
             end do
         else if(imagflg=='y')then
             read(vec,*) cline
             do j=1, (size*2),2
-                ! d(j)=cmplx(cline(j),cline(j+1),kind=8)
+                ! d(j)=cmplx(cline(j),cline(j+1),wp)
             end do
         end if
         close(vec)
@@ -576,8 +561,8 @@ MODULE readpars
         type(hamiltonian),intent(inout)::ham
         integer,intent(in)::size
         integer::ierr,j,k
-        REAL(kind=8),dimension(size)::line
-        REAL(kind=8),dimension(size*2)::cline
+        REAL(wp),dimension(size)::line
+        REAL(wp),dimension(size*2)::cline
         character(LEN=100)::a,b,hamnm
        
 
@@ -587,7 +572,7 @@ MODULE readpars
         open(unit=140,file='rundata.csv',status='old',iostat=ierr)
 
         if (ierr.ne.0) then
-          write(0,"(a)") 'Error in opening rundata.csv file'
+          write(stderr,"(a)") 'Error in opening rundata.csv file'
           errorflag = 1
           return
         end if
@@ -596,7 +581,7 @@ MODULE readpars
         read(140,*)
         read(140,*,iostat=ierr)a,b,hamnm
         if (ierr.ne.0) then
-            write(0,"(a)") "Error reading rundata.csv of input file"
+            write(stderr,"(a)") "Error reading rundata.csv of input file"
             errorflag = 1
             return
         end if
@@ -606,7 +591,7 @@ MODULE readpars
         if(imagflg=='n') then
             open(unit=204,file='data/'//trim(hamnm),status="old",iostat=ierr)
             if(ierr/=0)then
-                write(0,"(a,i0)") "Error in opening hamiltonian file. ierr had value ", ierr
+                write(stderr,"(a,i0)") "Error in opening hamiltonian file. ierr had value ", ierr
                 errorflag=1
                 return
             end if
@@ -614,7 +599,7 @@ MODULE readpars
             do j=1, size
                 read(204,*) line
                 do k=1, size
-                    ! ham%hjk(j,k)=cmplx(line(k),0.0,kind=8)
+                    ! ham%hjk(j,k)=cmplx(line(k),0.0,wp)
                     ham%hjk(j,k)=line(k)
                 end do
             end do
@@ -623,7 +608,7 @@ MODULE readpars
         else if (imagflg=='y')then
             open(unit=204,file='data/'//trim(hamnm),status="old",iostat=ierr)
             if(ierr/=0)then
-                write(0,"(a,i0)") "Error in opening hamiltonian file. ierr had value ", ierr
+                write(stderr,"(a,i0)") "Error in opening hamiltonian file. ierr had value ", ierr
                 errorflag=1
                 return
             end if
@@ -631,7 +616,7 @@ MODULE readpars
             do j=1, size
                 read(200,*) cline
                 do k=1, (size*2),2
-                    ! ham%hjk(j,(k+1)/2)=cmplx(cline(k),cline(k+1),kind=8)
+                    ! ham%hjk(j,(k+1)/2)=cmplx(cline(k),cline(k+1),wp)
                 end do
             end do
             close(204)

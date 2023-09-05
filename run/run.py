@@ -101,6 +101,16 @@ if(inputs.run['multiple']>1):
 
 
 print("Arguments checked")
+# Hopefully temporary solution but current one to set the size of the dual paramter is to just write a tiny fortran module to set 
+# the size of the dual array
+
+f=open('../src/dual_set.f90','w')
+f.write("!This an automatically generated file to set the size of the dual derivative array\n")
+f.write("module dual_set\n")
+f.write("integer, parameter :: dual_size = "+str(inputs.zombs['norb'])+"\n")
+f.write("end module dual_set\n")
+f.close()
+    
 # Check if on HPC
 Hostname=socket.gethostname()
 if((Hostname==("login2.arc4.leeds.ac.uk"))or(Hostname==("login1.arc4.leeds.ac.uk"))or(Hostname==("login2.arc3.leeds.ac.uk"))or(Hostname==("login1.arc3.leeds.ac.uk"))):
@@ -220,6 +230,7 @@ else:
         writer.writerow([inputs.run['zomgen'],inputs.run['hamgen'],inputs.run['imagprop'],inputs.run['beta'],inputs.run['timesteps'],inputs.run['clean'],inputs.run['gram'],inputs.run['gramnum'],inputs.run['grad'],'n'])
         writer.writerow(inputs.zombs.values())
         writer.writerow([inputs.run['hamfile'],inputs.run['ovrlfile'],inputs.run['cleanham']])
+
 
 
 
