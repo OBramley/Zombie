@@ -208,8 +208,8 @@ MODULE alarrays
         ham%ovrlp(1:size,1:size)=0.0d0
         ham%inv(1:size,1:size)=0.0d0
         if(GDflg.eq.'y')then  
-            if(ierr==0) allocate(ham%diff_hjk(size,diff_size,size), stat=ierr)
-            if(ierr==0) allocate(ham%diff_ovrlp(size,diff_size,size), stat=ierr)
+            if(ierr==0) allocate(ham%diff_hjk(size,size,diff_size), stat=ierr)
+            if(ierr==0) allocate(ham%diff_ovrlp(size,size,diff_size), stat=ierr)
             if (ierr/=0) then
                 write(stderr,"(a,i0)") "Error in GD Hamiltonian allocation. ierr had value ", ierr
                 errorflag=1

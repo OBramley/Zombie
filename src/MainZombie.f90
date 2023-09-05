@@ -86,13 +86,7 @@ program MainZombie
                 write(6,"(a)") "Zombie states generated"
             else if (zomgflg=='n') then
                 call read_zombie(zstore,0)
-                if (GDflg=='y')then 
-                    call dual_grad_setup(zstore,ndet)
-                end if 
-                do j=1,ndet
-                    zstore(j)%val(1:norb)=sin(zstore(j)%phi)
-                    zstore(j)%val(norb+1:2*norb)=cos(zstore(j)%phi)
-                end do
+             
                 write(6,"(a)") "Zombie read in"
             end if
             call flush(6)
@@ -126,10 +120,12 @@ program MainZombie
             end if
             ! Imaginary time propagation
             write(6,"(a)") "Imaginary time propagation started"
-            call imgtime_prop(dvecs,erg,haml)
+            call imaginary_time_prop2(dvecs,erg,haml,ndet)
+            ! call imgtime_prop(dvecs,erg,haml)
             write(6,"(a)") "Imaginary time propagation finished"
        
-        
+            write(6,"(a,f21.16)") "Initial energy: ", erg(timesteps+1)%x
+      
             call dvec_writer(dvecs%d,ndet,0)
             call energywriter(erg,"energy.csv",0)
        

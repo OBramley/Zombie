@@ -273,6 +273,12 @@ MODULE readpars
 
                 read(zomnum,*) phi
                 zstore(j)%phi=phi
+                if(GDflg.eq.'y')then
+                    do k=1,norb
+                        zstore(j)%phi(k)%dx(k)=1.0d0
+                    end do 
+                end if
+               
                 ! zstore(j)%val(1:norb)=sin(zstore(j)%phi)
                 ! zstore(j)%val(norb+1:2*norb)=cos(zstore(j)%phi)
                 

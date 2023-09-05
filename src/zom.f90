@@ -32,6 +32,9 @@ MODULE zom
                     !$omp end critical
                     zstore(j)%phi(k)%x=dummy
                 end do
+                if(GDflg.eq.'y')then
+                    call dual_grad_setup(zstore(j))
+                end if
                 zstore(j)%val(1:norb)=sin(zstore(j)%phi)
                 zstore(j)%val(norb+1:2*norb)=cos(zstore(j)%phi)
             end do
@@ -298,8 +301,12 @@ MODULE zom
                     zstore(j)%phi(2*k)=val
                 end do
                 !$omp end critical
+                if(GDflg.eq.'y')then
+                    call dual_grad_setup(zstore(j))
+                end if
                 zstore(j)%val(1:norb) = sin(zstore(j)%phi)
                 zstore(j)%val(norb+1:2*norb)=cos(zstore(j)%phi)
+             
             end do
             !$omp end do
             !$omp end parallel
@@ -352,19 +359,18 @@ MODULE zom
 
     end subroutine
 
-    subroutine dual_grad_setup(zstore,num)
+    subroutine dual_grad_setup(zs)
 
         implicit none
-        type(zombiest),dimension(:),intent(inout)::zstore
-        integer,intent(in)::num
-        integer::j,k
+        type(zombiest),intent(inout)::zs
+
+        integer::k
         if (errorflag .ne. 0) return
 
-        do j=2,num
-            do k=1,norb
-                zstore(j)%phi(k)%dx(k)=1.0d0
-            end do 
+        do k=1,norb
+            zs%phi(k)%dx(k)=1.0d0
         end do 
+       
 
         return 
     

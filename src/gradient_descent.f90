@@ -49,18 +49,18 @@ MODULE gradient_descent
         end if 
 
       
-        Call dgetrf(size, size, haml%inv, size, IPIV1, ierr)
+        Call dgetrf(size, size, haml%inv%x, size, IPIV1, ierr)
         if (ierr/=0) then
             write(0,"(a,i0)")"Error in DGETRF",ierr
         end if
-        if (ierr==0) call dgetri(size,haml%inv,size,IPIV1,WORK1,size,ierr)
+        if (ierr==0) call dgetri(size,haml%inv%x,size,IPIV1,WORK1,size,ierr)
         if (ierr/=0) then
             write(0,"(a,i0)")"Error in DGETRF",ierr
         end if
 
         deallocate(WORK1,IPIV1)
 
-        call DGEMM("N","N",size,size,size,1.d0,haml%inv,size,haml%hjk,size,0.d0,haml%kinvh,size)
+        call DGEMM("N","N",size,size,size,1.d0,haml%inv%x,size,haml%hjk%x,size,0.d0,haml%kinvh%x,size)
 
         return
 
@@ -227,6 +227,8 @@ MODULE gradient_descent
                 pickerorb=scramble_norb(norb)
 
                 call grad_calculate(haml,pick,dvecs,grad_fin,erg)
+                print*,haml%hjk(pick,5)%dx
+                stop
                 call dual_2_dual2(zstore(pick)%phi(:),global_zom_phi,1)
 
                 global_zom_val(1:norb)=sin(global_zom_phi(1:norb))

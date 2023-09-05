@@ -41,18 +41,18 @@ MODULE ham
             errorflag=1
         end if 
 
-        Call dgetrf(size, size, haml%inv, size, IPIV1, ierr)
+        Call dgetrf(size, size, haml%inv%x, size, IPIV1, ierr)
         if (ierr/=0) then
-            write(0,"(a,i0)")"Error in DGETRF",ierr
+            write(0,"(a,i0)")"Error in DGETRF ",ierr
         end if
-        if (ierr==0) call dgetri(size,haml%inv,size,IPIV1,WORK1,size,ierr)
+        if (ierr==0) call dgetri(size,haml%inv%x,size,IPIV1,WORK1,size,ierr)
         if (ierr/=0) then
-            write(0,"(a,i0)")"Error in DGETRF",ierr
+            write(0,"(a,i0)")"Error in DGETRF ",ierr
         end if
 
         deallocate(WORK1,IPIV1)
 
-        call DGEMM("N","N",size,size,size,1.d0,haml%inv,size,haml%hjk,size,0.d0,haml%kinvh,size)
+        call DGEMM("N","N",size,size,size,1.d0,haml%inv%x,size,haml%hjk%x,size,0.d0,haml%kinvh%x,size)
 
         return 
 
@@ -88,6 +88,7 @@ MODULE ham
             h1etot = haml_vals(z1d,z1d,an_cr,elecs%h1ei,elecs%h1_num)
             h2etot = haml_vals(z1d,z1d,an2_cr2,elecs%h2ei,elecs%h2_num)
             hamtot=h1etot+(0.5d0*h2etot)+(ovlptot*elecs%hnuc)
+
             call val_filler(haml%hjk,haml%ovrlp,haml%diff_hjk,haml%diff_ovrlp,hamtot,ovlptot,j,j)
             do k=j+1,size
                 call dual_2_dual2(zstore(k)%val,z2d,2)
@@ -103,6 +104,8 @@ MODULE ham
             end if 
         end do
         !$omp end parallel do 
+
+       
 
 
     end subroutine haml_ovrlp_comb
@@ -297,17 +300,22 @@ MODULE ham
         type(dual2),intent(in)::hamtot,ovlptot
         integer,intent(in)::j,k
 
+        if (errorflag .ne. 0) return
+
         hjk(j,k)%x=hamtot%x; hjk(j,k)%dx=hamtot%dx(1:norb)
         hjk(k,j)=hjk(j,k)
         
         ovrlp(j,k)=ovlptot%x; ovrlp(j,k)%dx=ovlptot%dx(1:norb)
         ovrlp(k,j)=ovrlp(j,k)
-
-        diff_hjk(j,k,:)=hamtot%dx(1:norb) 
-        diff_hjk(k,j,:)=hamtot%dx(1+norb:2*norb)
-        diff_ovrlp(j,k,:)=ovlptot%dx(1:norb)
-        diff_ovrlp(k,j,:)=ovlptot%dx(1+norb:2*norb)
         
+        diff_hjk(j,k,:)=hamtot%dx(1:norb)
+        diff_ovrlp(k,j,:)=ovlptot%dx(1+norb:2*norb)
+        if(j.ne.k)then 
+            diff_hjk(k,j,:)=hamtot%dx(1+norb:2*norb)
+            diff_ovrlp(j,k,:)=ovlptot%dx(1:norb)
+        end if
+        
+       
         return
         
     end subroutine val_filler

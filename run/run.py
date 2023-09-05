@@ -107,7 +107,7 @@ print("Arguments checked")
 f=open('../src/dual_set.f90','w')
 f.write("!This an automatically generated file to set the size of the dual derivative array\n")
 f.write("module dual_set\n")
-f.write("integer, parameter :: dual_size = "+str(inputs.zombs['norb'])+"\n")
+f.write("integer, parameter :: dual_size = "+str(inputs.zombs['norb']*2)+"\n")
 f.write("end module dual_set\n")
 f.close()
     
