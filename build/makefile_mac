@@ -10,9 +10,9 @@ VPATH=../src
 
 # Link step
 
-all: ZOMBIE.exe
+all: ZOMBIE
 
-ZOMBIE.exe:randgen.o mod_types.o vars.o dual_set.o dnad.o infnan_constants.o inf.o infnan.o alarrays.o readpars.o outputs.o electrons.o zom.o ham.o imgtp.o clean.o gradient_descent.o MainZombie.o #gram_schmidt.o
+ZOMBIE:randgen.o mod_types.o vars.o dual_set.o dnad.o infnan_constants.o inf.o infnan.o alarrays.o readpars.o outputs.o electrons.o zom.o ham.o imgtp.o clean.o gradient_descent.o MainZombie.o #gram_schmidt.o
 		 $(F90) $(FFLAGS) -o $@ $^ $(FLINKS)
 
 
