@@ -6,58 +6,58 @@ MODULE imgtp
     contains
 
     ! Routine for imaginary time propagation
-    subroutine imgtime_prop(dvecs,erg,haml)
+    ! subroutine imgtime_prop(dvecs,erg,haml)
 
-        implicit none
+    !     implicit none
 
-        type(dvector),intent(inout)::dvecs
-        type(dual), dimension(:),intent(inout)::erg
-        type(hamiltonian),intent(in)::haml
-        integer::j,k,states
-        real(wp)::db,r
+    !     type(dvector),intent(inout)::dvecs
+    !     type(dual), dimension(:),intent(inout)::erg
+    !     type(hamiltonian),intent(in)::haml
+    !     integer::j,k,states
+    !     real(wp)::db,r
      
-        if (errorflag .ne. 0) return
+    !     if (errorflag .ne. 0) return
     
        
-        dvecs%d=0.0d0
-        if(imagflg=='n') then
-            dvecs%d(j)=1.0d0
-            if(zst=='HF') then
-                do k=1, ndet
-                    call random_number(r)
-                    dvecs%d(k)=r
-                end do
-            end if 
-        ! else if(imagflg=='y') then
-        !     dvecs%d(1)=1.0
-        end if
+    !     dvecs%d=0.0d0
+    !     if(imagflg=='n') then
+    !         dvecs%d(j)=1.0d0
+    !         if(zst=='HF') then
+    !             do k=1, ndet
+    !                 call random_number(r)
+    !                 dvecs%d(k)=r
+    !             end do
+    !         end if 
+    !     ! else if(imagflg=='y') then
+    !     !     dvecs%d(1)=1.0
+    !     end if
         
        
-        states=1
-        if(gramflg.eq."y")then
-            states=gramnum+1
-            ! call gs(dvecs,haml)
-        else
-            call d_norm(dvecs,haml)
-        end if 
-        db=beta/timesteps
+    !     states=1
+    !     if(gramflg.eq."y")then
+    !         states=gramnum+1
+    !         ! call gs(dvecs,haml)
+    !     else
+    !         call d_norm(dvecs,haml)
+    !     end if 
+    !     db=beta/timesteps
        
     
-        do j=1,timesteps+1     
-            erg(j)=ergcalc(haml%hjk,dvecs%d)
-            call timestep(haml,dvecs,db)
+    !     do j=1,timesteps+1     
+    !         erg(j)=ergcalc(haml%hjk,dvecs%d)
+    !         call timestep(haml,dvecs,db)
            
-            if(gramflg.eq."y")then
-                ! call gs(dvecs,haml)
-            else
-                call d_norm(dvecs,haml)
-            end if
+    !         if(gramflg.eq."y")then
+    !             ! call gs(dvecs,haml)
+    !         else
+    !             call d_norm(dvecs,haml)
+    !         end if
    
-        end do
+    !     end do
 
-        return
+    !     return
 
-    end subroutine imgtime_prop
+    ! end subroutine imgtime_prop
 
     ! Calculates the energy
     function ergcalc(bham,dvec) result(result)
@@ -67,76 +67,76 @@ MODULE imgtp
         type(dual),intent(in),dimension(:)::dvec
         type(dual),intent(in),dimension(:,:)::bham
         type(dual)::result
-        ! type(dual)::temp
-        ! integer::j,l
+        type(dual)::temp
+        integer::j,l
         if (errorflag .ne. 0) return
 
         result=0.0d0
             
-        ! do j=1,ndet
-        !     temp=0.0d0
-        !     do l=1,ndet 
-        !         temp=temp+bham(j,l)*dvec(l)
-        !     end do 
-        !     result = result + (dvec(j)*temp)
-        ! end do
+        do j=1,ndet
+            temp=0.0d0
+            do l=1,ndet 
+                temp=temp+bham(j,l)*dvec(l)
+            end do 
+            result = result + (dvec(j)*temp)
+        end do
 
-        !$omp parallel
-        !$omp workshare
-        result=dot_product(dvec,matmul(bham,dvec))
-        !$omp end workshare
-        !$omp end parallel
+        ! !$omp parallel
+        ! !$omp workshare
+        ! result=dot_product(dvec,matmul(bham,dvec))
+        ! !$omp end workshare
+        ! !$omp end parallel
    
         return
        
     end function ergcalc
 
-    subroutine d_norm(dvec,haml)
+    ! subroutine d_norm(dvec,haml)
 
-        implicit none
-        type(dvector),intent(inout)::dvec
-        type(hamiltonian),intent(in)::haml
-        type(dual)::norm
+    !     implicit none
+    !     type(dvector),intent(inout)::dvec
+    !     type(hamiltonian),intent(in)::haml
+    !     type(dual)::norm
 
        
-        !$omp parallel 
-        !$omp workshare
-        norm=abs(dot_product((dvec%d),matmul(haml%ovrlp,(dvec%d))))
-        dvec%norm=sqrt(norm)
-        !$omp end workshare
-        !$omp end parallel
+    !     !$omp parallel 
+    !     !$omp workshare
+    !     norm=abs(dot_product((dvec%d),matmul(haml%ovrlp,(dvec%d))))
+    !     dvec%norm=sqrt(norm)
+    !     !$omp end workshare
+    !     !$omp end parallel
        
-        dvec%d=dvec%d/norm
+    !     dvec%d=dvec%d/norm
 
-        return
+    !     return
     
-    end subroutine d_norm
+    ! end subroutine d_norm
 
 
     ! Takes one timestep
-    subroutine timestep(haml,dvec,db) 
+    ! subroutine timestep(haml,dvec,db) 
 
-        implicit none
+    !     implicit none
 
-        type(dvector),intent(inout)::dvec
-        type(hamiltonian),intent(in)::haml
-        real(wp),intent(in)::db
-        type(dual),dimension(ndet)::ddot
+    !     type(dvector),intent(inout)::dvec
+    !     type(hamiltonian),intent(in)::haml
+    !     real(wp),intent(in)::db
+    !     type(dual),dimension(ndet)::ddot
 
    
 
-        if (errorflag .ne. 0) return
+    !     if (errorflag .ne. 0) return
   
-        !$omp parallel 
-        !$omp workshare
-        ddot= -matmul((haml%kinvh),(dvec%d))
-        dvec%d=dvec%d+(db*ddot)
-        !$omp end workshare
-        !$omp end parallel
+    !     !$omp parallel 
+    !     !$omp workshare
+    !     ddot= -matmul((haml%kinvh),(dvec%d))
+    !     dvec%d=dvec%d+(db*ddot)
+    !     !$omp end workshare
+    !     !$omp end parallel
      
-        return
+    !     return
 
-    end subroutine timestep
+    ! end subroutine timestep
 
     subroutine imaginary_time_prop2(dvecs,erg,haml,size)
 

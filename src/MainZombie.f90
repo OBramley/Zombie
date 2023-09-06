@@ -121,7 +121,7 @@ program MainZombie
             ! Imaginary time propagation
             write(6,"(a)") "Imaginary time propagation started"
             call imaginary_time_prop2(dvecs,erg,haml,ndet)
-            ! call imgtime_prop(dvecs,erg,haml)
+           
             write(6,"(a)") "Imaginary time propagation finished"
        
             write(6,"(a,f21.16)") "Initial energy: ", erg(timesteps+1)%x
@@ -137,7 +137,7 @@ program MainZombie
                     call zombiewriter(zstore(j),j,0)
                 end do
                 dvecs%d=0.0d0
-                call imgtime_prop(dvecs,erg,haml)
+                call imaginary_time_prop2(dvecs,erg,haml,ndet)
                 
                 write(6,"(a,f21.16)") "Final energy: ", erg(timesteps+1)%x
                 call energywriter(erg,"energy_final.csv",0)

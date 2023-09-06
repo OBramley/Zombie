@@ -144,9 +144,9 @@ MODULE outputs
            
             write(zomnum,*)' '
             if(imagflg=='n') then
-                write(zomnum,'(*(e25.17e3 :", "))') ((zom%phi(j)),j=1,norb)
-                write(zomnum,'(*(e25.17e3 :", "))') ((zom%val(j)),j=1+norb,2*norb)
-                write(zomnum,'(*(e25.17e3 :", "))') ((zom%val(j)),j=1,norb)
+                write(zomnum,'(*(e25.17e3 :", "))') ((zom%phi(j)%x),j=1,norb)
+                write(zomnum,'(*(e25.17e3 :", "))') ((zom%val(j)%x),j=1+norb,2*norb)
+                write(zomnum,'(*(e25.17e3 :", "))') ((zom%val(j)%x),j=1,norb)
             else if(imagflg=='y') then
                 ! write(zomnum,'(*(e25.17e3 :", ": ))') ((zom%phi(j)),j=1,norb)
                 ! write(zomnum,'(*(e25.17e3 :", ": ))') ((zom%img(j)),j=1,norb)

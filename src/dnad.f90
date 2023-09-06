@@ -911,7 +911,7 @@ end subroutine zero_out_dual
          type(dual), intent(in) :: v
          real(wp), intent(out) :: j
 
-         j = real(v%x)
+         j = v%x
 
     end subroutine assign_rd
 
