@@ -777,9 +777,9 @@ module dnad
 contains
 
 !********* Set of functions to map dual to dual2
-subroutine dual_2_dual2(d,d2,typ)
+function dual_2_dual2(d,typ) result(d2)
     type(dual), dimension(:), intent(in) :: d
-    type(dual2),intent(out) :: d2(:)
+    type(dual2):: d2(size(d))
     integer,intent(in) :: typ
 
     select case(typ)
@@ -789,7 +789,7 @@ subroutine dual_2_dual2(d,d2,typ)
             d2 = dual_2_dual2_2(d)
     end select
     
-end subroutine dual_2_dual2
+end function dual_2_dual2
 
 elemental function dual_2_dual2_1(d) result(d2)
     type(dual), intent(in) :: d
@@ -813,9 +813,9 @@ end function dual_2_dual2_2
 
 !******** Set of functions to map dual2 to dual
 
-subroutine dual2_2_dual(d,d2,typ)
-    type(dual), dimension(:), intent(out) :: d
+function dual2_2_dual(d2,typ) result(d)
     type(dual2),intent(in) :: d2(:)
+    type(dual), dimension(size(d2)) :: d
     integer,intent(in) :: typ
 
     select case(typ)
@@ -826,7 +826,7 @@ subroutine dual2_2_dual(d,d2,typ)
     end select
     
    
-end subroutine dual2_2_dual
+end function dual2_2_dual
 
 elemental function dual2_2_dual_1(d2) result(d)
     type(dual) :: d

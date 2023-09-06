@@ -84,7 +84,7 @@ MODULE ham
         !$omp & shared(elecs,zstore,an_cr,an2_cr2,haml) 
         do j=1,size
             h1etot=0.0d0; h2etot=0.0d0; ovlptot=0.0d0; hamtot=0.0d0
-            call dual_2_dual2(zstore(j)%val,z1d,1)
+            z1d = dual_2_dual2(zstore(j)%val,1)
             ovlptot=1.0d0
             h1etot = haml_vals(z1d,z1d,an_cr,elecs%h1ei,elecs%h1_num)
             h2etot = haml_vals(z1d,z1d,an2_cr2,elecs%h2ei,elecs%h2_num)
@@ -92,7 +92,7 @@ MODULE ham
 
             call val_filler(haml%hjk,haml%ovrlp,haml%diff_hjk,haml%diff_ovrlp,hamtot,ovlptot,j,j)
             do k=j+1,size
-                call dual_2_dual2(zstore(k)%val,z2d,2)
+                z2d= dual_2_dual2(zstore(k)%val,2)
                 h1etot=0.0d0; h2etot=0.0d0; ovlptot=0.0d0; hamtot=0.0d0
                 ovlptot=overlap_1(z1d,z2d)
                 h1etot = haml_vals(z1d,z2d,an_cr,elecs%h1ei,elecs%h1_num)
@@ -141,7 +141,7 @@ MODULE ham
         do j=1,size
             h1etot=0.0d0; h2etot=0.0d0; ovlptot=0.0d0; hamtot=0.0d0
             if (j.ne.row) then
-                call dual_2_dual2(zstore(j)%val,z2d,2)
+                z2d = dual_2_dual2(zstore(j)%val,2)
                 ovlptot=overlap_1(z1d,z2d)
                 h1etot = haml_vals(z1d,z2d,an_cr,elecs%h1ei,elecs%h1_num)
                 h2etot = haml_vals(z1d,z2d,an2_cr2,elecs%h2ei,elecs%h2_num)
@@ -181,7 +181,7 @@ MODULE ham
         do j=1,size
             h1etot=0.0d0; h2etot=0.0d0
             if (j.ne.row) then
-                call dual_2_dual2(zstore(j)%val,z2d,2) 
+                z2d=dual_2_dual2(zstore(j)%val,2) 
                 h1etot = haml_vals(z1d,z2d,an_cr,elecs%h1ei,elecs%h1_num)
                 h2etot = haml_vals(z1d,z2d,an2_cr2,elecs%h2ei,elecs%h2_num)
                 ham_tot(j)=ham_tot(j)+(0.5d0*h2etot)+h1etot
@@ -216,7 +216,7 @@ MODULE ham
   
         do j=1,size
             if(j.ne.row)then
-                call dual_2_dual2(zstore(j)%val,z2d,2) 
+                z2d=dual_2_dual2(zstore(j)%val,2) 
                 ovrlp_tot(j)=overlap_1(z1d,z2d)
             else
                 ovrlp_tot(j)=1.0d0

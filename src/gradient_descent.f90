@@ -279,7 +279,7 @@ MODULE gradient_descent
                 pickerorb=scramble_norb(norb)
 
                 call grad_calculate(haml,pick,dvecs,grad_fin,erg)
-                call dual_2_dual2(zstore(pick)%phi(:),global_zom_phi,1)
+                global_zom_phi = dual_2_dual2(zstore(pick)%phi(:),1)
 
                 global_zom_val(1:norb)=sin(global_zom_phi(1:norb))
                 global_zom_val(norb+1:2*norb)=cos(global_zom_phi(1:norb))
@@ -540,7 +540,7 @@ MODULE gradient_descent
                 
                     t=newb*(alpha**(lralt_temp-1))
                  
-                    call dual_2_dual2((zstore(pick)%phi(:)-(t*grad_fin%vars(pick,:))),temp_zom_phi,1)
+                    temp_zom_phi= dual_2_dual2((zstore(pick)%phi(:)-(t*grad_fin%vars(pick,:))),1)
                     
                 
                     temp_zom_val(1:norb)=sin(temp_zom_phi)
@@ -828,5 +828,15 @@ MODULE gradient_descent
         return
     end function scramble_norb
 
+    ! An elemental subroutine that takes an 1D array and sets A(j)=j 
+    subroutine set_array(A)
+        implicit none
+        integer,dimension(:),intent(inout)::A
+        integer::j
+        do j=1,size(A)
+            A(j)=j
+        end do
+        return
+    end subroutine set_array
 
 END MODULE gradient_descent
