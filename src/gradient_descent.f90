@@ -746,15 +746,15 @@ MODULE gradient_descent
         alpha=0.5  ! learning rate reduction
         b=1.D1 !starting learning rate
        
-        epoc_max=2000
+        epoc_max=4 #2000
         allocate(picker(ndet-1),stat=ierr)
       
         if(epoc_cnt.lt.epoc_max)then
             rjct_cnt=0
             picker=scramble(ndet-1)
-            call orbital_gd(zstore,grad_fin,elect,dvecs,erg,haml,epoc_cnt,alpha,b,picker,100,an_cr,an2_cr2,rjct_cnt,epoc_max) 
+            call orbital_gd(zstore,grad_fin,elect,dvecs,erg,haml,epoc_cnt,alpha,b,picker,2,an_cr,an2_cr2,rjct_cnt,epoc_max) 
             call full_zs_gd(zstore,elect,dvecs,haml,erg,epoc_cnt,alpha,b,an_cr,an2_cr2,grad_fin,epoc_max,picker) 
-            call orbital_gd(zstore,grad_fin,elect,dvecs,erg,haml,epoc_cnt,alpha,b,picker,100,an_cr,an2_cr2,rjct_cnt,epoc_max) 
+            ! call orbital_gd(zstore,grad_fin,elect,dvecs,erg,haml,epoc_cnt,alpha,b,picker,100,an_cr,an2_cr2,rjct_cnt,epoc_max) 
             ! call full_zs_gd(zstore,elect,dvecs,haml,erg,epoc_cnt,alpha,b,an_cr,an2_cr2,grad_fin,epoc_max,picker) 
             
         end if 
