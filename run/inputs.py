@@ -14,14 +14,14 @@
 run={
     
     # What is the name of the run
-    'runfolder':'Li_duals',
+    'runfolder':'Li_duals2',
 
     # Amount of time to request on HPC 
-    'runtime': "48:00:00",
+    'runtime': "00:05:00",
 
     'nodes':1,
 
-    'cores':1,
+    'cores':2,
 
     'submissions':1,
 
@@ -286,7 +286,7 @@ zombs={
     'spin':pyscf['spin'],
 
     # Number of Zombie states
-    'ndet':2,#pyscf['norb']*2, 
+    'ndet':10,#pyscf['norb']*2, 
 
     # Type of zombie states. Random (ran), Hartree Fock (HF) or biased (bb)
     'zomtyp':'bb',

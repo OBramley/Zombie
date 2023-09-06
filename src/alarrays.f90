@@ -130,7 +130,7 @@ MODULE alarrays
     subroutine dealloczs(zstore)
         implicit none
 
-        type(zombiest(*)),dimension(:),allocatable,intent(inout)::zstore
+        type(zombiest),dimension(:),allocatable,intent(inout)::zstore
 
         integer::j,ierr
 

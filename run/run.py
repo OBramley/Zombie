@@ -259,10 +259,10 @@ elif(inputs.run['cores']>1):
         subprocess.run(["make"])
 
 
-shutil.copy2("ZOMBIE.exe",EXDIR1)
+shutil.copy2("ZOMBIE",EXDIR1)
 if(multflg>1):
     for i in range(multflg):
-        shutil.copy2("ZOMBIE.exe",EXDIR1+'/node_'+str(i+1))
+        shutil.copy2("ZOMBIE",EXDIR1+'/node_'+str(i+1))
 
 os.chdir(EXDIR1)
 os.environ["OMP_CANCELLATION"]="TRUE" 
@@ -283,7 +283,7 @@ if(HPCFLG==1):
     f.write("export OMP_CANCELLATION=true \n")
     f.write("module add mkl \n")
     # f.write('time ./d_check.exe')
-    f.write('time ./ZOMBIE.exe')
+    f.write('time ./ZOMBIE')
     f.close()
     if(multflg>1):
         for j in range(multflg):
@@ -307,12 +307,12 @@ else:
     print(os.getcwd())
     if(inputs.run['cores']!=1):
         os.environ["OMP_NUM_THREADS"]=str(inputs.run['cores'])
-    subprocess.run(["./ZOMBIE.exe"])
+    subprocess.run(["./ZOMBIE"])
 
 # if(inputs.run['cores']!=1): 
 #     os.environ["OMP_NUM_THREADS"]=str(inputs.run['cores'])   
 # os.environ["OMP_CANCELLATION"]="TRUE"   
-# subprocess.run(["./ZOMBIE.exe"])
+# subprocess.run(["./ZOMBIE"])
  
 
     
