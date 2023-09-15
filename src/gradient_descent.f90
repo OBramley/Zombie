@@ -59,11 +59,11 @@ MODULE gradient_descent
         end if
 
         deallocate(WORK1,IPIV1)
-        if(d_grad_flg==2)then 
-            call kinvh_grad(haml%inv,haml%hjk,haml%ovrlp,haml%kinvh)
-        else
-            call DGEMM("N","N",size,size,size,1.d0,haml%inv%x,size,haml%hjk%x,size,0.d0,haml%kinvh%x,size)
-        end if
+        ! if(d_grad_flg==2)then 
+        !     call kinvh_grad(haml%inv,haml%hjk,haml%ovrlp,haml%kinvh)
+        ! else
+        call DGEMM("N","N",size,size,size,1.d0,haml%inv%x,size,haml%hjk%x,size,0.d0,haml%kinvh%x,size)
+        ! end if
         return
 
     end subroutine he_full_row
@@ -93,22 +93,22 @@ MODULE gradient_descent
             haml%ovrlp(pick,j)%dx=haml%diff_ovrlp(pick,j,:); haml%ovrlp(j,pick)%dx=haml%diff_ovrlp(pick,j,:)
         end do
        
-        if(d_grad_flg==2)then 
-            call kinvh_grad(haml%inv,haml%hjk,haml%ovrlp,haml%kinvh)
-        end if
+        ! if(d_grad_flg==2)then 
+        !     call kinvh_grad(haml%inv,haml%hjk,haml%ovrlp,haml%kinvh)
+        ! end if
        
         if(grad_fin%grad_avlb(pick)==d_grad_flg)then 
             return
         else
-            if(d_grad_flg==2)then
-                call imaginary_time_prop2(dvec,erg,haml,ndet)
-                grad_fin%vars(pick,:)=erg(1+timesteps)%dx
-                grad_fin%grad_avlb(pick)=2
-            else
+            ! if(d_grad_flg==2)then
+            !     call imaginary_time_prop2(dvec,erg,haml,ndet)
+            !     grad_fin%vars(pick,:)=erg(1+timesteps)%dx
+            !     grad_fin%grad_avlb(pick)=2
+            ! else
                 erg(timesteps+1)=ergcalc(haml%hjk,dvec%d)
                 grad_fin%vars(pick,:)=erg(1+timesteps)%dx
                 grad_fin%grad_avlb(pick)=1
-            end if 
+            ! end if 
 
         end if
 
@@ -302,7 +302,7 @@ MODULE gradient_descent
                     min_fxtdk_idx = -1
 
                     !$omp do !ordered schedule(static,1)
-                    do lralt_zs=1,45
+                    do lralt_zs=1,50
                         t=b*alpha**(lralt_zs-1)
                         temp_zom_phi=global_zom_phi
                         temp_zom_val=global_zom_val
@@ -329,7 +329,7 @@ MODULE gradient_descent
                             thread_zom_phi = temp_zom_phi
                             thread_zom_val = temp_zom_val
                             thread_d = temp_dvecs
-            
+                            exit
                             !$omp cancel do
                         end if
                        !$omp cancellation point do
@@ -359,6 +359,7 @@ MODULE gradient_descent
                         chng_trk2(acpt_cnt)=pickorb
                         rjct_cnt2=0
                         haml=global_ham
+                        grad_fin%grad_avlb=0
                         grad_fin%grad_avlb(pick)=d_grad_flg
                         grad_fin%prev_erg=global_min_fxtdk
                         grad_fin%vars(pick,:)=global_min_fxtdk%dx
@@ -376,7 +377,7 @@ MODULE gradient_descent
                     erg_str,'             ',grad_fin%prev_erg,'          ',chng_trk2(1:acpt_cnt) 
                   
                     zstore(pick)%phi%x=global_zom_phi%x
-                    call dual2_2_dual(zstore(pick)%val,global_zom_val,1)
+                    zstore(pick)%val = dual2_2_dual(global_zom_val,1)
                     call zombiewriter(zstore(pick),pick,0)
                     acpt_cnt_2=acpt_cnt_2+1
                     chng_trk(acpt_cnt_2)=pick
@@ -489,7 +490,7 @@ MODULE gradient_descent
         newb=b
         rjct_cnt=0 !tracks how many rejections 
         acpt_cnt=0  !counts how many ZS have been changed
-        loop_max=13!5
+        loop_max=50
 
         if(epoc_cnt.eq.1)then
             orb_cnt=500
@@ -535,11 +536,11 @@ MODULE gradient_descent
                 min_fxtdk = grad_fin%prev_erg !0
                 min_fxtdk_idx = -1
                 !$omp do !ordered schedule(static,1)
-                do lralt_temp=1,45!24!loop_max
+                do lralt_temp=1,loop_max
                     !$omp cancellation point do
                 
                     t=newb*(alpha**(lralt_temp-1))
-                 
+            
                     temp_zom_phi= dual_2_dual2((zstore(pick)%phi(:)-(t*grad_fin%vars(pick,:))),1)
                     
                 
@@ -561,6 +562,7 @@ MODULE gradient_descent
                         thread_zom_phi = temp_zom_phi
                         thread_zom_val = temp_zom_val
                         thread_d = temp_dvecs
+                        exit
                        !$omp cancel do
                     end if
                     !$omp cancellation point do
@@ -596,7 +598,7 @@ MODULE gradient_descent
                     lr_chng_trk(acpt_cnt)=t
                     erg_chng_trk(acpt_cnt)=global_min_fxtdk
                     zstore(pick)%phi%x=global_zom_phi%x
-                    call dual2_2_dual(zstore(pick)%val,global_zom_val,1)
+                    zstore(pick)%val = dual2_2_dual(global_zom_val,1)
                     call zombiewriter(zstore(pick),pick,0)
                     dvecs=global_dvecs
                     haml=global_ham
@@ -605,6 +607,7 @@ MODULE gradient_descent
                     write(6,"(a,i3,a,f21.16,a,f21.16,a,f21.16,a,i3,a,i3)") '       ', pick,'              ', &
                 grad_fin%prev_erg,'               ',global_min_fxtdk%x,'             ',t,'        ',acpt_cnt,'          ',rjct_cnt
                   
+                    grad_fin%grad_avlb=0
                     grad_fin%grad_avlb(pick)=d_grad_flg
                     grad_fin%prev_erg=global_min_fxtdk
                 end if 
@@ -621,11 +624,11 @@ MODULE gradient_descent
                 call epoc_writer(grad_fin%prev_erg,epoc_cnt,chng_trk,erg_chng_trk,lr_chng_trk,0)
                 epoc_cnt=epoc_cnt+1
             else 
-                if(d_grad_flg==1)then
-                    d_grad_flg=2
-                else if(d_grad_flg==2)then
-                    d_grad_flg=1
-                end if
+                ! if(d_grad_flg==1)then
+                !     d_grad_flg=2
+                ! else if(d_grad_flg==2)then
+                !     d_grad_flg=1
+                ! end if
             end if
            
             orb_cnt=orb_cnt-1
@@ -744,16 +747,16 @@ MODULE gradient_descent
 
       
 
-        alpha=0.5  ! learning rate reduction
-        b=1.D1 !starting learning rate
+        alpha=0.5 ! learning rate reduction
+        b=3.2D2   !starting learning rate
        
-        epoc_max=2 !2000
+        epoc_max=2000
         allocate(picker(ndet-1),stat=ierr)
       
         if(epoc_cnt.lt.epoc_max)then
             rjct_cnt=0
             picker=scramble(ndet-1)
-            call orbital_gd(zstore,grad_fin,elect,dvecs,erg,haml,epoc_cnt,alpha,b,picker,1,an_cr,an2_cr2,rjct_cnt,epoc_max) 
+            ! call orbital_gd(zstore,grad_fin,elect,dvecs,erg,haml,epoc_cnt,alpha,b,picker,1,an_cr,an2_cr2,rjct_cnt,epoc_max) 
             call full_zs_gd(zstore,elect,dvecs,haml,erg,epoc_cnt,alpha,b,an_cr,an2_cr2,grad_fin,epoc_max,picker) 
             ! call orbital_gd(zstore,grad_fin,elect,dvecs,erg,haml,epoc_cnt,alpha,b,picker,100,an_cr,an2_cr2,rjct_cnt,epoc_max) 
             ! call full_zs_gd(zstore,elect,dvecs,haml,erg,epoc_cnt,alpha,b,an_cr,an2_cr2,grad_fin,epoc_max,picker) 
