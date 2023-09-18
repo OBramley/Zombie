@@ -773,43 +773,38 @@ module dnad
 
     public dual_2_dual2
     public dual2_2_dual        
+    public typ2_2_typ1
 
 contains
 
+elemental function typ2_2_typ1(typ2) result(typ1)
+    type(dual2),intent(in) :: typ2
+    type(dual2):: typ1
+  
+    typ1%x = typ2%x
+    typ1%dx(1:dual_size) = typ2%dx(1+dual_size:2*dual_size)
+    typ1%dx(dual_size+1:) = 0.0d0
+   
+end function typ2_2_typ1
+
 !********* Set of functions to map dual to dual2
-function dual_2_dual2(d,typ) result(d2)
-    type(dual), dimension(:), intent(in) :: d
-    type(dual2):: d2(size(d))
+elemental function dual_2_dual2(d,typ) result(d2)
+    type(dual), intent(in) :: d
+    type(dual2):: d2
     integer,intent(in) :: typ
 
     select case(typ)
         case(1)
-            d2 = dual_2_dual2_1(d)
+            d2%x = d%x
+            d2%dx(1:dual_size) = d%dx
+            d2%dx(dual_size+1:) = 0.0d0
         case(2)
-            d2 = dual_2_dual2_2(d)
+            d2%x = d%x
+            d2%dx(1:dual_size) = 0.0d0
+            d2%dx(dual_size+1:) = d%dx
     end select
     
 end function dual_2_dual2
-
-elemental function dual_2_dual2_1(d) result(d2)
-    type(dual), intent(in) :: d
-    type(dual2) :: d2
-
-    d2%x = d%x
-    d2%dx(1:dual_size) = d%dx
-    d2%dx(dual_size+1:) = 0.0d0
-
-end function dual_2_dual2_1
-
-elemental function dual_2_dual2_2(d) result(d2)
-    type(dual), intent(in) :: d
-    type(dual2) :: d2
-
-    d2%x = d%x
-    d2%dx(1:dual_size) = 0.0d0
-    d2%dx(dual_size+1:) = d%dx
-
-end function dual_2_dual2_2
 
 !******** Set of functions to map dual2 to dual
 

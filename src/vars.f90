@@ -12,8 +12,13 @@ MODULE globvars
     type zombiest
         type(dual),dimension(:),allocatable::phi
         ! real(wp),dimension(:),allocatable::img
-        type(dual),dimension(:),allocatable::val
+        type(dual2),dimension(:),allocatable::val
     end type zombiest
+
+    interface val_set
+        module procedure val_set_single
+        module procedure val_set_whole
+    end interface val_set
 
    
     ! Type defining the Hamiltonian matrix and the overlap matrix
@@ -50,12 +55,6 @@ MODULE globvars
         integer(int8),dimension(:,:), allocatable::negs
         real(wp) :: hnuc
 
-        ! integer::h1_num
-        ! integer::h2_num
-        ! real(wp), dimension(:), allocatable::h1ei
-        ! real(wp), dimension(:), allocatable::h2ei
-        ! real(wp) :: hnuc
-        
     end type elecintrgl
 
     type oprts
@@ -105,6 +104,41 @@ MODULE globvars
     
 
     contains
+
+    subroutine val_set_whole(this)
+        implicit none
+        class(zombiest),intent(inout)::this
+        type(dual),dimension(norb)::temp
+
+        this%val(0)=0.0d0
+        temp=sin(this%phi)
+        this%val(1:norb)=dual_2_dual2(temp,2)
+        temp=cos(this%phi)
+        this%val(1+norb:2*norb)=dual_2_dual2(temp,2) 
+      
+       
+        return
+
+    end subroutine val_set_whole
+
+    subroutine val_set_single(this,n)
+        implicit none
+        class(zombiest),intent(inout)::this
+        type(dual)::temp
+        integer,intent(in)::n
+
+        temp=sin(this%phi(n))
+        this%val(n)%x=temp%x
+        this%val(n)%dx(1:norb) = 0.0d0
+        this%val(n)%dx(norb+1:) = temp%dx
+
+        temp=cos(this%phi(n))
+        this%val(n+norb)%x=temp%x
+        this%val(n+norb)%dx(1:norb) = 0.0d0
+        this%val(n+norb)%dx(norb+1:) = temp%dx
+    
+        return
+    end subroutine val_set_single
 
     subroutine initialise
         implicit none

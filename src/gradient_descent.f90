@@ -25,7 +25,8 @@ MODULE gradient_descent
 
         type(hamiltonian), intent(inout)::haml
         type(zombiest),dimension(:),intent(in)::zstore
-        type(dual2),dimension(0:),intent(in)::zs_diff
+        ! type(dual2),dimension(0:),intent(in)::zs_diff
+        type(zombiest),intent(in)::zs_diff
         type(elecintrgl),intent(in)::elecs
         integer,intent(in)::size,diff_state
         integer, allocatable,dimension(:)::IPIV1
@@ -201,8 +202,10 @@ MODULE gradient_descent
 
         type(dvector):: temp_dvecs,thread_d,global_dvecs       
         type(hamiltonian)::temp_ham,thread_ham,global_ham
-        type(dual2),dimension(norb)::temp_zom_phi,thread_zom_phi,global_zom_phi
-        type(dual2),dimension(0:2*norb)::temp_zom_val,thread_zom_val,global_zom_val
+        type(zombiest)::temp_zom,thread_zom,global_zom
+
+        ! type(dual2),dimension(norb)::temp_zom_phi,thread_zom_phi,global_zom_phi
+        ! type(dual2),dimension(0:2*norb)::temp_zom_val,thread_zom_val,global_zom_val
         type(dual)::global_min_fxtdk,min_fxtdk,fxtdk
        
 
@@ -224,6 +227,11 @@ MODULE gradient_descent
         call allocham(thread_ham,ndet,norb)
         call allocham(temp_ham,ndet,norb)
         call allocham(global_ham,ndet,norb)
+
+        call alloczf(global_zom)
+        call alloczf(thread_zom)
+        call alloczf(temp_zom)
+       
 
         allocate(pickerorb(norb),stat=ierr)
 
@@ -277,10 +285,11 @@ MODULE gradient_descent
                 pickerorb=scramble_norb(norb)
 
                 call grad_calculate(haml,pick,dvecs,grad_fin,erg)
-                global_zom_phi = dual_2_dual2(zstore(pick)%phi(:),1)
+                global_zom=zstore(pick)
+                ! global_zom_phi = dual_2_dual2(zstore(pick)%phi(:),1)
 
-                global_zom_val(1:norb)=sin(global_zom_phi(1:norb))
-                global_zom_val(norb+1:2*norb)=cos(global_zom_phi(1:norb))
+                ! global_zom_val(1:norb)=sin(global_zom_phi(1:norb))
+                ! global_zom_val(norb+1:2*norb)=cos(global_zom_phi(1:norb))
        
     
                 do n=1,norb
@@ -289,7 +298,7 @@ MODULE gradient_descent
                    
                     global_min_fxtdk=grad_fin%prev_erg
                     global_min_fxtdk_idx=-1
-                    
+                    temp_zom=global_zom
                     !$OMP PARALLEL DEFAULT(NONE) SHARED(loop_max, b, alpha, zstore, grad_fin, haml, elect, ndet, &
                     !$OMP &  timesteps,global_min_fxtdk,global_min_fxtdk_idx,global_zom_phi,global_zom_val,&
                     !$omp & global_ham,global_dvecs,pick,norb,pickorb) &
@@ -302,16 +311,15 @@ MODULE gradient_descent
                     !$omp do !ordered schedule(static,1)
                     do lralt_zs=1,50
                         t=b*alpha**(lralt_zs-1)
-                        temp_zom_phi=global_zom_phi
-                        temp_zom_val=global_zom_val
                        
-                        temp_zom_phi(pickorb)= temp_zom_phi(pickorb)-(t*grad_fin%vars(pick,pickorb))
-                        temp_zom_val(pickorb)=sin(temp_zom_phi(pickorb))
-                        temp_zom_val(pickorb+norb)=cos(temp_zom_phi(pickorb))
-                  
+                        temp_zom%phi(pickorb)=global_zom%phi(pickorb)
+                        temp_zom%phi(pickorb)%x = temp_zom%phi(pickorb)%x-(t*grad_fin%vars(pick,pickorb))
+                        call val_set(temp_zom,pickorb)
+
+                       
                         temp_ham=haml
                         
-                        call he_full_row(temp_ham,zstore,temp_zom_val,elect,ndet,pick)
+                        call he_full_row(temp_ham,zstore,temp_zom,elect,ndet,pick)
                      
                         ! Imaginary time propagation for back tracing
 
@@ -324,8 +332,7 @@ MODULE gradient_descent
                             min_fxtdk = fxtdk
                             min_fxtdk_idx = lralt_zs
                             thread_ham=temp_ham
-                            thread_zom_phi = temp_zom_phi
-                            thread_zom_val = temp_zom_val
+                            thread_zom = temp_zom
                             thread_d = temp_dvecs
                             exit
                             !$omp cancel do
@@ -341,8 +348,7 @@ MODULE gradient_descent
                             ! Update the global minimum fxtdk and corresponding temp_zom and temp_ham
                             global_min_fxtdk = min_fxtdk
                             global_min_fxtdk_idx = min_fxtdk_idx
-                            global_zom_phi = thread_zom_phi
-                            global_zom_val = thread_zom_val
+                            global_zom = thread_zom
                             global_ham = thread_ham
                             global_dvecs = thread_d
                         end if
@@ -373,9 +379,8 @@ MODULE gradient_descent
                 if(acpt_cnt.gt.0)then
                     write(6,"(a,i3,a,f21.16,a,f21.16,a,*(i0:','))")'  ', pick,'          ', &
                     erg_str,'             ',grad_fin%prev_erg,'          ',chng_trk2(1:acpt_cnt) 
-                  
-                    zstore(pick)%phi%x=global_zom_phi%x
-                    zstore(pick)%val = dual2_2_dual(global_zom_val,1)
+                    
+                    zstore(pick)=global_zom
                     call zombiewriter(zstore(pick),pick,0)
                     acpt_cnt_2=acpt_cnt_2+1
                     chng_trk(acpt_cnt_2)=pick
@@ -420,6 +425,10 @@ MODULE gradient_descent
         call deallocham(temp_ham)
         call deallocdv(temp_dvecs)
 
+        call dealloczf(global_zom)
+        call dealloczf(thread_zom)
+        call dealloczf(temp_zom)
+
         deallocate(pickerorb,stat=ierr)
         if(ierr==0) deallocate(chng_trk,stat=ierr)
         if(ierr==0) deallocate(chng_trk2,stat=ierr)
@@ -453,8 +462,11 @@ MODULE gradient_descent
 
         type(dvector):: temp_dvecs,thread_d,global_dvecs       
         type(hamiltonian)::temp_ham,thread_ham,global_ham
-        type(dual2),dimension(norb)::temp_zom_phi,thread_zom_phi,global_zom_phi
-        type(dual2),dimension(0:2*norb)::temp_zom_val,thread_zom_val,global_zom_val
+        type(zombiest)::temp_zom,thread_zom,global_zom
+
+        ! type(dual),dimension(norb)::temp_zom_phi,thread_zom_phi,global_zom_phi
+        ! type(dual2),dimension(0:2*norb)::temp_zom_val,thread_zom_val,global_zom_val
+
         type(dual)::global_min_fxtdk,min_fxtdk,fxtdk
 
         integer::lralt,rjct_cnt,rjct_cnt2,acpt_cnt,pick,lralt_temp,loop_max,orb_cnt,ierr
@@ -490,9 +502,9 @@ MODULE gradient_descent
         loop_max=50
 
         if(epoc_cnt.eq.1)then
-            orb_cnt=500
+            orb_cnt=2
         else
-            orb_cnt=100
+            orb_cnt=2
         end if 
         
         call allocdv(temp_dvecs,ndet)
@@ -501,6 +513,10 @@ MODULE gradient_descent
         call allocham(temp_ham,ndet,norb)
         call allocham(thread_ham,ndet,norb)
         call allocham(global_ham,ndet,norb)
+
+        call alloczf(global_zom)
+        call alloczf(thread_zom)
+        call alloczf(temp_zom)
        
        
         temp_ham=haml
@@ -537,27 +553,24 @@ MODULE gradient_descent
                     !$omp cancellation point do
                 
                     t=newb*(alpha**(lralt_temp-1))
-            
-                    temp_zom_phi= dual_2_dual2((zstore(pick)%phi(:)-(t*grad_fin%vars(pick,:))),1)
-                    
-                
-                    temp_zom_val(1:norb)=sin(temp_zom_phi)
-                    temp_zom_val(norb+1:)=cos(temp_zom_phi)
+                    temp_zom%phi=zstore(pick)%phi
+                    temp_zom%phi%x=zstore(pick)%phi%x-(t*grad_fin%vars(pick,:))
+                    call val_set(temp_zom)
+                 
                     temp_ham=haml
                 
-                    call he_full_row(temp_ham,zstore,temp_zom_val,elect,ndet,pick)
+                    call he_full_row(temp_ham,zstore,temp_zom,elect,ndet,pick)
 
                 
                     call imaginary_time_prop2(temp_dvecs,erg,temp_ham,ndet)
 
                     fxtdk=erg(timesteps+1)
-                 
+                   
                     if((fxtdk .lt. min_fxtdk))then
                         min_fxtdk = fxtdk
                         min_fxtdk_idx = lralt_temp
                         thread_ham=temp_ham
-                        thread_zom_phi = temp_zom_phi
-                        thread_zom_val = temp_zom_val
+                        thread_zom=temp_zom
                         thread_d = temp_dvecs
                         exit
                        !$omp cancel do
@@ -572,8 +585,7 @@ MODULE gradient_descent
                     ! Update the global minimum fxtdk and corresponding temp_zom and temp_ham
                     global_min_fxtdk = min_fxtdk
                     global_min_fxtdk_idx = min_fxtdk_idx
-                    global_zom_phi = thread_zom_phi
-                    global_zom_val = thread_zom_val
+                    global_zom=thread_zom
                     global_ham = thread_ham
                     global_dvecs = thread_d
                 end if
@@ -594,8 +606,7 @@ MODULE gradient_descent
                     chng_trk(acpt_cnt)=pick
                     lr_chng_trk(acpt_cnt)=t
                     erg_chng_trk(acpt_cnt)=global_min_fxtdk
-                    zstore(pick)%phi%x=global_zom_phi%x
-                    zstore(pick)%val = dual2_2_dual(global_zom_val,1)
+                    zstore(pick)=global_zom
                     call zombiewriter(zstore(pick),pick,0)
                     dvecs=global_dvecs
                     haml=global_ham
@@ -669,6 +680,10 @@ MODULE gradient_descent
         call deallocham(global_ham)
         call deallocdv(temp_dvecs)
         call deallocdv(thread_d) 
+
+        call dealloczf(global_zom)
+        call dealloczf(thread_zom)
+        call dealloczf(temp_zom)
        
         return
 

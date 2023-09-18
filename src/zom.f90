@@ -35,8 +35,9 @@ MODULE zom
                 if(GDflg.eq.'y')then
                     call dual_grad_setup(zstore(j))
                 end if
-                zstore(j)%val(1:norb)=sin(zstore(j)%phi)
-                zstore(j)%val(norb+1:2*norb)=cos(zstore(j)%phi)
+                call val_set(zstore(j))
+                ! zstore(j)%val(1:norb)=sin(zstore(j)%phi)
+                ! zstore(j)%val(norb+1:2*norb)=cos(zstore(j)%phi)
             end do
             if(rhf_1=='y') then
                 zstore(1)%phi(1:nel)=0.5*pirl
@@ -304,8 +305,11 @@ MODULE zom
                 if(GDflg.eq.'y')then
                     call dual_grad_setup(zstore(j))
                 end if
-                zstore(j)%val(1:norb) = sin(zstore(j)%phi)
-                zstore(j)%val(norb+1:2*norb)=cos(zstore(j)%phi)
+              
+                call val_set(zstore(j))
+                
+                ! zstore(j)%val(1:norb) = sin(zstore(j)%phi)
+                ! zstore(j)%val(norb+1:2*norb)=cos(zstore(j)%phi)
              
             end do
             !$omp end do

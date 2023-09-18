@@ -69,7 +69,7 @@ MODULE ham
         ! real(kind=8),dimension(:,:),intent(inout)::haml 
         type(zombiest),dimension(:),intent(in)::zstore
         type(elecintrgl),intent(in)::elecs
-        type(dual2),dimension(0:2*norb)::z1d,z2d
+        type(dual2),dimension(0:2*norb)::z1d
         integer,intent(in)::verb,size
         integer::j,k,ierr
         type(dual2)::htot,ovlptot,hamtot
@@ -78,21 +78,20 @@ MODULE ham
         ierr=0
 
         !$omp parallel do &
-        !$omp & private(j,k,h1etot,h2etot,ovlptot,hamtot,z1d,z2d) &
+        !$omp & private(j,k,h1etot,h2etot,ovlptot,hamtot,z1d) &
         !$omp & shared(elecs,zstore,haml) 
         do j=1,size
             ovlptot=0.0d0; hamtot=0.0d0
-            z1d = dual_2_dual2(zstore(j)%val,1)
+            z1d =typ2_2_typ1(zstore(j)%val)
             ovlptot=1.0d0
             htot=haml_vals(z1d,z1d,elecs)
             hamtot=htot+(ovlptot*elecs%hnuc)
 
             call val_filler(haml%hjk,haml%ovrlp,haml%diff_hjk,haml%diff_ovrlp,hamtot,ovlptot,j,j)
             do k=j+1,size
-                z2d= dual_2_dual2(zstore(k)%val,2)
                 ovlptot=0.0d0; hamtot=0.0d0
-                ovlptot=overlap_1(z1d,z2d)
-                htot=haml_vals(z1d,z2d,elecs)
+                ovlptot=overlap_1(z1d,zstore(k)%val)
+                htot=haml_vals(z1d,zstore(k)%val,elecs)
                 hamtot=htot+(ovlptot*elecs%hnuc)
                 call val_filler(haml%hjk,haml%ovrlp,haml%diff_hjk,haml%diff_ovrlp,hamtot,ovlptot,j,k)
             end do 
@@ -103,8 +102,6 @@ MODULE ham
         !$omp end parallel do 
 
        
-
-
     end subroutine haml_ovrlp_comb
 
     
@@ -116,29 +113,28 @@ MODULE ham
     ! Calcualates a column of a hamiltonian Start specifies the row the column
     ! is started to be calcualted 
 
-    subroutine haml_ovrlp_column(haml,z1d,zstore,size,elecs,row)
+    subroutine haml_ovrlp_column(haml,z1,zstore,size,elecs,row)
 
         implicit none
         type(zombiest),dimension(:),intent(in)::zstore
-        type(dual2),dimension(0:),intent(in)::z1d
+        type(zombiest),intent(in)::z1
         type(elecintrgl),intent(in)::elecs
         type(hamiltonian),intent(inout)::haml
-        type(dual2),dimension(0:2*norb)::z2d
         integer,intent(in)::row,size
+        type(dual2),dimension(0:2*norb)::z1d
         type(dual2)::htot,ovlptot,hamtot
         integer::j
 
         if (errorflag .ne. 0) return
-
+        z1d = typ2_2_typ1(z1%val)
         !$omp parallel do &
-        !$omp & private(j,h1etot,h2etot,ovlptot,hamtot,z2d) &
+        !$omp & private(j,h1etot,h2etot,ovlptot,hamtot) &
         !$omp & shared(elecs,zstore,haml,z1d) 
         do j=1,size
             ovlptot=0.0d0; hamtot=0.0d0
             if (j.ne.row) then
-                z2d = dual_2_dual2(zstore(j)%val,2)
-                ovlptot=overlap_1(z1d,z2d)
-                htot=haml_vals(z1d,z2d,elecs)
+                ovlptot=overlap_1(z1d,zstore(j)%val)
+                htot=haml_vals(z1d,zstore(j)%val,elecs)
                 hamtot=htot+(ovlptot*elecs%hnuc)
                 call val_filler(haml%hjk,haml%ovrlp,haml%diff_hjk,haml%diff_ovrlp,hamtot,ovlptot,row,j)
             else 
@@ -153,69 +149,6 @@ MODULE ham
         return
 
     end subroutine haml_ovrlp_column
-
-    function haml_column(z1d,zstore,size,elecs,row) result(ham_tot)
-
-
-        implicit none
-        type(zombiest),dimension(:),intent(in)::zstore
-        type(dual2),dimension(0:),intent(in)::z1d
-        type(elecintrgl),intent(in)::elecs
-        integer,intent(in)::row,size
-        type(dual2),dimension(size)::ham_tot
-        type(dual2),dimension(0:2*norb)::z2d
-        type(dual2)::htot
-        integer::j
-
-        if (errorflag .ne. 0) return
-        ham_tot=0.d0
-        !$omp parallel do private(h1etot,h2etot,j,z2d) shared(elecs,z1d,row,ham_tot)
-        do j=1,size
-           
-            if (j.ne.row) then
-                z2d=dual_2_dual2(zstore(j)%val,2) 
-                htot=haml_vals(z1d,z2d,elecs)
-                ham_tot(j)=ham_tot(j)+htot
-            else 
-                htot=haml_vals(z1d,z2d,elecs)
-                ham_tot(j)=ham_tot(j)+htot
-            end if 
-        end do 
-        !$omp end parallel do
-        
-        return
-
-    end function haml_column
-
-    ! function to calcualte an entire column of the overlap 
-    function ovrlp_column(z1d,size,zstore,row) result(ovrlp_tot)
-
-        implicit none
-        
-        type(zombiest),dimension(:),intent(in)::zstore
-        type(dual2),dimension(0:),intent(in)::z1d
-        integer,intent(in)::row,size
-        type(dual2),dimension(size)::ovrlp_tot
-        type(dual2),dimension(0:2*norb)::z2d
-       
-        integer::j
-        
-        if (errorflag .ne. 0) return
-       
-        ovrlp_tot=0.0d0
-  
-        do j=1,size
-            if(j.ne.row)then
-                z2d=dual_2_dual2(zstore(j)%val,2) 
-                ovrlp_tot(j)=overlap_1(z1d,z2d)
-            else
-                ovrlp_tot(j)=1.0d0
-            end if 
-        end do 
-
-        return
-
-    end function ovrlp_column
 
     !##############################################################################################################################
 
