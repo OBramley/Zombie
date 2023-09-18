@@ -7,13 +7,16 @@ MODULE electrons
     
     ! Program to generate one and two electron integrals from PyScf
     ! Some of this code has been adapted from George Booth
-    subroutine electronintegrals(elecs,an_cr,an2_cr2)
+    subroutine electronintegrals(elecs)
     
         implicit none
     
         type(elecintrgl), intent(inout)::elecs
-        type(oprts),intent(inout)::an_cr,an2_cr2
-        integer:: ierr
+        type(oprts)::an_cr,an2_cr2
+        real(wp), dimension(:), allocatable::h1ei
+        real(wp), dimension(:), allocatable::h2ei
+        integer::e1,e2,cnt
+        integer:: ierr,j,k
         
     
         if (errorflag .ne. 0) return
@@ -22,13 +25,83 @@ MODULE electrons
         ierr = 0
         
         write(6,"(a)") "Starting one electron integral allocation"
-        call  one_electrons(elecs,an_cr)
+        call  one_electrons(h1ei,e1,an_cr)
         write(6,"(a)") "completed one electron integral allocation"
        
         write(6,"(a)") "Starting two electron integral allocation"
-        call  two_electrons(elecs,an2_cr2)
+        call  two_electrons(h2ei,e2,an2_cr2)
         write(6,"(a)") "completed two electron integral allocation"
-       
+
+        elecs%num=e1+e2
+
+        allocate(elecs%integrals(elecs%num),stat=ierr)
+        allocate(elecs%ali_dead(2*norb,elecs%num),stat=ierr)
+        allocate(elecs%negs(2*norb,elecs%num),stat=ierr)
+        if(ierr/=0) then
+            write(0,"(a,i0)") "Error in electron integral  allocation. ierr had value ", ierr
+            errorflag=1
+            return
+        end if
+
+        cnt=1
+        do j=1,e1
+            elecs%integrals(cnt)=h1ei(j)
+            elecs%ali_dead(1:norb,cnt)=an_cr%alive(:,j)
+            elecs%ali_dead(norb+1:,cnt)=an_cr%dead(:,j)
+            elecs%negs(1:norb,cnt)=an_cr%neg_alive(:,j)
+            elecs%negs(norb+1:,cnt)=an_cr%neg_dead(:,j)
+            ! do k=1,norb
+                ! if(an_cr%alive(k,j)==0)then
+                !     elecs%ali_dead((2*k)-1,cnt)=0
+                ! else if(an_cr%alive(k,j)>norb)then 
+                !     elecs%ali_dead((2*k)-1,cnt)=int((an_cr%alive(k,j)-norb)*2,kind=int16)
+                ! else
+                !     elecs%ali_dead((2*k)-1,cnt)=int((an_cr%alive(k,j)*2)-1,kind=int16)
+                ! end if
+
+                ! if(an_cr%dead(k,j)==0)then
+                !     elecs%ali_dead((2*k),cnt)=0
+                ! else if(an_cr%dead(k,j)<norb)then 
+                !     elecs%ali_dead((2*k),cnt)=int((an_cr%dead(k,j)*2)-1,kind=int16)
+                ! else
+                !     elecs%ali_dead((2*k),cnt)=int((an_cr%dead(k,j)-norb)*2,kind=int16)
+                ! end if     
+
+                ! elecs%negs((2*k)-1,cnt)=an_cr%neg_alive(k,j)
+                ! elecs%negs((2*k),cnt)=an_cr%neg_dead(k,j)
+            ! end do
+
+            cnt=cnt+1
+        end do
+        
+        
+        do j=1,e2
+            elecs%integrals(cnt)=h2ei(j)
+            elecs%ali_dead(1:norb,cnt)=an2_cr2%alive(:,j)
+            elecs%ali_dead(norb+1:,cnt)=an2_cr2%dead(:,j)
+            elecs%negs(1:norb,cnt)=an2_cr2%neg_alive(:,j)
+            elecs%negs(norb+1:,cnt)=an2_cr2%neg_dead(:,j)
+            ! do k=1,norb
+            !     if(an2_cr2%alive(k,j)==0)then
+            !         elecs%ali_dead((2*k)-1,cnt)=0
+            !     else if(an2_cr2%alive(k,j)>norb)then 
+            !         elecs%ali_dead((2*k)-1,cnt)=int((an2_cr2%alive(k,j)-norb)*2,kind=int16)
+            !     else
+            !         elecs%ali_dead((2*k)-1,cnt)=int((an2_cr2%alive(k,j)*2)-1,kind=int16)
+            !     end if
+            !     if(an2_cr2%dead(k,j)==0)then
+            !         elecs%ali_dead((2*k),cnt)=0
+            !     else if(an2_cr2%dead(k,j)<norb)then 
+            !         elecs%ali_dead((2*k),cnt)=int((an2_cr2%dead(k,j)*2)-1,kind=int16)
+            !     else
+            !         elecs%ali_dead((2*k),cnt)=int((an2_cr2%dead(k,j)-norb)*2,kind=int16)
+            !     end if   
+            !     elecs%negs((2*k)-1,cnt)=an2_cr2%neg_alive(k,j)
+            !     elecs%negs((2*k),cnt)=an2_cr2%neg_dead(k,j)  
+            ! end do
+            cnt=cnt+1
+        end do
+        
 
         open(unit=128, file='integrals/hnuc.csv',status='old',iostat=ierr)
         if (ierr.ne.0) then
@@ -43,6 +116,15 @@ MODULE electrons
             return
           end if
         close(128)
+
+        call dealloc_oprts(an_cr)
+        call dealloc_oprts(an2_cr2)
+        deallocate(h1ei,h2ei,stat=ierr)
+        if (ierr/=0) then
+            write(0,"(a,i0)") "Error in h1ei  deallocation. ierr had value ", ierr
+            errorflag=1
+            return
+        end if
         
         write(6,"(a)") "1 & 2 electron integrals successfully generated"
     
@@ -51,21 +133,16 @@ MODULE electrons
     end subroutine electronintegrals
     
     
-    subroutine two_electrons(elecs,an2_cr2)
+    subroutine two_electrons(h2ei,e2,an2_cr2)
     
         implicit none 
-        type(elecintrgl), intent(inout)::elecs
+        real(wp), dimension(:), intent(inout),allocatable::h2ei
         type(oprts),intent(inout)::an2_cr2
-        integer::e2
-        ! type(oprts_2)::temp_an2_cr2
+        integer,intent(inout)::e2
         real(kind=8),dimension(:,:),allocatable::read_in
         integer::ierr,l,k,an1,an2,cr1,cr2,j,max,len
-        ! integer,allocatable,dimension(:,:)::temp_diff
-        ! integer,allocatable,dimension(:,:,:)::temp_hess
-        
+       
     
-     
-        
         ierr=0
         len=norb*norb*norb*norb
         allocate(read_in(len,5),stat=ierr)
@@ -78,8 +155,7 @@ MODULE electrons
         end if
 
         read(131,*) (read_in(1,k),k=1,5)
-        elecs%h2_num=int(read_in(1,1))
-        e2=elecs%h2_num
+        e2=int(read_in(1,1))
         do j=2,e2+1
             read(131,*) (read_in(j,k),k=1,5)
         end do 
@@ -87,15 +163,15 @@ MODULE electrons
         close(131)
       
 
-        allocate (elecs%h2ei(elecs%h2_num),stat=ierr)
+        allocate (h2ei(e2),stat=ierr)
         if (ierr/=0) then
-        write(0,"(a,i0)") "Error in electron integral  allocation. ierr had value ", ierr
+        write(0,"(a,i0)") "Error in 2 electron integral  allocation. ierr had value ", ierr
         errorflag=1
         return
         end if
        
-        elecs%h2ei=read_in(2:,1)
-       
+        h2ei=read_in(2:,1)
+        h2ei=h2ei*0.5_wp
         call alloc_oprts(an2_cr2,e2)
        
     
@@ -106,27 +182,36 @@ MODULE electrons
             an1=int(read_in(l+1,5))
            
             !annihilation
-            an2_cr2%ham%dead(an1,l)=an2_cr2%ham%alive(an1,l)
-            an2_cr2%ham%neg_dead(an1,l)=an2_cr2%ham%neg_alive(an1,l)
-            an2_cr2%ham%alive(an1,l)=0
-            an2_cr2%ham%neg_alive(:an1-1,l)=int(an2_cr2%ham%neg_alive(:an1-1,l)*(-1),kind=int8)
+            an2_cr2%dead(an1,l)=an2_cr2%alive(an1,l)
+            an2_cr2%neg_dead(an1,l)=an2_cr2%neg_alive(an1,l)
+            an2_cr2%alive(an1,l)=0
+            an2_cr2%neg_alive(:an1-1,l)=int(an2_cr2%neg_alive(:an1-1,l)*(-1),kind=int8)
             !annihilation
-            an2_cr2%ham%dead(an2,l)=an2_cr2%ham%alive(an2,l)
-            an2_cr2%ham%neg_dead(an2,l)=an2_cr2%ham%neg_alive(an2,l)
-            an2_cr2%ham%alive(an2,l)=0
-            an2_cr2%ham%neg_alive(:an2-1,l)=int(an2_cr2%ham%neg_alive(:an2-1,l)*(-1),kind=int8) 
+            an2_cr2%dead(an2,l)=an2_cr2%alive(an2,l)
+            an2_cr2%neg_dead(an2,l)=an2_cr2%neg_alive(an2,l)
+            an2_cr2%alive(an2,l)=0
+            an2_cr2%neg_alive(:an2-1,l)=int(an2_cr2%neg_alive(:an2-1,l)*(-1),kind=int8) 
             !creation 
-            an2_cr2%ham%alive(cr1,l)=an2_cr2%ham%dead(cr1,l)
-            an2_cr2%ham%neg_alive(cr1,l)=an2_cr2%ham%neg_dead(cr1,l)
-            an2_cr2%ham%dead(cr1,l)=0
-            an2_cr2%ham%neg_alive(:cr1-1,l)=int(an2_cr2%ham%neg_alive(:cr1-1,l)*(-1),kind=int8)
+            an2_cr2%alive(cr1,l)=an2_cr2%dead(cr1,l)
+            an2_cr2%neg_alive(cr1,l)=an2_cr2%neg_dead(cr1,l)
+            an2_cr2%dead(cr1,l)=0
+            an2_cr2%neg_alive(:cr1-1,l)=int(an2_cr2%neg_alive(:cr1-1,l)*(-1),kind=int8)
             !creation 
-            an2_cr2%ham%alive(cr2,l)=an2_cr2%ham%dead(cr2,l)
-            an2_cr2%ham%neg_alive(cr2,l)=an2_cr2%ham%neg_dead(cr2,l)
-            an2_cr2%ham%dead(cr2,l)=0
-            an2_cr2%ham%neg_alive(:cr2-1,l)=int(an2_cr2%ham%neg_alive(:cr2-1,l)*(-1),kind=int8)
+            an2_cr2%alive(cr2,l)=an2_cr2%dead(cr2,l)
+            an2_cr2%neg_alive(cr2,l)=an2_cr2%neg_dead(cr2,l)
+            an2_cr2%dead(cr2,l)=0
+            an2_cr2%neg_alive(:cr2-1,l)=int(an2_cr2%neg_alive(:cr2-1,l)*(-1),kind=int8)
     
         end do
+
+        deallocate(read_in, stat=ierr)
+        if (ierr/=0) then
+            write(0,"(a,i0)") "Error in read_in  deallocation. ierr had value ", ierr
+            errorflag=1
+            return
+        end if
+
+        return
 
         ! if(GDflg.eq.'y')then
         !     allocate(temp_diff(0:e2,norb),stat=ierr)
@@ -211,17 +296,15 @@ MODULE electrons
     end subroutine two_electrons
     
     
-    subroutine one_electrons(elecs,an_cr)
+    subroutine one_electrons(h1ei,e1,an_cr)
     
         implicit none 
-        type(elecintrgl), intent(inout)::elecs
         type(oprts),intent(inout)::an_cr
-        ! type(oprts_2)::temp_an_cr
-        integer::e1
+        real(wp), dimension(:), intent(inout),allocatable::h1ei
+        integer,intent(inout)::e1
         real(kind=8),dimension(:,:),allocatable::read_in
         integer::ierr,l,k,an,cr,j,max,len
-        ! integer,allocatable,dimension(:,:)::temp_diff
-        ! integer,allocatable,dimension(:,:,:)::temp_hess
+
         
         ierr=0
 
@@ -235,21 +318,21 @@ MODULE electrons
             return
         end if
         read(129,*) (read_in(1,k),k=1,3)
-        elecs%h1_num=int(read_in(1,1))
-        e1=elecs%h1_num
+        e1=int(read_in(1,1))
+       
         do j=2,e1+1
             read(129,*) (read_in(j,k),k=1,3)
         end do 
         close(129)
         
        
-        allocate (elecs%h1ei(elecs%h1_num), stat=ierr)
+        allocate (h1ei(e1), stat=ierr)
         if (ierr/=0) then
             write(0,"(a,i0)") "Error in electron integral  allocation. ierr had value ", ierr
             errorflag=1
             return
         end if
-        elecs%h1ei=read_in(2:,1)
+        h1ei=read_in(2:,1)
        
         call alloc_oprts(an_cr,e1)
           
@@ -257,16 +340,25 @@ MODULE electrons
             an=int(read_in(l+1,2))
             cr=int(read_in(l+1,3))
             !annihilation
-            an_cr%ham%dead(an,l)=an_cr%ham%alive(an,l)
-            an_cr%ham%neg_dead(an,l)=an_cr%ham%neg_alive(an,l)
-            an_cr%ham%alive(an,l)=0
-            an_cr%ham%neg_alive(:an-1,l)=int(an_cr%ham%neg_alive(:an-1,l)*(-1),kind=int8)
+            an_cr%dead(an,l)=an_cr%alive(an,l)
+            an_cr%neg_dead(an,l)=an_cr%neg_alive(an,l)
+            an_cr%alive(an,l)=0
+            an_cr%neg_alive(:an-1,l)=int(an_cr%neg_alive(:an-1,l)*(-1),kind=int8)
             !creation 
-            an_cr%ham%alive(cr,l)=an_cr%ham%dead(cr,l)
-            an_cr%ham%neg_alive(cr,l)=an_cr%ham%neg_dead(cr,l)
-            an_cr%ham%dead(cr,l)=0
-            an_cr%ham%neg_alive(:cr-1,l)=int(an_cr%ham%neg_alive(:cr-1,l)*(-1),kind=int8)
+            an_cr%alive(cr,l)=an_cr%dead(cr,l)
+            an_cr%neg_alive(cr,l)=an_cr%neg_dead(cr,l)
+            an_cr%dead(cr,l)=0
+            an_cr%neg_alive(:cr-1,l)=int(an_cr%neg_alive(:cr-1,l)*(-1),kind=int8)
         end do 
+         
+        deallocate(read_in, stat=ierr)
+        if (ierr/=0) then
+            write(0,"(a,i0)") "Error in read_in  deallocation. ierr had value ", ierr
+            errorflag=1
+            return
+        end if
+
+        return
          
         ! if(GDflg.eq.'y')then
           

@@ -44,26 +44,26 @@ MODULE globvars
 
     ! Type defining the 1&2 electron integrals
     type elecintrgl
-        integer::h1_num
-        integer::h2_num
-        real(wp), dimension(:), allocatable::h1ei
-        real(wp), dimension(:), allocatable::h2ei
+        integer::num
+        real(wp), dimension(:), allocatable::integrals
+        integer(int16),dimension(:,:), allocatable::ali_dead
+        integer(int8),dimension(:,:), allocatable::negs
         real(wp) :: hnuc
+
+        ! integer::h1_num
+        ! integer::h2_num
+        ! real(wp), dimension(:), allocatable::h1ei
+        ! real(wp), dimension(:), allocatable::h2ei
+        ! real(wp) :: hnuc
         
     end type elecintrgl
 
-    type oprts_2
+    type oprts
         integer(int16),dimension(:,:), allocatable::alive,dead
         integer(int8),dimension(:,:), allocatable::neg_alive,neg_dead
-    end type oprts_2
-
-    type oprts
-        type(oprts_2)::ham 
-        type(oprts_2),allocatable,dimension(:)::diff
-        integer,dimension(:,:), allocatable::dcnt
     end type oprts
 
-    
+
     type grad 
         real(wp),dimension(:,:), allocatable::vars
         real(wp):: prev_erg

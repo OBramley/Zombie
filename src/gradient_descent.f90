@@ -19,7 +19,7 @@ MODULE gradient_descent
     ! calcualiton of certain results. This minimises the (slow) applicaiton of the creation and annihilaiton operators
 
     ! Subroutine that controls and calcualtes all of the hamiltonian variables 
-    subroutine he_full_row(haml,zstore,zs_diff,elecs,size,an_cr,an2_cr2,diff_state)
+    subroutine he_full_row(haml,zstore,zs_diff,elecs,size,diff_state)
 
         implicit none 
 
@@ -27,7 +27,6 @@ MODULE gradient_descent
         type(zombiest),dimension(:),intent(in)::zstore
         type(dual2),dimension(0:),intent(in)::zs_diff
         type(elecintrgl),intent(in)::elecs
-        type(oprts),intent(in)::an_cr,an2_cr2
         integer,intent(in)::size,diff_state
         integer, allocatable,dimension(:)::IPIV1
         real(dp),allocatable,dimension(:)::WORK1
@@ -38,7 +37,7 @@ MODULE gradient_descent
         if (errorflag .ne. 0) return
         ierr=0
        
-        call haml_ovrlp_column(haml,zs_diff,zstore,ndet,an_cr%ham,an2_cr2%ham,elecs,diff_state)
+        call haml_ovrlp_column(haml,zs_diff,zstore,ndet,elecs,diff_state)
         
         haml%inv=haml%ovrlp
        
@@ -184,7 +183,7 @@ MODULE gradient_descent
     end subroutine kinvh_grad
 
 
-    subroutine orbital_gd(zstore,grad_fin,elect,dvecs,erg,haml,epoc_cnt,alpha,b,picker,maxloop,an_cr,an2_cr2,&
+    subroutine orbital_gd(zstore,grad_fin,elect,dvecs,erg,haml,epoc_cnt,alpha,b,picker,maxloop,&
         rjct_cnt_in,epoc_max) 
 
         implicit none 
@@ -194,7 +193,6 @@ MODULE gradient_descent
         type(dvector),intent(inout)::dvecs
         type(hamiltonian),intent(inout)::haml
         type(dual),dimension(:), intent(inout)::erg
-        type(oprts),intent(in)::an_cr,an2_cr2
         type(grad),intent(inout)::grad_fin
         real(dp),intent(in)::alpha,b
         integer,intent(inout)::epoc_cnt,rjct_cnt_in
@@ -293,7 +291,7 @@ MODULE gradient_descent
                     global_min_fxtdk_idx=-1
                     
                     !$OMP PARALLEL DEFAULT(NONE) SHARED(loop_max, b, alpha, zstore, grad_fin, haml, elect, ndet, &
-                    !$OMP & an_cr, an2_cr2, timesteps,global_min_fxtdk,global_min_fxtdk_idx,global_zom_phi,global_zom_val,&
+                    !$OMP &  timesteps,global_min_fxtdk,global_min_fxtdk_idx,global_zom_phi,global_zom_val,&
                     !$omp & global_ham,global_dvecs,pick,norb,pickorb) &
                     !$OMP & PRIVATE(lralt_zs, temp_zom_phi,temp_zom_val, temp_ham, erg, fxtdk, min_fxtdk, min_fxtdk_idx,& 
                     !$OMP & thread_zom_phi, thread_zom_val, thread_ham,thread_d,temp_dvecs,t)
@@ -313,7 +311,7 @@ MODULE gradient_descent
                   
                         temp_ham=haml
                         
-                        call he_full_row(temp_ham,zstore,temp_zom_val,elect,ndet,an_cr,an2_cr2,pick)
+                        call he_full_row(temp_ham,zstore,temp_zom_val,elect,ndet,pick)
                      
                         ! Imaginary time propagation for back tracing
 
@@ -438,7 +436,7 @@ MODULE gradient_descent
     end subroutine orbital_gd
 
 
-    subroutine full_zs_gd(zstore,elect,dvecs,haml,erg,epoc_cnt,alpha,b,an_cr,an2_cr2,grad_fin,epoc_max,picker) 
+    subroutine full_zs_gd(zstore,elect,dvecs,haml,erg,epoc_cnt,alpha,b,grad_fin,epoc_max,picker) 
 
         implicit none 
 
@@ -447,7 +445,6 @@ MODULE gradient_descent
         type(dvector),intent(inout)::dvecs
         type(hamiltonian),intent(inout)::haml
         type(dual),dimension(:), intent(inout)::erg
-        type(oprts),intent(in)::an_cr,an2_cr2
         type(grad),intent(inout)::grad_fin
         real(dp),intent(in)::b,alpha
         integer,intent(inout)::epoc_cnt
@@ -529,7 +526,7 @@ MODULE gradient_descent
               
                 global_min_fxtdk_idx=-1
                 !$OMP PARALLEL DEFAULT(NONE) SHARED(loop_max, newb, alpha, zstore, grad_fin, haml, elect, ndet, &
-                !$OMP & an_cr, an2_cr2, timesteps,global_min_fxtdk,global_min_fxtdk_idx,global_zom_phi,global_zom_val,global_ham,&
+                !$OMP &  timesteps,global_min_fxtdk,global_min_fxtdk_idx,global_zom_phi,global_zom_val,global_ham,&
                 !$omp & global_dvecs,pick,norb) &
                 !$OMP & PRIVATE(lralt_temp, temp_zom_phi,temp_zom_val, temp_ham, erg, fxtdk, min_fxtdk, min_fxtdk_idx,&
                 !$OMP & thread_zom_phi, thread_zom_val, thread_ham, thread_d,temp_dvecs,t)
@@ -548,7 +545,7 @@ MODULE gradient_descent
                     temp_zom_val(norb+1:)=cos(temp_zom_phi)
                     temp_ham=haml
                 
-                    call he_full_row(temp_ham,zstore,temp_zom_val,elect,ndet,an_cr,an2_cr2,pick)
+                    call he_full_row(temp_ham,zstore,temp_zom_val,elect,ndet,pick)
 
                 
                     call imaginary_time_prop2(temp_dvecs,erg,temp_ham,ndet)
@@ -636,11 +633,11 @@ MODULE gradient_descent
             ! if(acpt_cnt.eq.0)then
             if(rjct_cnt.ge.(ndet*4))then
                 call orbital_gd(zstore,grad_fin,elect,dvecs,erg,haml,&
-                epoc_cnt,alpha,newb,picker,1,an_cr,an2_cr2,rjct_cnt,epoc_max)
+                epoc_cnt,alpha,newb,picker,1,rjct_cnt,epoc_max)
                 orb_cnt=orb_cnt+1
             else if((orb_cnt.le.0))then
                 call orbital_gd(zstore,grad_fin,elect,dvecs,erg,haml,&
-                epoc_cnt,alpha,newb,picker,2,an_cr,an2_cr2,rjct_cnt,epoc_max)
+                epoc_cnt,alpha,newb,picker,2,rjct_cnt,epoc_max)
                 orb_cnt=100
             end if
  
@@ -664,7 +661,7 @@ MODULE gradient_descent
 
         if(epoc_cnt.lt.epoc_max)then
             call orbital_gd(zstore,grad_fin,elect,dvecs,erg,haml,&
-            epoc_cnt,alpha,b,picker,epoc_max-epoc_cnt,an_cr,an2_cr2,rjct_cnt,epoc_max)
+            epoc_cnt,alpha,b,picker,epoc_max-epoc_cnt,rjct_cnt,epoc_max)
         end if
       
        
@@ -678,13 +675,12 @@ MODULE gradient_descent
     end subroutine full_zs_gd
 
 
-    subroutine zombie_alter(zstore,haml,elect,erg,dvecs,an_cr,an2_cr2)
+    subroutine zombie_alter(zstore,haml,elect,erg,dvecs)
 
         implicit none
 
         type(zombiest),dimension(:),intent(inout)::zstore
         type(elecintrgl),intent(in)::elect
-        type(oprts),intent(in)::an_cr,an2_cr2
         type(dvector),intent(inout)::dvecs
         type(dual), dimension(:),intent(inout)::erg
         type(hamiltonian),intent(inout)::haml
@@ -756,10 +752,10 @@ MODULE gradient_descent
         if(epoc_cnt.lt.epoc_max)then
             rjct_cnt=0
             picker=scramble(ndet-1)
-            ! call orbital_gd(zstore,grad_fin,elect,dvecs,erg,haml,epoc_cnt,alpha,b,picker,1,an_cr,an2_cr2,rjct_cnt,epoc_max) 
-            call full_zs_gd(zstore,elect,dvecs,haml,erg,epoc_cnt,alpha,b,an_cr,an2_cr2,grad_fin,epoc_max,picker) 
-            ! call orbital_gd(zstore,grad_fin,elect,dvecs,erg,haml,epoc_cnt,alpha,b,picker,100,an_cr,an2_cr2,rjct_cnt,epoc_max) 
-            ! call full_zs_gd(zstore,elect,dvecs,haml,erg,epoc_cnt,alpha,b,an_cr,an2_cr2,grad_fin,epoc_max,picker) 
+            ! call orbital_gd(zstore,grad_fin,elect,dvecs,erg,haml,epoc_cnt,alpha,b,picker,1,rjct_cnt,epoc_max) 
+            call full_zs_gd(zstore,elect,dvecs,haml,erg,epoc_cnt,alpha,b,grad_fin,epoc_max,picker) 
+            ! call orbital_gd(zstore,grad_fin,elect,dvecs,erg,haml,epoc_cnt,alpha,b,picker,100,rjct_cnt,epoc_max) 
+            ! call full_zs_gd(zstore,elect,dvecs,haml,erg,epoc_cnt,alpha,b,grad_fin,epoc_max,picker) 
             
         end if 
 

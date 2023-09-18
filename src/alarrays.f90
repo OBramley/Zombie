@@ -9,34 +9,34 @@ MODULE alarrays
 
 
     ! Routine to allcoate 1&2 electron electron integral matrices
-    subroutine allocintgrl(elecs,e1,e2)
+    ! subroutine allocintgrl(elecs,e1,e2)
 
-        implicit none
+    !     implicit none
 
-        type(elecintrgl), intent(inout)::elecs
-        integer,intent(in)::e1,e2
-        integer::ierr
+    !     type(elecintrgl), intent(inout)::elecs
+    !     integer,intent(in)::e1,e2
+    !     integer::ierr
 
-        if (errorflag .ne. 0) return
+    !     if (errorflag .ne. 0) return
         
-        ierr=0
-        elecs%h1_num=e1
-        elecs%h2_num=e2
+    !     ierr=0
+    !     elecs%h1_num=e1
+    !     elecs%h2_num=e2
 
-        allocate (elecs%h1ei(e1), stat=ierr)
-        if(ierr==0) allocate (elecs%h2ei(e2),stat=ierr)
-        if (ierr/=0) then
-            write(stderr,"(a,i0)") "Error in electron integral  allocation. ierr had value ", ierr
-            errorflag=1
-            return
-        end if
+    !     allocate (elecs%h1ei(e1), stat=ierr)
+    !     if(ierr==0) allocate (elecs%h2ei(e2),stat=ierr)
+    !     if (ierr/=0) then
+    !         write(stderr,"(a,i0)") "Error in electron integral  allocation. ierr had value ", ierr
+    !         errorflag=1
+    !         return
+    !     end if
     
-        elecs%h1ei=0.0d0
-        elecs%h2ei=0.0d0
-        elecs%hnuc= 0.0d0
+    !     elecs%h1ei=0.0d0
+    !     elecs%h2ei=0.0d0
+    !     elecs%hnuc= 0.0d0
         
-        return
-    end subroutine allocintgrl
+    !     return
+    ! end subroutine allocintgrl
 
     ! Routine to deallcoate 1&2 electron electron integral matrices
     subroutine deallocintgrl(elecs)
@@ -50,9 +50,12 @@ MODULE alarrays
         if (errorflag .ne. 0) return
 
         ierr=0
+        deallocate (elecs%integrals, stat=ierr)
+        if(ierr==0) deallocate (elecs%ali_dead,stat=ierr)
+        if(ierr==0) deallocate (elecs%negs,stat=ierr)
 
-        deallocate (elecs%h1ei, stat=ierr)
-        if(ierr==0) deallocate (elecs%h2ei,stat=ierr)
+        ! deallocate (elecs%h1ei, stat=ierr)
+        ! if(ierr==0) deallocate (elecs%h2ei,stat=ierr)
         if (ierr/=0) then
             write(stderr,"(a,i0)") "Error in electron integral  deallocation. ierr had value ", ierr
             errorflag=1
@@ -361,36 +364,10 @@ MODULE alarrays
      
     end subroutine deallocgrad
     
-    subroutine alloc_oprts(oper,n)
+    subroutine alloc_oprts(oper,n) 
 
         implicit none 
         type(oprts),intent(inout)::oper 
-        integer,intent(in)::n 
-        integer::ierr
-
-        if (errorflag .ne. 0) return
-      
-        ierr=0
-       
-        call alloc_oprts_2(oper%ham,n)
-        
-        ! if(GDflg.eq.'y')then 
-        !     allocate(oper%diff(norb),stat=ierr)
-        !     if (ierr/=0) then
-        !         write(stderr,"(a,i0)") "Error in gradient operators allocation. ierr had value ", ierr
-        !         errorflag=1
-        !         return
-        !     end if
-        ! end if
-       
-        return 
-
-    end subroutine alloc_oprts
-
-    subroutine alloc_oprts_2(oper,n) 
-
-        implicit none 
-        type(oprts_2),intent(inout)::oper 
         integer,intent(in)::n 
         integer::ierr,k
         integer(int16)::j,norbs
@@ -418,12 +395,12 @@ MODULE alarrays
 
         return
 
-    end subroutine alloc_oprts_2
+    end subroutine alloc_oprts
 
-    subroutine dealloc_oprts_2(oper)
+    subroutine dealloc_oprts(oper)
 
         implicit none 
-        type(oprts_2),intent(inout)::oper 
+        type(oprts),intent(inout)::oper 
         integer::ierr
         
         if (errorflag .ne. 0) return
@@ -436,38 +413,6 @@ MODULE alarrays
             errorflag=1
             return
         end if
-
-    end subroutine
-
-    subroutine dealloc_oprts(oper)
-
-        implicit none 
-        type(oprts),intent(inout)::oper 
-        integer::ierr,j
-
-        if (errorflag .ne. 0) return
-
-        ierr=0
-
-        call dealloc_oprts_2(oper%ham)
-      
-        if(GDflg.eq.'y')then 
-            do j=1,norb 
-                call dealloc_oprts_2(oper%diff(j))
-                ! do k=1,norb 
-                !     call dealloc_oprts_2(oper%hess(j,k))
-                ! end do 
-            end do 
-            deallocate(oper%diff,oper%dcnt,stat=ierr)
-            ! deallocate(oper%diff,oper%hess,oper%dcnt,oper%hcnt,stat=ierr)
-            if (ierr/=0) then
-                write(stderr,"(a,i0)") "Error in gradient operators deallocation. ierr had value ", ierr
-                errorflag=1
-                return
-            end if
-        end if
-       
-
 
     end subroutine dealloc_oprts
 

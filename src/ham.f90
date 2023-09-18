@@ -9,14 +9,13 @@ MODULE ham
 
     !Level 0 Hamiltonian Routine
     ! Subroutine that controls and calcualtes all of the hamiltonian variables 
-    subroutine hamgen(haml,zstore,elecs,size,an_cr,an2_cr2,verb)
+    subroutine hamgen(haml,zstore,elecs,size,verb)
 
         implicit none 
 
         type(hamiltonian), intent(inout)::haml 
         type(zombiest),dimension(:),intent(in)::zstore
         type(elecintrgl),intent(in)::elecs
-        type(oprts),intent(in)::an_cr,an2_cr2
         integer,intent(in)::size,verb
         integer, allocatable,dimension(:)::IPIV1
         real(kind=8),allocatable,dimension(:)::WORK1
@@ -32,7 +31,7 @@ MODULE ham
         ! call system_clock(end)
         ! print *, "elapsed time: ", real(end - beginning) / real(rate)
 
-        call haml_ovrlp_comb(haml,zstore,elecs,size,an_cr%ham,an2_cr2%ham,verb)
+        call haml_ovrlp_comb(haml,zstore,elecs,size,verb)
         
         haml%inv=haml%ovrlp
         allocate(WORK1(size),IPIV1(size),stat=ierr)
@@ -63,41 +62,38 @@ MODULE ham
     
     !Level 1 Routines to make the Hamiltonian and Overlap matrices
 
-    subroutine haml_ovrlp_comb(haml,zstore,elecs,size,an_cr,an2_cr2,verb)
+    subroutine haml_ovrlp_comb(haml,zstore,elecs,size,verb)
         implicit none
 
         type(hamiltonian), intent(inout)::haml 
         ! real(kind=8),dimension(:,:),intent(inout)::haml 
         type(zombiest),dimension(:),intent(in)::zstore
         type(elecintrgl),intent(in)::elecs
-        type(oprts_2),intent(in)::an_cr,an2_cr2
         type(dual2),dimension(0:2*norb)::z1d,z2d
         integer,intent(in)::verb,size
         integer::j,k,ierr
-        type(dual2)::h1etot,h2etot,ovlptot,hamtot
+        type(dual2)::htot,ovlptot,hamtot
     
         if (errorflag .ne. 0) return 
         ierr=0
 
         !$omp parallel do &
         !$omp & private(j,k,h1etot,h2etot,ovlptot,hamtot,z1d,z2d) &
-        !$omp & shared(elecs,zstore,an_cr,an2_cr2,haml) 
+        !$omp & shared(elecs,zstore,haml) 
         do j=1,size
-            h1etot=0.0d0; h2etot=0.0d0; ovlptot=0.0d0; hamtot=0.0d0
+            ovlptot=0.0d0; hamtot=0.0d0
             z1d = dual_2_dual2(zstore(j)%val,1)
             ovlptot=1.0d0
-            h1etot = haml_vals(z1d,z1d,an_cr,elecs%h1ei,elecs%h1_num)
-            h2etot = haml_vals(z1d,z1d,an2_cr2,elecs%h2ei,elecs%h2_num)
-            hamtot=h1etot+(0.5d0*h2etot)+(ovlptot*elecs%hnuc)
+            htot=haml_vals(z1d,z1d,elecs)
+            hamtot=htot+(ovlptot*elecs%hnuc)
 
             call val_filler(haml%hjk,haml%ovrlp,haml%diff_hjk,haml%diff_ovrlp,hamtot,ovlptot,j,j)
             do k=j+1,size
                 z2d= dual_2_dual2(zstore(k)%val,2)
-                h1etot=0.0d0; h2etot=0.0d0; ovlptot=0.0d0; hamtot=0.0d0
+                ovlptot=0.0d0; hamtot=0.0d0
                 ovlptot=overlap_1(z1d,z2d)
-                h1etot = haml_vals(z1d,z2d,an_cr,elecs%h1ei,elecs%h1_num)
-                h2etot = haml_vals(z1d,z2d,an2_cr2,elecs%h2ei,elecs%h2_num)
-                hamtot=h1etot+(0.5d0*h2etot)+(ovlptot*elecs%hnuc)
+                htot=haml_vals(z1d,z2d,elecs)
+                hamtot=htot+(ovlptot*elecs%hnuc)
                 call val_filler(haml%hjk,haml%ovrlp,haml%diff_hjk,haml%diff_ovrlp,hamtot,ovlptot,j,k)
             end do 
             if(verb.eq.1)then
@@ -120,38 +116,35 @@ MODULE ham
     ! Calcualates a column of a hamiltonian Start specifies the row the column
     ! is started to be calcualted 
 
-    subroutine haml_ovrlp_column(haml,z1d,zstore,size,an_cr,an2_cr2,elecs,row)
+    subroutine haml_ovrlp_column(haml,z1d,zstore,size,elecs,row)
 
         implicit none
         type(zombiest),dimension(:),intent(in)::zstore
         type(dual2),dimension(0:),intent(in)::z1d
         type(elecintrgl),intent(in)::elecs
-        type(oprts_2),intent(in)::an_cr,an2_cr2
         type(hamiltonian),intent(inout)::haml
         type(dual2),dimension(0:2*norb)::z2d
         integer,intent(in)::row,size
-        type(dual2)::h1etot,h2etot,ovlptot,hamtot
+        type(dual2)::htot,ovlptot,hamtot
         integer::j
 
         if (errorflag .ne. 0) return
 
         !$omp parallel do &
         !$omp & private(j,h1etot,h2etot,ovlptot,hamtot,z2d) &
-        !$omp & shared(elecs,zstore,an_cr,an2_cr2,haml,z1d) 
+        !$omp & shared(elecs,zstore,haml,z1d) 
         do j=1,size
-            h1etot=0.0d0; h2etot=0.0d0; ovlptot=0.0d0; hamtot=0.0d0
+            ovlptot=0.0d0; hamtot=0.0d0
             if (j.ne.row) then
                 z2d = dual_2_dual2(zstore(j)%val,2)
                 ovlptot=overlap_1(z1d,z2d)
-                h1etot = haml_vals(z1d,z2d,an_cr,elecs%h1ei,elecs%h1_num)
-                h2etot = haml_vals(z1d,z2d,an2_cr2,elecs%h2ei,elecs%h2_num)
-                hamtot=h1etot+(0.5d0*h2etot)+(ovlptot*elecs%hnuc)
+                htot=haml_vals(z1d,z2d,elecs)
+                hamtot=htot+(ovlptot*elecs%hnuc)
                 call val_filler(haml%hjk,haml%ovrlp,haml%diff_hjk,haml%diff_ovrlp,hamtot,ovlptot,row,j)
             else 
                 ovlptot=1.0d0
-                h1etot = haml_vals(z1d,z1d,an_cr,elecs%h1ei,elecs%h1_num)
-                h2etot = haml_vals(z1d,z1d,an2_cr2,elecs%h2ei,elecs%h2_num)
-                hamtot=h1etot+(0.5d0*h2etot)+(ovlptot*elecs%hnuc)
+                htot=haml_vals(z1d,z1d,elecs)
+                hamtot=htot+(ovlptot*elecs%hnuc)
                 call val_filler(haml%hjk,haml%ovrlp,haml%diff_hjk,haml%diff_ovrlp,hamtot,ovlptot,row,j)
             end if 
         end do
@@ -161,34 +154,31 @@ MODULE ham
 
     end subroutine haml_ovrlp_column
 
-    function haml_column(z1d,zstore,size,an_cr,an2_cr2,elecs,row) result(ham_tot)
+    function haml_column(z1d,zstore,size,elecs,row) result(ham_tot)
 
 
         implicit none
         type(zombiest),dimension(:),intent(in)::zstore
         type(dual2),dimension(0:),intent(in)::z1d
         type(elecintrgl),intent(in)::elecs
-        type(oprts_2),intent(in)::an_cr,an2_cr2
         integer,intent(in)::row,size
         type(dual2),dimension(size)::ham_tot
         type(dual2),dimension(0:2*norb)::z2d
-        type(dual2)::h1etot,h2etot
+        type(dual2)::htot
         integer::j
 
         if (errorflag .ne. 0) return
         ham_tot=0.d0
-        !$omp parallel do private(h1etot,h2etot,j,z2d) shared(an_cr,an2_cr2,elecs,z1d,row,ham_tot)
+        !$omp parallel do private(h1etot,h2etot,j,z2d) shared(elecs,z1d,row,ham_tot)
         do j=1,size
-            h1etot=0.0d0; h2etot=0.0d0
+           
             if (j.ne.row) then
                 z2d=dual_2_dual2(zstore(j)%val,2) 
-                h1etot = haml_vals(z1d,z2d,an_cr,elecs%h1ei,elecs%h1_num)
-                h2etot = haml_vals(z1d,z2d,an2_cr2,elecs%h2ei,elecs%h2_num)
-                ham_tot(j)=ham_tot(j)+(0.5d0*h2etot)+h1etot
+                htot=haml_vals(z1d,z2d,elecs)
+                ham_tot(j)=ham_tot(j)+htot
             else 
-                h1etot = haml_vals(z1d,z1d,an_cr,elecs%h1ei,elecs%h1_num)
-                h2etot = haml_vals(z1d,z1d,an2_cr2,elecs%h2ei,elecs%h2_num)
-                ham_tot(j)=ham_tot(j)+(0.5d0*h2etot)+h1etot
+                htot=haml_vals(z1d,z2d,elecs)
+                ham_tot(j)=ham_tot(j)+htot
             end if 
         end do 
         !$omp end parallel do
@@ -233,13 +223,11 @@ MODULE ham
 
     ! calculates indvidual hamiltonian elements taking in two Zombie states and a set of 
     ! creation and annihilation operations
-    function haml_vals(z1d,z2d,ops,el,len) result(ham_tot)
+    function haml_vals(z1d,z2d,elecs) result(ham_tot)
 
         implicit none 
         type(dual2),dimension(0:),intent(in)::z1d,z2d
-        real(wp),dimension(:),intent(in)::el
-        integer,intent(in)::len
-        type(oprts_2),intent(in)::ops
+        type(elecintrgl),intent(in)::elecs
         type(dual2)::ham_tot
         type(dual2)::ov
         integer::j,k
@@ -251,12 +239,13 @@ MODULE ham
      
        
    
-        do j=1,len
-            ov=1.0d0
+        do j=1,elecs%num
+            ov=elecs%integrals(j)
             do k=1, norb
-                ov=ov*((z1d(k)*z2d(ops%alive(k,j))*ops%neg_alive(k,j))+(z1d((k+norb))*z2d((ops%dead(k,j)))*ops%neg_dead(k,j))) 
+                ov=ov*((z1d(k)*z2d(elecs%ali_dead(k,j))*elecs%negs(k,j))+&
+                (z1d((k+norb))*z2d((elecs%ali_dead(k+norb,j)))*elecs%negs(k+norb,j))) 
             end do
-            ham_tot=ham_tot+(ov*el(j))
+            ham_tot=ham_tot+ov
         end do
 
      

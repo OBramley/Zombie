@@ -21,7 +21,6 @@ program MainZombie
     type(dvector):: dvecs
     type(elecintrgl)::elect
     type(hamiltonian)::haml
-    type(oprts)::an_cr,an2_cr2
     integer:: j, istat,clean_ndet,ierr
     
     type(dual), dimension(:),allocatable::erg
@@ -72,7 +71,7 @@ program MainZombie
     if((cleanflg=="y").or.(cleanflg=="f").or.((hamgflg=='y')).or.(GDflg=='y'))then
        
         write(6,"(a)") "Setting electron"
-        call electronintegrals(elect,an_cr,an2_cr2)
+        call electronintegrals(elect)
         write(6,"(a)") "Electrons allocated"
         if (gramflg.eq."n") then 
             ! generate zombie states
@@ -110,7 +109,7 @@ program MainZombie
         
             if(hamgflg=='y')then
                 write(6,"(a)") "To hamiltonian gen"
-                call hamgen(haml,zstore,elect,ndet,an_cr,an2_cr2,1)
+                call hamgen(haml,zstore,elect,ndet,1)
                 call matrixwriter(haml%hjk%x,ndet,"data/ham.csv")
                 call matrixwriter(haml%ovrlp%x,ndet,"data/ovlp.csv")
                 write(6,"(a)") "Hamiltonian successfully generated"
@@ -130,7 +129,7 @@ program MainZombie
             call energywriter(erg,"energy.csv",0)
        
             if(GDflg.eq."y")then
-                call zombie_alter(zstore,haml,elect,erg,dvecs,an_cr,an2_cr2)
+                call zombie_alter(zstore,haml,elect,erg,dvecs)
                 
                 GDflg='n'
                 do j=1,ndet
@@ -163,16 +162,13 @@ program MainZombie
                 write(6,"(a)") "Zombie states deallocated"
                 call deallocintgrl(elect)
                 write(6,"(a)") "Electron integrals deallocated"
-                call dealloc_oprts(an_cr)
-                call dealloc_oprts(an2_cr2)
-                write(6,"(a)") "creation and annihilation operators deallocated"
                 !end if
             end if
 
             call flush(6)
             call flush(0)
         else if(gramflg.eq."n") then 
-            ! call gram_schmidt_control(elect,ndet,an_cr,an2_cr2)
+            ! call gram_schmidt_control(elect,ndet)
         else
             write(0,"(a,i0)") "Error in gramflg setting. This should have been caught ", ierr
             errorflag=1
@@ -185,7 +181,7 @@ program MainZombie
                 call dvec_read(dvecs%d%x,ndet,0,'dvec_0000.csv')
                 write(6,"(a)") "d-vector read in"
             else if(gramflg.eq."y")then
-                ! call gram_schmidt_control(elect,ndet,an_cr,an2_cr2)
+                ! call gram_schmidt_control(elect,ndet)
             else
                 write(0,"(a,i0)") "Error in gramflg setting. This should have been caught ", ierr
                     errorflag=1
@@ -196,18 +192,16 @@ program MainZombie
             write(6,"(a)") "Zombie states deallocated"
             call deallocintgrl(elect)
             write(6,"(a)") "Electron integrals deallocated"
-            call dealloc_oprts(an_cr)
-            call dealloc_oprts(an2_cr2)
-            write(6,"(a)") "creation and annihilation operators deallocated"
+    
         end if
     end if
     
     if((cleanflg=="y").or.(cleanflg=="f"))then
         if(cleanflg=="y")then
-            call clean_setup(cstore,nel,clean_haml,elect,clean_ndet,zstore,an_cr,an2_cr2)
+            call clean_setup(cstore,nel,clean_haml,elect,clean_ndet,zstore)
             write(6,"(a)") "Cleaning hamiltonian generated"
         else if(cleanflg=="f")then
-            call clean_read(cstore,clean_haml,clean_ndet,elect,an_cr,an2_cr2)
+            call clean_read(cstore,clean_haml,clean_ndet,elect)
             write(6,"(a)") "Cleaning hamiltonian read in"
         end if
         
@@ -232,9 +226,6 @@ program MainZombie
         call deallocintgrl(elect)
         write(6,"(a)") "Electron integrals deallocated"
         !end if
-        call dealloc_oprts(an_cr)
-        call dealloc_oprts(an2_cr2)
-        write(6,"(a)") "creation and annihilation operators deallocated"
     end if
 
 
