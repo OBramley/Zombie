@@ -229,11 +229,11 @@ MODULE ham
         ovrlp(j,k)=ovlptot%x; ovrlp(j,k)%dx=ovlptot%dx(1:norb)
         ovrlp(k,j)=ovrlp(j,k)
         
-        diff_hjk(j,k,:)=hamtot%dx(1:norb)
-        diff_ovrlp(k,j,:)=ovlptot%dx(1+norb:2*norb)
+        diff_hjk(:,k,j)=hamtot%dx(1:norb)
+        diff_ovrlp(:,j,k)=ovlptot%dx(1+norb:2*norb)
         if(j.ne.k)then 
-            diff_hjk(k,j,:)=hamtot%dx(1+norb:2*norb)
-            diff_ovrlp(j,k,:)=ovlptot%dx(1:norb)
+            diff_hjk(:,j,k)=hamtot%dx(1+norb:2*norb)
+            diff_ovrlp(:,k,j)=ovlptot%dx(1:norb)
         end if
         
        

@@ -89,8 +89,8 @@ MODULE gradient_descent
         call dx_zero(dvec%d)
 
         do j=1,ndet
-            haml%hjk(pick,j)%dx=haml%diff_hjk(pick,j,:); haml%hjk(j,pick)%dx=haml%diff_hjk(pick,j,:)
-            haml%ovrlp(pick,j)%dx=haml%diff_ovrlp(pick,j,:); haml%ovrlp(j,pick)%dx=haml%diff_ovrlp(pick,j,:)
+            haml%hjk(pick,j)%dx=haml%diff_hjk(:,j,pick); haml%hjk(j,pick)%dx=haml%diff_hjk(:,j,pick)
+            haml%ovrlp(pick,j)%dx=haml%diff_ovrlp(:,j,pick); haml%ovrlp(j,pick)%dx=haml%diff_ovrlp(:,j,pick)
         end do
        
         ! if(d_grad_flg==2)then 
