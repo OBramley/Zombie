@@ -35,8 +35,10 @@ MODULE electrons
         elecs%num=e1+e2
 
         allocate(elecs%integrals(elecs%num),stat=ierr)
-        allocate(elecs%ali_dead(2*norb,elecs%num),stat=ierr)
-        allocate(elecs%negs(2*norb,elecs%num),stat=ierr)
+        allocate(elecs%alive(norb,elecs%num),stat=ierr)
+        allocate(elecs%dead(norb,elecs%num),stat=ierr)
+        allocate(elecs%neg_a(norb,elecs%num),stat=ierr)
+        allocate(elecs%neg_d(norb,elecs%num),stat=ierr)
         if(ierr/=0) then
             write(0,"(a,i0)") "Error in electron integral  allocation. ierr had value ", ierr
             errorflag=1
@@ -46,59 +48,20 @@ MODULE electrons
         cnt=1
         do j=1,e1
             elecs%integrals(cnt)=h1ei(j)
-            elecs%ali_dead(1:norb,cnt)=an_cr%alive(:,j)
-            elecs%ali_dead(norb+1:,cnt)=an_cr%dead(:,j)
-            elecs%negs(1:norb,cnt)=an_cr%neg_alive(:,j)
-            elecs%negs(norb+1:,cnt)=an_cr%neg_dead(:,j)
-            ! do k=1,norb
-                ! if(an_cr%alive(k,j)==0)then
-                !     elecs%ali_dead((2*k)-1,cnt)=0
-                ! else if(an_cr%alive(k,j)>norb)then 
-                !     elecs%ali_dead((2*k)-1,cnt)=int((an_cr%alive(k,j)-norb)*2,kind=int16)
-                ! else
-                !     elecs%ali_dead((2*k)-1,cnt)=int((an_cr%alive(k,j)*2)-1,kind=int16)
-                ! end if
-
-                ! if(an_cr%dead(k,j)==0)then
-                !     elecs%ali_dead((2*k),cnt)=0
-                ! else if(an_cr%dead(k,j)<norb)then 
-                !     elecs%ali_dead((2*k),cnt)=int((an_cr%dead(k,j)*2)-1,kind=int16)
-                ! else
-                !     elecs%ali_dead((2*k),cnt)=int((an_cr%dead(k,j)-norb)*2,kind=int16)
-                ! end if     
-
-                ! elecs%negs((2*k)-1,cnt)=an_cr%neg_alive(k,j)
-                ! elecs%negs((2*k),cnt)=an_cr%neg_dead(k,j)
-            ! end do
-
+            elecs%alive(:,cnt)=an_cr%alive(:,j)
+            elecs%dead(:,cnt)=an_cr%dead(:,j)
+            elecs%neg_a(:,cnt)=an_cr%neg_alive(:,j)
+            elecs%neg_d(:,cnt)=an_cr%neg_dead(:,j)
             cnt=cnt+1
         end do
         
         
         do j=1,e2
             elecs%integrals(cnt)=h2ei(j)
-            elecs%ali_dead(1:norb,cnt)=an2_cr2%alive(:,j)
-            elecs%ali_dead(norb+1:,cnt)=an2_cr2%dead(:,j)
-            elecs%negs(1:norb,cnt)=an2_cr2%neg_alive(:,j)
-            elecs%negs(norb+1:,cnt)=an2_cr2%neg_dead(:,j)
-            ! do k=1,norb
-            !     if(an2_cr2%alive(k,j)==0)then
-            !         elecs%ali_dead((2*k)-1,cnt)=0
-            !     else if(an2_cr2%alive(k,j)>norb)then 
-            !         elecs%ali_dead((2*k)-1,cnt)=int((an2_cr2%alive(k,j)-norb)*2,kind=int16)
-            !     else
-            !         elecs%ali_dead((2*k)-1,cnt)=int((an2_cr2%alive(k,j)*2)-1,kind=int16)
-            !     end if
-            !     if(an2_cr2%dead(k,j)==0)then
-            !         elecs%ali_dead((2*k),cnt)=0
-            !     else if(an2_cr2%dead(k,j)<norb)then 
-            !         elecs%ali_dead((2*k),cnt)=int((an2_cr2%dead(k,j)*2)-1,kind=int16)
-            !     else
-            !         elecs%ali_dead((2*k),cnt)=int((an2_cr2%dead(k,j)-norb)*2,kind=int16)
-            !     end if   
-            !     elecs%negs((2*k)-1,cnt)=an2_cr2%neg_alive(k,j)
-            !     elecs%negs((2*k),cnt)=an2_cr2%neg_dead(k,j)  
-            ! end do
+            elecs%alive(:,cnt)=an2_cr2%alive(:,j)
+            elecs%dead(:,cnt)=an2_cr2%dead(:,j)
+            elecs%neg_a(:,cnt)=an2_cr2%neg_alive(:,j)
+            elecs%neg_d(:,cnt)=an2_cr2%neg_dead(:,j)
             cnt=cnt+1
         end do
         

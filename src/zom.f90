@@ -36,10 +36,19 @@ MODULE zom
                     call dual_grad_setup(zstore(j))
                 end if
                 call val_set(zstore(j))
-                ! zstore(j)%val(1:norb)=sin(zstore(j)%phi)
-                ! zstore(j)%val(norb+1:2*norb)=cos(zstore(j)%phi)
             end do
             if(rhf_1=='y') then
+                ! do k=1,nel
+                !     zstore(1)%phi(k)=0.5*pirl
+                !     zstore(1)%val((2*k)-1)=1
+                !     zstore(1)%phi(2*k)=0
+                ! end do
+                ! do k=nel+1,norb
+                !     zstore(1)%phi(k)=0
+                !     zstore(1)%val((2*k)-1)=0
+                !     zstore(1)%val(2*k)=1
+                ! end do
+
                 zstore(1)%phi(1:nel)=0.5*pirl
                 zstore(1)%phi(nel+1:)=0
                 zstore(1)%val(1:norb)=0 
@@ -315,6 +324,17 @@ MODULE zom
             !$omp end do
             !$omp end parallel
             if(rhf_1=='y') then
+                ! do k=1,nel
+                !     zstore(1)%phi(k)=0.5*pirl
+                !     zstore(1)%val((2*k)-1)=1
+                !     zstore(1)%phi(2*k)=0
+                ! end do
+                ! do k=nel+1,norb
+                !     zstore(1)%phi(k)=0
+                !     zstore(1)%val((2*k)-1)=0
+                !     zstore(1)%val(2*k)=1
+                ! end do
+
                 zstore(1)%phi(1:nel)=0.5*pirl
                 zstore(1)%phi(nel+1:)=0
                 zstore(1)%val(1:norb)=0 

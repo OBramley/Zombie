@@ -124,6 +124,8 @@ MODULE outputs
         
             if(imagflg=='n') then
                 write(zomnum,'(*(e25.17e3 :", "))') ((zom%phi(j)%x),j=1,norb)
+                ! write(zomnum,'(*(e25.17e3 :", "))') ((zom%val(j)%x),j=2,2*norb,2)
+                ! write(zomnum,'(*(e25.17e3 :", "))') ((zom%val(j)%x),j=1,2*norb,2)
                 write(zomnum,'(*(e25.17e3 :", "))') ((zom%val(j)%x),j=1+norb,2*norb)
                 write(zomnum,'(*(e25.17e3 :", "))') ((zom%val(j)%x),j=1,norb)
             else if(imagflg=='y') then
@@ -131,6 +133,8 @@ MODULE outputs
                 ! write(zomnum,'(*(e25.17e3 :", ": ))') ((zom%img(j)),j=1,norb)
                 write(zomnum,'(*(e25.17e3 :", "))') ((zom%val(j)%x),j=1+norb,2*norb)
                 write(zomnum,'(*(e25.17e3 :", "))') ((zom%val(j)%x),j=1,norb)
+                ! write(zomnum,'(*(e25.17e3 :", "))') ((zom%val(j)%x),j=2,2*norb,2)
+                ! write(zomnum,'(*(e25.17e3 :", "))') ((zom%val(j)%x),j=1,2*norb,2)
             end if
             close(zomnum)
         else if(file_exists.eqv..true.) then
@@ -145,6 +149,8 @@ MODULE outputs
             write(zomnum,*)' '
             if(imagflg=='n') then
                 write(zomnum,'(*(e25.17e3 :", "))') ((zom%phi(j)%x),j=1,norb)
+                ! write(zomnum,'(*(e25.17e3 :", "))') ((zom%val(j)%x),j=2,2*norb,2)
+                ! write(zomnum,'(*(e25.17e3 :", "))') ((zom%val(j)%x),j=1,2*norb,2)
                 write(zomnum,'(*(e25.17e3 :", "))') ((zom%val(j)%x),j=1+norb,2*norb)
                 write(zomnum,'(*(e25.17e3 :", "))') ((zom%val(j)%x),j=1,norb)
             else if(imagflg=='y') then

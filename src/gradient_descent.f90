@@ -275,10 +275,8 @@ MODULE gradient_descent
                     global_min_idx=-1
                   
                     !$OMP PARALLEL DEFAULT(NONE) SHARED(loop_max, b, alpha, zstore, grad_fin, haml, elect, ndet, &
-                    !$OMP &  timesteps,global_min_erg,global_min_idx,global_zom_phi,global_zom_val,&
-                    !$omp & global_ham,global_dvecs,pick,norb,pickorb) &
-                    !$OMP & PRIVATE(lralt_zs, temp_zom_phi,temp_zom_val, temp_ham, erg, fxtdk, min_fxtdk, min_fxtdk_idx,& 
-                    !$OMP & thread_zom_phi, thread_zom_val, thread_ham,thread_d,temp_dvecs,t)
+                    !$OMP &  timesteps,global_min_erg,global_min_idx,global, pick,norb,pickorb) &
+                    !$OMP & PRIVATE(lralt_zs, temp, min_erg, min_idx,t)
                    
                     min_erg = grad_fin%prev_erg !0
                     min_idx = -1
@@ -481,10 +479,8 @@ MODULE gradient_descent
                 global_min_erg=grad_fin%prev_erg
                 global_min_idx=-1
                 !$OMP PARALLEL DEFAULT(NONE) SHARED(loop_max, b, alpha, zstore, grad_fin, haml, elect, ndet, &
-                !$OMP &  timesteps,global_min_erg,global_min_idx,global_zom_phi,global_zom_val,global_ham,&
-                !$omp & global_dvecs,pick,norb) &
-                !$OMP & PRIVATE(lralt_temp, temp_zom_phi,temp_zom_val, temp_ham, erg, fxtdk, min_erg, min_fxtdk_idx,&
-                !$OMP & thread_zom_phi, thread_zom_val, thread_ham, thread_d,temp_dvecs,t)
+                !$OMP &  timesteps,global_min_erg,global_min_idx,global,pick,norb) &
+                !$OMP & PRIVATE(lralt_temp, temp, min_erg, min_idx,thread,t)
                 min_erg = grad_fin%prev_erg !0
                 min_idx = -1
                 !$omp do !ordered schedule(static,1)
@@ -501,8 +497,6 @@ MODULE gradient_descent
                     call he_full_row(temp,zstore,elect,ndet)
                     call imaginary_time_erg(temp,ndet)
                 
-            
-                   
                     if((temp%erg%x .lt. min_erg))then
                         min_erg = temp%erg%x
                         min_idx = lralt_temp
@@ -583,7 +577,6 @@ MODULE gradient_descent
                 orb_cnt=orb_cnt+1
             else if((orb_cnt.le.0))then
                 call orbital_gd(zstore,grad_fin,elect,dvecs,haml,2)
-                
                 call haml_to_grad_do(haml,dvecs,global)
                 temp=global; thread=global
                 orb_cnt=100

@@ -51,8 +51,10 @@ MODULE globvars
     type elecintrgl
         integer::num
         real(wp), dimension(:), allocatable::integrals
-        integer(int16),dimension(:,:), allocatable::ali_dead
-        integer(int8),dimension(:,:), allocatable::negs
+        integer(int16),dimension(:,:), allocatable::alive
+        integer(int16),dimension(:,:), allocatable::dead
+        integer(int8),dimension(:,:), allocatable::neg_a
+        integer(int8),dimension(:,:), allocatable::neg_d
         real(wp) :: hnuc
 
     end type elecintrgl
@@ -122,14 +124,14 @@ MODULE globvars
         implicit none
         class(zombiest),intent(inout)::this
         type(dual),dimension(norb)::temp
-
+       
         this%val(0)=0.0d0
         temp=sin(this%phi)
         this%val(1:norb)=dual_2_dual2(temp,2)
         temp=cos(this%phi)
         this%val(1+norb:2*norb)=dual_2_dual2(temp,2) 
-      
-       
+
+    
         return
 
     end subroutine val_set_whole

@@ -278,7 +278,7 @@ MODULE readpars
                         zstore(j)%phi(k)%dx(k)=1.0d0
                     end do 
                 end if
-               
+                call val_set(zstore(j))
                 ! zstore(j)%val(1:norb)=sin(zstore(j)%phi)
                 ! zstore(j)%val(norb+1:2*norb)=cos(zstore(j)%phi)
                 
@@ -286,6 +286,10 @@ MODULE readpars
                 close(zomnum)
                
             end do
+            if(rhf_1=='y') then
+                call dx_zero(zstore(1)%phi)
+                call dx_zero(zstore(1)%val)
+            end if 
         else if(imagflg=='y')then
             ! do j=1, ndet
             !     write(num,"(i4.4)")j

@@ -51,8 +51,10 @@ MODULE alarrays
 
         ierr=0
         deallocate (elecs%integrals, stat=ierr)
-        if(ierr==0) deallocate (elecs%ali_dead,stat=ierr)
-        if(ierr==0) deallocate (elecs%negs,stat=ierr)
+        if(ierr==0) deallocate (elecs%alive,stat=ierr)
+        if(ierr==0) deallocate (elecs%dead,stat=ierr)
+        if(ierr==0) deallocate (elecs%neg_a,stat=ierr)
+        if(ierr==0) deallocate (elecs%neg_d,stat=ierr)
 
         if (ierr/=0) then
             write(stderr,"(a,i0)") "Error in electron integral  deallocation. ierr had value ", ierr

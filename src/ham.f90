@@ -193,8 +193,8 @@ MODULE ham
         do j=1,elecs%num
             ov=elecs%integrals(j)
             do k=1, norb
-                ov=ov*((z1d(k)*z2d(elecs%ali_dead(k,j))*elecs%negs(k,j))+&
-                (z1d((k+norb))*z2d((elecs%ali_dead(k+norb,j)))*elecs%negs(k+norb,j))) 
+                ov=ov*((z1d(k)*z2d(elecs%alive(k,j))*elecs%neg_a(k,j))+&
+                (z1d((k+norb))*z2d((elecs%dead(k,j)))*elecs%neg_d(k,j))) 
             end do
             ham_tot=ham_tot+ov
         end do
@@ -229,36 +229,6 @@ MODULE ham
 
     !##############################################################################################################################
     
-    subroutine val_filler(hjk,ovrlp,diff_hjk,diff_ovrlp,hamtot,ovlptot,j,k)
-
-        implicit none 
-        type(dual), dimension(:,:),intent(inout)::hjk
-        type(dual), dimension(:,:),intent(inout)::ovrlp
-        real(wp), dimension(:,:,:),intent(inout)::diff_hjk
-        real(wp), dimension(:,:,:),intent(inout)::diff_ovrlp
-        type(dual2),intent(in)::hamtot,ovlptot
-        integer,intent(in)::j,k
-
-        if (errorflag .ne. 0) return
-
-        hjk(j,k)%x=hamtot%x; hjk(j,k)%dx=hamtot%dx(1:norb)
-        hjk(k,j)=hjk(j,k)
-        
-        ovrlp(j,k)=ovlptot%x; ovrlp(j,k)%dx=ovlptot%dx(1:norb)
-        ovrlp(k,j)=ovrlp(j,k)
-        
-        diff_hjk(:,k,j)=hamtot%dx(1:norb)
-        diff_ovrlp(:,k,j)=ovlptot%dx(1:norb)
-        ! diff_ovrlp(:,j,k)=ovlptot%dx(1+norb:2*norb)
-        if(j.ne.k)then 
-            diff_hjk(:,j,k)=hamtot%dx(1+norb:2*norb)
-            diff_ovrlp(:,j,k)=ovlptot%dx(1+norb:2*norb)
-            ! diff_ovrlp(:,k,j)=ovlptot%dx(1:norb)
-        end if
-        
-       
-        return
-        
-    end subroutine val_filler
+   
 
 END MODULE ham
