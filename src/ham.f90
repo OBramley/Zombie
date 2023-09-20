@@ -72,28 +72,34 @@ MODULE ham
         type(dual2),dimension(0:2*norb)::z1d
         integer,intent(in)::verb,size
         integer::j,k,ierr
-        type(dual2)::htot,ovlptot,hamtot
+        type(dual2)::ovlptot,hamtot
     
         if (errorflag .ne. 0) return 
         ierr=0
 
         !$omp parallel do &
-        !$omp & private(j,k,h1etot,h2etot,ovlptot,hamtot,z1d) &
+        !$omp & private(j,k,ovlptot,hamtot,z1d) &
         !$omp & shared(elecs,zstore,haml) 
         do j=1,size
-            ovlptot=0.0d0; hamtot=0.0d0
             z1d =typ2_2_typ1(zstore(j)%val)
-            ovlptot=1.0d0
-            htot=haml_vals(z1d,z1d,elecs)
-            hamtot=htot+(ovlptot*elecs%hnuc)
 
-            call val_filler(haml%hjk,haml%ovrlp,haml%diff_hjk,haml%diff_ovrlp,hamtot,ovlptot,j,j)
+            hamtot=haml_vals(z1d,z1d,elecs)+(elecs%hnuc)
+            haml%hjk(j,j)%x=hamtot%x
+            haml%diff_hjk(:,j,j)=hamtot%dx(1:norb)
+
+            haml%ovrlp(j,j)=1.0d0
+            haml%diff_ovrlp(:,j,j)=0.0d0 
+           
             do k=j+1,size
-                ovlptot=0.0d0; hamtot=0.0d0
                 ovlptot=overlap_1(z1d,zstore(k)%val)
-                htot=haml_vals(z1d,zstore(k)%val,elecs)
-                hamtot=htot+(ovlptot*elecs%hnuc)
-                call val_filler(haml%hjk,haml%ovrlp,haml%diff_hjk,haml%diff_ovrlp,hamtot,ovlptot,j,k)
+                haml%ovrlp(j,k)=ovlptot%x; haml%ovrlp(k,j)%x=haml%ovrlp(j,k)%x
+                haml%diff_ovrlp(:,k,j)=ovlptot%dx(1:norb)
+                haml%diff_ovrlp(:,j,k)=ovlptot%dx(1+norb:2*norb)
+
+                hamtot=haml_vals(z1d,zstore(k)%val,elecs)+(ovlptot*elecs%hnuc)
+                haml%hjk(j,k)%x=hamtot%x; haml%hjk(k,j)%x=haml%hjk(j,k)%x
+                haml%diff_hjk(:,k,j)=hamtot%dx(1:norb)
+                haml%diff_hjk(:,j,k)=hamtot%dx(1+norb:2*norb)
             end do 
             if(verb.eq.1)then
                 write(6,"(a,i0,a)") "hamliltonian column ",j, " completed"
@@ -113,35 +119,49 @@ MODULE ham
     ! Calcualates a column of a hamiltonian Start specifies the row the column
     ! is started to be calcualted 
 
-    subroutine haml_ovrlp_column(haml,z1,zstore,size,elecs,row)
+    subroutine haml_ovrlp_column(temp,zstore,size,elecs,row)
 
         implicit none
         type(zombiest),dimension(:),intent(in)::zstore
-        type(zombiest),intent(in)::z1
+        type(grad_do),intent(inout)::temp
+        ! type(zombiest),intent(in)::z1
         type(elecintrgl),intent(in)::elecs
-        type(hamiltonian),intent(inout)::haml
+        ! type(hamiltonian),intent(inout)::haml
         integer,intent(in)::row,size
         type(dual2),dimension(0:2*norb)::z1d
-        type(dual2)::htot,ovlptot,hamtot
+        type(dual2)::ovlptot,hamtot
         integer::j
 
         if (errorflag .ne. 0) return
-        z1d = typ2_2_typ1(z1%val)
+        z1d = typ2_2_typ1(temp%zom%val)
         !$omp parallel do &
-        !$omp & private(j,h1etot,h2etot,ovlptot,hamtot) &
+        !$omp & private(j,ovlptot,hamtot) &
         !$omp & shared(elecs,zstore,haml,z1d) 
         do j=1,size
-            ovlptot=0.0d0; hamtot=0.0d0
             if (j.ne.row) then
                 ovlptot=overlap_1(z1d,zstore(j)%val)
-                htot=haml_vals(z1d,zstore(j)%val,elecs)
-                hamtot=htot+(ovlptot*elecs%hnuc)
-                call val_filler(haml%hjk,haml%ovrlp,haml%diff_hjk,haml%diff_ovrlp,hamtot,ovlptot,row,j)
+                temp%ovrlp(row,j)=ovlptot%x; temp%ovrlp(row,j)%dx=ovlptot%dx(1:norb)
+                temp%ovrlp(j,row)=temp%ovrlp(row,j)
+
+                temp%diff_ovrlp_1(:,j)=ovlptot%dx(1:norb)
+                temp%diff_ovrlp_2(:,j)=ovlptot%dx(1+norb:2*norb)
+
+             
+                hamtot=haml_vals(z1d,zstore(j)%val,elecs)+(ovlptot*elecs%hnuc)
+                temp%hjk(row,j)%x=hamtot%x; temp%hjk(row,j)%dx=hamtot%dx(1:norb)
+                temp%hjk(j,row)=temp%hjk(row,j)
+
+                temp%diff_hjk_1(:,j)=hamtot%dx(1:norb)
+                temp%diff_hjk_2(:,j)=hamtot%dx(1+norb:2*norb)
             else 
-                ovlptot=1.0d0
-                htot=haml_vals(z1d,z1d,elecs)
-                hamtot=htot+(ovlptot*elecs%hnuc)
-                call val_filler(haml%hjk,haml%ovrlp,haml%diff_hjk,haml%diff_ovrlp,hamtot,ovlptot,row,j)
+                temp%ovrlp(row,row)=1.0d0
+                temp%ovrlp(row,row)%dx=0.0d0
+                temp%diff_ovrlp_1(:,j)=0.0d0
+             
+                hamtot=haml_vals(z1d,z1d,elecs)+(elecs%hnuc)
+                temp%hjk(row,row)%x=hamtot%x; temp%hjk(row,row)%dx=hamtot%dx(1:norb)
+
+                temp%diff_hjk_1(:,j)=hamtot%dx(1:norb)
             end if 
         end do
         !$omp end parallel do 
@@ -170,8 +190,6 @@ MODULE ham
        
         ham_tot=0.0d0
      
-       
-   
         do j=1,elecs%num
             ov=elecs%integrals(j)
             do k=1, norb
@@ -230,10 +248,12 @@ MODULE ham
         ovrlp(k,j)=ovrlp(j,k)
         
         diff_hjk(:,k,j)=hamtot%dx(1:norb)
-        diff_ovrlp(:,j,k)=ovlptot%dx(1+norb:2*norb)
+        diff_ovrlp(:,k,j)=ovlptot%dx(1:norb)
+        ! diff_ovrlp(:,j,k)=ovlptot%dx(1+norb:2*norb)
         if(j.ne.k)then 
             diff_hjk(:,j,k)=hamtot%dx(1+norb:2*norb)
-            diff_ovrlp(:,k,j)=ovlptot%dx(1:norb)
+            diff_ovrlp(:,j,k)=ovlptot%dx(1+norb:2*norb)
+            ! diff_ovrlp(:,k,j)=ovlptot%dx(1:norb)
         end if
         
        

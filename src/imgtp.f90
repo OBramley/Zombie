@@ -5,6 +5,76 @@ MODULE imgtp
     use dnad
     contains
 
+
+    subroutine imaginary_time_erg(values,size)
+
+        implicit none
+        type(grad_do),intent(inout)::values
+        integer,intent(in)::size
+        integer::j,k,l
+        type(dual)::norm,result,temp
+        type(dual),dimension(size)::ddot
+        real(kind=8)::db
+        
+
+        if (errorflag .ne. 0) return
+    
+        values%dvec%d=0.0d0
+        values%dvec%d(1)=1.0d0
+    
+        norm=0.0d0
+        do j=1,size
+            temp=0.0d0
+            do l=1,size 
+                temp=temp+values%ovrlp(j,l)*values%dvec%d(l)
+            end do 
+            norm=norm+(temp*values%dvec%d(j))
+        end do 
+    
+        norm = sqrt(abs(norm))
+        values%dvec%d=values%dvec%d/norm
+    
+        db=beta/timesteps
+
+        do k=1,timesteps+1
+            ddot=0.0d0
+            do j=1,size 
+                temp=0.0d0
+                do l=1,size 
+                    temp = temp + values%kinvh(j,l)*values%dvec%d(l)
+                end do 
+                ddot(j)=temp
+            end do
+        
+            values%dvec%d=values%dvec%d-(db*ddot)
+        
+            norm=0.0d0   
+    
+            do j=1,size
+                temp=0.0d0
+                do l=1,size 
+                    temp=temp+values%ovrlp(j,l)*values%dvec%d(l)
+                end do 
+                norm=norm+(temp*values%dvec%d(j))
+            end do 
+    
+            norm = sqrt(abs(norm))
+            values%dvec%d=values%dvec%d/norm
+        end do
+
+        result=0.0d0
+        do j=1,size
+            temp=0.0d0
+            do l=1,size 
+                temp=temp+values%hjk(j,l)*values%dvec%d(l)
+            end do 
+            result = result + (values%dvec%d(j)*temp)
+        end do
+    
+        values%erg=result
+
+    end subroutine  imaginary_time_erg
+
     ! Routine for imaginary time propagation
     ! subroutine imgtime_prop(dvecs,erg,haml)
 

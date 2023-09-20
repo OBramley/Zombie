@@ -61,7 +61,20 @@ MODULE globvars
         integer(int16),dimension(:,:), allocatable::alive,dead
         integer(int8),dimension(:,:), allocatable::neg_alive,neg_dead
     end type oprts
-
+    
+    type grad_do
+        type(dual), dimension(:,:), allocatable::hjk
+        type(dual), dimension(:,:), allocatable::ovrlp
+        type(dual), dimension(:,:), allocatable::inv
+        type(dual), dimension(:,:), allocatable::kinvh
+        real(wp), dimension(:,:), allocatable::diff_hjk_1
+        real(wp), dimension(:,:), allocatable::diff_ovrlp_1
+        real(wp), dimension(:,:), allocatable::diff_hjk_2 
+        real(wp), dimension(:,:), allocatable::diff_ovrlp_2  
+        type(zombiest)::zom
+        type(dvector)::dvec
+        type(dual)::erg
+    end type grad_do
 
     type grad 
         real(wp),dimension(:,:), allocatable::vars
