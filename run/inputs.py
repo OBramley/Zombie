@@ -14,14 +14,14 @@
 run={
     
     # What is the name of the run
-    'runfolder':'Li_duals2',
+    'runfolder':'li_duals2',
 
     # Amount of time to request on HPC 
     'runtime': "00:05:00",
 
     'nodes':1,
 
-    'cores':1,
+    'cores':8,
 
     'submissions':1,
 
