@@ -16,7 +16,7 @@ MODULE electrons
         real(wp), dimension(:), allocatable::h1ei
         real(wp), dimension(:), allocatable::h2ei
         integer::e1,e2,cnt
-        integer:: ierr,j,k
+        integer:: ierr,j
         
     
         if (errorflag .ne. 0) return
@@ -176,85 +176,6 @@ MODULE electrons
 
         return
 
-        ! if(GDflg.eq.'y')then
-        !     allocate(temp_diff(0:e2,norb),stat=ierr)
-        !     if (ierr/=0) then
-        !         write(0,"(a,i0)") "Error in temp operators allocation. ierr had value ", ierr
-        !         errorflag=1
-        !         return
-        !     end if
-        !     call alloc_oprts_2(temp_an2_cr2,e2)
-        !     max=0
-        !     temp_diff=0
-            
-        !     do j=1,norb
-        !         do l=1,e2
-        !             cr1=int(read_in(l+1,2))
-        !             cr2=int(read_in(l+1,3))
-        !             an2=int(read_in(l+1,4))
-        !             an1=int(read_in(l+1,5))
-        !             if((an2.eq.j).or.(cr2.eq.j).or.(an1.eq.j).or.(cr1.eq.j))then
-        !                 temp_diff(0,j)=temp_diff(0,j)+1
-        !                 ! print*,temp_diff(0,j)
-        !                 temp_diff(temp_diff(0,j),j)=l
-
-        !                 temp_an2_cr2%alive(:,l)=an2_cr2%ham%alive(:,l)
-        !                 temp_an2_cr2%dead(:,l)=an2_cr2%ham%dead(:,l)
-        !                 temp_an2_cr2%neg_alive(:,l)=an2_cr2%ham%neg_alive(:,l)
-        !                 temp_an2_cr2%neg_dead(:,l)=an2_cr2%ham%neg_dead(:,l)
-    
-        !                 if((an2.eq.j).or.(an1.eq.j))then
-        !                     if((cr1.eq.j).or.(cr2.eq.j))then
-        !                         temp_an2_cr2%alive(j,l)=int(j+norb,kind=2)
-        !                         temp_an2_cr2%neg_alive(j,l)=int(2*temp_an2_cr2%neg_alive(j,l),kind=1)
-        !                         temp_an2_cr2%neg_dead(j,l)=0
-        !                     else
-        !                         temp_an2_cr2%alive(j,l)=int(j,kind=2)
-        !                         temp_an2_cr2%dead(j,l)=int(j+norb,kind=2)
-        !                         temp_an2_cr2%neg_alive(j,l)=int(temp_an2_cr2%neg_dead(j,l)*(-1),kind=1)
-        !                     end if
-        !                 else
-        !                     temp_an2_cr2%alive(j,l)=int(j,kind=2)
-        !                     temp_an2_cr2%dead(j,l)=int(j+norb,kind=2)
-        !                     temp_an2_cr2%neg_dead(j,l)=temp_an2_cr2%neg_alive(j,l)
-        !                     temp_an2_cr2%neg_alive(j,l)=int(temp_an2_cr2%neg_alive(j,l)*(-1),kind=1)
-        !                 end if
-        !             end if
-        !         end do
-        !         if(max.lt.temp_diff(0,j))then 
-        !             max=temp_diff(0,j)
-        !         end if
-        !         call alloc_oprts_2(an2_cr2%diff(j),temp_diff(0,j))
-        !         do l=1,temp_diff(0,j)
-        !             an2_cr2%diff(j)%alive(:,l)=temp_an2_cr2%alive(:,temp_diff(l,j))
-        !             an2_cr2%diff(j)%dead(:,l)=temp_an2_cr2%dead(:,temp_diff(l,j))
-        !             an2_cr2%diff(j)%neg_alive(:,l)=temp_an2_cr2%neg_alive(:,temp_diff(l,j))
-        !             an2_cr2%diff(j)%neg_dead(:,l)=temp_an2_cr2%neg_dead(:,temp_diff(l,j))
-        !         end do
-        !     end do
-
-        !     allocate(an2_cr2%dcnt(0:max,norb))
-        !     an2_cr2%dcnt=0
-        !     do j=1, norb 
-        !         an2_cr2%dcnt(0:max,j)=temp_diff(0:max,j)
-        !         ! print*,an2_cr2%dcnt(0:,j)
-        !     end do
-        !     ! an2_cr2%dcnt(0,:)=temp_diff(0,:)
-        !     ! do j=1, norb 
-        !     !     an2_cr2%dcnt(1:,j)=temp_diff(1:max,j)
-        !     ! end do 
-        !     deallocate(temp_diff,stat=ierr)
-        !     deallocate(read_in,stat=ierr)
-        !     if (ierr/=0) then
-        !         write(0,"(a,i0)") "Error in temp operators deallocation. ierr had value ", ierr
-        !         errorflag=1
-        !         return
-        !     end if
-        !     call dealloc_oprts_2(temp_an2_cr2)
- 
-        ! end if
-        
-        return
     
     end subroutine two_electrons
     
@@ -323,79 +244,6 @@ MODULE electrons
 
         return
          
-        ! if(GDflg.eq.'y')then
-          
-        !     allocate(temp_diff(0:e1,norb),stat=ierr)
-        !     if (ierr/=0) then
-        !         write(0,"(a,i0)") "Error in temp operators allocation. ierr had value ", ierr
-        !         errorflag=1
-        !         return
-        !     end if
-        !     temp_diff=0
-        !     call alloc_oprts_2(temp_an_cr,e1) 
-            
-        !     max=0
-        !     do j=1,norb
-        !         do l=1,e1
-        !             an=int(read_in(l+1,2))
-        !             cr=int(read_in(l+1,3))
-        !             if((an.eq.j).or.(cr.eq.j))then
-        !                 temp_diff(0,j)=temp_diff(0,j)+1
-        !                 temp_diff(temp_diff(0,j),j)=l
-
-        !                 temp_an_cr%alive(:,l)=an_cr%ham%alive(:,l)
-        !                 temp_an_cr%dead(:,l)=an_cr%ham%dead(:,l)
-        !                 temp_an_cr%neg_alive(:,l)=an_cr%ham%neg_alive(:,l)
-        !                 temp_an_cr%neg_dead(:,l)=an_cr%ham%neg_dead(:,l)
-        !                 if(an.eq.cr)then 
-        !                     temp_an_cr%alive(j,l)=int(j+norb,kind=2)
-        !                     temp_an_cr%neg_alive(j,l)=int(2*temp_an_cr%neg_alive(j,l),kind=1)
-        !                     temp_an_cr%neg_dead(j,l)=0
-        !                 else if(j.eq.an)then
-        !                     temp_an_cr%alive(j,l)=int(j,kind=2)
-        !                     temp_an_cr%dead(j,l)=int(j+norb,kind=2)
-        !                     temp_an_cr%neg_alive(j,l)=int(temp_an_cr%neg_dead(j,l)*(-1),kind=1)
-        !                 else if(j.eq.cr)then
-        !                     temp_an_cr%alive(j,l)=int(j,kind=2)
-        !                     temp_an_cr%dead(j,l)=int(j+norb,kind=2)
-        !                     temp_an_cr%neg_dead(j,l)=temp_an_cr%neg_alive(j,l)
-        !                     temp_an_cr%neg_alive(j,l)=int(temp_an_cr%neg_alive(j,l)*(-1),kind=1)
-        !                 end if
-        !             end if
-        !         end do
-        !         if(max.lt.temp_diff(0,j))then 
-        !             max=temp_diff(0,j)
-        !         end if
-        !         call alloc_oprts_2(an_cr%diff(j),temp_diff(0,j))
-        !         do l=1,temp_diff(0,j)
-        !             an_cr%diff(j)%alive(:,l)=temp_an_cr%alive(:,temp_diff(l,j))
-        !             an_cr%diff(j)%dead(:,l)=temp_an_cr%dead(:,temp_diff(l,j))
-        !             an_cr%diff(j)%neg_alive(:,l)=temp_an_cr%neg_alive(:,temp_diff(l,j))
-        !             an_cr%diff(j)%neg_dead(:,l)=temp_an_cr%neg_dead(:,temp_diff(l,j))
-        !         end do
-        !     end do
-          
-        !     allocate(an_cr%dcnt(0:max,norb))
-         
-        !     do j=1, norb 
-        !         an_cr%dcnt(0:max,j)=temp_diff(0:max,j)
-        !     end do 
-            
-        !     deallocate(temp_diff,stat=ierr)
-        !     deallocate(read_in,stat=ierr)
-        !     if (ierr/=0) then
-        !         write(0,"(a,i0)") "Error in temp operators deallocation. ierr had value ", ierr
-        !         errorflag=1
-        !         return
-        !     end if
-          
-        !     call dealloc_oprts_2(temp_an_cr)
-
-        
-        
-        ! end if
-        
-        
         return
     
     

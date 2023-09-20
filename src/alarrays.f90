@@ -7,37 +7,6 @@ MODULE alarrays
     contains
 
 
-
-    ! Routine to allcoate 1&2 electron electron integral matrices
-    ! subroutine allocintgrl(elecs,e1,e2)
-
-    !     implicit none
-
-    !     type(elecintrgl), intent(inout)::elecs
-    !     integer,intent(in)::e1,e2
-    !     integer::ierr
-
-    !     if (errorflag .ne. 0) return
-        
-    !     ierr=0
-    !     elecs%h1_num=e1
-    !     elecs%h2_num=e2
-
-    !     allocate (elecs%h1ei(e1), stat=ierr)
-    !     if(ierr==0) allocate (elecs%h2ei(e2),stat=ierr)
-    !     if (ierr/=0) then
-    !         write(stderr,"(a,i0)") "Error in electron integral  allocation. ierr had value ", ierr
-    !         errorflag=1
-    !         return
-    !     end if
-    
-    !     elecs%h1ei=0.0d0
-    !     elecs%h2ei=0.0d0
-    !     elecs%hnuc= 0.0d0
-        
-    !     return
-    ! end subroutine allocintgrl
-
     ! Routine to deallcoate 1&2 electron electron integral matrices
     subroutine deallocintgrl(elecs)
 

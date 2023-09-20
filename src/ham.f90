@@ -218,7 +218,8 @@ MODULE ham
       
        
         do j=1,norb
-            ovrlp_tot=ovrlp_tot*((z1d(j)*z2d(j))+(z1d(j+norb)*z2d(norb+j)))
+            ovrlp=ovrlp*sparse_mult_ovrlp(z1d(j),z1d(j+norb),z2d(j),z2d(j+norb),j)
+            ! ovrlp_tot=ovrlp_tot*((z1d(j)*z2d(j))+(z1d(j+norb)*z2d(norb+j)))
         end do
    
       
@@ -229,6 +230,17 @@ MODULE ham
 
     !##############################################################################################################################
     
-   
+    function sparse_mult_ovrlp(z1d_a,z1d_d,z2d_a,z2d_d,j)result(mult)
+        implicit none
+        type(dual2),value::z1d_a,z1d_d,z2d_a,z2d_d
+        type(dual2)::mult
+        integer::j
+
+       
+        mult%x          = (z1d_a%x * z2d_a%x) + (z1d_d%x*z2d_d%x)
+        mult%dx(j)      = (z1d_a%dx(j) * z2d_a%x) + (z1d_d%dx(j)*z2d_d%x)
+        mult%dx(j+norb) = (z1d_a%x  * z2d_a%dx(j+norb)) + (z1d_d%x*z2d_d%dx(j+norb))
+       
+    end function sparse_mult_ovrlp
 
 END MODULE ham
