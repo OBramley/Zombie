@@ -46,7 +46,7 @@ MODULE ham
         end if
         if (ierr==0) call dgetri(size,haml%inv,size,IPIV1,WORK1,size,ierr)
         if (ierr/=0) then
-            write(0,"(a,i0)")"Error in DGETRF ",ierr
+            write(0,"(a,i0)")"Error in DGETRI ",ierr
         end if
 
         deallocate(WORK1,IPIV1)
@@ -124,9 +124,7 @@ MODULE ham
         implicit none
         type(zombiest),dimension(:),intent(in)::zstore
         type(grad_do),intent(inout)::temp
-        ! type(zombiest),intent(in)::z1
         type(elecintrgl),intent(in)::elecs
-        ! type(hamiltonian),intent(inout)::haml
         integer,intent(in)::row,size
         type(dual2),dimension(0:2*norb)::z1d
         type(dual2)::ovlptot,hamtot
@@ -136,7 +134,7 @@ MODULE ham
         z1d = typ2_2_typ1(temp%zom%val)
         !$omp parallel do &
         !$omp & private(j,ovlptot,hamtot) &
-        !$omp & shared(elecs,zstore,haml,z1d) 
+        !$omp & shared(elecs,zstore,temp,z1d) 
         do j=1,size
             if (j.ne.row) then
                 ovlptot=overlap_1(z1d,zstore(j)%val)
@@ -189,17 +187,15 @@ MODULE ham
 
        
         ham_tot=0.0d0
-     
+        !$omp simd
         do j=1,elecs%num
             ov=elecs%integrals(j)
             do k=1, norb
-                ov=ov*((z1d(k)*z2d(elecs%alive(k,j))*elecs%neg_a(k,j))+&
-                (z1d((k+norb))*z2d((elecs%dead(k,j)))*elecs%neg_d(k,j))) 
+                ov=ov*((z1d(k)*z2d(elecs%alive(k,j))*elecs%neg_a(k,j))+(z1d((k+norb))*z2d((elecs%dead(k,j)))*elecs%neg_d(k,j))) 
             end do
             ham_tot=ham_tot+ov
         end do
-
-     
+        !$omp end simd
         return 
       
     end function haml_vals
@@ -216,31 +212,17 @@ MODULE ham
 
         ovrlp_tot=1.0d0
       
-       
+        !$omp simd
         do j=1,norb
-            ovrlp=ovrlp*sparse_mult_ovrlp(z1d(j),z1d(j+norb),z2d(j),z2d(j+norb),j)
-            ! ovrlp_tot=ovrlp_tot*((z1d(j)*z2d(j))+(z1d(j+norb)*z2d(norb+j)))
+            ovrlp_tot=ovrlp_tot*((z1d(j)*z2d(j))+(z1d(j+norb)*z2d(norb+j)))
         end do
-   
+        !$omp end simd
       
-        
-
         return 
     end function overlap_1
 
     !##############################################################################################################################
     
-    function sparse_mult_ovrlp(z1d_a,z1d_d,z2d_a,z2d_d,j)result(mult)
-        implicit none
-        type(dual2),value::z1d_a,z1d_d,z2d_a,z2d_d
-        type(dual2)::mult
-        integer::j
-
-       
-        mult%x          = (z1d_a%x * z2d_a%x) + (z1d_d%x*z2d_d%x)
-        mult%dx(j)      = (z1d_a%dx(j) * z2d_a%x) + (z1d_d%dx(j)*z2d_d%x)
-        mult%dx(j+norb) = (z1d_a%x  * z2d_a%dx(j+norb)) + (z1d_d%x*z2d_d%dx(j+norb))
-       
-    end function sparse_mult_ovrlp
+    
 
 END MODULE ham
