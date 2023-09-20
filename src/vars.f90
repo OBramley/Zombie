@@ -23,10 +23,10 @@ MODULE globvars
    
     ! Type defining the Hamiltonian matrix and the overlap matrix
     type hamiltonian
-        type(dual), dimension(:,:), allocatable::hjk
-        type(dual), dimension(:,:), allocatable::ovrlp
-        type(dual), dimension(:,:), allocatable::inv
-        type(dual), dimension(:,:), allocatable::kinvh
+        real(wp), dimension(:,:), allocatable::hjk
+        real(wp), dimension(:,:), allocatable::ovrlp
+        real(wp), dimension(:,:), allocatable::inv
+        real(wp), dimension(:,:), allocatable::kinvh
         real(wp), dimension(:,:,:), allocatable::diff_hjk !ZS to be differentiated,zs is bra or ket, orbital, bra/ket pairing
         real(wp), dimension(:,:,:), allocatable::diff_ovrlp!ZS to be differntiated, orbital, bra/ket pairing
         ! real(wp), dimension(:,:,:,:),allocatable::diff_ov_dov

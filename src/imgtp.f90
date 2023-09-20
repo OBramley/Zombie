@@ -129,8 +129,7 @@ MODULE imgtp
 
     ! end subroutine imgtime_prop
 
-    ! Calculates the energy
-    function ergcalc(bham,dvec) result(result)
+    function ergcalc_dual(bham,dvec) result(result)
 
         implicit none
 
@@ -138,6 +137,38 @@ MODULE imgtp
         type(dual),intent(in),dimension(:,:)::bham
         type(dual)::result
         type(dual)::temp
+        integer::j,l
+        if (errorflag .ne. 0) return
+
+        result=0.0d0
+            
+        do j=1,ndet
+            temp=0.0d0
+            do l=1,ndet 
+                temp=temp+bham(j,l)*dvec(l)
+            end do 
+            result = result + (dvec(j)*temp)
+        end do
+
+        ! !$omp parallel
+        ! !$omp workshare
+        ! result=dot_product(dvec,matmul(bham,dvec))
+        ! !$omp end workshare
+        ! !$omp end parallel
+   
+        return
+       
+    end function ergcalc_dual
+
+    ! Calculates the energy
+    function ergcalc(bham,dvec) result(result)
+
+        implicit none
+
+        real(wp),intent(in),dimension(:)::dvec
+        real(wp),intent(in),dimension(:,:)::bham
+        real(wp)::result
+        real(wp)::temp
         integer::j,l
         if (errorflag .ne. 0) return
 

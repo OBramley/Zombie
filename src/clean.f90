@@ -346,7 +346,7 @@ MODULE clean
         call allocham(cleanham,clean_ndet,1)
         call hamgen(cleanham,cstore,elecs,ndet,1)
         ! call hamgen(cleanham,cstore,elecs,clean_ndet,1)
-        call matrixwriter(cleanham%hjk%x,clean_ndet,"data/clean_ham.csv")
+        call matrixwriter(cleanham%hjk,clean_ndet,"data/clean_ham.csv")
         
         
         return
@@ -439,7 +439,7 @@ MODULE clean
             call allocham(cleanham,clean_ndet,1)
             call hamgen(cleanham,cstore,elecs,ndet,1)
             ! call hamgen(cleanham,cstore,elecs,clean_ndet,1)
-            call matrixwriter(cleanham%hjk%x,clean_ndet,"data/clean_ham.csv")
+            call matrixwriter(cleanham%hjk,clean_ndet,"data/clean_ham.csv")
         else
             clean_ndet = lines_clean(clean_ndet)        
             call alloczs(cstore,clean_ndet)

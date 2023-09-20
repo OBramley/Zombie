@@ -110,8 +110,8 @@ program MainZombie
             if(hamgflg=='y')then
                 write(6,"(a)") "To hamiltonian gen"
                 call hamgen(haml,zstore,elect,ndet,1)
-                call matrixwriter(haml%hjk%x,ndet,"data/ham.csv")
-                call matrixwriter(haml%ovrlp%x,ndet,"data/ovlp.csv")
+                call matrixwriter(haml%hjk,ndet,"data/ham.csv")
+                call matrixwriter(haml%ovrlp,ndet,"data/ovlp.csv")
                 write(6,"(a)") "Hamiltonian successfully generated"
             else if (hamgflg=='n')then
                 call read_ham(haml,ndet)
@@ -129,19 +129,21 @@ program MainZombie
             call energywriter(erg,"energy.csv",0)
        
             if(GDflg.eq."y")then
-                call zombie_alter(zstore,haml,elect,erg,dvecs)
+                deallocate(erg,stat=ierr)
+                call zombie_alter(zstore,haml,elect,dvecs)
                 
                 GDflg='n'
                 do j=1,ndet
                     call zombiewriter(zstore(j),j,0)
                 end do
                 dvecs%d=0.0d0
+                allocate(erg(timesteps+1),stat=ierr)
                 call imaginary_time_prop2(dvecs,erg,haml,ndet)
                 
                 write(6,"(a,f21.16)") "Final energy: ", erg(timesteps+1)%x
                 call energywriter(erg,"energy_final.csv",0)
-                call matrixwriter(haml%hjk%x,ndet,"data/ham_final.csv")
-                call matrixwriter(haml%ovrlp%x,ndet,"data/ovlp_final.csv")
+                call matrixwriter(haml%hjk,ndet,"data/ham_final.csv")
+                call matrixwriter(haml%ovrlp,ndet,"data/ovlp_final.csv")
                 
                 ! call sd_anal(zstore,nel,dvecs(1),2)
             end if
@@ -208,7 +210,7 @@ program MainZombie
         call allocdv(dvec_clean,clean_ndet)
         call cleaner(zstore,cstore,dvecs,dvec_clean,clean_ndet,clean_norm)
         ! clean_erg=dot_product(dvec_clean(1)%d,matmul(clean_haml%hjk,dvec_clean(1)%d))
-        clean_erg=ergcalc(clean_haml%hjk,dvec_clean%d)
+        clean_erg=ergcalc(clean_haml%hjk,dvec_clean%d%x)
         write(6,"(a)") "Cleaning process complete"
         call clean_erg_write(clean_ndet,clean_erg,clean_norm,99)
         call dvec_writer_c(dvec_clean%d,clean_ndet,0)

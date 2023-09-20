@@ -104,12 +104,12 @@ print("Arguments checked")
 # Hopefully temporary solution but current one to set the size of the dual paramter is to just write a tiny fortran module to set 
 # the size of the dual array
 
-f=open('../src/dual_set.f90','w')
-f.write("!This an automatically generated file to set the size of the dual derivative array\n")
-f.write("module dual_set\n")
-f.write("integer, parameter :: dual_size = "+str(inputs.zombs['norb']*2)+"\n")
-f.write("end module dual_set\n")
-f.close()
+# f=open('../src/dual_set.f90','w')
+# f.write("!This an automatically generated file to set the size of the dual derivative array\n")
+# f.write("module dual_set\n")
+# f.write("integer, parameter :: dual_size = "+str(inputs.zombs['norb']*2)+"\n")
+# f.write("end module dual_set\n")
+# f.close()
     
 # Check if on HPC
 Hostname=socket.gethostname()

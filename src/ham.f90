@@ -40,18 +40,18 @@ MODULE ham
             errorflag=1
         end if 
 
-        Call dgetrf(size, size, haml%inv%x, size, IPIV1, ierr)
+        Call dgetrf(size, size, haml%inv, size, IPIV1, ierr)
         if (ierr/=0) then
             write(0,"(a,i0)")"Error in DGETRF ",ierr
         end if
-        if (ierr==0) call dgetri(size,haml%inv%x,size,IPIV1,WORK1,size,ierr)
+        if (ierr==0) call dgetri(size,haml%inv,size,IPIV1,WORK1,size,ierr)
         if (ierr/=0) then
             write(0,"(a,i0)")"Error in DGETRF ",ierr
         end if
 
         deallocate(WORK1,IPIV1)
 
-        call DGEMM("N","N",size,size,size,1.d0,haml%inv%x,size,haml%hjk%x,size,0.d0,haml%kinvh%x,size)
+        call DGEMM("N","N",size,size,size,1.d0,haml%inv,size,haml%hjk,size,0.d0,haml%kinvh,size)
 
         return 
 
@@ -84,7 +84,7 @@ MODULE ham
             z1d =typ2_2_typ1(zstore(j)%val)
 
             hamtot=haml_vals(z1d,z1d,elecs)+(elecs%hnuc)
-            haml%hjk(j,j)%x=hamtot%x
+            haml%hjk(j,j)=hamtot%x
             haml%diff_hjk(:,j,j)=hamtot%dx(1:norb)
 
             haml%ovrlp(j,j)=1.0d0
@@ -92,12 +92,12 @@ MODULE ham
            
             do k=j+1,size
                 ovlptot=overlap_1(z1d,zstore(k)%val)
-                haml%ovrlp(j,k)=ovlptot%x; haml%ovrlp(k,j)%x=haml%ovrlp(j,k)%x
+                haml%ovrlp(j,k)=ovlptot%x; haml%ovrlp(k,j)=haml%ovrlp(j,k)
                 haml%diff_ovrlp(:,k,j)=ovlptot%dx(1:norb)
                 haml%diff_ovrlp(:,j,k)=ovlptot%dx(1+norb:2*norb)
 
                 hamtot=haml_vals(z1d,zstore(k)%val,elecs)+(ovlptot*elecs%hnuc)
-                haml%hjk(j,k)%x=hamtot%x; haml%hjk(k,j)%x=haml%hjk(j,k)%x
+                haml%hjk(j,k)=hamtot%x; haml%hjk(k,j)=haml%hjk(j,k)
                 haml%diff_hjk(:,k,j)=hamtot%dx(1:norb)
                 haml%diff_hjk(:,j,k)=hamtot%dx(1+norb:2*norb)
             end do 
