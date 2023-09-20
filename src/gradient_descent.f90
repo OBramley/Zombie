@@ -12,24 +12,30 @@ MODULE gradient_descent
 
     implicit none 
     integer::d_grad_flg=1
-    
+    real(wp)::alpha=0.5 ! learning rate reduction
+    real(wp)::b=3.2D2   !starting learning rate
+    integer::epoc_max=2000
+    integer::epoc_cnt !epoc counter
+    integer::loop_max=50 !max number of loops in gd
+    integer::rjct_cnt_global=0
+    integer::pick !Chosen zombie state
+    integer,dimension(:),allocatable::picker
+    integer,dimension(:),allocatable::chng_trk
+   
     contains
 
     ! Subroutine to calcualte Hamiltonian elements combines 1st and 2nd electron integral calcualations so remove double 
     ! calcualiton of certain results. This minimises the (slow) applicaiton of the creation and annihilaiton operators
 
     ! Subroutine that controls and calcualtes all of the hamiltonian variables 
-    subroutine he_full_row(temp,zstore,elecs,size,diff_state)
+    subroutine he_full_row(temp,zstore,elecs,size)
 
         implicit none 
 
         type(grad_do),intent(inout)::temp
-        ! type(hamiltonian), intent(inout)::haml
         type(zombiest),dimension(:),intent(in)::zstore
-        ! type(dual2),dimension(0:),intent(in)::zs_diff
-        ! type(zombiest),intent(in)::zs_diff
         type(elecintrgl),intent(in)::elecs
-        integer,intent(in)::size,diff_state
+        integer,intent(in)::size
         integer, allocatable,dimension(:)::IPIV1
         real(dp),allocatable,dimension(:)::WORK1
         
@@ -39,7 +45,7 @@ MODULE gradient_descent
         if (errorflag .ne. 0) return
         ierr=0
        
-        call haml_ovrlp_column(temp,zstore,ndet,elecs,diff_state)
+        call haml_ovrlp_column(temp,zstore,ndet,elecs,pick)
         
         temp%inv=temp%ovrlp
        
@@ -59,7 +65,11 @@ MODULE gradient_descent
             write(0,"(a,i0)")"Error in DGETRF",ierr
         end if
 
-        deallocate(WORK1,IPIV1)
+        deallocate(WORK1,IPIV1,stat=ierr)
+        if (ierr/=0) then
+            write(0,"(a,i0)") "Error in IPIV or WORK1 vector deallocation . ierr had value ", ierr
+            errorflag=1
+        end if
         ! if(d_grad_flg==2)then 
         !     call kinvh_grad(temp%inv,temp%hjk,temp%ovrlp,temp%kinvh)
         ! else
@@ -70,15 +80,14 @@ MODULE gradient_descent
     end subroutine he_full_row
 
     
-    subroutine grad_calculate(haml,temp,pick,grad_fin)
+    subroutine grad_calculate(haml,temp,grad_fin)
 
         implicit none 
 
         type(grad),intent(inout)::grad_fin
         type(hamiltonian),intent(in)::haml
         type(grad_do),intent(inout)::temp
-        integer,intent(in)::pick
-      
+     
         integer::j
        
         if (errorflag .ne. 0) return
@@ -180,7 +189,7 @@ MODULE gradient_descent
     end subroutine kinvh_grad
 
 
-    subroutine orbital_gd(zstore,grad_fin,elect,dvecs,haml,epoc_cnt,alpha,b,picker,maxloop,rjct_cnt_in,epoc_max) 
+    subroutine orbital_gd(zstore,grad_fin,elect,dvecs,haml,maxloop) 
 
         implicit none 
 
@@ -189,23 +198,18 @@ MODULE gradient_descent
         type(dvector),intent(inout)::dvecs
         type(hamiltonian),intent(inout)::haml
         type(grad),intent(inout)::grad_fin
-        real(dp),intent(in)::alpha,b
-        integer,intent(inout)::epoc_cnt,rjct_cnt_in
-        integer,intent(in)::maxloop,epoc_max
-        integer,dimension(:),intent(inout)::picker
-
+        integer,intent(in)::maxloop
+    
         type(grad_do)::temp,thread,global
         real(wp)::global_min_erg,min_erg
         integer::global_min_idx,min_idx
 
-        integer::rjct_cnt,acpt_cnt,pick,pickorb,rjct_cnt2,loops,lralt_zs,acpt_cnt_2,ierr
+        integer::rjct_cnt,acpt_cnt,pickorb,rjct_cnt2,loops,lralt_zs,acpt_cnt_2,ierr
         real(dp)::t,erg_str
-        integer::j,n,p,loop_max
-        integer,dimension(:),allocatable::chng_trk,chng_trk2,pickerorb
+        integer::j,n,p
+        integer,dimension(:),allocatable::chng_trk2,pickerorb
        
         
-        DOUBLE PRECISION, external::ZBQLU01
-
         if (errorflag .ne. 0) return
        
         ierr=0
@@ -215,10 +219,7 @@ MODULE gradient_descent
         call alloc_grad_do(global,ndet,norb)
 
         allocate(pickerorb(norb),stat=ierr)
-
-        if(ierr==0) allocate(chng_trk(ndet-1),stat=ierr)
         if(ierr==0) allocate(chng_trk2(norb),stat=ierr)
-       
         if (ierr/=0) then
             write(0,"(a,i0)") "Gradient descent allocations . ierr had value ", ierr
             errorflag=1
@@ -232,14 +233,8 @@ MODULE gradient_descent
         acpt_cnt_2=0
         rjct_cnt2=0
         loops=0
-        loop_max=50
         p=70-norb
-        grad_fin%grad_avlb=0
-
-        call haml_to_grad_do(haml,dvecs,temp)
-        call haml_to_grad_do(haml,dvecs,thread)
-        call haml_to_grad_do(haml,dvecs,global)
-
+     
         call haml_to_grad_do(haml,dvecs,global)
         temp=global; thread=global
       
@@ -268,7 +263,7 @@ MODULE gradient_descent
                 pickerorb=scramble_norb(norb)
 
                 call zeroer(temp);call zeroer(thread);call zeroer(global)
-                call grad_calculate(haml,global,pick,grad_fin)
+                call grad_calculate(haml,global,grad_fin)
 
                 temp%zom=zstore(pick); thread%zom=zstore(pick); global%zom=zstore(pick)
                
@@ -295,7 +290,7 @@ MODULE gradient_descent
                         temp%zom%phi(pickorb)=global%zom%phi(pickorb)
                         temp%zom%phi(pickorb)%x = temp%zom%phi(pickorb)%x-(t*grad_fin%vars(pick,pickorb))
                         call val_set(temp%zom,pickorb)
-                        call he_full_row(temp,zstore,elect,ndet,pick)
+                        call he_full_row(temp,zstore,elect,ndet)
                      
                         ! Imaginary time propagation for back tracing
 
@@ -304,7 +299,7 @@ MODULE gradient_descent
                         if((temp%erg%x .lt. min_erg))then
                             min_erg = temp%erg%x
                             min_idx = lralt_zs
-                            call grad_do_transfer(temp,thread,pick)
+                            call grad_do_transfer(temp,thread)
                             exit
                             !$omp cancel do
                         end if
@@ -319,7 +314,7 @@ MODULE gradient_descent
                             ! Update the global minimum fxtdk and corresponding temp_zom and temp_ham
                             global_min_erg = min_erg
                             global_min_idx = min_idx
-                            call grad_do_transfer(thread,global,pick)
+                            call grad_do_transfer(thread,global)
                         end if
                         !$OMP END CRITICAL
                     end if
@@ -334,10 +329,10 @@ MODULE gradient_descent
                         grad_fin%grad_avlb(pick)=d_grad_flg
                         grad_fin%prev_erg=global_min_erg
                         grad_fin%vars(pick,:)=global%erg%dx
-                        rjct_cnt_in=0
+                        rjct_cnt_global=0
                     end if
 
-                    call grad_do_transfer(global,temp,pick)
+                    call grad_do_transfer(global,temp)
                     
                     write(6,'(1a)',advance='no') '|'
                     flush(6)
@@ -348,7 +343,7 @@ MODULE gradient_descent
                     write(6,"(a,i3,a,f21.16,a,f21.16,a,*(i0:','))")'  ', pick,'          ', &
                     erg_str,'             ',grad_fin%prev_erg,'          ',chng_trk2(1:acpt_cnt) 
                     
-                    call grad_do_haml_transfer(global,haml,zstore(pick),dvecs,grad_fin%vars(pick,:),pick)
+                    call grad_do_haml_transfer(global,haml,zstore(pick),dvecs,grad_fin%vars(pick,:))
                     call zombiewriter(zstore(pick),pick,0)
                     acpt_cnt_2=acpt_cnt_2+1
                     chng_trk(acpt_cnt_2)=pick
@@ -357,7 +352,7 @@ MODULE gradient_descent
                     erg_str,'             ',grad_fin%prev_erg,'          ',0
                    
                     rjct_cnt2=rjct_cnt2+1
-
+                    rjct_cnt_global=rjct_cnt_global+1
                     temp%hjk(:,pick)=haml%hjk(:,pick); thread%hjk(:,pick)=haml%hjk(:,pick); global%hjk(:,pick)=haml%hjk(:,pick)
                     temp%hjk(pick,:)=haml%hjk(pick,:); thread%hjk(pick,:)=haml%hjk(pick,:); global%hjk(pick,:)=haml%hjk(pick,:)
                     temp%ovrlp(:,pick)=haml%ovrlp(:,pick); thread%ovrlp(:,pick)=haml%ovrlp(:,pick)
@@ -400,9 +395,7 @@ MODULE gradient_descent
         call dealloc_grad_do(global)
      
         deallocate(pickerorb,stat=ierr)
-        if(ierr==0) deallocate(chng_trk,stat=ierr)
         if(ierr==0) deallocate(chng_trk2,stat=ierr)
-       
         if (ierr/=0) then
             write(0,"(a,i0)") "Gradient descent deallocations . ierr had value ", ierr
             errorflag=1
@@ -415,7 +408,7 @@ MODULE gradient_descent
     end subroutine orbital_gd
 
 
-    subroutine full_zs_gd(zstore,elect,dvecs,haml,epoc_cnt,alpha,b,grad_fin,epoc_max,picker) 
+    subroutine full_zs_gd(zstore,elect,dvecs,haml,grad_fin) 
 
         implicit none 
 
@@ -424,30 +417,23 @@ MODULE gradient_descent
         type(dvector),intent(inout)::dvecs
         type(hamiltonian),intent(inout)::haml
         type(grad),intent(inout)::grad_fin
-        real(wp),intent(in)::b,alpha
-        integer,intent(inout)::epoc_cnt
-        integer,intent(in)::epoc_max
-        integer,dimension(:),intent(inout)::picker
+      
         type(grad_do)::temp,thread,global
         real(wp)::global_min_erg,min_erg
         integer::global_min_idx,min_idx
 
-        integer::lralt,rjct_cnt,rjct_cnt2,acpt_cnt,pick,lralt_temp,loop_max,orb_cnt,ierr
+        integer::lralt,acpt_cnt,lralt_temp,orb_cnt,ierr
         real(wp)::t
         integer::j
-        integer,dimension(:),allocatable::chng_trk
         real(wp),dimension(:),allocatable::lr_chng_trk,erg_chng_trk
 
-        DOUBLE PRECISION, external::ZBQLU01
-       
-        
+      
+    
 
         if (errorflag .ne. 0) return
         
         ierr=0
     
-      
-        allocate(chng_trk(ndet-1),stat=ierr)
         if(ierr==0) allocate(lr_chng_trk(ndet-1),stat=ierr)
         if(ierr==0) allocate(erg_chng_trk(ndet-1),stat=ierr)
        
@@ -459,11 +445,9 @@ MODULE gradient_descent
         end if 
        
         lralt=1    ! power alpha is raised to  
-       
-        rjct_cnt=0 !tracks how many rejections 
+ 
         acpt_cnt=0  !counts how many ZS have been changed
-        loop_max=50
-
+       
         if(epoc_cnt.eq.1)then
             orb_cnt=2
         else
@@ -478,23 +462,21 @@ MODULE gradient_descent
         temp=global; thread=global
        
         
-        do while(rjct_cnt.lt.(ndet-1)*30)
+        do while(rjct_cnt_global.lt.(ndet-1)*30)
 
             write(6,"(a)") '    Zombie state    |     Previous Energy     |    Energy after Gradient Descent step &
             &   |       Learning rate      | Acceptance count | Rejection count'
             chng_trk=0
             lr_chng_trk=0
             erg_chng_trk=0
-            rjct_cnt2=0
+            
 
             do j=1,(ndet-1)
                 
                 pick=picker(j)
-                rjct_cnt2=0
-                
-                
+               
                 call zeroer(global); call zeroer(temp); call zeroer(thread)
-                call grad_calculate(haml,global,pick,grad_fin)
+                call grad_calculate(haml,global,grad_fin)
                
                 global_min_erg=grad_fin%prev_erg
                 global_min_idx=-1
@@ -516,7 +498,7 @@ MODULE gradient_descent
                     call val_set(temp%zom)
                  
                   
-                    call he_full_row(temp,zstore,elect,ndet,pick)
+                    call he_full_row(temp,zstore,elect,ndet)
                     call imaginary_time_erg(temp,ndet)
                 
             
@@ -524,7 +506,7 @@ MODULE gradient_descent
                     if((temp%erg%x .lt. min_erg))then
                         min_erg = temp%erg%x
                         min_idx = lralt_temp
-                        call grad_do_transfer(temp,thread,pick)
+                        call grad_do_transfer(temp,thread)
                         exit
                        !$omp cancel do
                     end if
@@ -538,7 +520,7 @@ MODULE gradient_descent
                     ! Update the global minimum fxtdk and corresponding temp_zom and temp_ham
                     global_min_erg = min_erg
                     global_min_idx = min_idx
-                    call grad_do_transfer(thread,global,pick)
+                    call grad_do_transfer(thread,global)
                 
                 end if
                 !$OMP END CRITICAL
@@ -547,10 +529,10 @@ MODULE gradient_descent
                
 
                 if(global_min_idx .eq. -1)then
-                    rjct_cnt=rjct_cnt+1
+                    rjct_cnt_global=rjct_cnt_global+1
                     
                     write(6,"(a,i3,a,f21.16,a,f21.16,a,f21.16,a,i3,a,i3)") '       ', pick,'              ', &
-                    grad_fin%prev_erg,'               ',0.0,'             ',0.0,'        ',acpt_cnt,'          ',rjct_cnt
+                    grad_fin%prev_erg,'               ',0.0,'             ',0.0,'        ',acpt_cnt,'          ',rjct_cnt_global
                     
                     temp%hjk(:,pick)=haml%hjk(:,pick); temp%hjk(pick,:)=haml%hjk(pick,:)
                     temp%ovrlp(:,pick)=haml%ovrlp(:,pick);temp%ovrlp(pick,:)=haml%ovrlp(pick,:)
@@ -560,12 +542,12 @@ MODULE gradient_descent
                     chng_trk(acpt_cnt)=pick
                     lr_chng_trk(acpt_cnt)=t
                     erg_chng_trk(acpt_cnt)=global_min_erg
-                    call grad_do_haml_transfer(global,haml,zstore(pick),dvecs,grad_fin%vars(pick,:),pick)
+                    call grad_do_haml_transfer(global,haml,zstore(pick),dvecs,grad_fin%vars(pick,:))
                     call zombiewriter(zstore(pick),pick,0)
-                    rjct_cnt=0
+                    rjct_cnt_global=0
                    
                     write(6,"(a,i3,a,f21.16,a,f21.16,a,f21.16,a,i3,a,i3)") '       ', pick,'              ', &
-                grad_fin%prev_erg,'               ',global_min_erg,'             ',t,'        ',acpt_cnt,'          ',rjct_cnt
+            grad_fin%prev_erg,'               ',global_min_erg,'             ',t,'        ',acpt_cnt,'          ',rjct_cnt_global
                   
                     grad_fin%grad_avlb=0
                     grad_fin%grad_avlb(pick)=d_grad_flg
@@ -594,16 +576,13 @@ MODULE gradient_descent
             orb_cnt=orb_cnt-1
           
             ! if(acpt_cnt.eq.0)then
-            if(rjct_cnt.ge.(ndet*4))then
-                call orbital_gd(zstore,grad_fin,elect,dvecs,haml,&
-                epoc_cnt,alpha,b,picker,1,rjct_cnt,epoc_max)
-              
+            if(rjct_cnt_global.ge.(ndet*4))then
+                call orbital_gd(zstore,grad_fin,elect,dvecs,haml,1)
                 call haml_to_grad_do(haml,dvecs,global)
                 temp=global; thread=global
                 orb_cnt=orb_cnt+1
             else if((orb_cnt.le.0))then
-                call orbital_gd(zstore,grad_fin,elect,dvecs,haml,&
-                epoc_cnt,alpha,b,picker,2,rjct_cnt,epoc_max)
+                call orbital_gd(zstore,grad_fin,elect,dvecs,haml,2)
                 
                 call haml_to_grad_do(haml,dvecs,global)
                 temp=global; thread=global
@@ -616,9 +595,6 @@ MODULE gradient_descent
             end if
         end do
 
-        rjct_cnt=0
-        
-        deallocate(chng_trk,stat=ierr)
         if(ierr==0) deallocate(lr_chng_trk,stat=ierr)
         if(ierr==0) deallocate(erg_chng_trk,stat=ierr)
        
@@ -633,8 +609,7 @@ MODULE gradient_descent
         call dealloc_grad_do(global)
 
         if(epoc_cnt.lt.epoc_max)then
-            call orbital_gd(zstore,grad_fin,elect,dvecs,haml,&
-            epoc_cnt,alpha,b,picker,epoc_max-epoc_cnt,rjct_cnt,epoc_max)
+            call orbital_gd(zstore,grad_fin,elect,dvecs,haml,(epoc_max-epoc_cnt))
         end if
       
         return
@@ -642,26 +617,24 @@ MODULE gradient_descent
     end subroutine full_zs_gd
 
 
-    subroutine zombie_alter(zstore,haml,elect,erg,dvecs)
+    subroutine zombie_alter(zstore,haml,elect,dvecs)
 
         implicit none
 
         type(zombiest),dimension(:),intent(inout)::zstore
         type(elecintrgl),intent(in)::elect
         type(dvector),intent(inout)::dvecs
-        type(dual), dimension(:),intent(inout)::erg
         type(hamiltonian),intent(inout)::haml
         type(grad)::grad_fin
-        integer,dimension(:),allocatable::picker
-        integer::epoc_cnt,epoc_max,cnt,rjct_cnt
-        real(dp)::alpha,b
+        integer::cnt
+       
         integer::ierr,j
         
         if (errorflag .ne. 0) return
 
         ierr=0
         call allocgrad(grad_fin,ndet,norb)
-        grad_fin%prev_erg=erg(timesteps+1)
+        grad_fin%prev_erg=ergcalc(haml%hjk,dvecs%d%x)
       
         epoc_cnt=1 !epoc counter
         if(rstrtflg.eq.'y')then 
@@ -709,20 +682,14 @@ MODULE gradient_descent
         end if
 
       
-
-        alpha=0.5 ! learning rate reduction
-        b=3.2D2   !starting learning rate
-       
-        epoc_max=2000
         allocate(picker(ndet-1),stat=ierr)
-      
+        if(ierr==0) allocate(chng_trk(ndet-1),stat=ierr)
+
         if(epoc_cnt.lt.epoc_max)then
-            rjct_cnt=0
             picker=scramble(ndet-1)
-            ! call orbital_gd(zstore,grad_fin,elect,dvecs,haml,epoc_cnt,alpha,b,picker,1,rjct_cnt,epoc_max) 
-            call full_zs_gd(zstore,elect,dvecs,haml,epoc_cnt,alpha,b,grad_fin,epoc_max,picker) 
-            ! call orbital_gd(zstore,grad_fin,elect,dvecs,haml,epoc_cnt,alpha,b,picker,100,rjct_cnt,epoc_max) 
-            ! call full_zs_gd(zstore,elect,dvecs,haml,epoc_cnt,alpha,b,grad_fin,epoc_max,picker) 
+            ! call orbital_gd(zstore,grad_fin,elect,dvecs,haml,1)
+            call full_zs_gd(zstore,elect,dvecs,haml,grad_fin) 
+            !call orbital_gd(zstore,grad_fin,elect,dvecs,haml,100)
             
         end if 
 
@@ -730,7 +697,7 @@ MODULE gradient_descent
         
 
         deallocate(picker,stat=ierr)
-       
+        deallocate(chng_trk,stat=ierr)
         return
 
     end subroutine zombie_alter
@@ -796,12 +763,11 @@ MODULE gradient_descent
     end function scramble_norb
 
 
-    subroutine grad_do_transfer(in,out,pick)
+    subroutine grad_do_transfer(in,out)
 
         implicit none
         type(grad_do),intent(in)::in
         type(grad_do),intent(inout)::out
-        integer,intent(in)::pick
 
         if (errorflag .ne. 0) return
 
@@ -820,7 +786,7 @@ MODULE gradient_descent
 
     end subroutine grad_do_transfer
 
-    subroutine grad_do_haml_transfer(in,haml,zstore,dvec,grads,pick)
+    subroutine grad_do_haml_transfer(in,haml,zstore,dvec,grads)
 
         implicit none
         type(grad_do),intent(in)::in
@@ -828,7 +794,6 @@ MODULE gradient_descent
         type(zombiest),intent(inout)::zstore
         type(dvector),intent(inout)::dvec
         real(wp),dimension(:),intent(inout)::grads
-        integer,intent(in)::pick
         integer::j
 
         if (errorflag .ne. 0) return
@@ -888,16 +853,5 @@ MODULE gradient_descent
 
     end subroutine
 
-
-    ! An elemental subroutine that takes an 1D array and sets A(j)=j 
-    subroutine set_array(A)
-        implicit none
-        integer,dimension(:),intent(inout)::A
-        integer::j
-        do j=1,size(A)
-            A(j)=j
-        end do
-        return
-    end subroutine set_array
 
 END MODULE gradient_descent
