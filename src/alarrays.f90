@@ -6,7 +6,32 @@ MODULE alarrays
 
     contains
 
+    subroutine allocintgrl(elecs,n)
 
+        implicit none
+
+        type(elecintrgl),intent(inout)::elecs
+        integer,intent(in)::n
+        integer::ierr
+
+        if (errorflag .ne. 0) return
+
+        ierr=0
+        allocate (elecs%integrals(n), stat=ierr)
+        if(ierr==0) allocate (elecs%alive(norb,n),stat=ierr)
+        if(ierr==0) allocate (elecs%dead(norb,n),stat=ierr)
+        if(ierr==0) allocate (elecs%neg_a(norb,n),stat=ierr)
+        if(ierr==0) allocate (elecs%neg_d(norb,n),stat=ierr)
+
+        if (ierr/=0) then
+            write(stderr,"(a,i0)") "Error in electron integral  deallocation. ierr had value ", ierr
+            errorflag=1
+            return
+        end if
+
+        return
+
+    end subroutine allocintgrl
     ! Routine to deallcoate 1&2 electron electron integral matrices
     subroutine deallocintgrl(elecs)
 

@@ -10,6 +10,9 @@ MODULE gradient_descent
     use infnan_mod
     use zom 
 
+    use GPU_setup, zstore_d => zstore_d, elecs_d => elecs_d, dvecs_d => dvecs_d, haml_d => haml_d, grad_fin_d => grad_fin_d, &
+    & temp_d => temp_d, thread_d => thread_d
+
     implicit none 
     integer::d_grad_flg=1
     real(wp)::alpha=0.2 ! learning rate reduction
@@ -46,7 +49,8 @@ MODULE gradient_descent
         ierr=0
        
         call haml_ovrlp_column(temp,zstore,ndet,elecs,pick)
-        
+        ! call haml_ovrlp_column_gpu(temp_d,zstore_d,size,elecs_d,pick)
+        ! temp=temp_d
         temp%inv=temp%ovrlp
        
         allocate(WORK1(size),IPIV1(size),stat=ierr)
@@ -550,6 +554,7 @@ MODULE gradient_descent
         
         if (errorflag .ne. 0) return
 
+       
         ierr=0
         call allocgrad(grad_fin,ndet,norb)
         grad_fin%prev_erg=ergcalc(haml%hjk,dvecs%d%x)
@@ -599,10 +604,16 @@ MODULE gradient_descent
             call epoc_writer(grad_fin%prev_erg,0,0,0.0d0,0)
         end if
 
+        call gpu_setup()
+        zstore_d=zstore
+        elecs_d=elect
+        dvecs_d=dvecs
+        haml_d=haml
+        grad_fin_d=grad_fin
       
         allocate(picker(ndet-1),stat=ierr)
         if(ierr==0) allocate(chng_trk(ndet-1),stat=ierr)
-        call omp_set_nested(.true.)
+        ! call omp_set_nested(.true.)
         if(epoc_cnt.lt.epoc_max)then
             picker=scramble(ndet-1)
             ! call orbital_gd(zstore,grad_fin,elect,dvecs,haml,10)
