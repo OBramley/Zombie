@@ -110,7 +110,7 @@ f.write("module dual_set\n")
 f.write("integer, parameter :: dual_size = "+str(inputs.zombs['norb']*2)+"\n")
 f.write("end module dual_set\n")
 f.close()
-    
+
 # Check if on HPC
 Hostname=socket.gethostname()
 if((Hostname==("login2.arc4.leeds.ac.uk"))or(Hostname==("login1.arc4.leeds.ac.uk"))or(Hostname==("login2.arc3.leeds.ac.uk"))or(Hostname==("login1.arc3.leeds.ac.uk"))):

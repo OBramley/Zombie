@@ -5,8 +5,7 @@ MODULE ham
     use alarrays
     use omp_lib
     use dnad
-    use cudafor
-
+    
     contains
 
     !Level 0 Hamiltonian Routine
@@ -28,9 +27,13 @@ MODULE ham
 
         if (errorflag .ne. 0) return
         ierr=0
-       
+        !!$acc data copyin(zstore(1:size),elecs%integrals(1:elecs%num),elecs%alive(1:norb,1:elecs%num),&
+        !!$acc & elecs%dead(1:norb,1:elecs%num),elecs%neg_a(1:norb,1:elecs%num),elecs%neg_d(1:norb,1:elecs%num)) &
+        !!$acc & create(haml%hjk(1:size,1:size),haml%ovrlp(1:size,1:size),haml%diff_hjk(1:2*norb,1:size,1:size),&
+        !!$acc & haml%diff_ovrlp(1:2*norb,1:size,1:size))
         call haml_ovrlp_comb(haml,zstore,elecs,size,verb)
-        
+        ! call haml_ovrlp_comb_gpu(haml,zstore,elecs,size,verb)
+        !!$acc update host(haml%hjk, haml%ovrlp) 
         haml%inv=haml%ovrlp
         allocate(WORK1(size),IPIV1(size),stat=ierr)
         if (ierr/=0) then
@@ -75,9 +78,9 @@ MODULE ham
         if (errorflag .ne. 0) return 
         ierr=0
 
-        !$omp parallel do simd&
-        !$omp & private(j,k,ovlptot,hamtot,z1d) &
-        !$omp & shared(elecs,zstore,haml) 
+        !!$omp parallel do &
+        !!$omp & private(j,k,ovlptot,hamtot,z1d) &
+        !!$omp & shared(elecs,zstore,haml,size) 
         do j=1,size
             z1d =typ2_2_typ1(zstore(j)%val)
 
@@ -103,7 +106,7 @@ MODULE ham
                 write(6,"(a,i0,a)") "hamliltonian column ",j, " completed"
             end if 
         end do
-        !$omp end parallel do simd
+        !!$omp end parallel do
 
     end subroutine haml_ovrlp_comb
 
@@ -119,7 +122,7 @@ MODULE ham
     subroutine haml_ovrlp_column(temp,zstore,size,elecs,row)
 
         implicit none
-        type(zombiest),dimension(:),intent(in)::zstore
+        type(zombiest),dimension(1:ndet),intent(in)::zstore
         type(grad_do),intent(inout)::temp
         type(elecintrgl),intent(in)::elecs
         integer,intent(in)::row,size
@@ -129,9 +132,10 @@ MODULE ham
 
         if (errorflag .ne. 0) return
         z1d = typ2_2_typ1(temp%zom%val)
-        !$omp parallel do  default(none) &
-        !$omp & private(j,ovlptot,hamtot) &
-        !$omp & shared(elecs,zstore,temp,z1d,row,norb) 
+        
+        !!$omp parallel do  default(none) &
+        !!$omp & private(j,ovlptot,hamtot) &
+        !!$omp & shared(elecs,zstore,temp,z1d,row,norb) 
         do j=1,size
             if (j.ne.row) then
                 ovlptot=overlap_2(z1d,zstore(j)%val)
@@ -159,8 +163,8 @@ MODULE ham
                 temp%diff_hjk_1(:,j)=hamtot%dx(1:norb)
             end if 
         end do
-        ! $omp end parallel do 
-
+        !!$omp end parallel do 
+        
         return
 
     end subroutine haml_ovrlp_column
@@ -184,7 +188,7 @@ MODULE ham
 
        
         ham_tot=0.0d0
-        !$omp simd
+        !!$omp simd
         do j=1,elecs%num
             ov=elecs%integrals(j)
             do k=1, norb
@@ -192,7 +196,7 @@ MODULE ham
             end do
             ham_tot=ham_tot+ov
         end do
-        !$omp end simd
+        !!$omp end simd
         return 
       
     end function haml_vals
@@ -209,11 +213,11 @@ MODULE ham
 
         ovrlp_tot=1.0d0
       
-        !$omp simd
+        !!$omp simd
         do j=1,norb
             ovrlp_tot=ovrlp_tot*((z1d(j)*z2d(j))+(z1d(j+norb)*z2d(norb+j)))
         end do
-        !$omp end simd
+        !!$omp end simd
       
         return 
     end function overlap_1
@@ -234,9 +238,11 @@ MODULE ham
 
        
         ovrlp_tot=1.0d0
-       !$omp simd
+       !!$omp simd
+        !!$acc parallel loop 
         do j=1,norb
             temp=z1d(j)%x*z2d(j)%x+z1d(j+norb)%x*z2d(norb+j)%x
+          !   !$acc loop vector
             do k=1,j
                 ovrlp_tot%dx(k)=((z1d(j)%x*z2d(j)%dx(k)+z1d(j)%dx(k)*z2d(j)%x)+&
                                 (z1d(j+norb)%x*z2d(norb+j)%dx(k)+z1d(j+norb)%dx(k)*z2d(norb+j)%x))*ovrlp_tot%x + &
@@ -247,7 +253,8 @@ MODULE ham
             end do
             ovrlp_tot%x=ovrlp_tot%x*(temp)
         end do
-        !$omp end simd
+        !!$acc end parallel loop
+        !!$omp end simd
       
         return 
     end function overlap_2
@@ -266,9 +273,11 @@ MODULE ham
 
        
         ham_tot=0.0d0
-        !$omp simd
+       ! !$omp simd
+       ! !$acc parallel loop 
         do j=1,elecs%num
             ov=elecs%integrals(j)
+        !    !$acc loop vector
             do k=1, norb
                 temp=z1d(k)%x*elecs%neg_a(k,j)*z2d(elecs%alive(k,j))%x+z1d(k+norb)%x*elecs%neg_d(k,j)*z2d(elecs%dead(k,j))%x
                 do l=1,k
@@ -288,188 +297,228 @@ MODULE ham
             end do
             ham_tot=ham_tot+ov
         end do
-        !$omp end simd
+       !  !$acc end parallel loop
+        !!$omp end simd
         return 
       
     end function haml_vals_2
 
 
 
-    function overlap_gpu(z1d,z2d,zstore,elecs) result(overlap)
+    ! function overlap_gpu(z1d,z2d,zstore,elecs) result(overlap)
 
-        implicit none 
-        type(dual2),dimension(0:),intent(in)::z1d,z2d
-        type(dual2)::overlap
-        type(zombiest),dimension(:),intent(in)::zstore
-        type(elecintrgl),intent(in)::elecs
-        real(wp),device,::ovlptot_var,hamtot_var
-        real(wp),device,dimension(norb)::ovlptot_dx,hamtot_dx
-        integer::j,k
-        type(dim3)::threads_per_block, ovrlp_dx_block_num
+    !     implicit none 
+    !     type(dual2)::z1d(:),z2d(:)
+    !     type(dual2)::overlap
+    !     type(zombiest),dimension(:),intent(in)::zstore
+    !     type(elecintrgl),intent(in)::elecs
+    !     real(wp)::ovlptot_var
+    !     real(wp),dimension(norb)::ovlptot_dx
+    !     integer::j,k,l
+    !     ! type(dim3)::threads_per_block, ovrlp_dx_block_num
 
-        if (errorflag .ne. 0) return
+    !     if (errorflag .ne. 0) return
 
-        threads_per_block= dim3(16,16)
-        ovrlp_dx_block_num=ceiling(norb/threads_per_block%x,norb/threads_per_block%y)
-      
-        ovlptot_var=1.0d0 
-        call overlp_x<<<1, norb>>>(z1d, z2d, ovlptot_var)
-        ovlptot_dx=1.0d0
-        call overlp_dx<<<ovrlp_dx_block_num, threads_per_block>>>(z1d, z2d, ovlptot_dx)
+    !     ! threads_per_block= dim3(16,16)
+    !     ! ovrlp_dx_block_num=ceiling(norb/threads_per_block%x,norb/threads_per_block%y)
         
-        overlap%x=ovlptot_var
-        overlap%dx(1:norb)=ovlptot_dx(1:norb)   
+      
+    !     ovlptot_var=1.0d0
+    !     !$cuf kernel do <<<*,*>>> reduce(*:ovlptot_var)
+    !     do j=1,norb
+    !         ovlptot_var=ovlptot_var*((z1d(j)%x * z2d(j)%x) + (z1d(j+norb)%x * z2d(j+norb)%x))
+    !     end do
+    !     ! call overlp_x<<<1, norb>>>(z1d, z2d, norb, ovlptot_var)
+    !     ovlptot_dx=1.0d0
+    !     !$cuf kernel do <<<*,*>>> reduce(*:ovlptot_dx)
+    !     do j=1,norb
+    !         do l=1,norb
+    !             if(j.ne.l)then 
+    !                 ovlptot_dx(j)=ovlptot_dx(j)*((z1d(l)%x * z2d(l)%x) + (z1d(l+norb)%x * z2d(l+norb)%x))
+    !             else
+    !                 ovlptot_dx(j)=ovlptot_dx(j)*(z1d(j)%x*z2d(j)%dx(j)+z1d(j)%dx(j)*z2d(j)%x)+&
+    !                         (z1d(j+norb)%x*z2d(norb+j)%dx(j)+z1d(j+norb)%dx(j)*z2d(norb+j)%x)
+    !             end if
+    !         end do 
+    !     end do
+    !     ! call overlp_dx<<<ovrlp_dx_block_num, threads_per_block>>>(z1d, z2d, norb, ovlptot_dx)
+        
+    !     overlap%x=ovlptot_var
+    !     overlap%dx(1:norb)=ovlptot_dx(1:norb)   
        
-    end function overlap_gpu
+    ! end function overlap_gpu
 
-    function haml_gpu(z1d,z2d,elecs) result(ham_tot)
+    ! function haml_gpu(z1d,z2d,elecs) result(ham_tot)
 
-        type(elecintrgl),intent(in)::elecs
-        type(dual2)::haml_tot
-        real(wp),device,dimension(elecs%num)::temp_result_x
-        real(wp),device::htot_x
-        real(wp),device,dimension(:)::htot_dx
-        real(wp),device,dimension(elecs%num,norb)::temp_result_dx
-        type(dim3)::threads_per_block_x,threads_per_block_dx,haml_grid,haml_grid_dx
-        integer::j,k
+    !     type(elecintrgl),intent(in)::elecs
+    !     type(dual2)::haml_tot
+    !     real(wp),dimension(elecs%num)::temp_result_x
+    !     real(wp),dimension(elecs%num,norb)::temp_result_dx
+    !     type(dim3)::threads_per_block_x,threads_per_block_dx,haml_grid,haml_grid_dx
+    !     integer::j,k
 
-        if (errorflag .ne. 0) return
-        ham_tot=0.0d0
+    !     if (errorflag .ne. 0) return
+    !     ham_tot=0.0d0
       
 
-        threads_per_block_x= dim3(32,32)
-        haml_grid=dim3(ceiling(elecs%num/threads_per_block_x%x),ceiling(norb/threads_per_block_x%y))
-        threads_per_block_dx= dim3(4,16,16)
-        haml_grid_dx=dim3(ceiling(elecs%num/threads_per_block_dx%x),&
-            ceiling(norb/threads_per_block_dx%y),ceiling(norb/threads_per_block_dx%z))
+    !     ! threads_per_block_x= dim3(32,32)
+    !     ! haml_grid=dim3(ceiling(elecs%num/threads_per_block_x%x),ceiling(norb/threads_per_block_x%y))
+    !     ! threads_per_block_dx= dim3(4,16,16)
+    !     ! haml_grid_dx=dim3(ceiling(elecs%num/threads_per_block_dx%x),&
+    !     !     ceiling(norb/threads_per_block_dx%y),ceiling(norb/threads_per_block_dx%z))
 
-        temp_result_x=elecs%integrals
+    !     temp_result_x=elecs%integrals
+        
+    !     !$cuf kernel do(2) <<<*,*>>> reduce(*:temp_result_x)
+    !     do j=1,elecs%num
+    !         do l=1,norb
+    !             temp_result_x(j)=temp_result_x(j)*(z1d(l)%x*elecs%neg_a(l,j)*z2d(elecs%alive(l,j))%x+&
+    !             z1d(l+norb)%x*elecs%neg_d(l,j)*z2d(elecs%dead(l,j))%x)
+    !         end do 
+    !     end do
 
-        call haml_x<<<haml_grid, threads_per_block_x>>>(z1d, z2d, temp_result_x)
+    !     ! call haml_x<<<haml_grid, threads_per_block_x>>>(z1d, z2d, norb, temp_result_x)
 
-        htot_x=0.0d0
-        !$cuf kernel do <<<*,*>>> reduce(+:htot_x)
-        do j=1,elecs%num
-            ham_tot%x=ham_tot%x+temp_result_x(j)
-        end do
+    !     ham_tot%x=0.0d0
+    !     !$cuf kernel do <<<*,*>>> reduce(+:ham_tot)
+    !     do j=1,elecs%num
+    !         ham_tot%x=ham_tot%x+temp_result_x(j)
+    !     end do
       
-        !$cuf kernel do(2) <<<*,*>>>
-        do k=1,norb
-            do j=1,elecs%num
-                temp_result_dx(j,k)=elecs%integrals(j)
-            end do 
-        end do
+    !     !$cuf kernel do(2) <<<*,*>>>
+    !     do k=1,norb
+    !         do j=1,elecs%num
+    !             temp_result_dx(j,k)=elecs%integrals(j)
+    !         end do 
+    !     end do
 
-        call haml_dx<<<haml_grid_dx, threads_per_block_dx>>>(z1d, z2d, elecs, temp_result_dx)
-        htot_dx=0.d0
-        !$cuf kernel do(2) <<<*,*>>>
-        do k=1,norb
-            do j=1,elecs%num
-                ham_tot%dx(k)=ham_tot%dx(k)+temp_result_dx(j,k)
-            end do 
-        end do
+    !     !$cuf kernel do(3) <<<*,*>>> reduce(*:temp_result_dx)
+    !     do j=1,elecs%num
+    !         do l=1,norb
+    !             do k=1, norb
+    !                 if(l.ne.k)then
+    !                     temp_result_dx(j,l)=temp_result_dx(j,l)*(z1d(k)%x*elecs%neg_a(k,j)*z2d(elecs%alive(k,j))%x+&
+    !                     z1d(k+norb)%x*elecs%neg_d(k,j)*z2d(elecs%dead(k,j))%x)  
+    !                 else
+    !                     temp_result_dx(j,l)=temp_result_dx(j,l)*((z1d(k)%x*elecs%neg_a(k,j)*z2d(elecs%alive(k,j))%dx(l)+&
+    !                         z1d(k)%dx(l)*elecs%neg_a(k,j)*z2d(elecs%alive(k,j))%x)+&
+    !                         (z1d(k+norb)%x*elecs%neg_d(k,j)*z2d(elecs%dead(k,j))%dx(l)+&
+    !                         z1d(k+norb)%dx(l)*elecs%neg_d(k,j)*z2d(elecs%dead(k,j))%x))
+    !                 end if 
+    !             end do 
+    !         end do
+    !     end do 
+
+    !     ! call haml_dx<<<haml_grid_dx, threads_per_block_dx>>>(z1d, z2d, elecs, norb, temp_result_dx)
+    !     ham_tot%dx=0.d0
+    !     !$cuf kernel do(2) <<<*,*>>> reduce(+:ham_tot)
+    !     do k=1,norb
+    !         do j=1,elecs%num
+    !             ham_tot%dx(k)=ham_tot%dx(k)+temp_result_dx(j,k)
+    !         end do 
+    !     end do
 
         
 
-    end function haml_gpu
+    ! end function haml_gpu
 
 
-    subroutine haml_ovrlp_comb_gpu(haml,zstore,elecs,size,verb)
-        implicit none
+    ! subroutine haml_ovrlp_comb_gpu(haml,zstore,elecs,size,verb)
+    !     implicit none
 
-        type(hamiltonian), intent(inout)::haml 
-        ! real(kind=8),dimension(:,:),intent(inout)::haml 
-        type(zombiest),dimension(:),intent(in)::zstore
-        type(elecintrgl),intent(in)::elecs
-        type(dual2),dimension(0:2*norb)::z1d
-        integer,intent(in)::verb,size
-        integer::j,k,ierr
-        type(dual2)::ovlptot,hamtot
+    !     type(hamiltonian), intent(inout)::haml 
+    !     ! real(kind=8),dimension(:,:),intent(inout)::haml 
+    !     type(zombiest),dimension(:),intent(in)::zstore
+    !     type(elecintrgl),intent(in)::elecs
+    !     type(dual2),dimension(0:2*norb)::z1d
+    !     integer,intent(in)::verb,size
+    !     integer::j,k,ierr
+    !     type(dual2)::ovlptot,hamtot
     
-        if (errorflag .ne. 0) return 
-        ierr=0
+    !     if (errorflag .ne. 0) return 
+    !     ierr=0
 
-        !$omp parallel do simd&
-        !$omp & private(j,k,ovlptot,hamtot,z1d) &
-        !$omp & shared(elecs,zstore,haml) 
-        do j=1,size
-            z1d =typ2_2_typ1(zstore(j)%val)
+    !     !$omp parallel do simd&
+    !     !$omp & private(j,k,ovlptot,hamtot,z1d) &
+    !     !$omp & shared(elecs,zstore,haml) 
+    !     do j=1,size
+    !         z1d =typ2_2_typ1(zstore(j)%val)
 
-            hamtot=haml_gpu(z1d,z1d,elecs)+(elecs%hnuc)
-            haml%hjk(j,j)=hamtot%x
-            haml%diff_hjk(:,j,j)=hamtot%dx(1:norb)
+    !         hamtot=haml_gpu(z1d,z1d,elecs)+(elecs%hnuc)
+    !         haml%hjk(j,j)=hamtot%x
+    !         haml%diff_hjk(:,j,j)=hamtot%dx(1:norb)
 
-            haml%ovrlp(j,j)=1.0d0
-            haml%diff_ovrlp(:,j,j)=0.0d0 
+    !         haml%ovrlp(j,j)=1.0d0
+    !         haml%diff_ovrlp(:,j,j)=0.0d0 
            
-            do k=j+1,size
-                ovlptot=1.0d0
-                ovlptot=overlap_gpu(z1d,store(k)%val,zstore,elecs) 
-                haml%ovrlp(j,k)=ovlptot%x; haml%ovrlp(k,j)=haml%ovrlp(j,k)
-                haml%diff_ovrlp(:,k,j)=ovlptot%dx(1:norb)
-                haml%diff_ovrlp(:,j,k)=ovlptot%dx(1+norb:2*norb)
+    !         do k=j+1,size
+    !             ovlptot=1.0d0
+    !             ovlptot=overlap_gpu(z1d,store(k)%val,zstore,elecs) 
+    !             haml%ovrlp(j,k)=ovlptot%x; haml%ovrlp(k,j)=haml%ovrlp(j,k)
+    !             haml%diff_ovrlp(:,k,j)=ovlptot%dx(1:norb)
+    !             haml%diff_ovrlp(:,j,k)=ovlptot%dx(1+norb:2*norb)
 
-                hamtot=haml_gpu(z1d,store(k)%val,elecs)+(ovlptot*elecs%hnuc)
-                haml%hjk(j,k)=hamtot%x; haml%hjk(k,j)=haml%hjk(j,k)
-                haml%diff_hjk(:,k,j)=hamtot%dx(1:norb)
-                haml%diff_hjk(:,j,k)=hamtot%dx(1+norb:2*norb)
-            end do 
-            if(verb.eq.1)then
-                write(6,"(a,i0,a)") "hamliltonian column ",j, " completed"
-            end if 
-        end do
-        !$omp end parallel do simd
+    !             hamtot=haml_gpu(z1d,store(k)%val,elecs)+(ovlptot*elecs%hnuc)
+    !             haml%hjk(j,k)=hamtot%x; haml%hjk(k,j)=haml%hjk(j,k)
+    !             haml%diff_hjk(:,k,j)=hamtot%dx(1:norb)
+    !             haml%diff_hjk(:,j,k)=hamtot%dx(1+norb:2*norb)
+    !         end do 
+    !         if(verb.eq.1)then
+    !             write(6,"(a,i0,a)") "hamliltonian column ",j, " completed"
+    !         end if 
+    !     end do
+    !     !$omp end parallel do simd
 
-    end subroutine haml_ovrlp_comb_gpu
+    ! end subroutine haml_ovrlp_comb_gpu
 
 
 
-    subroutine haml_ovrlp_column_gpu(temp,zstore,size,elecs,row)
+    ! subroutine haml_ovrlp_column_gpu(temp,zstore,size,elecs,row)
 
-        implicit none
-        type(zombiest),dimension(:),intent(in)::zstore
-        type(grad_do),intent(inout)::temp
-        type(elecintrgl),intent(in)::elecs
-        integer,intent(in)::row,size
-        type(dual2),dimension(0:2*norb)::z1d
-        type(dual2)::ovlptot,hamtot
-        integer::j
+    !     implicit none
+    !     type(zombiest),dimension(:),intent(in)::zstore
+    !     type(grad_do),intent(inout)::temp
+    !     type(elecintrgl),intent(in)::elecs
+    !     integer,intent(in)::row,size
+    !     type(dual2),dimension(0:2*norb)::z1d
+    !     type(dual2)::ovlptot,hamtot
+    !     integer::j
 
-        if (errorflag .ne. 0) return
-        z1d = typ2_2_typ1(temp%zom%val)
-        !$omp parallel do  default(none) &
-        !$omp & private(j,ovlptot,hamtot) &
-        !$omp & shared(elecs,zstore,temp,z1d,row,norb) 
-        do j=1,size
-            if (j.ne.row) then
-                ovlptot=overlap_gpu(z1d,store(j)%val,zstore,elecs)
-                temp%ovrlp(row,j)=ovlptot%x; temp%ovrlp(row,j)%dx=ovlptot%dx(1:norb)
-                temp%ovrlp(j,row)=temp%ovrlp(row,j)
+    !     if (errorflag .ne. 0) return
+    !     z1d = typ2_2_typ1(temp%zom%val)
+    !     !$omp parallel do  default(none) &
+    !     !$omp & private(j,ovlptot,hamtot) &
+    !     !$omp & shared(elecs,zstore,temp,z1d,row,norb) 
+    !     do j=1,size
+    !         if (j.ne.row) then
+    !             ovlptot=overlap_gpu(z1d,store(j)%val,zstore,elecs)
+    !             temp%ovrlp(row,j)=ovlptot%x; temp%ovrlp(row,j)%dx=ovlptot%dx(1:norb)
+    !             temp%ovrlp(j,row)=temp%ovrlp(row,j)
 
-                temp%diff_ovrlp_1(:,j)=ovlptot%dx(1:norb)
-                temp%diff_ovrlp_2(:,j)=ovlptot%dx(1+norb:2*norb)
+    !             temp%diff_ovrlp_1(:,j)=ovlptot%dx(1:norb)
+    !             temp%diff_ovrlp_2(:,j)=ovlptot%dx(1+norb:2*norb)
 
-                hamtot=haml_gpu(z1d,store(j)%val,elecs)+(ovlptot*elecs%hnuc)
-                temp%hjk(row,j)%x=hamtot%x; temp%hjk(row,j)%dx=hamtot%dx(1:norb)
-                temp%hjk(j,row)=temp%hjk(row,j)
+    !             hamtot=haml_gpu(z1d,store(j)%val,elecs)+(ovlptot*elecs%hnuc)
+    !             temp%hjk(row,j)%x=hamtot%x; temp%hjk(row,j)%dx=hamtot%dx(1:norb)
+    !             temp%hjk(j,row)=temp%hjk(row,j)
 
-                temp%diff_hjk_1(:,j)=hamtot%dx(1:norb)
-                temp%diff_hjk_2(:,j)=hamtot%dx(1+norb:2*norb)
-            else 
-                temp%ovrlp(row,row)=1.0d0
-                temp%ovrlp(row,row)%dx=0.0d0
-                temp%diff_ovrlp_1(:,j)=0.0d0
-                hamtot=haml_gpu(z1d,z1d,elecs)+(elecs%hnuc)
-                temp%hjk(row,row)%x=hamtot%x; temp%hjk(row,row)%dx=hamtot%dx(1:norb)
+    !             temp%diff_hjk_1(:,j)=hamtot%dx(1:norb)
+    !             temp%diff_hjk_2(:,j)=hamtot%dx(1+norb:2*norb)
+    !         else 
+    !             temp%ovrlp(row,row)=1.0d0
+    !             temp%ovrlp(row,row)%dx=0.0d0
+    !             temp%diff_ovrlp_1(:,j)=0.0d0
+    !             hamtot=haml_gpu(z1d,z1d,elecs)+(elecs%hnuc)
+    !             temp%hjk(row,row)%x=hamtot%x; temp%hjk(row,row)%dx=hamtot%dx(1:norb)
 
-                temp%diff_hjk_1(:,j)=hamtot%dx(1:norb)
-            end if 
-        end do
-        ! $omp end parallel do 
+    !             temp%diff_hjk_1(:,j)=hamtot%dx(1:norb)
+    !         end if 
+    !     end do
+    !     ! $omp end parallel do 
 
-        return
+    !     return
 
-    end subroutine haml_ovrlp_column_gpu
+    ! end subroutine haml_ovrlp_column_gpu
 
   
 

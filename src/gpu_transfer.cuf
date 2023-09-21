@@ -2,55 +2,191 @@ MODULE GPU_setup
 
     use mod_types
     use dnad
+    use alarrays
     use globvars
+    use cudafor
+
+   
 
     type(zombiest), device, dimension(:),allocatable:: zstore_d
-    type(elecintrgl),intent(in)::elecs_d
+    type(elecintrgl),device::elecs_d
     type(grad_do),device::temp_d,thread_d
     type(hamiltonian),device::haml_d
-    type(dvector)::dvecs_d
     type(grad),device::grad_fin_d
-  
+    type(dvector)::dvecs_d
+    
     contains 
 
-    subroutine gpu_setup()
+    subroutine gpu_setup(num,zstore)
 
-        implicit none
-        type(zombiest), dimension(:),intent(in):: zstore
-        type(elecintrgl),intent(in)::elecs
+    implicit none
+    type(zombiest),dimension(:)::zstore
+    type(elecintrgl)::elecs
+    integer,intent(in)::num
+   
 
-        integer::j,k 
+    integer::j,k,ierr 
 
-        if (errorflag .ne. 0) return
+    if (errorflag .ne. 0) return
 
-        call allocham(haml_d,ndet,norb)
-        call alloczs(zstore_d,ndet)
-        call allocintgrl(elecs_d,elecs%num)
-        call alloc_grad_do(temp_d,ndet,norb)
-        call alloc_grad_do(thread_d,ndet,norb)
-        call allocgrad(grad_fin_d,ndet,norb)
-        call allocdv(dvecs_d,ndet)
+    ierr = 0
+    !ierr =  cudaMalloc(elecs_d,size(elecs)) 
+    !ierr=  cudamalloc(elecs_d%integrals,num) 
 
-    end subroutine gpu_setup
+    !$acc data copyin(elecs)
+
+     !allocate(zstore_d(ndet),stat=ierr)
+    ! do j=1,ndet
+    !     call cudamalloc(zstore_d(j),size(zstore(j)))
+    ! end do 
+
+    ! allocate(haml_d%hjk(ndet,ndet), stat=ierr)
+    ! if(ierr==0) allocate(haml_d%ovrlp(ndet,ndet), stat=ierr)
+    ! if(ierr==0) allocate(haml_d%inv(ndet,ndet), stat=ierr)
+    ! if(ierr==0) allocate(haml_d%kinvh(ndet,ndet), stat=ierr)
+    ! if (ierr/=0) then
+    !     write(stderr,"(a,i0)") "Error in Hamiltonian allocation. ierr had value ", ierr
+    !     errorflag=1
+    !     return
+    ! end if
+    
+    ! if(GDflg.eq.'y')then  
+    !     if(ierr==0) allocate(haml_d%diff_hjk(norb,ndet,ndet), stat=ierr)
+    !     if(ierr==0) allocate(haml_d%diff_ovrlp(norb,ndet,ndet), stat=ierr)
+    !     if (ierr/=0) then
+    !         write(stderr,"(a,i0)") "Error in GD Hamiltonian allocation. ierr had value ", ierr
+    !         errorflag=1
+    !         return
+    !     end if
+    ! end if
+
+    ! allocate(zstore_d(ndet),stat=ierr)
+    ! if (ierr/=0) then
+    !     write(stderr,"(a,i0)") "Error in zombie set allocation. ierr had value ", ierr
+    !     errorflag=1
+    !     return
+    ! end if
+    ! do j=1,ndet
+    !     allocate(zstore_d(j)%phi(norb), stat=ierr)
+    !    ! allocate(zstore_d(j)%val(0:2*norb), stat=ierr)  
+    ! end do
+
+    ! allocate (elecs_d%integrals(num), stat=ierr)
+    ! if(ierr==0) allocate (elecs_d%alive(norb,num),stat=ierr)
+    ! if(ierr==0) allocate (elecs_d%dead(norb,num),stat=ierr)
+    ! if(ierr==0) allocate (elecs_d%neg_a(norb,num),stat=ierr)
+    ! if(ierr==0) allocate (elecs_d%neg_d(norb,num),stat=ierr)
+    
+    ! allocate(temp_d%hjk(ndet,ndet), stat=ierr)
+    ! if(ierr==0) allocate(temp_d%ovrlp(ndet,ndet), stat=ierr)
+    ! if(ierr==0) allocate(temp_d%inv(ndet,ndet), stat=ierr)
+    ! if(ierr==0) allocate(temp_d%kinvh(ndet,ndet), stat=ierr)
+    ! if(ierr==0) allocate(temp_d%diff_hjk_1(norb,ndet), stat=ierr)
+    ! if(ierr==0) allocate(temp_d%diff_ovrlp_1(norb,ndet), stat=ierr)
+    ! if(ierr==0) allocate(temp_d%diff_hjk_2(norb,ndet), stat=ierr)
+    ! if(ierr==0) allocate(temp_d%diff_ovrlp_2(norb,ndet), stat=ierr)
+    ! allocate(temp_d%zom%phi(norb), stat=ierr)
+    ! allocate(temp_d%zom%val(2*norb+1), stat=ierr)  
+    ! !if(ierr==0) allocate(temp_d%zom%val(0:(2*norb)), stat=ierr)  
+    ! allocate(temp_d%dvec%d(ndet),stat=ierr)
+
+    ! allocate(thread_d%hjk(ndet,ndet), stat=ierr)
+    ! if(ierr==0) allocate(thread_d%ovrlp(ndet,ndet), stat=ierr)
+    ! if(ierr==0) allocate(thread_d%inv(ndet,ndet), stat=ierr)
+    ! if(ierr==0) allocate(thread_d%kinvh(ndet,ndet), stat=ierr)
+    ! if(ierr==0) allocate(thread_d%diff_hjk_1(norb,ndet), stat=ierr)
+    ! if(ierr==0) allocate(thread_d%diff_ovrlp_1(norb,ndet), stat=ierr)
+    ! if(ierr==0) allocate(thread_d%diff_hjk_2(norb,ndet), stat=ierr)
+    ! if(ierr==0) allocate(thread_d%diff_ovrlp_2(norb,ndet), stat=ierr)
+    ! allocate(thread_d%zom%phi(norb), stat=ierr)
+    !  allocate(thread_d%zom%val(2*norb+1), stat=ierr)  
+    ! !if(ierr==0) allocate(thread_d%zom%val(0:(2*norb)), stat=ierr)  
+    ! allocate(thread_d%dvec%d(ndet),stat=ierr)
+
+    ! !allocate(dvecs_d%d(ndet),stat=ierr)
+    
+ 
+    ! allocate(grad_fin_d%vars(ndet,norb),stat=ierr)
+    ! if (ierr==0)allocate(grad_fin_d%grad_avlb(ndet),stat=ierr)
+  
+
+end subroutine gpu_setup
 
 
-    subroutine gpu_close()
+   !subroutine gpu_close()
 
-        implicit none
+! implicit none
        
 
-        integer::j,k 
+! integer::j,k,ierr
 
-        if (errorflag .ne. 0) return
+! if (errorflag .ne. 0) return
 
-        call deallocham(haml_d)
-        call dealloczs(zstore_d)
-        call deallocintgrl(elecs_d)
-        call dealloc_grad_do(temp_d)
-        call dealloc_grad_do(thread_d)
+! deallocate(haml_d%hjk, stat=ierr)
+! if(ierr==0) deallocate(haml_d%ovrlp, stat=ierr)
+! if(ierr==0) deallocate(haml_d%inv, stat=ierr)
+! if(ierr==0) deallocate(haml_d%kinvh, stat=ierr)
+! if (ierr/=0) then
+!     write(stderr,"(a,i0)") "Error in Hamiltonian deallocation. ierr had value ", ierr
+!     errorflag=1
+!     return
+! end if
 
-    end subroutine gpu_close
+! if(GDflg.eq.'y')then  
+!     if(ierr==0) deallocate(haml_d%diff_hjk, stat=ierr)
+!     if(ierr==0) deallocate(haml_d%diff_ovrlp, stat=ierr)
+!     if (ierr/=0) then
+!         write(stderr,"(a,i0)") "Error in GD Hamiltonian deallocation. ierr had value ", ierr
+!         errorflag=1
+!         return
+!     end if
+! end if
 
+! do j=1,size(zstore_d)
+!     !deallocate(zstore_d(j)%val, stat=ierr)
+!     deallocate(zstore_d(j)%phi, stat=ierr)
+! end do
+
+! if(ierr==0) deallocate(zstore_d,stat=ierr)
+
+! deallocate(thread_d%zom%val, stat=ierr)
+! deallocate(thread_d%zom%phi, stat=ierr)
+! deallocate(thread_d%dvec%d, stat=ierr)
+! deallocate(thread_d%hjk, stat=ierr)
+! if(ierr==0) deallocate(thread_d%ovrlp, stat=ierr)
+! if(ierr==0) deallocate(thread_d%inv, stat=ierr)
+! if(ierr==0) deallocate(thread_d%kinvh, stat=ierr)
+! if(ierr==0) deallocate(thread_d%diff_hjk_1, stat=ierr)
+! if(ierr==0) deallocate(thread_d%diff_ovrlp_1, stat=ierr)
+! if(ierr==0) deallocate(thread_d%diff_hjk_2, stat=ierr)
+! if(ierr==0) deallocate(thread_d%diff_ovrlp_2, stat=ierr)
+
+
+! deallocate(temp_d%zom%val, stat=ierr)
+! deallocate(temp_d%zom%phi, stat=ierr)
+! deallocate(temp_d%dvec%d, stat=ierr)
+! deallocate(temp_d%hjk, stat=ierr)
+! if(ierr==0) deallocate(temp_d%ovrlp, stat=ierr)
+! if(ierr==0) deallocate(temp_d%inv, stat=ierr)
+! if(ierr==0) deallocate(temp_d%kinvh, stat=ierr)
+! if(ierr==0) deallocate(temp_d%diff_hjk_1, stat=ierr)
+! if(ierr==0) deallocate(temp_d%diff_ovrlp_1, stat=ierr)
+! if(ierr==0) deallocate(temp_d%diff_hjk_2, stat=ierr)
+! if(ierr==0) deallocate(temp_d%diff_ovrlp_2, stat=ierr)
+
+
+! deallocate (elecs_d%integrals, stat=ierr)
+! if(ierr==0) deallocate (elecs_d%alive,stat=ierr)
+! if(ierr==0) deallocate (elecs_d%dead,stat=ierr)
+! if(ierr==0) deallocate (elecs_d%neg_a,stat=ierr)
+! if(ierr==0) deallocate (elecs_d%neg_d,stat=ierr)
+
+! !deallocate(dvecs_d%d,stat=ierr)
+
+! deallocate(grad_fin_d%vars,stat=ierr)
+! if (ierr==0)deallocate(grad_fin_d%grad_avlb,stat=ierr)
+
+! end subroutine gpu_close
 
 
 END MODULE GPU_setup

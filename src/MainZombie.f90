@@ -66,7 +66,7 @@ program MainZombie
    
     write(6,"(a)") "Random seed set"
 
-
+   
     ! generate 1 and 2 electron integrals
     if((cleanflg=="y").or.(cleanflg=="f").or.((hamgflg=='y')).or.(GDflg=='y'))then
        
@@ -96,6 +96,7 @@ program MainZombie
    
     if(propflg=="y")then
         if (gramflg.eq."n") then 
+            
             ! generate Hamiltonian and overlap
             call allocham(haml,ndet,norb)
             write(6,"(a)") "Hamiltonian allocated"
@@ -106,7 +107,10 @@ program MainZombie
                 write(0,"(a,i0)") "Error in erg allocation. ierr had value ", ierr
             end if
             write(6,"(a)") "d-vector and energy array allocated"
-        
+            !$acc data copyin(zstore(1:size),elecs%integrals(1:elecs%num),elecs%alive(1:norb,1:elecs%num),&
+            !$acc & elecs%dead(1:norb,1:elecs%num),elecs%neg_a(1:norb,1:elecs%num),elecs%neg_d(1:norb,1:elecs%num)) &
+            !$acc & create(haml%hjk(1:size,1:size),haml%ovrlp(1:size,1:size),haml%diff_hjk(1:2*norb,1:size,1:size),&
+            !$acc & haml%diff_ovrlp(1:2*norb,1:size,1:size))
             if(hamgflg=='y')then
                 write(6,"(a)") "To hamiltonian gen"
                 call hamgen(haml,zstore,elect,ndet,1)

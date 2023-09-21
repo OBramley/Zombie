@@ -6,15 +6,17 @@ MODULE ham_gpu
     use dnad
     use globvars
     use cudafor
+
   
     contains
 
-    attributes(global) subroutine overlp_x(z1d, z2d, result)
-        type(dual2),dimension(0:2*norb) :: z1d,z2d
+    attributes(global) subroutine overlp_x(z1d, z2d, norb, result)
+        type(dual2),dimension(:) :: z1d,z2d
         real(wp), intent(inout) :: result
-
+        integer::norb
         integer :: j
-
+       
+        
         ! Calculate the global index for this thread
         j = (blockIdx%x - 1) * blockDim%x + threadIdx%x
 
@@ -24,18 +26,18 @@ MODULE ham_gpu
     end subroutine overlp_x
 
 
-    attributes(global) subroutine overlp_dx(z1d, z2d, result)
-        type(dual2),dimension(0:2*norb) :: z1d,z2d
+    attributes(global) subroutine overlp_dx(z1d, z2d, norb, result)
+        type(dual2),dimension(:) :: z1d,z2d
         real(wp), dimension(:),intent(inout) :: result
-
+        integer::norb
         integer :: j,l
 
        
         j = (blockIdx%x - 1) * blockDim%x + threadIdx%x
-        l = blockIdx.y * blockDim.y + threadIdx.y
+        l = blockIdx%y * blockDim%y + threadIdx%y
 
 
-        if (j <= norb).and.(l<=norb) then
+        if((j <= norb).and.(l<=norb))then
             if(j.ne.l)then 
                 result(j)=result(j)*((z1d(l)%x * z2d(l)%x) + (z1d(l+norb)%x * z2d(l+norb)%x))
             else
@@ -46,33 +48,33 @@ MODULE ham_gpu
 
     end subroutine overlp_dx
 
-    attributes(global) subroutine haml_x(z1d, z2d, elecs, result)
+    attributes(global) subroutine haml_x(z1d, z2d, elecs, norb, result)
 
-        type(dual2),dimension(0:2*norb) :: z1d,z2d
+        type(dual2),dimension(:) :: z1d,z2d
         type(elecintrgl),intent(in)::elecs
         real(wp), dimension(:), intent(inout) :: result
-
+        integer::norb
         integer :: j,l
 
         j = (blockIdx%x - 1) * blockDim%x + threadIdx%x
-        l = blockIdx.y * blockDim.y + threadIdx.y
+         l = blockIdx%y * blockDim%y + threadIdx%y
 
-        if (j <= elecs%num).and.(l<=norb) then
+        if((j <= elecs%num).and.(l<=norb))then
             result(j)=result(j)*(z1d(l)%x*elecs%neg_a(l,j)*z2d(elecs%alive(l,j))%x+&
             z1d(l+norb)%x*elecs%neg_d(l,j)*z2d(elecs%dead(l,j))%x)
         end if 
     end subroutine haml_x
 
-    attributes(global) subroutine haml_dx(z1d, z2d, elecs, result)
+    attributes(global) subroutine haml_dx(z1d, z2d, elecs, norb, result)
 
-        type(dual2),dimension(0:2*norb) :: z1d,z2d
+        type(dual2),dimension(:) :: z1d,z2d
         type(elecintrgl),intent(in)::elecs
         real(wp), dimension(:,:), intent(inout) :: result
-
+        integer::norb
         j = (blockIdx%x - 1) * blockDim%x + threadIdx%x
-        l = blockIdx.y * blockDim.y + threadIdx.y
-        k = blockIdx.z * blockDim.z + threadIdx.z
-
+        l = blockIdx%y * blockDim%y + threadIdx%y
+        l = blockIdx%z * blockDim%z + threadIdx%z
+        
         if((j <= elecs%num).and.(l<=norb) .and.(k<=norb))then
             if(l.ne.k)then
                 result(j,l)=result(j,l)*(z1d(k)%x*elecs%neg_a(k,j)*z2d(elecs%alive(k,j))%x+&
@@ -86,3 +88,5 @@ MODULE ham_gpu
         end if
 
     end subroutine haml_dx
+
+end module ham_gpu

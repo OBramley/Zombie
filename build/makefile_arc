@@ -28,7 +28,7 @@ mod_types.o:mod_types.f90
 dual_set.o:dual_set.f90
 	 $(F90) $(FFLAGS) -c $<
 
-dnad.o:dnad.f90 dual_set.f90 mod_types.o
+dnad.o:dnad.f90 dual_set.o mod_types.o
 	 $(F90) $(FFLAGS) -c $<
 
 infnan_constants.o:infnan_constants.f90
