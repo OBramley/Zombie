@@ -778,6 +778,7 @@ module dnad
 contains
 
 elemental function typ2_2_typ1(typ2) result(typ1)
+    !$acc routine seq
     type(dual2),intent(in) :: typ2
     type(dual2):: typ1
   
@@ -877,6 +878,7 @@ end subroutine zero_out_dual
     ! <u, du> = <r, 0>
     !-----------------------------------------
     elemental subroutine assign_dr(u, r)
+        !$acc routine seq
         type(dual), intent(out) :: u
         real(wp), intent(in) :: r
        
@@ -964,6 +966,7 @@ end subroutine zero_out_dual
     ! <res, dres> = <u, du> + <r, 0> = <u + r, du>
     !-----------------------------------------
     elemental function add_dr(u, r) result(res)
+      !$acc routine seq
         type(dual), intent(in) :: u
         real(wp), intent(in) :: r
         type(dual) :: res
@@ -1173,6 +1176,7 @@ end subroutine zero_out_dual
     ! <res, dres> = <u, du> * r = <u * r, du * r>
     !----------------------------------------
     elemental function mult_dr(u, r) result(res)
+        !$acc routine seq
         type(dual), intent(in) :: u
         real(wp), intent(in) :: r
         type(dual) :: res
@@ -4082,6 +4086,7 @@ end subroutine zero_out_dual
     ! <u, du> = <r, 0>
     !-----------------------------------------
     elemental subroutine assign_dr2(u, r)
+        !$acc routine seq
         type(dual2), intent(out) :: u
         real(wp), intent(in) :: r
        
@@ -4140,6 +4145,7 @@ end subroutine zero_out_dual
     ! <res, dres> = <u, du> + <v, dv> = <u + v, du + dv>
     !-----------------------------------------
     elemental function add_dd2(u, v) result(res)
+        !$acc routine seq
          type(dual2), intent(in) :: u, v
          type(dual2) :: res
 
@@ -4169,6 +4175,7 @@ end subroutine zero_out_dual
     ! <res, dres> = <u, du> + <r, 0> = <u + r, du>
     !-----------------------------------------
     elemental function add_dr2(u, r) result(res)
+      !$acc routine seq
         type(dual2), intent(in) :: u
         real(wp), intent(in) :: r
         type(dual2) :: res
@@ -4378,6 +4385,7 @@ end subroutine zero_out_dual
     ! <res, dres> = <u, du> * r = <u * r, du * r>
     !----------------------------------------
     elemental function mult_dr2(u, r) result(res)
+        !$acc routine seq
         type(dual2), intent(in) :: u
         real(wp), intent(in) :: r
         type(dual2) :: res

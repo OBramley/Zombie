@@ -107,10 +107,9 @@ program MainZombie
                 write(0,"(a,i0)") "Error in erg allocation. ierr had value ", ierr
             end if
             write(6,"(a)") "d-vector and energy array allocated"
-            !$acc data copyin(zstore(1:size),elecs%integrals(1:elecs%num),elecs%alive(1:norb,1:elecs%num),&
-            !$acc & elecs%dead(1:norb,1:elecs%num),elecs%neg_a(1:norb,1:elecs%num),elecs%neg_d(1:norb,1:elecs%num)) &
-            !$acc & create(haml%hjk(1:size,1:size),haml%ovrlp(1:size,1:size),haml%diff_hjk(1:2*norb,1:size,1:size),&
-            !$acc & haml%diff_ovrlp(1:2*norb,1:size,1:size))
+            !$acc data copyin(zstore,elect,ndet,norb)
+            !!$acc & create(haml%hjk(1:ndet,1:ndet),haml%ovrlp(1:ndet,1:ndet),haml%diff_hjk(1:2*norb,1:ndet,1:ndet),&
+            !!$acc & haml%diff_ovrlp(1:2*norb,1:ndet,1:ndet))
             if(hamgflg=='y')then
                 write(6,"(a)") "To hamiltonian gen"
                 call hamgen(haml,zstore,elect,ndet,1)
@@ -151,7 +150,7 @@ program MainZombie
                 
                 ! call sd_anal(zstore,nel,dvecs(1),2)
             end if
-     
+            !$acc end data
             deallocate(erg,stat=ierr)
             if(ierr/=0)then
                 errorflag=1

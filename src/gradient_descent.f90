@@ -266,7 +266,7 @@ MODULE gradient_descent
                     pickorb=pickerorb(n)
                     min_idx = -1
                     temp=thread
-                    !$omp parallel do default(none) num_threads(4) ordered &
+                    !$omp parallel do default(none) ordered &
                     !$omp private(t,lralt_zs) firstprivate(temp)&
                     !$omp shared(min_idx,elect,zstore,grad_fin,thread,loop_max,alpha,b,pick,pickorb,ndet)
                     do lralt_zs=1,loop_max
@@ -315,6 +315,7 @@ MODULE gradient_descent
                     
                     call grad_do_haml_transfer(thread,haml,zstore(pick),dvecs,grad_fin%vars(pick,:))
                     call zombiewriter(zstore(pick),pick,0)
+                    !$acc update device(zstore(pick))
                     acpt_cnt_2=acpt_cnt_2+1
                     chng_trk(acpt_cnt_2)=pick
                 else 
@@ -429,7 +430,7 @@ MODULE gradient_descent
                 call grad_calculate(haml,thread,grad_fin)
                 temp=thread
                 min_idx=-1
-                !$omp parallel do ordered num_threads(4) &
+                !$omp parallel do ordered &
                 !$omp private(t) firstprivate(temp)&
                 !$omp shared(min_idx,elect,zstore,grad_fin,thread,loop_max,alpha,b,pick,ndet)
                 do lralt_temp=1,loop_max
@@ -462,6 +463,7 @@ MODULE gradient_descent
                     grad_fin%prev_erg,'               ',0.0,'             ',0.0,'        ',acpt_cnt,'          ',rjct_cnt_global
                    
                 else
+                    
                     t=b*(alpha**(min_idx-1))
                     acpt_cnt=acpt_cnt+1
                     chng_trk(acpt_cnt)=pick
@@ -470,7 +472,7 @@ MODULE gradient_descent
                     call grad_do_haml_transfer(thread,haml,zstore(pick),dvecs,grad_fin%vars(pick,:))
                     call zombiewriter(zstore(pick),pick,0)
                     rjct_cnt_global=0
-            
+                    !$acc update device(zstore(pick))
                 write(6,"(a,i3,a,f21.16,a,f21.16,a,f21.16,a,i3,a,i3)") '       ', pick,'              ', &
     grad_fin%prev_erg,'               ',thread%erg%x,'             ',t,'        ',acpt_cnt,'          ',rjct_cnt_global
             
