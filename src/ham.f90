@@ -72,21 +72,61 @@ MODULE ham
         type(elecintrgl),intent(in)::elecs
         type(dual2),dimension(0:2*norb)::z1d
         integer,intent(in)::verb,size
-        integer::j,k,ierr
+        integer::j,k,l,n,p,ierr
         type(dual2)::ovlptot,hamtot
-    
+        real(wp)::tempx,tmp,temph_2,temph,tmph
+        real(wp),dimension(2*norb)::temp_dx,temph_dx2,temph_dx
         if (errorflag .ne. 0) return 
         ierr=0
 
         !!$omp parallel do &
         !!$omp & private(j,k,ovlptot,hamtot,z1d) &
         !!$omp & shared(elecs,zstore,haml,size) 
-        !$acc data create(z1d,ovlptot,hamtot) present(elecs,zstore,norb)
-        !$acc parallel loop gang private(ovlptot,hamtot,z1d)
+        !$acc data create(z1d,ovlptot,hamtot,tempx,temp_dx(1:2*norb),tmp,temph_dx2(1:2*norb),temph_dx(1:2*norb),temph_2,temph,tmph)&
+        !$acc & present(elecs,zstore,norb)
+        !$acc parallel loop gang private(ovlptot,hamtot,z1d,k,j,l,n,tempx,temp_dx,tmp,tmph,temph_2,temph_dx,temph_dx2)
         do j=1,size
             z1d =typ2_2_typ1(zstore(j)%val)
 
-            hamtot=haml_vals_2(z1d,z1d,elecs)+(elecs%hnuc)
+            ! hamtot=haml_vals_2(z1d,z1d,elecs)+(elecs%hnuc)
+            temph_2=0.0d0; temph_dx2=0.0d0
+            !$acc loop reduction(+:temph_2) reduction(+:temph_dx2) private(temph,temph_dx,l,j,k)
+            do p=1,elecs%num
+                temph=elecs%integrals(p)
+                !$acc loop reduction(*:temph)
+                do n=1, norb
+                    temph=z1d(n)%x*elecs%neg_a(n,p)*z1d(elecs%alive(n,p))%x+&
+                    z1d(n+norb)%x*elecs%neg_d(n,p)*z1d(elecs%dead(n,p))%x
+                end do
+                temph_2=temph_2+temph
+                temph_dx=elecs%integrals(p)
+                !$acc loop collapse(2) reduction(*:temph_dx)
+                do l=1,norb
+                    do n=1, norb
+                        if(l.ne.n)then
+                            tmph=(z1d(n)%x*elecs%neg_a(n,p)*z1d(elecs%alive(n,p))%x+&
+                            z1d(n+norb)%x*elecs%neg_d(n,p)*z1d(elecs%dead(n,p))%x)
+                            temph_dx(l)=temp_dx(l)*tmph
+                            temph_dx(l+norb)=temp_dx(l+norb)*tmph
+                        else
+                            tmph= ((z1d(n)%x*elecs%neg_a(n,p)*z1d(elecs%alive(n,p))%dx(l)+&
+                            z1d(n)%dx(l)*elecs%neg_a(n,p)*z1d(elecs%alive(n,p))%x)+&
+                            (z1d(n+norb)%x*elecs%neg_d(n,p)*z1d(elecs%dead(n,p))%dx(l)+&
+                            z1d(n+norb)%dx(l)*elecs%neg_d(n,p)*z1d(elecs%dead(n,p))%x))
+                            temph_dx(l)=temp_dx(l)*tmph
+                            tmph=((z1d(n)%x*elecs%neg_a(n,p)*z1d(elecs%alive(n,p))%dx(l+norb)+&
+                            z1d(n)%dx(l+norb)*elecs%neg_a(n,p)*z1d(elecs%alive(n,p))%x)+&
+                            (z1d(n+norb)%x*elecs%neg_d(n,p)*z1d(elecs%dead(n,p))%dx(l+norb)+&
+                            z1d(n+norb)%dx(l+norb)*elecs%neg_d(n,p)*z1d(elecs%dead(n,p))%x))
+                            temph_dx(l+norb)=temp_dx(l+norb)*tmph
+                        end if 
+                    end do 
+                end do 
+                temph_dx2=temph_dx2+temph_dx
+            end do
+            hamtot%x=temph_2
+            hamtot%dx=temph_dx2
+
             haml%hjk(j,j)=hamtot%x
             haml%diff_hjk(:,j,j)=hamtot%dx(1:norb)
 
@@ -94,12 +134,79 @@ MODULE ham
             haml%diff_ovrlp(:,j,j)=0.0d0 
            
             do k=j+1,size
-                ovlptot=overlap_2(z1d,zstore(k)%val)
+                tempx=1.0d0
+                temp_dx=1.0d0
+                !$acc loop worker reduction(*:tempx) 
+                do l=1,norb
+                    tempx=tempx*((z1d(l)%x*zstore(k)%val(l)%x)+(z1d(l+norb)%x*zstore(k)%val(norb+l)%x))
+                end do 
+                !$acc loop worker collapse(2) reduction(*:temp_dx)
+                do l=1,norb
+                    do n=1,norb
+                        if(l.ne.n)then 
+                            tmp=(z1d(n)%x * zstore(k)%val(n)%x) + (z1d(n+norb)%x * zstore(k)%val(n+norb)%x)
+                            temp_dx(l)=temp_dx(l)*tmp
+                            temp_dx(l+norb)=temp_dx(l+norb)*tmp
+                        else
+                            tmp=(z1d(l)%x*zstore(k)%val(l)%dx(l))+(z1d(l+norb)%x*zstore(k)%val(norb+l)%dx(l))
+
+                            temp_dx(l)=temp_dx(l)*tmp
+                            tmp=(z1d(l)%dx(l+norb)*zstore(k)%val(l)%x)+(z1d(l+norb)%dx(l+norb)*zstore(k)%val(norb+l)%x)
+                            temp_dx(l+norb)=temp_dx(l+norb)*tmp
+                        end if
+                    end do
+                end do
+                ovlptot%x=tempx
+                ovlptot%dx=temp_dx
+                ! ovlptot=overlap_2(z1d,zstore(k)%val)
                 haml%ovrlp(j,k)=ovlptot%x; haml%ovrlp(k,j)=haml%ovrlp(j,k)
                 haml%diff_ovrlp(:,k,j)=ovlptot%dx(1:norb)
                 haml%diff_ovrlp(:,j,k)=ovlptot%dx(1+norb:2*norb)
 
-                hamtot=haml_vals_2(z1d,zstore(k)%val,elecs)+(ovlptot*elecs%hnuc)
+                temph_2=0.0d0; temph_dx2=0.0d0
+                !$acc loop reduction(+:temph_2) reduction(+:temph_dx2) private(temph,temph_dx,l,j,k)
+                do p=1,elecs%num
+                    temph=elecs%integrals(p)
+                    !$acc loop reduction(*:temph)
+                    do n=1, norb
+                        temph=z1d(n)%x*elecs%neg_a(n,p)*zstore(k)%val(elecs%alive(n,p))%x+&
+                        z1d(n+norb)%x*elecs%neg_d(n,p)*zstore(k)%val(elecs%dead(n,p))%x
+                    end do
+                    temph_2=temph_2+temph
+                    temph_dx=elecs%integrals(p)
+                    !$acc loop collapse(2) reduction(*:temph_dx)
+                    do l=1,norb
+                        do n=1, norb
+                            if(l.ne.n)then
+                                tmph=(z1d(n)%x*elecs%neg_a(n,p)*zstore(k)%val(elecs%alive(n,p))%x+&
+                                z1d(n+norb)%x*elecs%neg_d(n,p)*zstore(k)%val(elecs%dead(n,p))%x)
+                        
+                                temph_dx(l)=temp_dx(l)*tmph
+                                
+                                temph_dx(l+norb)=temp_dx(l+norb)*tmph
+                            else
+                                tmph= ((z1d(n)%x*elecs%neg_a(n,p)*zstore(k)%val(elecs%alive(n,p))%dx(l)+&
+                                z1d(n)%dx(l)*elecs%neg_a(n,p)*zstore(k)%val(elecs%alive(n,p))%x)+&
+                                (z1d(n+norb)%x*elecs%neg_d(n,p)*zstore(k)%val(elecs%dead(n,p))%dx(l)+&
+                                z1d(n+norb)%dx(l)*elecs%neg_d(n,p)*zstore(k)%val(elecs%dead(n,p))%x))
+                                
+                                temph_dx(l)=temp_dx(l)*tmph
+                                tmph=((z1d(n)%x*elecs%neg_a(n,p)*zstore(k)%val(elecs%alive(n,p))%dx(l+norb)+&
+                                z1d(n)%dx(l+norb)*elecs%neg_a(n,p)*zstore(k)%val(elecs%alive(n,p))%x)+&
+                                (z1d(n+norb)%x*elecs%neg_d(n,p)*zstore(k)%val(elecs%dead(n,p))%dx(l+norb)+&
+                                z1d(n+norb)%dx(l+norb)*elecs%neg_d(n,p)*zstore(k)%val(elecs%dead(n,p))%x))
+                                
+                                temph_dx(l+norb)=temp_dx(l+norb)*tmph
+                            end if 
+                        end do 
+                    end do 
+                    temph_dx2=temph_dx2+temph_dx(1:2*norb)
+                end do
+                hamtot%x=temph_2
+                hamtot%dx=temph_dx2
+
+                !$acc wait
+                ! hamtot=haml_vals_2(z1d,zstore(k)%val,elecs)+(ovlptot*elecs%hnuc)
                 haml%hjk(j,k)=hamtot%x; haml%hjk(k,j)=haml%hjk(j,k)
                 haml%diff_hjk(:,k,j)=hamtot%dx(1:norb)
                 haml%diff_hjk(:,j,k)=hamtot%dx(1+norb:2*norb)
@@ -131,28 +238,91 @@ MODULE ham
         integer,intent(in)::row,size
         type(dual2),dimension(0:2*norb)::z1d
         type(dual2)::ovlptot,hamtot
-        integer::j
+        real(wp)::tempx,tmp,temph_2,temph,tmph
+        real(wp),dimension(2*norb)::temp_dx,temph_dx2,temph_dx
+        integer::j,k,l,p,n
 
         if (errorflag .ne. 0) return
         z1d = typ2_2_typ1(temp%zom%val)
         !$acc data copyin(z1d,size) copyout(temp%hjk(1:size,row),temp%ovrlp(1:size,row),temp%diff_ovrlp_1,temp%diff_ovrlp_2) &
-        !$acc & create(ovlptot,hamtot) present(elecs,zstore,norb)
+        !$acc & create(ovlptot,hamtot,tempx,temp_dx(1:2*norb),tmp,temph_dx2(1:2*norb),temph_dx(1:2*norb),temph_2,temph,tmph) &
+        !$acc & present(elecs,zstore,norb)
         !!$omp parallel do  default(none) &
         !!$omp & private(j,ovlptot,hamtot) &
         !!$omp & shared(elecs,zstore,temp,z1d,row,norb,size)
-        !$acc parallel loop async gang private(ovlptot,hamtot)
+        !$acc parallel loop async gang private(ovlptot,hamtot,temp_dx,tempx,tmp,tmph,temph_2,temph_dx,temph_dx2)
         do j=1,size
-           
             if (j.ne.row) then
-                ovlptot=overlap_2(z1d,zstore(j)%val)
+                tempx=1.0d0
+                temp_dx=1.0d0
+                !$acc loop worker reduction(*:tempx) 
+                do l=1,norb
+                    tempx=tempx*((z1d(l)%x*zstore(j)%val(l)%x)+(z1d(l+norb)%x*zstore(j)%val(norb+l)%x))
+                end do 
+                !$acc loop worker collapse(2) reduction(*:temp_dx)
+                do l=1,norb
+                    do k=1,norb
+                        if(l.ne.k)then
+                            tmp=((z1d(k)%x * zstore(j)%val(k)%x) + (z1d(k+norb)%x * zstore(j)%val(k+norb)%x))
+                            temp_dx(l)=temp_dx(l)*tmp
+                            temp_dx(l+norb)=temp_dx(l+norb)*tmp
+                        else
+                            tmp=(z1d(l)%x*zstore(j)%val(l)%dx(l))+(z1d(l+norb)%x*zstore(j)%val(norb+l)%dx(l))
+                            temp_dx(l)=temp_dx(l)*tmp
+                            tmp=(z1d(l)%dx(l+norb)*zstore(j)%val(l)%x)+(z1d(l+norb)%dx(l+norb)*zstore(j)%val(norb+l)%x)
+                            temp_dx(l+norb)=temp_dx(l+norb)*tmp
+                        end if
+                    end do
+                end do
+                ovlptot%x=tempx
+                ovlptot%dx=temp_dx
+                ! ovlptot=overlap_2(z1d,zstore(j)%val)
                 temp%ovrlp(row,j)=ovlptot%x; temp%ovrlp(row,j)%dx=ovlptot%dx(1:norb)
                 ! temp%ovrlp(j,row)=temp%ovrlp(row,j)
-
                 temp%diff_ovrlp_1(:,j)=ovlptot%dx(1:norb)
                 temp%diff_ovrlp_2(:,j)=ovlptot%dx(1+norb:2*norb)
 
-             
-                hamtot=haml_vals_2(z1d,zstore(j)%val,elecs)+(ovlptot*elecs%hnuc)
+                temph_2=0.0d0; temph_dx2=0.0d0
+                !$acc loop reduction(+:temph_2) reduction(+:temph_dx2) private(temph,temph_dx,l,j,k)
+                do p=1,elecs%num
+                    temph=elecs%integrals(p)
+                    !$acc loop reduction(*:temph)
+                    do n=1, norb
+                        temph=z1d(n)%x*elecs%neg_a(n,p)*zstore(j)%val(elecs%alive(n,p))%x+&
+                        z1d(n+norb)%x*elecs%neg_d(n,p)*zstore(j)%val(elecs%dead(n,p))%x
+                    end do
+                    temph_2=temph_2+temph
+                    temph_dx=elecs%integrals(p)
+                    !$acc loop collapse(2) reduction(*:temph_dx)
+                    do l=1,norb
+                        do n=1, norb
+                            if(l.ne.n)then
+                                tmph=(z1d(n)%x*elecs%neg_a(n,p)*zstore(j)%val(elecs%alive(n,p))%x+&
+                                z1d(n+norb)%x*elecs%neg_d(n,p)*zstore(j)%val(elecs%dead(n,p))%x)
+                                temph_dx(l)=temp_dx(l)*tmph
+                                temph_dx(l+norb)=temp_dx(l+norb)*tmph
+                            else
+                                tmph= ((z1d(n)%x*elecs%neg_a(n,p)*zstore(j)%val(elecs%alive(n,p))%dx(l)+&
+                                z1d(n)%dx(l)*elecs%neg_a(n,p)*zstore(j)%val(elecs%alive(n,p))%x)+&
+                                (z1d(n+norb)%x*elecs%neg_d(n,p)*zstore(j)%val(elecs%dead(n,p))%dx(l)+&
+                                z1d(n+norb)%dx(l)*elecs%neg_d(n,p)*zstore(j)%val(elecs%dead(n,p))%x))
+                                temph_dx(l)=temp_dx(l)*tmph
+                                tmph=((z1d(n)%x*elecs%neg_a(n,p)*zstore(j)%val(elecs%alive(n,p))%dx(l+norb)+&
+                                z1d(n)%dx(l+norb)*elecs%neg_a(n,p)*zstore(j)%val(elecs%alive(n,p))%x)+&
+                                (z1d(n+norb)%x*elecs%neg_d(n,p)*zstore(j)%val(elecs%dead(n,p))%dx(l+norb)+&
+                                z1d(n+norb)%dx(l+norb)*elecs%neg_d(n,p)*zstore(j)%val(elecs%dead(n,p))%x))
+                                
+                                temph_dx(l+norb)=temp_dx(l+norb)*tmph
+                            end if 
+                        end do 
+                    end do 
+                    temph_dx2=temph_dx2+temph_dx
+                end do
+                hamtot%x=temph_2
+                hamtot%dx=temph_dx2
+
+                !$acc wait
+                ! hamtot=haml_vals_2(z1d,zstore(j)%val,elecs)+(ovlptot*elecs%hnuc)
                 temp%hjk(row,j)%x=hamtot%x; temp%hjk(row,j)%dx=hamtot%dx(1:norb)
                 ! temp%hjk(j,row)=temp%hjk(row,j)
 
@@ -162,8 +332,48 @@ MODULE ham
                 temp%ovrlp(row,row)=1.0d0
                 temp%ovrlp(row,row)%dx=0.0d0
                 temp%diff_ovrlp_1(:,j)=0.0d0
-             
-                hamtot=haml_vals_2(z1d,z1d,elecs)+(elecs%hnuc)
+
+                temph_2=0.0d0; temph_dx2=0.0d0
+                !$acc loop reduction(+:temph_2) reduction(+:temph_dx2) private(temph,temph_dx,l,j,k)
+                do p=1,elecs%num
+                    temph=elecs%integrals(p)
+                    !$acc loop reduction(*:temph)
+                    do n=1, norb
+                        temph=z1d(n)%x*elecs%neg_a(n,p)*z1d(elecs%alive(n,p))%x+&
+                        z1d(n+norb)%x*elecs%neg_d(n,p)*z1d(elecs%dead(n,p))%x
+                    end do
+                    temph_2=temph_2+temph
+                    temph_dx=elecs%integrals(p)
+                    !$acc loop collapse(2) reduction(*:temph_dx)
+                    do l=1,norb
+                        do n=1, norb
+                            if(l.ne.n)then
+                                tmph=(z1d(n)%x*elecs%neg_a(n,p)*z1d(elecs%alive(n,p))%x+&
+                                z1d(n+norb)%x*elecs%neg_d(n,p)*z1d(elecs%dead(n,p))%x)
+                                temph_dx(l)=temp_dx(l)*tmph
+                                temph_dx(l+norb)=temp_dx(l+norb)*tmph
+                            else
+                                tmph= ((z1d(n)%x*elecs%neg_a(n,p)*z1d(elecs%alive(n,p))%dx(l)+&
+                                z1d(n)%dx(l)*elecs%neg_a(n,p)*z1d(elecs%alive(n,p))%x)+&
+                                (z1d(n+norb)%x*elecs%neg_d(n,p)*z1d(elecs%dead(n,p))%dx(l)+&
+                                z1d(n+norb)%dx(l)*elecs%neg_d(n,p)*z1d(elecs%dead(n,p))%x))
+
+                                temph_dx(l)=temp_dx(l)*tmph
+                                tmph=((z1d(n)%x*elecs%neg_a(n,p)*z1d(elecs%alive(n,p))%dx(l+norb)+&
+                                z1d(n)%dx(l+norb)*elecs%neg_a(n,p)*z1d(elecs%alive(n,p))%x)+&
+                                (z1d(n+norb)%x*elecs%neg_d(n,p)*z1d(elecs%dead(n,p))%dx(l+norb)+&
+                                z1d(n+norb)%dx(l+norb)*elecs%neg_d(n,p)*z1d(elecs%dead(n,p))%x))
+                                
+                                temph_dx(l+norb)=temp_dx(l+norb)*tmph
+                            end if 
+                        end do 
+                    end do 
+                    temph_dx2=temph_dx2+temph_dx
+                end do
+                hamtot%x=temph_2
+                hamtot%dx=temph_dx2
+    
+                ! hamtot=haml_vals_2(z1d,z1d,elecs)+(elecs%hnuc)
                 temp%hjk(row,row)%x=hamtot%x; temp%hjk(row,row)%dx=hamtot%dx(1:norb)
 
                 temp%diff_hjk_1(:,j)=hamtot%dx(1:norb)
