@@ -265,7 +265,7 @@ MODULE gradient_descent
                     pickorb=pickerorb(n)
                     min_idx = -1
                     temp=thread
-                    !$omp parallel do default(none) num_threads(4) ordered &
+                    !$omp parallel do default(none) num_threads(2) ordered &
                     !$omp private(t,lralt_zs) firstprivate(temp)&
                     !$omp shared(min_idx,elect,zstore,grad_fin,thread,loop_max,alpha,b,pick,pickorb,ndet)
                     do lralt_zs=1,loop_max
@@ -428,7 +428,7 @@ MODULE gradient_descent
                 call grad_calculate(haml,thread,grad_fin)
                 temp=thread
                 min_idx=-1
-                !$omp parallel do ordered num_threads(4) &
+                !$omp parallel do ordered num_threads(2) &
                 !$omp private(t) firstprivate(temp)&
                 !$omp shared(min_idx,elect,zstore,grad_fin,thread,loop_max,alpha,b,pick,ndet)
                 do lralt_temp=1,loop_max
@@ -600,13 +600,13 @@ MODULE gradient_descent
         else
             call epoc_writer(grad_fin%prev_erg,0,0,0.0d0,0)
         end if
-
+        call omp_set_nested(.TRUE.)
         allocate(picker(ndet-1),stat=ierr)
         if(ierr==0) allocate(chng_trk(ndet-1),stat=ierr)
         ! call omp_set_nested(.true.)
         if(epoc_cnt.lt.epoc_max)then
             picker=scramble(ndet-1)
-            ! call orbital_gd(zstore,grad_fin,elect,dvecs,haml,10)
+            call orbital_gd(zstore,grad_fin,elect,dvecs,haml,1000)
             call full_zs_gd(zstore,elect,dvecs,haml,grad_fin) 
             !call orbital_gd(zstore,grad_fin,elect,dvecs,haml,100)
             

@@ -56,6 +56,305 @@ MODULE ham
 
     !##############################################################################################################################
     
+    ! subroutine haml_ovrlp_comb(haml,zstore,elecs,size,verb)
+    !     implicit none
+
+    !     type(hamiltonian), intent(inout)::haml 
+    !     ! real(kind=8),dimension(:,:),intent(inout)::haml 
+    !     type(zombiest),dimension(:),intent(in)::zstore
+    !     type(elecintrgl),intent(in)::elecs
+    !     type(dual2),dimension(0:2*norb)::z1d
+    !     integer,intent(in)::verb,size
+    !     integer::j,k,l,n,p,ierr
+    !     real(wp)::overlap_x, haml_x_t, haml_x
+    !     real(wp),dimension(2*norb)::overlap_dx,  haml_dx_t, haml_dx
+    !     if (errorflag .ne. 0) return 
+    !     ierr=0
+
+    !     !$acc data create(z1d,overlap_x,overlap_dx(1:2*norb),haml_x_t, haml_x,haml_dx_t(1:2*norb),haml_dx(1:2*norb))&
+    !     !$acc & present(elecs,zstore,norb)
+    !     !$acc parallel loop gang private(overlap_dx,overlap_x,haml_x_t,haml_dx_t,haml_dx,z1d,k,j,l,n,p)
+    !     do j=1,size
+    !         z1d =typ2_2_typ1(zstore(j)%val)
+
+    !         haml_x_t=0.0d0
+    !         !$acc loop reduction(+:haml_x_t) private(haml_x,l,p)
+    !         do p=1,elecs%num 
+    !             haml_x=elecs%integrals(p)
+    !             !$acc loop reduction(*:haml_x)
+    !             do l=1,norb
+    !                 haml_x=haml_x*(z1d(l)%x*elecs%neg_a(l,p)*z1d(elecs%alive(l,p))%x+&
+    !                 z1d(l+norb)%x*elecs%neg_d(l,p)*z1d(elecs%dead(l,p))%x)
+    !             end do
+    !             haml_x_t=haml_x_t+haml_x
+    !         end do
+
+    !         haml_dx_t=0.0d0
+    !         !$acc loop reduction(+:haml_dx_t) private(haml_dx,l,n,p)
+    !         do p=1,elecs%num 
+    !             haml_dx=elecs%integrals(p)
+    !             !$acc loop collapse(2) reduction(*:haml_dx)
+    !             do n=1,norb
+    !                 do l=1,norb
+    !                     if(n.ne.l)then
+    !                         haml_dx(n)=haml_dx(n)*(z1d(l)%x*elecs%neg_a(l,p)*z1d(elecs%alive(l,p))%x+&
+    !                         z1d(l+norb)%x*elecs%neg_d(l,p)*z1d(elecs%dead(l,p))%x)
+    !                     else
+    !                         haml_dx(n)=haml_dx(n)*((z1d(l)%x*elecs%neg_a(l,p)*z1d(elecs%alive(l,p))%dx(l)+&
+    !                         z1d(l)%dx(l)*elecs%neg_a(l,p)*z1d(elecs%alive(l,p))%x)+&
+    !                         (z1d(l+norb)%x*elecs%neg_d(l,p)*z1d(elecs%dead(l,p))%dx(l)+&
+    !                         z1d(l+norb)%dx(l)*elecs%neg_d(l,p)*z1d(elecs%dead(l,p))%x))
+    !                     end if 
+    !                 end do
+    !             end do 
+    !             haml_dx_t=haml_dx_t+haml_dx
+    !         end do
+            
+    !         haml%hjk(j,j)=haml_x_t+elecs%hnuc
+    !         haml%diff_hjk(:,j,j)=haml_dx_t(1:norb)
+
+    !         haml%ovrlp(j,j)=1.0d0
+    !         haml%diff_ovrlp(:,j,j)=0.0d0 
+           
+    !         do k=j+1,size
+    !             overlap_x=1.0d0;overlap_dx=1.0d0
+    !             !$acc loop reduction(*:overlap_x)
+    !             do l=1,norb
+    !                 overlap_x=overlap_x*((z1d(l)%x*zstore(k)%val(l)%x)+(z1d(l+norb)%x*zstore(k)%val(l+norb)%x))
+    !             end do
+                
+    !             !$acc loop collapse(2) reduction(*:overlap_dx)
+    !             do n=1,norb 
+    !                 do l=1,norb 
+    !                     if(n.ne.l)then 
+    !                         overlap_dx(n)=overlap_dx(n)*((z1d(l)%x*zstore(k)%val(l)%x)+(z1d(l+norb)%x*zstore(k)%val(l+norb)%x))
+    !                         overlap_dx(n+norb)=overlap_dx(n+norb)*((z1d(l)%x*zstore(k)%val(l)%x)+&
+    !                         (z1d(l+norb)%x*zstore(k)%val(l+norb)%x))
+    !                     else
+    !                         overlap_dx(n)=overlap_dx(n)*((z1d(l)%dx(l)*zstore(k)%val(l)%x)+&
+    !                         (z1d(l+norb)%dx(l)*zstore(k)%val(l+norb)%x))
+    !                         overlap_dx(n+norb)=overlap_dx(n+norb)*((z1d(l)%x*zstore(k)%val(l)%dx(l+norb))+&
+    !                         (z1d(l+norb)%x*zstore(k)%val(l+norb)%dx(l+norb)))
+    !                     end if
+    !                 end do
+    !             end do
+
+    
+    !             haml%ovrlp(j,k)=overlap_x
+    !             haml%ovrlp(k,j)=haml%ovrlp(j,k)
+    !             haml%diff_ovrlp(:,k,j)=overlap_dx(1:norb)
+    !             haml%diff_ovrlp(:,j,k)=overlap_dx(1+norb:2*norb)
+
+    !             haml_x_t=0.0d0
+    !             !$acc loop reduction(+:haml_x_t) private(haml_x,l,p)
+    !             do p=1,elecs%num 
+    !                 haml_x=elecs%integrals(p)
+    !                 !$acc loop reduction(*:haml_x)
+    !                 do l=1,norb
+    !                     haml_x=haml_x*(z1d(l)%x*elecs%neg_a(l,p)*zstore(k)%val(elecs%alive(l,p))%x+&
+    !                     z1d(l+norb)%x*elecs%neg_d(l,p)*zstore(k)%val(elecs%dead(l,p))%x)
+    !                 end do
+    !                 haml_x_t=haml_x_t+haml_x
+    !             end do 
+
+    !             haml_dx_t=0.0d0
+    !             !$acc loop reduction(+:haml_dx_t) private(haml_dx,l,n,p)
+    !             do p=1,elecs%num 
+    !                 haml_dx=elecs%integrals(p)
+    !                 !$acc loop collapse(2) reduction(*:haml_dx)
+    !                 do n=1,norb
+    !                     do l=1,norb
+    !                         if(n.ne.l)then
+    !                         haml_dx(n)=haml_dx(n)*(z1d(l)%x*elecs%neg_a(l,p)*zstore(k)%val(elecs%alive(l,p))%x+&
+    !                         z1d(l+norb)%x*elecs%neg_d(l,p)*zstore(k)%val(elecs%dead(l,p))%x)
+
+    !                         haml_dx(n+norb)=haml_dx(n+norb)*(z1d(l)%x*elecs%neg_a(l,p)*zstore(k)%val(elecs%alive(l,p))%x+&
+    !                         z1d(l+norb)%x*elecs%neg_d(l,p)*zstore(k)%val(elecs%dead(l,p))%x)
+    !                         else
+    !                             haml_dx(n)=haml_dx(n)*((z1d(l)%dx(l)*elecs%neg_a(l,p)*zstore(k)%val(elecs%alive(l,p))%x)+&
+    !                             (z1d(l+norb)%dx(l)*elecs%neg_d(l,p)*zstore(k)%val(elecs%dead(l,p))%x))
+
+    !                             haml_dx(n+norb)=haml_dx(n+norb)*((z1d(l)%x*elecs%neg_a(l,p)*&
+    !                             zstore(k)%val(elecs%alive(l,p))%dx(l+norb))+&
+    !                             (z1d(l+norb)%x*elecs%neg_d(l,p)*zstore(k)%val(elecs%dead(l,p))%dx(l+norb)))
+    !                         end if 
+    !                     end do
+    !                 end do 
+    !                 haml_dx_t=haml_dx_t+haml_dx
+    !             end do
+    
+    !             haml%hjk(j,k)=haml_x_t+(elecs%hnuc*haml%ovrlp(j,k))
+    !             haml%hjk(k,j)=haml%hjk(j,k)
+    !             haml%diff_hjk(:,k,j)=haml_dx_t(1:norb)+(elecs%hnuc*haml%diff_ovrlp(:,k,j))
+    !             haml%diff_hjk(:,j,k)=haml_dx_t(1+norb:2*norb)+(elecs%hnuc*haml%diff_ovrlp(:,j,k))
+    !         end do 
+    !         ! if(verb.eq.1)then
+    !             ! write(6,"(a,i0,a)") "hamliltonian column ",j, " completed"
+    !         ! end if 
+    !     end do
+
+    
+    !     !$acc end data
+    !     !!$omp end parallel do
+      
+    ! end subroutine haml_ovrlp_comb
+
+    
+
+    ! !##############################################################################################################################
+
+    ! !Level 2 routines to make an Overlap and Hamiltonian matrix column
+
+    ! ! Calcualates a column of a hamiltonian Start specifies the row the column
+    ! ! is started to be calcualted 
+
+    ! subroutine haml_ovrlp_column(temp,zstore,size,elecs,row)
+
+    !     implicit none
+    !     type(zombiest),dimension(1:ndet),intent(in)::zstore
+    !     type(grad_do),intent(inout)::temp
+    !     type(elecintrgl),intent(in)::elecs
+    !     integer,intent(in)::row,size
+    !     type(dual2),dimension(0:2*norb)::z1d
+    !     real(wp)::overlap_x, haml_x_t, haml_x
+    !     real(wp),dimension(2*norb)::overlap_dx,  haml_dx_t, haml_dx
+    !     integer::j,k,l,p,n,ierr
+
+    !     if (errorflag .ne. 0) return
+        
+    !     z1d = typ2_2_typ1(temp%zom%val)
+    !     !$acc data copyin(z1d,size) copyout(temp%hjk(1:size,row),temp%ovrlp(1:size,row),temp%diff_ovrlp_1,temp%diff_ovrlp_2) &
+    !     !$acc & create(overlap_x,overlap_dx(1:2*norb),haml_x_t, haml_x,haml_dx_t(1:2*norb),haml_dx(1:2*norb)) &
+    !     !$acc & present(elecs,zstore,norb)
+    !     !$acc parallel loop async gang private(overlap_dx,overlap_x,haml_x_t,haml_dx_t,haml_dx,z1d,k,j,l,n,p)
+    !     do k=1,size
+    !         if (k.ne.row) then
+    !             overlap_x=1.0d0;overlap_dx=1.0d0
+    !             !$acc loop reduction(*:overlap_x)
+    !             do l=1,norb
+    !                 overlap_x=overlap_x*((z1d(l)%x*zstore(k)%val(l)%x)+(z1d(l+norb)%x*zstore(k)%val(l+norb)%x))
+    !             end do
+                
+    !             !$acc loop collapse(2) reduction(*:overlap_dx)
+    !             do n=1,norb 
+    !                 do l=1,norb 
+    !                     if(n.ne.l)then 
+    !                         overlap_dx(n)=overlap_dx(n)*((z1d(l)%x*zstore(k)%val(l)%x)+(z1d(l+norb)%x*zstore(k)%val(l+norb)%x))
+    !                         overlap_dx(n+norb)=overlap_dx(n+norb)*((z1d(l)%x*zstore(k)%val(l)%x)+&
+    !                         (z1d(l+norb)%x*zstore(k)%val(l+norb)%x))
+    !                     else
+    !                         overlap_dx(n)=overlap_dx(n)*((z1d(l)%dx(l)*zstore(k)%val(l)%x)+&
+    !                         (z1d(l+norb)%dx(l)*zstore(k)%val(l+norb)%x))
+    !                         overlap_dx(n+norb)=overlap_dx(n+norb)*((z1d(l)%x*zstore(k)%val(l)%dx(l+norb))+&
+    !                         (z1d(l+norb)%x*zstore(k)%val(l+norb)%dx(l+norb)))
+    !                     end if
+    !                 end do
+    !             end do
+
+    !             temp%ovrlp(k,row)%x=overlap_x
+    !             temp%diff_ovrlp_1(:,k)=overlap_dx(1:norb)
+    !             temp%diff_ovrlp_2(:,k)=overlap_dx(1+norb:2*norb)
+    !             temp%ovrlp(k,row)%dx=temp%diff_ovrlp_1(:,k)
+    !             ! temp%ovrlp(row,k)=temp%ovrlp(k,row)
+
+    !             haml_x_t=0.0d0; haml_dx_t=0.0d0
+    !             !$acc loop reduction(+:haml_x_t) private(haml_x,l,p)
+    !             do p=1,elecs%num 
+    !                 haml_x=elecs%integrals(p)
+    !                 !$acc loop reduction(*:haml_x)
+    !                 do l=1,norb
+    !                     haml_x=haml_x*(z1d(l)%x*elecs%neg_a(l,p)*zstore(k)%val(elecs%alive(l,p))%x+&
+    !                     z1d(l+norb)%x*elecs%neg_d(l,p)*zstore(k)%val(elecs%dead(l,p))%x)
+    !                 end do
+    !                 haml_x_t=haml_x_t+haml_x
+    !             end do
+
+    !             !$acc loop reduction(+:haml_dx_t) private(haml_dx,l,n,p)
+    !             do p=1,elecs%num 
+    !                 haml_dx=elecs%integrals(p)
+    !                 !$acc loop collapse(2) reduction(*:haml_dx)
+    !                 do n=1,norb
+    !                     do l=1,norb
+    !                         if(n.ne.l)then
+    !                         haml_dx(n)=haml_dx(n)*(z1d(l)%x*elecs%neg_a(l,p)*zstore(k)%val(elecs%alive(l,p))%x+&
+    !                         z1d(l+norb)%x*elecs%neg_d(l,p)*zstore(k)%val(elecs%dead(l,p))%x)
+
+    !                         haml_dx(n+norb)=haml_dx(n+norb)*(z1d(l)%x*elecs%neg_a(l,p)*zstore(k)%val(elecs%alive(l,p))%x+&
+    !                         z1d(l+norb)%x*elecs%neg_d(l,p)*zstore(k)%val(elecs%dead(l,p))%x)
+    !                         else
+    !                             haml_dx(n)=haml_dx(n)*((z1d(l)%dx(l)*elecs%neg_a(l,p)*zstore(k)%val(elecs%alive(l,p))%x)+&
+    !                             (z1d(l+norb)%dx(l)*elecs%neg_d(l,p)*zstore(k)%val(elecs%dead(l,p))%x))
+
+    !                             haml_dx(n+norb)=haml_dx(n+norb)*((z1d(l)%x*elecs%neg_a(l,p)*&
+    !                             zstore(k)%val(elecs%alive(l,p))%dx(l+norb))+&
+    !                             (z1d(l+norb)%x*elecs%neg_d(l,p)*zstore(k)%val(elecs%dead(l,p))%dx(l+norb)))
+    !                         end if 
+    !                     end do
+    !                 end do 
+    !                 haml_dx_t=haml_dx_t+haml_dx
+    !             end do
+
+    !             temp%hjk(k,row)%x=haml_x_t+(elecs%hnuc*temp%ovrlp(k,row)%x)
+    !             temp%diff_hjk_1(:,k)=haml_dx_t(1:norb)+(elecs%hnuc*temp%diff_ovrlp_1(:,k))
+    !             temp%diff_hjk_2(:,k)=haml_dx_t(1+norb:2*norb)+(elecs%hnuc*temp%diff_ovrlp_2(:,k))
+    !             temp%hjk(k,row)%dx=temp%diff_hjk_1(:,k)
+    !             ! temp%hjk(row,k)=temp%hjk(k,row)
+    !         else 
+    !             temp%ovrlp(row,row)=1.0d0
+    !             temp%ovrlp(row,row)%dx=0.0d0
+    !             temp%diff_ovrlp_1(:,row)=0.0d0
+
+    !             haml_x_t=0.0d0 
+    !             !$acc loop reduction(+:haml_x_t) private(haml_x,l,p)
+    !             do p=1,elecs%num 
+    !                 haml_x=elecs%integrals(p)
+    !                 !$acc loop reduction(*:haml_x)
+    !                 do l=1,norb
+    !                     haml_x=haml_x*(z1d(l)%x*elecs%neg_a(l,p)*z1d(elecs%alive(l,p))%x+&
+    !                     z1d(l+norb)%x*elecs%neg_d(l,p)*z1d(elecs%dead(l,p))%x)
+    !                 end do
+    !                 haml_x_t=haml_x_t+haml_x
+    !             end do 
+
+    !             haml_dx_t=0.0d0
+    !             !$acc loop reduction(+:haml_dx_t) private(haml_dx,l,n,p)
+    !             do p=1,elecs%num 
+    !                 haml_dx=elecs%integrals(p)
+    !                 !$acc loop collapse(2) reduction(*:haml_dx)
+    !                 do n=1,norb
+    !                     do l=1,norb
+    !                         if(n.ne.l)then
+    !                         haml_dx(n)=haml_dx(n)*(z1d(l)%x*elecs%neg_a(l,p)*z1d(elecs%alive(l,p))%x+&
+    !                         z1d(l+norb)%x*elecs%neg_d(l,p)*z1d(elecs%dead(l,p))%x)
+    !                         else
+    !                             haml_dx(n)=haml_dx(n)*((z1d(l)%x*elecs%neg_a(l,p)*z1d(elecs%alive(l,p))%dx(l)+&
+    !                             z1d(l)%dx(l)*elecs%neg_a(l,p)*z1d(elecs%alive(l,p))%x)+&
+    !                             (z1d(l+norb)%x*elecs%neg_d(l,p)*z1d(elecs%dead(l,p))%dx(l)+&
+    !                             z1d(l+norb)%dx(l)*elecs%neg_d(l,p)*z1d(elecs%dead(l,p))%x))
+    !                         end if 
+    !                     end do
+    !                 end do 
+    !                 haml_x_t=haml_x_t+haml_x
+    !             end do
+
+    !             temp%hjk(row,row)%x=haml_x_t+elecs%hnuc
+    !             temp%diff_hjk_1(:,row)=haml_dx_t(1:norb)
+    !             temp%hjk(row,row)%dx=temp%diff_hjk_1(:,row)
+            
+    !         end if 
+    !     end do
+
+    !     !!$omp end parallel do 
+    !     !$acc end data
+      
+    !     temp%hjk(row,:)=temp%hjk(:,row); temp%ovrlp(row,:)=temp%ovrlp(:,row)
+       
+    !     return
+
+    ! end subroutine haml_ovrlp_column
+
+    !##############################################################################################################################
+
     
     !Level 1 Routines to make the Hamiltonian and Overlap matrices
 
@@ -74,7 +373,7 @@ MODULE ham
         if (errorflag .ne. 0) return 
         ierr=0
 
-        !$omp parallel do simd&
+        !$omp parallel do &
         !$omp & private(j,k,ovlptot,hamtot,z1d) &
         !$omp & shared(elecs,zstore,haml) 
         do j=1,size
@@ -102,7 +401,7 @@ MODULE ham
                 write(6,"(a,i0,a)") "hamliltonian column ",j, " completed"
             end if 
         end do
-        !$omp end parallel do simd
+        !$omp end parallel do
 
     end subroutine haml_ovrlp_comb
 
@@ -158,7 +457,7 @@ MODULE ham
                 temp%diff_hjk_1(:,j)=hamtot%dx(1:norb)
             end if 
         end do
-        ! $omp end parallel do 
+        !$omp end parallel do 
 
         return
 

@@ -5,7 +5,7 @@
 
 F90= nvfortran 
 # F90= gfortran 
-FFLAGS = -mp=gpu  -Minfo  #-gpu=cc70 #-gpu=managed #
+FFLAGS = -mp -acc  -Minfo  -gpu=cc70 -fast #-gpu=managed #
 # FFLAGS= #-fopenmp -fbacktrace -fno-unsafe-math-optimizations -frounding-math -fsignaling-nans -foffload=-lgfortran 
 FLINKS=$(ARC_LINALG_FFLAGS)
 # FLINKS=	-llapack -lblas 
@@ -13,12 +13,9 @@ VPATH=../src
 
 # Link step
 
-
-
-
 all: ZOMBIE
 
-ZOMBIE:randgen.o mod_types.o vars.o dual_set.o dnad.o infnan_constants.o gpu_transfer.o ham_gpu.o inf.o infnan.o alarrays.o readpars.o outputs.o electrons.o zom.o ham.o imgtp.o clean.o gradient_descent.o MainZombie.o #gram_schmidt.o
+ZOMBIE:randgen.o mod_types.o vars.o dual_set.o dnad.o infnan_constants.o inf.o infnan.o alarrays.o readpars.o outputs.o electrons.o zom.o ham.o imgtp.o clean.o gradient_descent.o MainZombie.o #gram_schmidt.o
 		 $(F90) $(FFLAGS) -o $@ $^ $(FLINKS)
 
 
@@ -29,11 +26,11 @@ randgen.o:randgen.f
 
 mod_types.o:mod_types.f90
 	 $(F90) $(FFLAGS) -c $<
-
+	 
 dual_set.o:dual_set.f90
 	 $(F90) $(FFLAGS) -c $<
 
-dnad.o:dnad.f90 dual_set.f90 mod_types.o
+dnad.o:dnad.f90 dual_set.o mod_types.o
 	 $(F90) $(FFLAGS) -c $<
 
 infnan_constants.o:infnan_constants.f90
@@ -51,11 +48,6 @@ vars.o:vars.f90 mod_types.o dnad.o
 alarrays.o:alarrays.f90 vars.o mod_types.o dnad.o
 	 $(F90) $(FFLAGS) -c $<
 
-gpu_transfer.o:gpu_transfer.cuf mod_types.o dnad.o vars.o alarrays.o
-	 $(F90) $(FFLAGS) -c $<
-
-ham_gpu.o:ham_gpu.cuf mod_types.o vars.o alarrays.o dnad.o 
-	 $(F90) $(FFLAGS) -c $<
 
 readpars.o:readpars.f90 vars.o dnad.o
 	 $(F90) $(FFLAGS) -c $<
@@ -69,7 +61,7 @@ electrons.o:electrons.f90 vars.o alarrays.o
 zom.o:zom.f90 vars.o infnan.o mod_types.o dnad.o
 	 $(F90) $(FFLAGS) -c $<
 	 
-ham.o:ham.f90 mod_types.o vars.o alarrays.o dnad.o ham_gpu.o
+ham.o:ham.f90 mod_types.o vars.o alarrays.o dnad.o
 	 $(F90) $(FFLAGS) -c $<
 
 imgtp.o:imgtp.f90 vars.o alarrays.o dnad.o
@@ -84,7 +76,7 @@ gradient_descent.o:gradient_descent.f90 vars.o alarrays.o ham.o imgtp.o outputs.
 # gram_schmidt.o:gram_schmidt.f90 vars.o alarrays.o ham.o gradient_descent.o grad_d.o imgtp.o outputs.o infnan.o zom.o grad_calc.o
 # 	 $(F90) $(FFLAGS) -c $<
 
-MainZombie.o:MainZombie.f90 randgen.o mod_types.o vars.o ham_gpu.o gpu_transfer.o dual_set.o dnad.o infnan_constants.o inf.o infnan.o alarrays.o readpars.o outputs.o electrons.o zom.o ham.o imgtp.o clean.o gradient_descent.o  #gram_schmidt.o
+MainZombie.o:MainZombie.f90 randgen.o mod_types.o vars.o dual_set.o dnad.o infnan_constants.o inf.o infnan.o alarrays.o readpars.o outputs.o electrons.o zom.o ham.o imgtp.o clean.o gradient_descent.o  #gram_schmidt.o
 	 $(F90) $(FFLAGS) -c $<
 
 # This entry allows you to type " make clean " to get rid of
