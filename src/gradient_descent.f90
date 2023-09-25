@@ -10,9 +10,6 @@ MODULE gradient_descent
     use infnan_mod
     use zom 
 
-    use GPU_setup, zstore_d => zstore_d, elecs_d => elecs_d, dvecs_d => dvecs_d, haml_d => haml_d, grad_fin_d => grad_fin_d, &
-    & temp_d => temp_d, thread_d => thread_d
-
     implicit none 
     integer::d_grad_flg=1
     real(wp)::alpha=0.2 ! learning rate reduction
@@ -604,13 +601,6 @@ MODULE gradient_descent
             call epoc_writer(grad_fin%prev_erg,0,0,0.0d0,0)
         end if
 
-        call gpu_setup()
-        zstore_d=zstore
-        elecs_d=elect
-        dvecs_d=dvecs
-        haml_d=haml
-        grad_fin_d=grad_fin
-      
         allocate(picker(ndet-1),stat=ierr)
         if(ierr==0) allocate(chng_trk(ndet-1),stat=ierr)
         ! call omp_set_nested(.true.)
