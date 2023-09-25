@@ -49,7 +49,9 @@ MODULE gradient_descent
         call haml_ovrlp_column(temp,zstore,ndet,elecs,pick)
         ! call haml_ovrlp_column_gpu(temp_d,zstore_d,size,elecs_d,pick)
         ! temp=temp_d
+
         temp%inv=temp%ovrlp
+        
        
         allocate(WORK1(size),IPIV1(size),stat=ierr)
         if (ierr/=0) then
@@ -231,8 +233,8 @@ MODULE gradient_descent
         p=70-norb
      
     
-        call haml_to_grad_do(haml,dvecs,temp)
-        thread=temp
+        call haml_to_grad_do(haml,dvecs,thread)
+        temp=thread
 
         do while(rjct_cnt.lt.(norb*100))
             loops=loops+1
@@ -324,6 +326,7 @@ MODULE gradient_descent
                    
                     rjct_cnt=rjct_cnt+1
                     rjct_cnt_global=rjct_cnt_global+1   
+                    call haml_to_grad_do(haml,dvecs,thread)
                 end if
                 
             end do
@@ -412,6 +415,7 @@ MODULE gradient_descent
         call alloc_grad_do(temp,ndet,norb)
         call alloc_grad_do(thread,ndet,norb)
         call haml_to_grad_do(haml,dvecs,thread)
+        
        
         do while(rjct_cnt_global.lt.(ndet-1)*30)
 
@@ -429,6 +433,7 @@ MODULE gradient_descent
                 call zeroer(thread)
                 call grad_calculate(haml,thread,grad_fin)
                 temp=thread
+              
                 min_idx=-1
                 !$omp parallel do ordered &
                 !$omp private(t) firstprivate(temp)&
@@ -439,9 +444,11 @@ MODULE gradient_descent
                         temp%zom=zstore(pick)
                         temp%zom%phi=zstore(pick)%phi
                         temp%zom%phi%x=zstore(pick)%phi%x-(t*grad_fin%vars(pick,:))
+                        print*,temp%zom%phi%x
                         call val_set(temp%zom)
                         call he_full_row(temp,zstore,elect,ndet)
                         call imaginary_time_erg(temp,ndet)
+                        print*,temp%erg%x
                         if(temp%erg%x .lt. grad_fin%prev_erg)then
                            !$omp critical
                             if(min_idx.eq.-1)then
@@ -462,6 +469,7 @@ MODULE gradient_descent
                     write(6,"(a,i3,a,f21.16,a,f21.16,a,f21.16,a,i3,a,i3)") '       ', pick,'              ', &
                     grad_fin%prev_erg,'               ',0.0,'             ',0.0,'        ',acpt_cnt,'          ',rjct_cnt_global
                    
+                    call haml_to_grad_do(haml,dvecs,thread)
                 else
                     
                     t=b*(alpha**(min_idx-1))
