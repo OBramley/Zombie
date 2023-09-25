@@ -107,7 +107,7 @@ MODULE gradient_descent
         
         do j=st,fn
             temp=haml%diff_hjk(j,:,pick)*dvec%d%x
-            
+            temp(pick)=sum(haml%diff_hjk(j,:,pick)*dvec%d%x)
             grad_fin%vars(pick,j)=sum(dvec%d%x*temp)
         end do
         ! if(d_grad_flg==2)then 
