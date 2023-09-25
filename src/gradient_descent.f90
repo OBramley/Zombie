@@ -264,12 +264,13 @@ MODULE gradient_descent
                 do n=1,norb
                     pickorb=pickerorb(n)
                     min_idx = -1
-                    temp=thread
-                    !$omp parallel do default(none) num_threads(2) ordered &
-                    !$omp private(t,lralt_zs) firstprivate(temp)&
+                
+                    !$omp parallel do num_threads(2) ordered &
+                    !$omp private(t,lralt_zs,temp)&
                     !$omp shared(min_idx,elect,zstore,grad_fin,thread,loop_max,alpha,b,pick,pickorb,ndet)
                     do lralt_zs=1,loop_max
                         if(min_idx.eq.-1)then
+                            temp=thread
                             t=b*alpha**(lralt_zs-1)
                         
                             temp%zom%phi(pickorb)%x = thread%zom%phi(pickorb)%x-(t*grad_fin%vars(pick,pickorb))
@@ -429,10 +430,12 @@ MODULE gradient_descent
                 temp=thread
                 min_idx=-1
                 !$omp parallel do ordered num_threads(2) &
-                !$omp private(t) firstprivate(temp)&
+                !$omp private(t,temp) &
                 !$omp shared(min_idx,elect,zstore,grad_fin,thread,loop_max,alpha,b,pick,ndet)
                 do lralt_temp=1,loop_max
+
                     if(min_idx.eq.-1)then
+                        temp=thread
                         t=b*(alpha**(lralt_temp-1))
                         temp%zom=zstore(pick)
                         temp%zom%phi=zstore(pick)%phi

@@ -27,7 +27,7 @@ mod_types.o:mod_types.f90
 dual_set.o:dual_set.f90
 	 $(F90) $(FFLAGS) -c $<
 
-dnad.o:dnad.f90 dual_set.f90 mod_types.o
+dnad.o:dnad.f90 dual_set.o mod_types.o
 	 $(F90) $(FFLAGS) -c $<
 
 infnan_constants.o:infnan_constants.f90
@@ -79,4 +79,4 @@ MainZombie.o:MainZombie.f90 randgen.o mod_types.o vars.o dual_set.o dnad.o infna
 # all object and module files
 
 clean:
-	rm -rf f_{files,modd}* *.o *.mod *.exe *~ ../run/*.exe ../run/*~ ../src/*~
+	rm -rf ZOMBIE f_{files,modd}* *.o *.mod *.exe *~ ../run/*.exe ../run/*~ ../src/*~
