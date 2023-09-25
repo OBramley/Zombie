@@ -21,9 +21,9 @@ run={
 
     'nodes':1,
 
-    'cores':12,
+    'cores':8,
 
-    'submissions':15,
+    'submissions':1,
 
     'multiple':1,
 
@@ -286,7 +286,7 @@ zombs={
     'spin':pyscf['spin'],
 
     # Number of Zombie states
-    'ndet':100,#pyscf['norb']*2, 
+    'ndet':10,#pyscf['norb']*2, 
 
     # Type of zombie states. Random (ran), Hartree Fock (HF) or biased (bb)
     'zomtyp':'bb',

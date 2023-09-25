@@ -12,7 +12,7 @@ MODULE globvars
     type zombiest
         type(dual),dimension(:),allocatable::phi
         ! real(wp),dimension(:),allocatable::img
-        type(dual2),dimension(:),allocatable::val
+        type(dual),dimension(:),allocatable::val
     end type zombiest
 
     interface val_set
@@ -65,17 +65,14 @@ MODULE globvars
     end type oprts
     
     type grad_do
-        type(dual), dimension(:,:), allocatable::hjk
-        type(dual), dimension(:,:), allocatable::ovrlp
-        type(dual), dimension(:,:), allocatable::inv
-        type(dual), dimension(:,:), allocatable::kinvh
-        real(wp), dimension(:,:), allocatable::diff_hjk_1
-        real(wp), dimension(:,:), allocatable::diff_ovrlp_1
-        real(wp), dimension(:,:), allocatable::diff_hjk_2 
-        real(wp), dimension(:,:), allocatable::diff_ovrlp_2  
+        real(dp), dimension(:,:), allocatable::hjk
+        real(dp), dimension(:,:), allocatable::ovrlp
+        real(dp), dimension(:,:), allocatable::inv
+        real(dp), dimension(:,:), allocatable::kinvh
+       
         type(zombiest)::zom
         type(dvector)::dvec
-        type(dual)::erg
+        real(dp)::erg
     end type grad_do
 
     type grad 
@@ -123,14 +120,11 @@ MODULE globvars
     subroutine val_set_whole(this)
         implicit none
         class(zombiest),intent(inout)::this
-        type(dual),dimension(norb)::temp
-       
+      
         this%val(0)=0.0d0
-        temp=sin(this%phi)
-        this%val(1:norb)=dual_2_dual2(temp,2)
-        temp=cos(this%phi)
-        this%val(1+norb:2*norb)=dual_2_dual2(temp,2) 
-
+  
+        this%val(1:norb)=sin(this%phi)
+        this%val(1+norb:2*norb)=cos(this%phi)
     
         return
 
@@ -139,18 +133,12 @@ MODULE globvars
     subroutine val_set_single(this,n)
         implicit none
         class(zombiest),intent(inout)::this
-        type(dual)::temp
         integer,intent(in)::n
 
-        temp=sin(this%phi(n))
-        this%val(n)%x=temp%x
-        this%val(n)%dx(1:norb) = 0.0d0
-        this%val(n)%dx(norb+1:) = temp%dx
-
-        temp=cos(this%phi(n))
-        this%val(n+norb)%x=temp%x
-        this%val(n+norb)%dx(1:norb) = 0.0d0
-        this%val(n+norb)%dx(norb+1:) = temp%dx
+     
+        this%val(n)=sin(this%phi(n))
+        this%val(n+norb)=cos(this%phi(n))
+       
     
         return
     end subroutine val_set_single

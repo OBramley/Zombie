@@ -512,10 +512,6 @@ MODULE alarrays
         if(ierr==0) allocate(grads%ovrlp(size,size), stat=ierr)
         if(ierr==0) allocate(grads%inv(size,size), stat=ierr)
         if(ierr==0) allocate(grads%kinvh(size,size), stat=ierr)
-        if(ierr==0) allocate(grads%diff_hjk_1(diff_size,size), stat=ierr)
-        if(ierr==0) allocate(grads%diff_ovrlp_1(diff_size,size), stat=ierr)
-        if(ierr==0) allocate(grads%diff_hjk_2(diff_size,size), stat=ierr)
-        if(ierr==0) allocate(grads%diff_ovrlp_2(diff_size,size), stat=ierr)
         if (ierr/=0) then
             write(stderr,"(a,i0)") "Error in gradient descent type allocation. ierr had value ", ierr
             errorflag=1
@@ -542,10 +538,6 @@ MODULE alarrays
         if(ierr==0) deallocate(grads%ovrlp, stat=ierr)
         if(ierr==0) deallocate(grads%inv, stat=ierr)
         if(ierr==0) deallocate(grads%kinvh, stat=ierr)
-        if(ierr==0) deallocate(grads%diff_hjk_1, stat=ierr)
-        if(ierr==0) deallocate(grads%diff_ovrlp_1, stat=ierr)
-        if(ierr==0) deallocate(grads%diff_hjk_2, stat=ierr)
-        if(ierr==0) deallocate(grads%diff_ovrlp_2, stat=ierr)
         if (ierr/=0) then
             write(stderr,"(a,i0)") "Error in gradient descent type deallocation. ierr had value ", ierr
             errorflag=1

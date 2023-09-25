@@ -56,303 +56,7 @@ MODULE ham
 
     !##############################################################################################################################
     
-    ! subroutine haml_ovrlp_comb(haml,zstore,elecs,size,verb)
-    !     implicit none
-
-    !     type(hamiltonian), intent(inout)::haml 
-    !     ! real(kind=8),dimension(:,:),intent(inout)::haml 
-    !     type(zombiest),dimension(:),intent(in)::zstore
-    !     type(elecintrgl),intent(in)::elecs
-    !     type(dual2),dimension(0:2*norb)::z1d
-    !     integer,intent(in)::verb,size
-    !     integer::j,k,l,n,p,ierr
-    !     real(wp)::overlap_x, haml_x_t, haml_x
-    !     real(wp),dimension(2*norb)::overlap_dx,  haml_dx_t, haml_dx
-    !     if (errorflag .ne. 0) return 
-    !     ierr=0
-
-    !     !$acc data create(z1d,overlap_x,overlap_dx(1:2*norb),haml_x_t, haml_x,haml_dx_t(1:2*norb),haml_dx(1:2*norb))&
-    !     !$acc & present(elecs,zstore,norb)
-    !     !$acc parallel loop gang private(overlap_dx,overlap_x,haml_x_t,haml_dx_t,haml_dx,z1d,k,j,l,n,p)
-    !     do j=1,size
-    !         z1d =typ2_2_typ1(zstore(j)%val)
-
-    !         haml_x_t=0.0d0
-    !         !$acc loop reduction(+:haml_x_t) private(haml_x,l,p)
-    !         do p=1,elecs%num 
-    !             haml_x=elecs%integrals(p)
-    !             !$acc loop reduction(*:haml_x)
-    !             do l=1,norb
-    !                 haml_x=haml_x*(z1d(l)%x*elecs%neg_a(l,p)*z1d(elecs%alive(l,p))%x+&
-    !                 z1d(l+norb)%x*elecs%neg_d(l,p)*z1d(elecs%dead(l,p))%x)
-    !             end do
-    !             haml_x_t=haml_x_t+haml_x
-    !         end do
-
-    !         haml_dx_t=0.0d0
-    !         !$acc loop reduction(+:haml_dx_t) private(haml_dx,l,n,p)
-    !         do p=1,elecs%num 
-    !             haml_dx=elecs%integrals(p)
-    !             !$acc loop collapse(2) reduction(*:haml_dx)
-    !             do n=1,norb
-    !                 do l=1,norb
-    !                     if(n.ne.l)then
-    !                         haml_dx(n)=haml_dx(n)*(z1d(l)%x*elecs%neg_a(l,p)*z1d(elecs%alive(l,p))%x+&
-    !                         z1d(l+norb)%x*elecs%neg_d(l,p)*z1d(elecs%dead(l,p))%x)
-    !                     else
-    !                         haml_dx(n)=haml_dx(n)*((z1d(l)%x*elecs%neg_a(l,p)*z1d(elecs%alive(l,p))%dx(l)+&
-    !                         z1d(l)%dx(l)*elecs%neg_a(l,p)*z1d(elecs%alive(l,p))%x)+&
-    !                         (z1d(l+norb)%x*elecs%neg_d(l,p)*z1d(elecs%dead(l,p))%dx(l)+&
-    !                         z1d(l+norb)%dx(l)*elecs%neg_d(l,p)*z1d(elecs%dead(l,p))%x))
-    !                     end if 
-    !                 end do
-    !             end do 
-    !             haml_dx_t=haml_dx_t+haml_dx
-    !         end do
-            
-    !         haml%hjk(j,j)=haml_x_t+elecs%hnuc
-    !         haml%diff_hjk(:,j,j)=haml_dx_t(1:norb)
-
-    !         haml%ovrlp(j,j)=1.0d0
-    !         haml%diff_ovrlp(:,j,j)=0.0d0 
-           
-    !         do k=j+1,size
-    !             overlap_x=1.0d0;overlap_dx=1.0d0
-    !             !$acc loop reduction(*:overlap_x)
-    !             do l=1,norb
-    !                 overlap_x=overlap_x*((z1d(l)%x*zstore(k)%val(l)%x)+(z1d(l+norb)%x*zstore(k)%val(l+norb)%x))
-    !             end do
-                
-    !             !$acc loop collapse(2) reduction(*:overlap_dx)
-    !             do n=1,norb 
-    !                 do l=1,norb 
-    !                     if(n.ne.l)then 
-    !                         overlap_dx(n)=overlap_dx(n)*((z1d(l)%x*zstore(k)%val(l)%x)+(z1d(l+norb)%x*zstore(k)%val(l+norb)%x))
-    !                         overlap_dx(n+norb)=overlap_dx(n+norb)*((z1d(l)%x*zstore(k)%val(l)%x)+&
-    !                         (z1d(l+norb)%x*zstore(k)%val(l+norb)%x))
-    !                     else
-    !                         overlap_dx(n)=overlap_dx(n)*((z1d(l)%dx(l)*zstore(k)%val(l)%x)+&
-    !                         (z1d(l+norb)%dx(l)*zstore(k)%val(l+norb)%x))
-    !                         overlap_dx(n+norb)=overlap_dx(n+norb)*((z1d(l)%x*zstore(k)%val(l)%dx(l+norb))+&
-    !                         (z1d(l+norb)%x*zstore(k)%val(l+norb)%dx(l+norb)))
-    !                     end if
-    !                 end do
-    !             end do
-
-    
-    !             haml%ovrlp(j,k)=overlap_x
-    !             haml%ovrlp(k,j)=haml%ovrlp(j,k)
-    !             haml%diff_ovrlp(:,k,j)=overlap_dx(1:norb)
-    !             haml%diff_ovrlp(:,j,k)=overlap_dx(1+norb:2*norb)
-
-    !             haml_x_t=0.0d0
-    !             !$acc loop reduction(+:haml_x_t) private(haml_x,l,p)
-    !             do p=1,elecs%num 
-    !                 haml_x=elecs%integrals(p)
-    !                 !$acc loop reduction(*:haml_x)
-    !                 do l=1,norb
-    !                     haml_x=haml_x*(z1d(l)%x*elecs%neg_a(l,p)*zstore(k)%val(elecs%alive(l,p))%x+&
-    !                     z1d(l+norb)%x*elecs%neg_d(l,p)*zstore(k)%val(elecs%dead(l,p))%x)
-    !                 end do
-    !                 haml_x_t=haml_x_t+haml_x
-    !             end do 
-
-    !             haml_dx_t=0.0d0
-    !             !$acc loop reduction(+:haml_dx_t) private(haml_dx,l,n,p)
-    !             do p=1,elecs%num 
-    !                 haml_dx=elecs%integrals(p)
-    !                 !$acc loop collapse(2) reduction(*:haml_dx)
-    !                 do n=1,norb
-    !                     do l=1,norb
-    !                         if(n.ne.l)then
-    !                         haml_dx(n)=haml_dx(n)*(z1d(l)%x*elecs%neg_a(l,p)*zstore(k)%val(elecs%alive(l,p))%x+&
-    !                         z1d(l+norb)%x*elecs%neg_d(l,p)*zstore(k)%val(elecs%dead(l,p))%x)
-
-    !                         haml_dx(n+norb)=haml_dx(n+norb)*(z1d(l)%x*elecs%neg_a(l,p)*zstore(k)%val(elecs%alive(l,p))%x+&
-    !                         z1d(l+norb)%x*elecs%neg_d(l,p)*zstore(k)%val(elecs%dead(l,p))%x)
-    !                         else
-    !                             haml_dx(n)=haml_dx(n)*((z1d(l)%dx(l)*elecs%neg_a(l,p)*zstore(k)%val(elecs%alive(l,p))%x)+&
-    !                             (z1d(l+norb)%dx(l)*elecs%neg_d(l,p)*zstore(k)%val(elecs%dead(l,p))%x))
-
-    !                             haml_dx(n+norb)=haml_dx(n+norb)*((z1d(l)%x*elecs%neg_a(l,p)*&
-    !                             zstore(k)%val(elecs%alive(l,p))%dx(l+norb))+&
-    !                             (z1d(l+norb)%x*elecs%neg_d(l,p)*zstore(k)%val(elecs%dead(l,p))%dx(l+norb)))
-    !                         end if 
-    !                     end do
-    !                 end do 
-    !                 haml_dx_t=haml_dx_t+haml_dx
-    !             end do
-    
-    !             haml%hjk(j,k)=haml_x_t+(elecs%hnuc*haml%ovrlp(j,k))
-    !             haml%hjk(k,j)=haml%hjk(j,k)
-    !             haml%diff_hjk(:,k,j)=haml_dx_t(1:norb)+(elecs%hnuc*haml%diff_ovrlp(:,k,j))
-    !             haml%diff_hjk(:,j,k)=haml_dx_t(1+norb:2*norb)+(elecs%hnuc*haml%diff_ovrlp(:,j,k))
-    !         end do 
-    !         ! if(verb.eq.1)then
-    !             ! write(6,"(a,i0,a)") "hamliltonian column ",j, " completed"
-    !         ! end if 
-    !     end do
-
-    
-    !     !$acc end data
-    !     !!$omp end parallel do
-      
-    ! end subroutine haml_ovrlp_comb
-
-    
-
-    ! !##############################################################################################################################
-
-    ! !Level 2 routines to make an Overlap and Hamiltonian matrix column
-
-    ! ! Calcualates a column of a hamiltonian Start specifies the row the column
-    ! ! is started to be calcualted 
-
-    ! subroutine haml_ovrlp_column(temp,zstore,size,elecs,row)
-
-    !     implicit none
-    !     type(zombiest),dimension(1:ndet),intent(in)::zstore
-    !     type(grad_do),intent(inout)::temp
-    !     type(elecintrgl),intent(in)::elecs
-    !     integer,intent(in)::row,size
-    !     type(dual2),dimension(0:2*norb)::z1d
-    !     real(wp)::overlap_x, haml_x_t, haml_x
-    !     real(wp),dimension(2*norb)::overlap_dx,  haml_dx_t, haml_dx
-    !     integer::j,k,l,p,n,ierr
-
-    !     if (errorflag .ne. 0) return
-        
-    !     z1d = typ2_2_typ1(temp%zom%val)
-    !     !$acc data copyin(z1d,size) copyout(temp%hjk(1:size,row),temp%ovrlp(1:size,row),temp%diff_ovrlp_1,temp%diff_ovrlp_2) &
-    !     !$acc & create(overlap_x,overlap_dx(1:2*norb),haml_x_t, haml_x,haml_dx_t(1:2*norb),haml_dx(1:2*norb)) &
-    !     !$acc & present(elecs,zstore,norb)
-    !     !$acc parallel loop async gang private(overlap_dx,overlap_x,haml_x_t,haml_dx_t,haml_dx,z1d,k,j,l,n,p)
-    !     do k=1,size
-    !         if (k.ne.row) then
-    !             overlap_x=1.0d0;overlap_dx=1.0d0
-    !             !$acc loop reduction(*:overlap_x)
-    !             do l=1,norb
-    !                 overlap_x=overlap_x*((z1d(l)%x*zstore(k)%val(l)%x)+(z1d(l+norb)%x*zstore(k)%val(l+norb)%x))
-    !             end do
-                
-    !             !$acc loop collapse(2) reduction(*:overlap_dx)
-    !             do n=1,norb 
-    !                 do l=1,norb 
-    !                     if(n.ne.l)then 
-    !                         overlap_dx(n)=overlap_dx(n)*((z1d(l)%x*zstore(k)%val(l)%x)+(z1d(l+norb)%x*zstore(k)%val(l+norb)%x))
-    !                         overlap_dx(n+norb)=overlap_dx(n+norb)*((z1d(l)%x*zstore(k)%val(l)%x)+&
-    !                         (z1d(l+norb)%x*zstore(k)%val(l+norb)%x))
-    !                     else
-    !                         overlap_dx(n)=overlap_dx(n)*((z1d(l)%dx(l)*zstore(k)%val(l)%x)+&
-    !                         (z1d(l+norb)%dx(l)*zstore(k)%val(l+norb)%x))
-    !                         overlap_dx(n+norb)=overlap_dx(n+norb)*((z1d(l)%x*zstore(k)%val(l)%dx(l+norb))+&
-    !                         (z1d(l+norb)%x*zstore(k)%val(l+norb)%dx(l+norb)))
-    !                     end if
-    !                 end do
-    !             end do
-
-    !             temp%ovrlp(k,row)%x=overlap_x
-    !             temp%diff_ovrlp_1(:,k)=overlap_dx(1:norb)
-    !             temp%diff_ovrlp_2(:,k)=overlap_dx(1+norb:2*norb)
-    !             temp%ovrlp(k,row)%dx=temp%diff_ovrlp_1(:,k)
-    !             ! temp%ovrlp(row,k)=temp%ovrlp(k,row)
-
-    !             haml_x_t=0.0d0; haml_dx_t=0.0d0
-    !             !$acc loop reduction(+:haml_x_t) private(haml_x,l,p)
-    !             do p=1,elecs%num 
-    !                 haml_x=elecs%integrals(p)
-    !                 !$acc loop reduction(*:haml_x)
-    !                 do l=1,norb
-    !                     haml_x=haml_x*(z1d(l)%x*elecs%neg_a(l,p)*zstore(k)%val(elecs%alive(l,p))%x+&
-    !                     z1d(l+norb)%x*elecs%neg_d(l,p)*zstore(k)%val(elecs%dead(l,p))%x)
-    !                 end do
-    !                 haml_x_t=haml_x_t+haml_x
-    !             end do
-
-    !             !$acc loop reduction(+:haml_dx_t) private(haml_dx,l,n,p)
-    !             do p=1,elecs%num 
-    !                 haml_dx=elecs%integrals(p)
-    !                 !$acc loop collapse(2) reduction(*:haml_dx)
-    !                 do n=1,norb
-    !                     do l=1,norb
-    !                         if(n.ne.l)then
-    !                         haml_dx(n)=haml_dx(n)*(z1d(l)%x*elecs%neg_a(l,p)*zstore(k)%val(elecs%alive(l,p))%x+&
-    !                         z1d(l+norb)%x*elecs%neg_d(l,p)*zstore(k)%val(elecs%dead(l,p))%x)
-
-    !                         haml_dx(n+norb)=haml_dx(n+norb)*(z1d(l)%x*elecs%neg_a(l,p)*zstore(k)%val(elecs%alive(l,p))%x+&
-    !                         z1d(l+norb)%x*elecs%neg_d(l,p)*zstore(k)%val(elecs%dead(l,p))%x)
-    !                         else
-    !                             haml_dx(n)=haml_dx(n)*((z1d(l)%dx(l)*elecs%neg_a(l,p)*zstore(k)%val(elecs%alive(l,p))%x)+&
-    !                             (z1d(l+norb)%dx(l)*elecs%neg_d(l,p)*zstore(k)%val(elecs%dead(l,p))%x))
-
-    !                             haml_dx(n+norb)=haml_dx(n+norb)*((z1d(l)%x*elecs%neg_a(l,p)*&
-    !                             zstore(k)%val(elecs%alive(l,p))%dx(l+norb))+&
-    !                             (z1d(l+norb)%x*elecs%neg_d(l,p)*zstore(k)%val(elecs%dead(l,p))%dx(l+norb)))
-    !                         end if 
-    !                     end do
-    !                 end do 
-    !                 haml_dx_t=haml_dx_t+haml_dx
-    !             end do
-
-    !             temp%hjk(k,row)%x=haml_x_t+(elecs%hnuc*temp%ovrlp(k,row)%x)
-    !             temp%diff_hjk_1(:,k)=haml_dx_t(1:norb)+(elecs%hnuc*temp%diff_ovrlp_1(:,k))
-    !             temp%diff_hjk_2(:,k)=haml_dx_t(1+norb:2*norb)+(elecs%hnuc*temp%diff_ovrlp_2(:,k))
-    !             temp%hjk(k,row)%dx=temp%diff_hjk_1(:,k)
-    !             ! temp%hjk(row,k)=temp%hjk(k,row)
-    !         else 
-    !             temp%ovrlp(row,row)=1.0d0
-    !             temp%ovrlp(row,row)%dx=0.0d0
-    !             temp%diff_ovrlp_1(:,row)=0.0d0
-
-    !             haml_x_t=0.0d0 
-    !             !$acc loop reduction(+:haml_x_t) private(haml_x,l,p)
-    !             do p=1,elecs%num 
-    !                 haml_x=elecs%integrals(p)
-    !                 !$acc loop reduction(*:haml_x)
-    !                 do l=1,norb
-    !                     haml_x=haml_x*(z1d(l)%x*elecs%neg_a(l,p)*z1d(elecs%alive(l,p))%x+&
-    !                     z1d(l+norb)%x*elecs%neg_d(l,p)*z1d(elecs%dead(l,p))%x)
-    !                 end do
-    !                 haml_x_t=haml_x_t+haml_x
-    !             end do 
-
-    !             haml_dx_t=0.0d0
-    !             !$acc loop reduction(+:haml_dx_t) private(haml_dx,l,n,p)
-    !             do p=1,elecs%num 
-    !                 haml_dx=elecs%integrals(p)
-    !                 !$acc loop collapse(2) reduction(*:haml_dx)
-    !                 do n=1,norb
-    !                     do l=1,norb
-    !                         if(n.ne.l)then
-    !                         haml_dx(n)=haml_dx(n)*(z1d(l)%x*elecs%neg_a(l,p)*z1d(elecs%alive(l,p))%x+&
-    !                         z1d(l+norb)%x*elecs%neg_d(l,p)*z1d(elecs%dead(l,p))%x)
-    !                         else
-    !                             haml_dx(n)=haml_dx(n)*((z1d(l)%x*elecs%neg_a(l,p)*z1d(elecs%alive(l,p))%dx(l)+&
-    !                             z1d(l)%dx(l)*elecs%neg_a(l,p)*z1d(elecs%alive(l,p))%x)+&
-    !                             (z1d(l+norb)%x*elecs%neg_d(l,p)*z1d(elecs%dead(l,p))%dx(l)+&
-    !                             z1d(l+norb)%dx(l)*elecs%neg_d(l,p)*z1d(elecs%dead(l,p))%x))
-    !                         end if 
-    !                     end do
-    !                 end do 
-    !                 haml_x_t=haml_x_t+haml_x
-    !             end do
-
-    !             temp%hjk(row,row)%x=haml_x_t+elecs%hnuc
-    !             temp%diff_hjk_1(:,row)=haml_dx_t(1:norb)
-    !             temp%hjk(row,row)%dx=temp%diff_hjk_1(:,row)
-            
-    !         end if 
-    !     end do
-
-    !     !!$omp end parallel do 
-    !     !$acc end data
-      
-    !     temp%hjk(row,:)=temp%hjk(:,row); temp%ovrlp(row,:)=temp%ovrlp(:,row)
-       
-    !     return
-
-    ! end subroutine haml_ovrlp_column
-
+   
     !##############################################################################################################################
 
     
@@ -365,37 +69,30 @@ MODULE ham
         ! real(kind=8),dimension(:,:),intent(inout)::haml 
         type(zombiest),dimension(:),intent(in)::zstore
         type(elecintrgl),intent(in)::elecs
-        type(dual2),dimension(0:2*norb)::z1d
         integer,intent(in)::verb,size
         integer::j,k,ierr
-        type(dual2)::ovlptot,hamtot
+        real(wp)::ovlptot,hamtot
     
         if (errorflag .ne. 0) return 
         ierr=0
 
         !$omp parallel do &
-        !$omp & private(j,k,ovlptot,hamtot,z1d) &
+        !$omp & private(j,k,ovlptot,hamtot) &
         !$omp & shared(elecs,zstore,haml) 
         do j=1,size
-            z1d =typ2_2_typ1(zstore(j)%val)
-
-            hamtot=haml_vals_2(z1d,z1d,elecs)+(elecs%hnuc)
-            haml%hjk(j,j)=hamtot%x
-            haml%diff_hjk(:,j,j)=hamtot%dx(1:norb)
-
+           
+            hamtot=haml_vals_2(zstore(j)%val%x,zstore(j)%val%x,elecs)+(elecs%hnuc)
+            haml%hjk(j,j)=hamtot
+           
             haml%ovrlp(j,j)=1.0d0
             haml%diff_ovrlp(:,j,j)=0.0d0 
            
             do k=j+1,size
-                ovlptot=overlap_2(z1d,zstore(k)%val)
-                haml%ovrlp(j,k)=ovlptot%x; haml%ovrlp(k,j)=haml%ovrlp(j,k)
-                haml%diff_ovrlp(:,k,j)=ovlptot%dx(1:norb)
-                haml%diff_ovrlp(:,j,k)=ovlptot%dx(1+norb:2*norb)
-
-                hamtot=haml_vals_2(z1d,zstore(k)%val,elecs)+(ovlptot*elecs%hnuc)
-                haml%hjk(j,k)=hamtot%x; haml%hjk(k,j)=haml%hjk(j,k)
-                haml%diff_hjk(:,k,j)=hamtot%dx(1:norb)
-                haml%diff_hjk(:,j,k)=hamtot%dx(1+norb:2*norb)
+                ovlptot=overlap_2(zstore(j)%val%x,zstore(k)%val%x)
+                haml%ovrlp(j,k)=ovlptot; haml%ovrlp(k,j)=haml%ovrlp(j,k)
+                hamtot=haml_vals_2(zstore(j)%val%x,zstore(k)%val%x,elecs)+(ovlptot*elecs%hnuc)
+                haml%hjk(j,k)=hamtot; haml%hjk(k,j)=haml%hjk(j,k)
+              
             end do 
             if(verb.eq.1)then
                 write(6,"(a,i0,a)") "hamliltonian column ",j, " completed"
@@ -421,40 +118,29 @@ MODULE ham
         type(grad_do),intent(inout)::temp
         type(elecintrgl),intent(in)::elecs
         integer,intent(in)::row,size
-        type(dual2),dimension(0:2*norb)::z1d
-        type(dual2)::ovlptot,hamtot
+       
+        real(wp)::ovlptot,hamtot
         integer::j
 
         if (errorflag .ne. 0) return
-        z1d = typ2_2_typ1(temp%zom%val)
+      
         !$omp parallel do  default(none) &
         !$omp & private(j,ovlptot,hamtot) &
-        !$omp & shared(elecs,zstore,temp,z1d,row,norb) 
+        !$omp & shared(elecs,zstore,temp,row,norb) 
         do j=1,size
             if (j.ne.row) then
-                ovlptot=overlap_2(z1d,zstore(j)%val)
-                temp%ovrlp(row,j)=ovlptot%x; temp%ovrlp(row,j)%dx=ovlptot%dx(1:norb)
+                ovlptot=overlap_2(temp%zom%val%x,zstore(j)%val%x)
+                temp%ovrlp(row,j)=ovlptot
                 temp%ovrlp(j,row)=temp%ovrlp(row,j)
 
-                temp%diff_ovrlp_1(:,j)=ovlptot%dx(1:norb)
-                temp%diff_ovrlp_2(:,j)=ovlptot%dx(1+norb:2*norb)
-
-             
-                hamtot=haml_vals_2(z1d,zstore(j)%val,elecs)+(ovlptot*elecs%hnuc)
-                temp%hjk(row,j)%x=hamtot%x; temp%hjk(row,j)%dx=hamtot%dx(1:norb)
+                hamtot=haml_vals_2(temp%zom%val%x,zstore(j)%val%x,elecs)+(ovlptot*elecs%hnuc)
+                temp%hjk(row,j)=hamtot
                 temp%hjk(j,row)=temp%hjk(row,j)
 
-                temp%diff_hjk_1(:,j)=hamtot%dx(1:norb)
-                temp%diff_hjk_2(:,j)=hamtot%dx(1+norb:2*norb)
             else 
                 temp%ovrlp(row,row)=1.0d0
-                temp%ovrlp(row,row)%dx=0.0d0
-                temp%diff_ovrlp_1(:,j)=0.0d0
-             
-                hamtot=haml_vals_2(z1d,z1d,elecs)+(elecs%hnuc)
-                temp%hjk(row,row)%x=hamtot%x; temp%hjk(row,row)%dx=hamtot%dx(1:norb)
-
-                temp%diff_hjk_1(:,j)=hamtot%dx(1:norb)
+                hamtot=haml_vals_2(temp%zom%val%x,temp%zom%val%x,elecs)+(elecs%hnuc)
+                temp%hjk(row,row)=hamtot
             end if 
         end do
         !$omp end parallel do 
@@ -463,58 +149,79 @@ MODULE ham
 
     end subroutine haml_ovrlp_column
 
+    subroutine haml_ovrlp_column_grad(haml,zstore,size,elecs,row,orb)
+
+        implicit none
+        type(zombiest),dimension(:),intent(in)::zstore
+        type(hamiltonian),intent(inout)::haml
+        type(elecintrgl),intent(in)::elecs
+        integer,intent(in)::row,size,orb
+        real(wp),dimension(norb)::ovlptot,hamtot
+        integer::j,st,fn
+
+        if (errorflag .ne. 0) return
+        if(orb==0)then
+            st=1; fn=norb
+            !$omp parallel do  default(none) &
+            !$omp & private(j,ovlptot,hamtot) &
+            !$omp & shared(elecs,zstore,row,norb,orb,st,fn,haml) 
+            do j=1,size
+                if (j.ne.row) then
+                    ovlptot=overlap_2_grad(zstore(row)%val,zstore(j)%val%x,st,fn)
+                
+                    haml%diff_ovrlp(:,j,row)=ovlptot
+                
+                    hamtot=haml_vals_2_grad(zstore(row)%val,zstore(j)%val,elecs,st,fn,1)+(ovlptot*elecs%hnuc)
+
+                    haml%diff_hjk(:,j,row)=hamtot
+                
+                else 
+                    haml%diff_ovrlp(:,j,row)=0.0d0
+                
+                    hamtot=haml_vals_2_grad(zstore(row)%val,zstore(j)%val,elecs,st,fn,0)
+                    haml%diff_hjk(:,j,row)=hamtot
+                
+                end if 
+            end do
+            !$omp end parallel do 
+        else 
+            st=orb; fn=orb
+            !$omp parallel do  default(none) &
+            !$omp & private(j,ovlptot,hamtot) &
+            !$omp & shared(elecs,zstore,row,norb,orb,st,fn,haml) 
+            do j=1,size
+                if (j.ne.row) then
+                    ovlptot=overlap_2_grad(zstore(row)%val,zstore(j)%val%x,st,fn)
+                
+                    haml%diff_ovrlp(orb,j,row)=ovlptot(orb)
+                
+                    hamtot=haml_vals_2_grad(zstore(row)%val,zstore(j)%val,elecs,st,fn,1)+(ovlptot*elecs%hnuc)
+
+                    haml%diff_hjk(orb,j,row)=hamtot(orb)
+                
+                else 
+                    haml%diff_ovrlp(orb,j,row)=0.0d0
+                
+                    hamtot=haml_vals_2_grad(zstore(row)%val,zstore(row)%val,elecs,st,fn,0)
+                    haml%diff_hjk(orb,j,row)=hamtot(orb)
+                
+                end if 
+            end do
+            !$omp end parallel do 
+        end if
+      
+        
+
+        return
+
+    end subroutine haml_ovrlp_column_grad
+
+
     !##############################################################################################################################
 
     !Level 3 routine to make individual value in overlap and hamiltonian matrix
 
-    ! calculates indvidual hamiltonian elements taking in two Zombie states and a set of 
-    ! creation and annihilation operations
-    function haml_vals(z1d,z2d,elecs) result(ham_tot)
-
-        implicit none 
-        type(dual2),dimension(0:),intent(in)::z1d,z2d
-        type(elecintrgl),intent(in)::elecs
-        type(dual2)::ham_tot
-        type(dual2)::ov
-        integer::j,k
-        
-        if (errorflag .ne. 0) return
-
-       
-        ham_tot=0.0d0
-        !$omp simd
-        do j=1,elecs%num
-            ov=elecs%integrals(j)
-            do k=1, norb
-                ov=ov*((z1d(k)*z2d(elecs%alive(k,j))*elecs%neg_a(k,j))+(z1d((k+norb))*z2d((elecs%dead(k,j)))*elecs%neg_d(k,j)))
-            end do
-            ham_tot=ham_tot+ov
-        end do
-        !$omp end simd
-        return 
-      
-    end function haml_vals
-
-    ! calculates individual overlaps where no creation and annihilation operations are needed
-    function overlap_1(z1d,z2d) result(ovrlp_tot)
-
-        implicit none
-        type(dual2),dimension(0:)::z1d,z2d
-        type(dual2)::ovrlp_tot
-        integer::j
-
-        if (errorflag .ne. 0) return
-
-        ovrlp_tot=1.0d0
-      
-        !$omp simd
-        do j=1,norb
-            ovrlp_tot=ovrlp_tot*((z1d(j)*z2d(j))+(z1d(j+norb)*z2d(norb+j)))
-        end do
-        !$omp end simd
-      
-        return 
-    end function overlap_1
+   
 
     !##############################################################################################################################
     
@@ -523,8 +230,8 @@ MODULE ham
     function overlap_2(z1d,z2d) result(ovrlp_tot)
 
         implicit none
-        type(dual2),dimension(0:)::z1d,z2d
-        type(dual2)::ovrlp_tot
+        real(wp),dimension(0:)::z1d,z2d
+        real(wp)::ovrlp_tot
         real(wp)::temp
         integer::j,k
 
@@ -534,16 +241,7 @@ MODULE ham
         ovrlp_tot=1.0d0
        !$omp simd
         do j=1,norb
-            temp=z1d(j)%x*z2d(j)%x+z1d(j+norb)%x*z2d(norb+j)%x
-            do k=1,j
-                ovrlp_tot%dx(k)=((z1d(j)%x*z2d(j)%dx(k)+z1d(j)%dx(k)*z2d(j)%x)+&
-                                (z1d(j+norb)%x*z2d(norb+j)%dx(k)+z1d(j+norb)%dx(k)*z2d(norb+j)%x))*ovrlp_tot%x + &
-                                (temp)*ovrlp_tot%dx(k)
-                ovrlp_tot%dx(k+norb)=((z1d(j)%x*z2d(j)%dx(k+norb)+z1d(j)%dx(k+norb)*z2d(j)%x)+&
-                                (z1d(j+norb)%x*z2d(norb+j)%dx(k+norb)+z1d(j+norb)%dx(k+norb)*z2d(norb+j)%x))*ovrlp_tot%x + &
-                                (temp)*ovrlp_tot%dx(k+norb)
-            end do
-            ovrlp_tot%x=ovrlp_tot%x*(temp)
+            ovrlp_tot=ovrlp_tot*(z1d(j)*z2d(j)+z1d(j+norb)*z2d(norb+j))
         end do
         !$omp end simd
       
@@ -553,10 +251,10 @@ MODULE ham
     function haml_vals_2(z1d,z2d,elecs) result(ham_tot)
 
         implicit none 
-        type(dual2),dimension(0:),intent(in)::z1d,z2d
+        real(wp),dimension(0:),intent(in)::z1d,z2d
         type(elecintrgl),intent(in)::elecs
-        type(dual2)::ham_tot
-        type(dual2)::ov
+        real(wp)::ham_tot
+        real(wp)::ov
         real(wp)::temp
         integer::j,k,l
         
@@ -568,21 +266,7 @@ MODULE ham
         do j=1,elecs%num
             ov=elecs%integrals(j)
             do k=1, norb
-                temp=z1d(k)%x*elecs%neg_a(k,j)*z2d(elecs%alive(k,j))%x+z1d(k+norb)%x*elecs%neg_d(k,j)*z2d(elecs%dead(k,j))%x
-                do l=1,k
-                    ov%dx(l)=((z1d(k)%x*elecs%neg_a(k,j)*z2d(elecs%alive(k,j))%dx(l)+&
-                    z1d(k)%dx(l)*elecs%neg_a(k,j)*z2d(elecs%alive(k,j))%x)+&
-                    (z1d(k+norb)%x*elecs%neg_d(k,j)*z2d(elecs%dead(k,j))%dx(l)+&
-                    z1d(k+norb)%dx(l)*elecs%neg_d(k,j)*z2d(elecs%dead(k,j))%x))*ov%x + &
-                    (temp)*ov%dx(l)
-
-                    ov%dx(l+1)=((z1d(k)%x*elecs%neg_a(k,j)*z2d(elecs%alive(k,j))%dx(l+1)+&
-                    z1d(k)%dx(l+1)*elecs%neg_a(k,j)*z2d(elecs%alive(k,j))%x)+&
-                    (z1d(k+norb)%x*elecs%neg_d(k,j)*z2d(elecs%dead(k,j))%dx(l+1)+&
-                    z1d(k+norb)%dx(l+1)*elecs%neg_d(k,j)*z2d(elecs%dead(k,j))%x))*ov%x + &
-                    (temp)*ov%dx(l+1)
-                end do
-                ov%x=ov%x*temp
+                ov=ov*(z1d(k)*elecs%neg_a(k,j)*z2d(elecs%alive(k,j))+z1d(k+norb)*elecs%neg_d(k,j)*z2d(elecs%dead(k,j)))
             end do
             ham_tot=ham_tot+ov
         end do
@@ -591,7 +275,137 @@ MODULE ham
       
     end function haml_vals_2
 
+    function overlap_2_grad(z1d,z2d,st,fn) result(ovrlp_tot)
 
+        implicit none
+        type(dual),dimension(0:)::z1d
+        real(wp),dimension(0:)::z2d
+        integer::st,fn
+        real(wp),dimension(norb)::ovrlp_tot
+        real(wp)::temp
+        integer::j,k
+
+        if (errorflag .ne. 0) return
+
+       
+        ovrlp_tot=1.0d0
+       !$omp simd
+        do k=st,fn
+            do j=1,norb
+                if(j.ne.k)then
+                    ovrlp_tot(k)=ovrlp_tot(k)*(z1d(j)%x*z2d(j)+z1d(j+norb)%x*z2d(norb+j))
+                else 
+                    ovrlp_tot(k)=ovrlp_tot(k)*(z1d(j)%dx(k)*z2d(j)+z1d(j+norb)%dx(k)*z2d(norb+j))
+                end if
+            end do
+        end do
+        !$omp end simd
+      
+        return 
+    end function overlap_2_grad
+
+    function haml_vals_2_grad(z1d,z2d,elecs,st,fn,typ) result(ham_tot)
+
+        implicit none 
+        type(dual),dimension(0:)::z1d,z2d
+        integer::st,fn,typ
+        type(elecintrgl),intent(in)::elecs
+        real(wp),dimension(norb)::ham_tot
+        real(wp)::ov
+        integer::j,k,l
+        
+        if (errorflag .ne. 0) return
+
+       
+        ham_tot=0.0d0
+        if(typ==1)then
+            do k=st, fn
+                do j=1,elecs%num
+                    ov=elecs%integrals(j)
+                    do l=1,norb
+                        if(l.ne.k)then 
+                            ov=ov*(z1d(l)%x*elecs%neg_a(l,j)*z2d(elecs%alive(l,j))%x+&
+                            z1d(l+norb)%x*elecs%neg_d(l,j)*z2d(elecs%dead(l,j))%x)
+                        else
+                            ov=ov*(z1d(l)%dx(k)*elecs%neg_a(l,j)*z2d(elecs%alive(l,j))%x+&
+                            z1d(l+norb)%dx(l)*elecs%neg_d(l,j)*z2d(elecs%dead(l,j))%x)
+                        end if
+                    end do
+                    ham_tot(k)=ham_tot(k)+ov
+                end do
+            end do
+        else
+            do k=st, fn
+                do j=1,elecs%num
+                    ov=elecs%integrals(j)
+                    do l=1,norb
+                        if(l.ne.k)then 
+                            ov=ov*(z1d(l)%x*elecs%neg_a(l,j)*z2d(elecs%alive(l,j))%x+&
+                            z1d(l+norb)%x*elecs%neg_d(l,j)*z2d(elecs%dead(l,j))%x)
+                        else
+                            ov=ov*(z1d(l)%dx(k)*elecs%neg_a(l,j)*z2d(elecs%alive(l,j))%x+&
+                            z1d(l)%x*elecs%neg_a(l,j)*z2d(elecs%alive(l,j))%dx(k)+&
+                            z1d(l+norb)%dx(l)*elecs%neg_d(l,j)*z2d(elecs%dead(l,j))%x+&
+                            z1d(l+norb)%x*elecs%neg_d(l,j)*z2d(elecs%dead(l,j))%dx(k))
+                        end if
+                    end do
+                    ham_tot(k)=ham_tot(k)+ov
+                end do
+            end do
+        end if
+      
+        return 
+      
+    end function haml_vals_2_grad
+
+     ! calculates indvidual hamiltonian elements taking in two Zombie states and a set of 
+    ! creation and annihilation operations
+    ! function haml_vals(z1d,z2d,elecs) result(ham_tot)
+
+    !     implicit none 
+    !     type(dual),dimension(0:),intent(in)::z1d,z2d
+    !     type(elecintrgl),intent(in)::elecs
+    !     type(dual2)::ham_tot
+    !     type(dual2)::ov
+    !     integer::j,k
+        
+    !     if (errorflag .ne. 0) return
+
+       
+    !     ham_tot=0.0d0
+    !     !$omp simd
+    !     do j=1,elecs%num
+    !         ov=elecs%integrals(j)
+    !         do k=1, norb
+    !             ov=ov*((z1d(k)*z2d(elecs%alive(k,j))*elecs%neg_a(k,j))+(z1d((k+norb))*z2d((elecs%dead(k,j)))*elecs%neg_d(k,j)))
+    !         end do
+    !         ham_tot=ham_tot+ov
+    !     end do
+    !     !$omp end simd
+    !     return 
+      
+    ! end function haml_vals
+
+    ! calculates individual overlaps where no creation and annihilation operations are needed
+    ! function overlap_1(z1d,z2d) result(ovrlp_tot)
+
+    !     implicit none
+    !     type(dual2),dimension(0:)::z1d,z2d
+    !     type(dual2)::ovrlp_tot
+    !     integer::j
+
+    !     if (errorflag .ne. 0) return
+
+    !     ovrlp_tot=1.0d0
+      
+    !     !$omp simd
+    !     do j=1,norb
+    !         ovrlp_tot=ovrlp_tot*((z1d(j)*z2d(j))+(z1d(j+norb)*z2d(norb+j)))
+    !     end do
+    !     !$omp end simd
+      
+    !     return 
+    ! end function overlap_1
 
     ! function overlap_gpu(z1d,z2d,zstore,elecs) result(overlap)
 

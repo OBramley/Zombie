@@ -12,8 +12,8 @@ MODULE imgtp
         type(grad_do),intent(inout)::values
         integer,intent(in)::size
         integer::j,k,l
-        type(dual)::norm,result,temp
-        type(dual),dimension(size)::ddot
+        real(wp)::norm,result,temp
+        real(wp),dimension(size)::ddot
         real(kind=8)::db
         
 
