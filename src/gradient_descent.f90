@@ -36,12 +36,10 @@ MODULE gradient_descent
         integer,intent(in)::size
         integer, allocatable,dimension(:)::IPIV1
         real(dp),allocatable,dimension(:)::WORK1
-        
-        integer::ierr
+        integer::ierr=0
 
 
         if (errorflag .ne. 0) return
-        ierr=0
        
         call haml_ovrlp_column(temp,zstore,ndet,elecs,pick)
         ! call haml_ovrlp_column_gpu(temp_d,zstore_d,size,elecs_d,pick)
@@ -77,27 +75,26 @@ MODULE gradient_descent
     end subroutine he_full_row
 
     
-    subroutine grad_calculate(haml,dvec,elecs,zstore,grad_fin,orb)
+    subroutine grad_calculate(haml,dvec,zstore,grad_fin,orb)
 
         implicit none 
 
         type(grad),intent(inout)::grad_fin
-        type(elecintrgl),intent(in)::elecs
         type(hamiltonian),intent(inout)::haml
         type(dvector),intent(inout)::dvec
         type(zombiest),dimension(:),intent(in)::zstore
-        real(wp)::ham_c_d,intermediate
+        real(wp)::ham_c_d
         real(wp),dimension(norb,ndet)::ovrlp_dx
         real(wp),dimension(ndet)::temp
         integer,intent(in)::orb
-        integer::j,k,st,fn,l
+        integer::j,k,l
        
         if (errorflag .ne. 0) return
 
       
         if(orb==0)then
             if(grad_fin%grad_avlb(1,pick)==0)then
-                ham_c_d=(dot_product(matmul(haml%hjk,dvec%d),dvec%d_1)/(dvec%norm)**3)*((-dvec%d_o_d)/abs(dvec%d_o_d))
+                ham_c_d=(dot_product(matmul(haml%hjk,dvec%d),dvec%d_1)/(dvec%norm)**3)*(-dvec%d_o_d)
                 ovrlp_dx=1.0d0
                 !$omp parallel private(j,k,l,temp) shared(zstore,pick,ndet,norb,dvec,ham_c_d,grad_fin) 
                 !$omp do reduction(*:ovrlp_dx) collapse(3)
@@ -130,7 +127,7 @@ MODULE gradient_descent
             end if 
         else
             if(grad_fin%grad_avlb(orb,pick)==0)then
-                ham_c_d=(dot_product(matmul(haml%hjk,dvec%d),dvec%d_1)/(dvec%norm)**3)*((-dvec%d_o_d)/abs(dvec%d_o_d))
+                ham_c_d=(dot_product(matmul(haml%hjk,dvec%d),dvec%d_1)/(dvec%norm)**3)*(-dvec%d_o_d)
                 ovrlp_dx=1.0d0
                 !$omp parallel do reduction(*: ovrlp_dx)collapse(2) private(j,l) shared(zstore,pick,ndet,norb,orb)
                 do j=1,ndet
@@ -163,7 +160,6 @@ MODULE gradient_descent
     elemental subroutine var_check(var)
     
             implicit none 
-    
             real(dp),intent(inout)::var
     
             if(is_nan(var).eqv..true.)then
@@ -186,18 +182,17 @@ MODULE gradient_descent
         type(grad),intent(inout)::grad_fin
         integer,intent(in)::maxloop
         type(grad_do)::temp,thread
-        integer::rjct_cnt,acpt_cnt,pickorb,loops,lralt_zs,acpt_cnt_2,ierr,min_idx
+        integer::rjct_cnt,acpt_cnt,pickorb,loops,lralt_zs,acpt_cnt_2,min_idx
         real(dp)::t,erg_str
         integer::j,n,p
         integer,dimension(:),allocatable::chng_trk2,pickerorb
-       
+        integer::ierr=0
         
         if (errorflag .ne. 0) return
-       
-        ierr=0
+     
 
-        call alloc_grad_do(temp,ndet,norb)
-        call alloc_grad_do(thread,ndet,norb)
+        call alloc_grad_do(temp,ndet)
+        call alloc_grad_do(thread,ndet)
         allocate(pickerorb(norb),stat=ierr)
         if(ierr==0) allocate(chng_trk2(norb),stat=ierr)
         if (ierr/=0) then
@@ -244,7 +239,7 @@ MODULE gradient_descent
 
                 do n=1,norb
                     pickorb=pickerorb(n)
-                    call grad_calculate(haml,dvecs,elect,zstore,grad_fin,pickorb)
+                    call grad_calculate(haml,dvecs,zstore,grad_fin,pickorb)
                     call haml_to_grad_do(haml,dvecs,thread)
                     thread%zom=zstore(pick)
                     min_idx = -1
@@ -357,13 +352,12 @@ MODULE gradient_descent
         type(hamiltonian),intent(inout)::haml
         type(grad),intent(inout)::grad_fin
         type(grad_do)::temp,thread
-        integer::acpt_cnt,lralt_temp,orb_cnt,ierr,min_idx,j
+        integer::acpt_cnt,lralt_temp,orb_cnt,min_idx,j
         real(wp)::t
         real(wp),dimension(:),allocatable::lr_chng_trk,erg_chng_trk
+        integer::ierr=0
 
         if (errorflag .ne. 0) return
-        
-        ierr=0
     
         if(ierr==0) allocate(lr_chng_trk(ndet-1),stat=ierr)
         if(ierr==0) allocate(erg_chng_trk(ndet-1),stat=ierr)
@@ -384,8 +378,8 @@ MODULE gradient_descent
             orb_cnt=2
         end if 
 
-        call alloc_grad_do(temp,ndet,norb)
-        call alloc_grad_do(thread,ndet,norb)
+        call alloc_grad_do(temp,ndet)
+        call alloc_grad_do(thread,ndet)
         call haml_to_grad_do(haml,dvecs,thread)
        
         do while(rjct_cnt_global.lt.(ndet-1)*30)
@@ -402,7 +396,7 @@ MODULE gradient_descent
                 pick=picker(j)
                 
              
-                call grad_calculate(haml,dvecs,elect,zstore,grad_fin,0)
+                call grad_calculate(haml,dvecs,zstore,grad_fin,0)
                 call haml_to_grad_do(haml,dvecs,thread)
                 temp=thread
                 min_idx=-1
@@ -519,14 +513,11 @@ MODULE gradient_descent
         type(dvector),intent(inout)::dvecs
         type(hamiltonian),intent(inout)::haml
         type(grad)::grad_fin
-        integer::cnt
+        integer::cnt,j
+        integer::ierr=0
        
-        integer::ierr,j
-        
         if (errorflag .ne. 0) return
 
-       
-        ierr=0
         call allocgrad(grad_fin,ndet,norb)
         grad_fin%prev_erg=ergcalc(haml%hjk,dvecs%d)
       

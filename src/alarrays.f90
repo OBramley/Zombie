@@ -11,11 +11,10 @@ MODULE alarrays
 
         type(elecintrgl),intent(inout)::elecs
         integer,intent(in)::n
-        integer::ierr
+        integer::ierr=0
 
         if (errorflag .ne. 0) return
 
-        ierr=0
         allocate (elecs%integrals(n), stat=ierr)
         if(ierr==0) allocate (elecs%alive(norb,n),stat=ierr)
         if(ierr==0) allocate (elecs%dead(norb,n),stat=ierr)
@@ -37,12 +36,11 @@ MODULE alarrays
         implicit none
 
         type(elecintrgl),intent(inout)::elecs
-
-        integer::ierr
+        integer::ierr=0
 
         if (errorflag .ne. 0) return
 
-        ierr=0
+       
         deallocate (elecs%integrals, stat=ierr)
         if(ierr==0) deallocate (elecs%alive,stat=ierr)
         if(ierr==0) deallocate (elecs%dead,stat=ierr)
@@ -67,14 +65,12 @@ MODULE alarrays
         type(zombiest),dimension(:),allocatable,intent(inout)::zstore
       
         integer, intent (in) :: nbf
-
-        integer::j,ierr
+        integer::ierr=0
+        integer::j
 
         if (errorflag .ne. 0) return
 
-        ierr=0
-
-        
+       
         if(allocated(zstore).eqv..false.)then
             allocate(zstore(nbf),stat=ierr)
             if (ierr/=0) then
@@ -98,12 +94,10 @@ MODULE alarrays
         
         implicit none
         type(zombiest),intent(inout)::zs
-
-        integer::ierr,j
+        integer::ierr=0
+        integer::j
 
         if (errorflag .ne. 0) return
-
-        ierr = 0
 
        
         allocate(zs%phi(norb), stat=ierr)
@@ -134,12 +128,10 @@ MODULE alarrays
         implicit none
 
         type(zombiest),dimension(:),allocatable,intent(inout)::zstore
-
-        integer::j,ierr
+        integer::ierr=0
+        integer::j
 
         if (errorflag .ne. 0) return
-
-        ierr=0
 
         do j=1,size(zstore)
             call dealloczf(zstore(j))
@@ -160,12 +152,10 @@ MODULE alarrays
     subroutine dealloczf(zs)
 
         type(zombiest),intent(inout)::zs
-
-        integer::ierr,j
+        integer::ierr=0
+        integer::j
 
         if (errorflag .ne. 0) return
-
-        ierr = 0
 
         call deallocdual(zs%val(0))
         do j=1,norb 
@@ -192,17 +182,15 @@ MODULE alarrays
     end subroutine dealloczf
 
    
-    subroutine allocham(ham,size,diff_size)
+    subroutine allocham(ham,size)
 
         implicit none
 
         type(hamiltonian),intent(inout)::ham 
-        integer,intent(in)::size,diff_size
-        integer::ierr
+        integer,intent(in)::size
+        integer::ierr=0
 
         if (errorflag .ne. 0) return
-
-        ierr = 0
 
         allocate(ham%hjk(size,size), stat=ierr)
         if(ierr==0) allocate(ham%ovrlp(size,size), stat=ierr)
@@ -226,14 +214,9 @@ MODULE alarrays
         implicit none
 
         type(hamiltonian), intent(inout)::ham 
-
-        integer::ierr
+        integer::ierr=0
 
         if (errorflag .ne. 0) return
-
-        ierr = 0
-
-        
 
         deallocate(ham%hjk, stat=ierr)
         if(ierr==0) deallocate(ham%ovrlp, stat=ierr)
@@ -256,12 +239,10 @@ MODULE alarrays
 
         type(dvector),intent(inout)::dvecs
         integer, intent(in)::length
-        integer::ierr
+        integer::ierr=0
 
         if (errorflag .ne. 0) return
 
-        ierr=0
-    
         allocate(dvecs%d(length),stat=ierr)
         allocate(dvecs%d_1(length),stat=ierr)
         if (ierr/=0) then
@@ -281,12 +262,10 @@ MODULE alarrays
 
         implicit none 
         type(dvector),intent(inout)::dvecs
-        integer::ierr
+        integer::ierr=0
 
         if (errorflag .ne. 0) return
 
-        ierr=0
-       
         deallocate(dvecs%d,stat=ierr)
         deallocate(dvecs%d_1,stat=ierr)
         if (ierr/=0) then
@@ -307,13 +286,11 @@ MODULE alarrays
 
         type(grad),intent(inout)::gradients
         integer, intent(in)::num,length
-        integer::ierr
+        integer::ierr=0
 
         if (errorflag .ne. 0) return
 
-        ierr=0
-
-        
+       
         allocate(gradients%vars(num,length),stat=ierr)
         if (ierr==0)allocate(gradients%grad_avlb(length,num),stat=ierr)
         if (ierr/=0) then
@@ -334,12 +311,9 @@ MODULE alarrays
         implicit none
 
         type(grad),intent(inout)::gradients
-        integer::ierr
+        integer::ierr=0
 
         if (errorflag .ne. 0) return
-
-        ierr=0
-
         
         deallocate(gradients%vars,stat=ierr)
         if (ierr==0)deallocate(gradients%grad_avlb,stat=ierr)
@@ -358,12 +332,12 @@ MODULE alarrays
         implicit none 
         type(oprts),intent(inout)::oper 
         integer,intent(in)::n 
-        integer::ierr,k
+        integer::k
         integer(int16)::j,norbs
+        integer::ierr=0
 
         if (errorflag .ne. 0) return
-
-        ierr=0
+     
         norbs=int(norb,kind=int16)
         allocate(oper%alive(norb,n),oper%dead(norb,n),oper%neg_alive(norb,n),oper%neg_dead(norb,n),stat=ierr)
         if (ierr/=0) then
@@ -390,11 +364,9 @@ MODULE alarrays
 
         implicit none 
         type(oprts),intent(inout)::oper 
-        integer::ierr
+        integer::ierr=0
         
         if (errorflag .ne. 0) return
-
-        ierr=0
 
         deallocate(oper%alive,oper%dead,oper%neg_alive,oper%neg_dead,stat=ierr)
         if (ierr/=0) then
@@ -410,11 +382,10 @@ MODULE alarrays
         implicit none 
         type(hamiltonian),intent(inout)::ham 
         integer,intent(in)::num,size
-        integer::ierr
+        integer::ierr=0
 
         if (errorflag .ne. 0) return
 
-        ierr=0
         ham%gram_num=num
         allocate(ham%gs_ovrlp(num,size,size),stat=ierr)
         if(ierr==0) allocate(ham%gs_kinvh(num,size,size),stat=ierr)
@@ -433,11 +404,10 @@ MODULE alarrays
 
         implicit none 
         type(hamiltonian),intent(inout)::ham 
-        integer::ierr
+        integer::ierr=0
 
         if (errorflag .ne. 0) return
 
-        ierr=0
         deallocate(ham%gs_ovrlp,stat=ierr)
         if(ierr==0) deallocate(ham%gs_kinvh,stat=ierr)
         if(ierr==0) deallocate(ham%gs_ovrlp_self,stat=ierr)
@@ -456,7 +426,7 @@ MODULE alarrays
         implicit none 
         type(dvector),intent(inout)::dvec
         integer,intent(in)::num,size
-        integer::ierr
+        integer::ierr=0
 
         if (errorflag .ne. 0) return
 
@@ -481,8 +451,6 @@ MODULE alarrays
 
         if (errorflag .ne. 0) return
 
-        ierr=0
-
         deallocate(dvec%d_gs,stat=ierr)
         if(ierr/=0)then 
             write(stderr,"(a,i0)") "Error in dvector gram deallocation. ierr had value ", ierr
@@ -494,11 +462,11 @@ MODULE alarrays
 
     end subroutine deallocdvgram
 
-    subroutine alloc_grad_do(grads,size,diff_size)
+    subroutine alloc_grad_do(grads,size)
 
         implicit none
         type(grad_do),intent(inout)::grads
-        integer,intent(in)::size,diff_size
+        integer,intent(in)::size
         integer::ierr=0
 
         if (errorflag .ne. 0) return
@@ -546,7 +514,6 @@ MODULE alarrays
         implicit none 
         type(dual),intent(inout)::dual_1
         integer,intent(in)::size
-
         integer::ierr=0
 
         if (errorflag .ne. 0) return
@@ -567,7 +534,6 @@ MODULE alarrays
 
         implicit none 
         type(dual),intent(inout)::dual_1
-
         integer::ierr=0
 
         if (errorflag .ne. 0) return

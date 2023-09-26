@@ -20,18 +20,15 @@ program MainZombie
     type(dvector):: dvecs
     type(elecintrgl)::elect
     type(hamiltonian)::haml
-    integer:: j, istat,clean_ndet,ierr
-    
+    integer:: j,clean_ndet
     real(wp), dimension(:),allocatable::erg
-
     type(hamiltonian)::clean_haml
     type(dvector)::dvec_clean
     real(wp)::clean_norm, clean_erg
-
     character(LEN=100) :: CWD
     real(wp):: starttime, stoptime, runtime
     integer(wp):: randseed
-   
+    integer::ierr=0, istat=0
     ! DOUBLE PRECISION, external::ZBQLU01
 
     call CPU_TIME(starttime) !used to calculate the runtime, which is output at the end
@@ -45,7 +42,7 @@ program MainZombie
     write(6,"(a)") ""
     write(6,"(a)") ""
 
-    ierr=0
+  
     istat=0
     call initialise
     call readrunconds
@@ -96,7 +93,7 @@ program MainZombie
     if(propflg=="y")then
         if (gramflg.eq."n") then 
             ! generate Hamiltonian and overlap
-            call allocham(haml,ndet,norb)
+            call allocham(haml,ndet)
             write(6,"(a)") "Hamiltonian allocated"
             call allocdv(dvecs,ndet)
             allocate(erg(timesteps+1),stat=ierr)

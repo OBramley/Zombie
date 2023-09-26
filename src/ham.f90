@@ -18,14 +18,10 @@ MODULE ham
         type(elecintrgl),intent(in)::elecs
         integer,intent(in)::size,verb
         integer, allocatable,dimension(:)::IPIV1
-        real(kind=8),allocatable,dimension(:)::WORK1
-        integer::ierr
-
-      
-        
+        real(wp),allocatable,dimension(:)::WORK1
+        integer::ierr=0
 
         if (errorflag .ne. 0) return
-        ierr=0
        
         call haml_ovrlp_comb(haml,zstore,elecs,size,verb)
         
@@ -68,11 +64,11 @@ MODULE ham
         type(zombiest),dimension(:),intent(in)::zstore
         type(elecintrgl),intent(in)::elecs
         integer,intent(in)::verb,size
-        integer::j,k,ierr
+        integer::j,k
         real(wp)::ovlptot,hamtot
-    
+
         if (errorflag .ne. 0) return 
-        ierr=0
+       
 
         !$omp parallel do &
         !$omp & private(j,k,ovlptot,hamtot) &
@@ -160,11 +156,8 @@ MODULE ham
         real(wp)::ovrlp_tot
         integer::j
 
-        if (errorflag .ne. 0) return
-
-       
         ovrlp_tot=1.0d0
-       !$omp simd
+        !$omp simd
         do j=1,norb
             ovrlp_tot=ovrlp_tot*(z1d(j)*z2d(j)+z1d(j+norb)*z2d(norb+j))
         end do
@@ -178,13 +171,9 @@ MODULE ham
         implicit none 
         real(wp),dimension(0:),intent(in)::z1d,z2d
         type(elecintrgl),intent(in)::elecs
-        real(wp)::ham_tot
-        real(wp)::ov
-        real(wp)::temp
+        real(wp)::ham_tot,ov
         integer::j,k
         
-        if (errorflag .ne. 0) return
-
         ham_tot=0.0d0
         !$omp simd
         do j=1,elecs%num

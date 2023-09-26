@@ -17,12 +17,11 @@ MODULE outputs
         real(wp),dimension(:,:),intent(in)::out
         integer,intent(in)::size
         character(LEN=*),intent(in)::filenm
-        integer::ierr,j,k
+        integer::j,k
+        integer::ierr=0
 
         if (errorflag .ne. 0) return
         
-        ierr=0
-
         open(unit=200,file=filenm,status="new",iostat=ierr)
         if(ierr/=0)then
             write(0,"(a,i0)") "Error in opening matrix file. ierr had value ", ierr
@@ -49,8 +48,9 @@ MODULE outputs
         real(wp),dimension(:,:),intent(in)::out
         integer,intent(in)::size
         character(LEN=*),intent(in)::filenm
-        integer::ierr,j,k
+        integer::j,k
         logical :: file_exists
+        integer::ierr=0
         if (errorflag .ne. 0) return
         
         ierr=0
@@ -88,14 +88,14 @@ MODULE outputs
         type(zombiest),intent(in)::zom 
         integer,intent(in)::num,gst
         character(LEN=20)::filenm
-        integer::ierr,zomnum,j
+        integer::zomnum,j
         character(LEN=4)::nums
         character(len=2)::gst_num
         logical :: file_exists
+        integer::ierr=0
 
         if (errorflag .ne. 0) return
 
-        ierr=0
         
         if(GDflg.eq.'y')then
             write(nums,"(i4.4)")(num+1000)
@@ -173,12 +173,11 @@ MODULE outputs
         type(zombiest),intent(in)::zom 
         integer,intent(in)::num
         character(LEN=28)::filenm
-        integer::ierr,zomnum,j
+        integer::zomnum,j
         character(LEN=6)::nums
+        integer::ierr=0
 
         if (errorflag .ne. 0) return
-
-        ierr=0
 
         write(nums,"(i6.6)")num
 
@@ -218,13 +217,14 @@ MODULE outputs
         character(LEN=*),intent(in)::filenm
         real::db
         integer,intent(in)::j
-        integer::ergnum,ierr,k
+        integer::ergnum,k
         logical :: file_exists
+        integer::ierr=0
 
         if (errorflag .ne. 0) return
 
         ergnum=400+j
-        ierr=0
+     
         db=beta/timesteps
       
         inquire(file=trim(filenm),exist=file_exists)
@@ -265,15 +265,13 @@ MODULE outputs
         real(wp),intent(in)::erg,lr 
         integer,intent(in)::step,pass
         integer,intent(in)::chng_trk
-        integer::epoc,ierr
         logical :: file_exists
-
+        integer::ierr=0,epoc=450
         if (errorflag .ne. 0) return
 
         
         inquire(file='epoc.csv',exist=file_exists)
-        epoc=450
-        ierr=0
+       
         if(file_exists.eqv..false.) then
             open(unit=epoc,file='epoc.csv',status="new",iostat=ierr)
             if(ierr/=0)then
@@ -308,13 +306,10 @@ MODULE outputs
         real(wp),intent(in)::erg
         integer,intent(in)::step,pass
         integer,dimension(:),intent(in)::chng_trk
-        integer::epoc,ierr,k
-
+        integer::k
+        integer::ierr=0, epoc=450
         if (errorflag .ne. 0) return
 
-    
-        epoc=450
-        ierr=0
        
         open(unit=epoc,file='epoc.csv',status="old",access='append',iostat=ierr)
         if(ierr/=0)then
@@ -342,13 +337,11 @@ MODULE outputs
         real(wp),dimension(:),intent(in)::lr,erg_dim 
         integer,intent(in)::step,pass
         integer,dimension(:),intent(in)::chng_trk
-        integer::epoc,ierr,k
+        integer::k
+        integer::ierr=0, epoc=450
 
         if (errorflag .ne. 0) return
 
-    
-        epoc=450
-        ierr=0
        
         open(unit=epoc,file='epoc.csv',status="old",access='append',iostat=ierr)
         if(ierr/=0)then
@@ -387,11 +380,11 @@ MODULE outputs
         real(wp),dimension(:),intent(in)::d
         character(LEN=4)::stateno
         integer,intent(in)::size,p
-        integer::ierr,j,vec
+        integer::j,vec
         logical :: file_exists
+        integer::ierr=0
+
         if (errorflag .ne. 0) return
-        
-        ierr=0
 
         write(stateno,"(i4.4)")p
         
@@ -433,11 +426,11 @@ MODULE outputs
         real(wp),dimension(:),intent(in)::d
         character(LEN=4)::stateno
         integer,intent(in)::size,p
-        integer::ierr,j,vec
-        if (errorflag .ne. 0) return
-        
-        ierr=0
+        integer::j,vec
+        integer::ierr=0
 
+        if (errorflag .ne. 0) return
+    
         write(stateno,"(i4.4)")p
 
         vec=900+p
@@ -463,11 +456,11 @@ MODULE outputs
         integer, intent(in)::clean_ndet,j
         ! complex(wp),intent(in)::clean_erg,clean_norm
         real(wp),intent(in)::clean_erg,clean_norm
-        integer::cleane,ierr
+        integer::cleane
+        integer::ierr=0
 
         cleane=400+j
-        ierr=0
-
+    
         open(unit=cleane,file='clean_energy.csv',status="new",iostat=ierr)
         if(ierr/=0)then
             write(0,"(a,i0)") "Error in opening clean energy output file. ierr had value ", ierr

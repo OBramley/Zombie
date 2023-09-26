@@ -15,7 +15,7 @@ MODULE imgtp
         integer::j,k,l
         real(wp)::norm,result,temp
         real(wp),dimension(size)::ddot
-        real(kind=8)::db
+        real(wp)::db
         
         if (errorflag .ne. 0) return
     
@@ -34,7 +34,7 @@ MODULE imgtp
                 end do 
                 norm=norm+(temp*values%dvec%d_1(j))
             end do 
-            values%dvec%d_o_d=norm
+        
             values%dvec%norm = sqrt(abs(norm))
         
             values%dvec%d=values%dvec%d_1/values%dvec%norm
@@ -61,7 +61,7 @@ MODULE imgtp
             end do 
             norm=norm+(temp*values%dvec%d_1(j))
         end do 
-        values%dvec%d_o_d=norm
+        values%dvec%d_o_d=sign_d_o_d(norm)
         values%dvec%norm = sqrt(abs(norm))
     
         values%dvec%d=values%dvec%d_1/values%dvec%norm
@@ -143,8 +143,7 @@ MODULE imgtp
         real(wp)::result
         real(wp)::temp
         integer::j,l
-        if (errorflag .ne. 0) return
-
+      
         result=0.0d0
             
         do j=1,ndet
@@ -220,9 +219,9 @@ MODULE imgtp
         real(wp), dimension(:),intent(inout)::erg
         type(hamiltonian),intent(in)::haml
         integer,intent(in)::size
-        integer::j,k,l,g
+        integer::j,k,l!,g
         real(wp)::norm,result,temp
-        real(kind=8)::db
+        real(wp)::db
         real(wp),dimension(size)::ddot
 
 
@@ -245,7 +244,6 @@ MODULE imgtp
                     end do 
                     norm=norm+(temp*dvecs%d_1(j))
                 end do 
-                dvecs%d_o_d=norm
                 dvecs%norm = sqrt(abs(norm))
                 
                 dvecs%d=dvecs%d_1/dvecs%norm
@@ -285,7 +283,7 @@ MODULE imgtp
                 end do 
                 norm=norm+(temp*dvecs%d_1(j))
             end do 
-            dvecs%d_o_d=norm
+            dvecs%d_o_d=sign_d_o_d(norm)
             dvecs%norm = sqrt(abs(norm))
             
             dvecs%d=dvecs%d_1/dvecs%norm

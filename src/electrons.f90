@@ -15,15 +15,11 @@ MODULE electrons
         type(oprts)::an_cr,an2_cr2
         real(wp), dimension(:), allocatable::h1ei
         real(wp), dimension(:), allocatable::h2ei
-        integer::e1,e2,cnt
-        integer:: ierr,j
-        
+        integer::e1,e2,cnt,j
+        integer::ierr=0
     
         if (errorflag .ne. 0) return
        
-    
-        ierr = 0
-        
         write(6,"(a)") "Starting one electron integral allocation"
         call  one_electrons(h1ei,e1,an_cr)
         write(6,"(a)") "completed one electron integral allocation"
@@ -54,7 +50,6 @@ MODULE electrons
             elecs%neg_d(:,cnt)=an_cr%neg_dead(:,j)
             cnt=cnt+1
         end do
-        
         
         do j=1,e2
             elecs%integrals(cnt)=h2ei(j)
@@ -102,11 +97,10 @@ MODULE electrons
         real(wp), dimension(:), intent(inout),allocatable::h2ei
         type(oprts),intent(inout)::an2_cr2
         integer,intent(inout)::e2
-        real(kind=8),dimension(:,:),allocatable::read_in
-        integer::ierr,l,k,an1,an2,cr1,cr2,j,max,len
-       
+        real(wp),dimension(:,:),allocatable::read_in
+        integer::l,k,an1,an2,cr1,cr2,j,len
+        integer::ierr=0
     
-        ierr=0
         len=norb*norb*norb*norb
         allocate(read_in(len,5),stat=ierr)
        
@@ -186,11 +180,10 @@ MODULE electrons
         type(oprts),intent(inout)::an_cr
         real(wp), dimension(:), intent(inout),allocatable::h1ei
         integer,intent(inout)::e1
-        real(kind=8),dimension(:,:),allocatable::read_in
-        integer::ierr,l,k,an,cr,j,max,len
-
+        real(wp),dimension(:,:),allocatable::read_in
+        integer::l,k,an,cr,j,len
+        integer::ierr=0
         
-        ierr=0
 
         len=norb*norb
         allocate(read_in(len,3),stat=ierr)

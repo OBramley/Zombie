@@ -22,23 +22,23 @@ MODULE clean
         integer, intent(in)::nume,pass
         integer, allocatable, dimension(:,:)::combs2
         integer, allocatable, dimension(:)::position
-        real, allocatable, dimension(:)::magovrlp,temporary
-        integer::ierr,s,kx
-        integer::total,total2,j,k,l,temp_t2,jx, t
+        real(wp), allocatable, dimension(:)::magovrlp,temporary
+        integer::ierr=0
+        integer::total,total2,j,k,l,temp_t2,jx,t,s,kx
         real(wp)::norm,checker
         logical,allocatable,dimension(:)::excld
         real(wp)::ovrlp1, ovrlp2      
         integer, dimension(:), allocatable :: combins
 
     
-    
+        if (errorflag .ne. 0) return
         total=choose(norb,nume)
         total2=0
         temp_t2=5000
         call  alloczf(zs)
         norm=0.0
-        excld=.TRUE.
-       
+    
+        allocate (combs2(total,nume),stat=ierr)
         allocate(combins(0:nume-1))
         if(pass.ne.1)then
             allocate(magovrlp(temp_t2),stat=ierr)
@@ -69,9 +69,10 @@ MODULE clean
             do k=1,nume
                 checker=checker+modulo(combins(k),2)
             end do
-            if(checker==((nume/2)-spin))then
+            if(int(checker)==int((nume/2)-spin))then
                 !$omp critical
                 total2=total2+1
+                combs2(total2,:)=combins(:)
                 if((pass.ne.1).and.(total2.gt.temp_t2))then 
                     allocate(temporary(total2-1),stat=ierr)
                     temporary=magovrlp
@@ -139,6 +140,7 @@ MODULE clean
                 errorflag=1
                 return
             end if
+            excld=.TRUE.
             do j=1, total2
                 position(j)=minloc(magovrlp,1,excld)
                 excld(position(j))=.FALSE.
@@ -161,7 +163,7 @@ MODULE clean
             deallocate(magovrlp,stat=ierr)
         end if 
        
-       
+        deallocate (combs2,stat=ierr)
 
         return 
 
@@ -181,10 +183,10 @@ MODULE clean
         type(zombiest),dimension(:),allocatable::cstoretemp
         integer, allocatable, dimension(:,:)::combs,combs2,combsfix
         integer, allocatable, dimension(:)::magovrlp
-        integer::j,k,ierr,total,total2,total3,totalf
+        integer::j,k,total,total2,total3,totalf
         ! complex(kind=8)::magnitude
         real(wp)::magnitude,checker
-
+        integer::ierr=0
 
         if (errorflag .ne. 0) return
 
@@ -241,7 +243,7 @@ MODULE clean
             do k=1,nume
                 checker=checker+modulo(combs(j,k),2)
             end do
-            if(checker==((nume/2)-spin))then
+            if(int(checker)==int((nume/2)-spin))then
                 !$omp critical
                 total2=total2+1
                 combs2(total2,:)=combsfix(j,:)
@@ -343,7 +345,7 @@ MODULE clean
         end do
        
         
-        call allocham(cleanham,clean_ndet,1)
+        call allocham(cleanham,clean_ndet)
         call hamgen(cleanham,cstore,elecs,ndet,1)
         ! call hamgen(cleanham,cstore,elecs,clean_ndet,1)
         call matrixwriter(cleanham%hjk,clean_ndet,"data/clean_ham.csv")
@@ -388,8 +390,8 @@ MODULE clean
         integer,intent(in)::cleantot
         ! complex(kind=8),intent(out)::norm
         ! complex(kind=8)::ovrlp1, ovrlp2
-        real(kind=8),intent(out)::norm
-        real(kind=8)::ovrlp1, ovrlp2
+        real(wp),intent(out)::norm
+        real(wp)::ovrlp1, ovrlp2
         integer::j,k,l
         
         if (errorflag .ne. 0) return
@@ -436,7 +438,7 @@ MODULE clean
    
         if(pyscfc.eq.1)then
             call pyscf_clean(cstore,clean_ndet,nel)
-            call allocham(cleanham,clean_ndet,1)
+            call allocham(cleanham,clean_ndet)
             call hamgen(cleanham,cstore,elecs,ndet,1)
             ! call hamgen(cleanham,cstore,elecs,clean_ndet,1)
             call matrixwriter(cleanham%hjk,clean_ndet,"data/clean_ham.csv")
@@ -444,7 +446,7 @@ MODULE clean
             clean_ndet = lines_clean(clean_ndet)        
             call alloczs(cstore,clean_ndet)
             call read_zombie_c(cstore,clean_ndet)
-            call allocham(cleanham,clean_ndet,1)
+            call allocham(cleanham,clean_ndet)
             call read_ham_c(cleanham,clean_ndet)
         end if
 
@@ -457,11 +459,9 @@ MODULE clean
         implicit none
 
         integer, intent(INOUT):: nlines
-        integer:: ierr
+        integer:: ierr=0
         
-        if (errorflag .ne. 0) return
-
-        ierr=0
+       
         nlines=0
         open(unit=204, file='data/clean_ham.csv',status='old',iostat=ierr)
         if (ierr.ne.0) then
@@ -500,11 +500,11 @@ MODULE clean
         integer, allocatable, dimension(:,:)::combs
         integer::Line2, Line3, Line4, Line5, Line6,Line7
         real::Line1
-        integer:: ierr, nlines,j
+        integer:: nlines,j
+        integer::ierr=0
 
         if (errorflag .ne. 0) return
-        ierr=0
-
+        
         open(unit=204, file='data/FCIconfigs_equilibrium.txt',status='old',iostat=ierr)
         if (ierr.ne.0) then
             write(0,"(a,i0)") 'Error in opening pyscf cleaning file ',ierr

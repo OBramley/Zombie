@@ -9,8 +9,9 @@ MODULE readpars
         implicit none
         character(LEN=100)::LINE1, LINE2, LINE3, LINE4, LINE5, LINE6, LINE7, LINE8,LINE9, LINE10
         character(LEN=100):: LINE11,LINE12, LINE13, LINE14, LINE15, LINE16, LINE17
-        integer::ierr, n
-        
+        integer::n
+        integer::ierr=0
+
         if (errorflag .ne. 0) return
 
         open(unit=140,file='rundata.csv',status='old',iostat=ierr)
@@ -204,16 +205,16 @@ MODULE readpars
 
         implicit none
         type(zombiest),dimension(:),intent(inout)::zstore
-        real(wp),dimension(norb)::phi,img
-        real(wp),dimension(norb*2)::ccos,csin
+        real(wp),dimension(norb)::phi !,img
+        ! real(wp),dimension(norb*2)::ccos,csin
         integer,intent(in)::gst
         character(len=4)::num
         character(len=2)::gst_num
-        integer::ierr,j,k,l,zomnum,lines,gram_st
+        integer::j,k,zomnum !,gram_st
         character(LEN=20)::filenm
-        ierr=0
-        lines=0
-        
+        integer::ierr=0,lines=0
+
+        if (errorflag .ne. 0) return
      
         if(imagflg=='n') then
             do j=1, ndet
@@ -331,10 +332,10 @@ MODULE readpars
         integer,dimension(norb)::dead,alive
         ! real(wp),dimension(norb*2)::cdead,calive
         character(len=6)::num
-        integer::ierr,j,k,zomnum
+        integer::j,k,zomnum
         character(LEN=28)::filenm
+        integer::ierr=0
 
-        ierr=0
         ! if(imagflg=='n') then
             do j=1, clean_ndet
                 write(num,"(i6.6)")j
@@ -352,7 +353,7 @@ MODULE readpars
                 cstore(j)%val(norb+1:2*norb)%x=dead
                 cstore(j)%val(1:norb)%x=alive
                 do k=1, norb
-                    if(cstore(j)%val(k)%x.eq.1)then
+                    if(int(cstore(j)%val(k)%x).eq.1)then
                         cstore(j)%phi(k)%x=0.5*pirl
                     else
                         cstore(j)%phi(k)%x=0
@@ -392,17 +393,17 @@ MODULE readpars
         implicit none
         type(hamiltonian),intent(inout)::ham
         integer,intent(in)::size
-        integer::ierr,j,k
+        integer::j,k
         REAL(wp),dimension(size)::line
         REAL(wp),dimension(size*2)::cline
         character(LEN=100)::hamnm,ovrlpnm
         integer, allocatable,dimension(:)::IPIV1
         real(wp),allocatable,dimension(:)::WORK1
         ! complex(wp),allocatable,dimension(:)::WORK1
+        integer::ierr=0
 
         if (errorflag .ne. 0) return
-        ierr=0
-
+       
         open(unit=140,file='rundata.csv',status='old',iostat=ierr)
 
         if (ierr.ne.0) then
@@ -535,10 +536,10 @@ MODULE readpars
         integer,intent(in)::size,p
         REAL(wp),dimension(size)::line
         REAL(wp),dimension(size*2)::cline
-        integer::ierr,j,vec
-        if (errorflag .ne. 0) return
+        integer::j,vec
+        integer::ierr=0
 
-        ierr=0
+        if (errorflag .ne. 0) return
 
         vec=900+p
         open(unit=vec,file='data/'//trim(filenm),status="old",iostat=ierr)
@@ -569,14 +570,14 @@ MODULE readpars
         implicit none
         type(hamiltonian),intent(inout)::ham
         integer,intent(in)::size
-        integer::ierr,j,k
+        integer::j,k
         REAL(wp),dimension(size)::line
         REAL(wp),dimension(size*2)::cline
         character(LEN=100)::a,b,hamnm
+        integer::ierr=0
        
 
         if (errorflag .ne. 0) return
-        ierr=0
 
         open(unit=140,file='rundata.csv',status='old',iostat=ierr)
 

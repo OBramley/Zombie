@@ -14,7 +14,7 @@ MODULE zom
         type(zombiest),dimension(:),intent(inout)::zstore
         integer, intent(in)::num
         integer::j,k
-        real(kind=8)::dummy
+        real(wp)::dummy
         DOUBLE PRECISION, external::ZBQLU01
         if (errorflag .ne. 0) return
 
@@ -77,13 +77,14 @@ MODULE zom
 
         implicit none
         type(zombiest),dimension(:),intent(inout)::zstore
-        integer::ierr,count,j
+        integer::count,j
         integer::total,k
         integer, allocatable, dimension(:,:)::combs
         integer, dimension(ndet,norb)::combs2
+        integer::ierr=0
 
         if (errorflag .ne. 0) return
-        ierr=0
+      
 
         combs2(1:ndet,1:norb)=0
     
@@ -268,10 +269,10 @@ MODULE zom
         implicit none
         type(zombiest),dimension(:),intent(inout)::zstore
         DOUBLE PRECISION, external::ZBQLU01
-        real(kind=8)::mu((norb/2)),sig(norb/2)
-        real(kind=8)::val
+        real(wp)::mu((norb/2)),sig(norb/2)
+        real(wp)::val
         integer::j,k
-        ! real::r
+      
 
         if (errorflag .ne. 0) return
  
@@ -334,9 +335,9 @@ MODULE zom
     subroutine musig(mu,sig)
 
         implicit none
-        real(kind=8),dimension(:),intent(inout)::mu,sig
+        real(wp),dimension(:),intent(inout)::mu,sig
         integer::alive,j
-        real(kind=8)::asrt,aend,dsrt,dend,val
+        real(wp)::asrt,aend,dsrt,dend,val
 
 
         alive=int(nel/2)

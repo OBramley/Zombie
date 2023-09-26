@@ -50,7 +50,7 @@ MODULE globvars
         real(wp), dimension(:), allocatable::d_1
         real(wp), dimension(:,:),allocatable::d_gs
         real(wp):: norm
-        real(wp):: d_o_d
+        integer(int8):: d_o_d
     end type dvector
 
     ! Type defining the 1&2 electron integrals
@@ -136,7 +136,8 @@ MODULE globvars
     elemental function cos_d(u) result(res)
         type(dual), intent(in) :: u
         type(dual) :: res
-
+        
+        allocate(res%dx(size(u%dx)))
         res%x = cos(u%x)
         res%dx = -sin(u%x) * u%dx
 
@@ -150,6 +151,7 @@ MODULE globvars
         type(dual), intent(in) :: u
         type(dual) :: res
 
+        allocate(res%dx(size(u%dx)))
         res%x = sin(u%x)
         res%dx = cos(u%x) * u%dx
 
@@ -180,6 +182,22 @@ MODULE globvars
     
         return
     end subroutine val_set_single
+
+    function sign_d_o_d(x) result(s)
+
+        implicit none 
+        real(wp),intent(in)::x
+        integer(int8)::s
+
+        if(x>0) then
+            s=1
+        else if(x<0) then
+            s=-1
+        else
+            s=0
+        end if
+
+    end function sign_d_o_d
 
     subroutine initialise
         implicit none
