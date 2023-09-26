@@ -118,16 +118,18 @@ MODULE ham
       
         !$omp parallel do  default(none) &
         !$omp & private(j,ovlptot,hamtot) &
-        !$omp & shared(elecs,zstore,temp,row,norb) 
-        do j=1,size
+        !$omp & shared(elecs,zstore,temp,row,norb)
+        !!$acc data present(zstore,elecs,norb,ndet) copy(temp) create(ovlptot,hamtot)
+        !!$acc parallel loop
+        do j=1,ndet
             if (j.ne.row) then
                 ovlptot=overlap_1(temp%zom%val%x,zstore(j)%val%x)
                 temp%ovrlp(j,row)=ovlptot
-                temp%ovrlp(row,j)=temp%ovrlp(j,row)
+                ! temp%ovrlp(j,row)=temp%ovrlp(row,j)
 
                 hamtot=haml_vals(temp%zom%val%x,zstore(j)%val%x,elecs)+(ovlptot*elecs%hnuc)
                 temp%hjk(j,row)=hamtot
-                temp%hjk(row,j)=temp%hjk(j,row)
+                ! temp%hjk(j,row)=temp%hjk(row,j)
 
             else 
                 temp%ovrlp(row,row)=1.0d0
@@ -136,7 +138,11 @@ MODULE ham
             end if 
         end do
         !$omp end parallel do 
-
+        !!$acc end parallel loop
+        !!$acc end data
+        temp%hjk(row,:)=temp%hjk(:,row) 
+        temp%ovrlp(row,:)=temp%ovrlp(:,row)
+        
         return
 
     end subroutine haml_ovrlp_column

@@ -180,7 +180,7 @@ MODULE gradient_descent
         type(grad),intent(inout)::grad_fin
         integer,intent(in)::maxloop
         type(grad_do)::temp,thread
-        integer::rjct_cnt,acpt_cnt,pickorb,loops,lralt_zs,acpt_cnt_2,min_idx
+        integer::rjct_cnt,acpt_cnt,pickorb,loops,lralt_zs,acpt_cnt_2
         real(dp)::t,erg_str
         integer::j,n,p
         integer,dimension(:),allocatable::chng_trk2,pickerorb
@@ -226,7 +226,6 @@ MODULE gradient_descent
             chng_trk=0
             acpt_cnt_2=0  
         
-            ! temp=thread
             do j=1,ndet-1
                
                 erg_str=grad_fin%prev_erg
@@ -235,54 +234,40 @@ MODULE gradient_descent
                 acpt_cnt=0
                 pickerorb=scramble_norb(norb)
                 call haml_to_grad_do(haml,dvecs,thread)
+
                 do n=1,norb
                     pickorb=pickerorb(n)
                     call grad_calculate(haml,dvecs,zstore,grad_fin,pickorb)
-                    ! call haml_to_grad_do(haml,dvecs,thread)
-                    thread%zom=zstore(pick)
-                    min_idx = -1
                 
-                    !$omp parallel do ordered &
-                    !$omp private(t,lralt_zs,temp)&
-                    !$omp shared(min_idx,elect,zstore,grad_fin,thread,loop_max,alpha,b,pick,pickorb,ndet)
+                    thread%zom=zstore(pick)
+            
                     do lralt_zs=1,loop_max
-                        if(min_idx.eq.-1)then
-                            temp=thread
-                            t=b*alpha**(lralt_zs-1)
-                        
-                            temp%zom%phi(pickorb)%x = thread%zom%phi(pickorb)%x-(t*grad_fin%vars(pick,pickorb))
-                            call val_set(temp%zom,pickorb)
-                            call he_full_row(temp,zstore,elect,ndet)
+                        temp=thread
+                        t=b*alpha**(lralt_zs-1)
                     
-                            call imaginary_time_erg(temp,ndet)
+                        temp%zom%phi(pickorb)%x = thread%zom%phi(pickorb)%x-(t*grad_fin%vars(pick,pickorb))
+                        call val_set(temp%zom,pickorb)
                         
-                            if((temp%erg .lt. grad_fin%prev_erg))then
-                                !$omp critical
-                                if(min_idx.eq.-1)then
-                                    thread=temp
-                                    min_idx = lralt_zs
-                                end if
-                                !$omp end critical
-                            end if
-                        else 
-                            continue
-                        end if 
+                        call he_full_row(temp,zstore,elect,ndet)
+                    
+                        call imaginary_time_erg(temp,ndet)
+                        
+                        if((temp%erg .lt. grad_fin%prev_erg))then
+                            acpt_cnt=acpt_cnt+1
+                            chng_trk2(acpt_cnt)=pickorb
+                            rjct_cnt=0
+                            grad_fin%grad_avlb=0
+                            grad_fin%prev_erg=thread%erg
+                            rjct_cnt_global=0
+                            call grad_do_haml_transfer(temp,haml,zstore(pick),dvecs)
+                            thread=temp
+                            exit
+                        end if
                     end do
-                    !$omp end parallel do
-
-                    if(min_idx .ne. -1)then
-                        acpt_cnt=acpt_cnt+1
-                        chng_trk2(acpt_cnt)=pickorb
-                        rjct_cnt=0
-                        grad_fin%grad_avlb=0
-                        grad_fin%prev_erg=thread%erg
-                        rjct_cnt_global=0
-                        call grad_do_haml_transfer(thread,haml,zstore(pick),dvecs)
-                    end if
                     
+                   
                     write(stdout,'(1a)',advance='no') '|'
                     flush(6)
-                    call grad_do_haml_partial_transfer(thread,haml,dvecs)
                 end do
                
                 if(acpt_cnt.gt.0)then
@@ -379,6 +364,7 @@ MODULE gradient_descent
         call alloc_grad_do(temp,ndet)
         call alloc_grad_do(thread,ndet)
         call haml_to_grad_do(haml,dvecs,thread)
+        temp=thread
        
         do while(rjct_cnt_global.lt.(ndet-1)*30)
 
@@ -394,59 +380,46 @@ MODULE gradient_descent
                 
              
                 call grad_calculate(haml,dvecs,zstore,grad_fin,0)
-                ! call haml_to_grad_do(haml,dvecs,thread)
-                min_idx=-1
-                !$omp parallel do ordered &
-                !$omp private(t,temp) &
-                !$omp shared(min_idx,elect,zstore,grad_fin,thread,loop_max,alpha,b,pick,ndet)
+              
                 do lralt_temp=1,loop_max
-
-                    if(min_idx.eq.-1)then
-                        temp=thread
-                        t=b*(alpha**(lralt_temp-1))
-                        temp%zom=zstore(pick)
-                        temp%zom%phi=zstore(pick)%phi
-                        temp%zom%phi%x=zstore(pick)%phi%x-(t*grad_fin%vars(pick,:))
-                        call val_set(temp%zom)
-                        call he_full_row(temp,zstore,elect,ndet)
-                        call imaginary_time_erg(temp,ndet)
-                        if(temp%erg .lt. grad_fin%prev_erg)then
-                           !$omp critical
-                            if(min_idx.eq.-1)then
-                                min_idx = lralt_temp
-                                thread=temp
-                            end if
-                            !$omp end critical
-                        end if
-                    else 
-                        continue
+                    temp=thread
+                    t=b*(alpha**(lralt_temp-1))
+                    temp%zom=zstore(pick)
+                    temp%zom%phi=zstore(pick)%phi
+                    temp%zom%phi%x=zstore(pick)%phi%x-(t*grad_fin%vars(pick,:))
+                    call val_set(temp%zom)
+                    call he_full_row(temp,zstore,elect,ndet)
+                    call imaginary_time_erg(temp,ndet)
+                    if(temp%erg .lt. grad_fin%prev_erg)then
+                        t=b*(alpha**(min_idx-1))
+                        acpt_cnt=acpt_cnt+1
+                        chng_trk(acpt_cnt)=pick
+                        lr_chng_trk(acpt_cnt)=t
+                        erg_chng_trk(acpt_cnt)=thread%erg
+                        !$acc update device(zstore(pick))
+                        call grad_do_haml_transfer(thread,haml,zstore(pick),dvecs)
+                        call zombiewriter(zstore(pick),pick,0)
+                        rjct_cnt_global=0
+                
+                    write(stdout,"(a,i3,a,f21.16,a,f21.16,a,f21.16,a,i3,a,i3)") '       ', pick,'              ', &
+        grad_fin%prev_erg,'               ',thread%erg,'             ',t,'        ',acpt_cnt,'          ',rjct_cnt_global
+            
+                        grad_fin%grad_avlb=0
+                        grad_fin%prev_erg=thread%erg
+                        call grad_do_haml_partial_transfer(temp,haml,dvecs)
+                        thread=temp
+                        min_idx=-1
                     end if
+               
                 end do
-                !$omp end parallel do
-
+             
                 if(min_idx .eq. -1)then
                     rjct_cnt_global=rjct_cnt_global+1
                     write(stdout,"(a,i3,a,f21.16,a,f21.16,a,f21.16,a,i3,a,i3)") '       ', pick,'              ', &
                     grad_fin%prev_erg,'               ',0.0,'             ',0.0,'        ',acpt_cnt,'          ',rjct_cnt_global
-                   
-                else
-                    t=b*(alpha**(min_idx-1))
-                    acpt_cnt=acpt_cnt+1
-                    chng_trk(acpt_cnt)=pick
-                    lr_chng_trk(acpt_cnt)=t
-                    erg_chng_trk(acpt_cnt)=thread%erg
-                    call grad_do_haml_transfer(thread,haml,zstore(pick),dvecs)
-                    call zombiewriter(zstore(pick),pick,0)
-                    rjct_cnt_global=0
-            
-                write(stdout,"(a,i3,a,f21.16,a,f21.16,a,f21.16,a,i3,a,i3)") '       ', pick,'              ', &
-    grad_fin%prev_erg,'               ',thread%erg,'             ',t,'        ',acpt_cnt,'          ',rjct_cnt_global
-            
-                grad_fin%grad_avlb=0
-                grad_fin%prev_erg=thread%erg
                 end if
+
                 flush(6)
-                call grad_do_haml_partial_transfer(thread,haml,dvecs)
                 
             end do
           

@@ -126,8 +126,9 @@ program MainZombie
        
             if(GDflg.eq."y")then
                 deallocate(erg,stat=ierr)
+                !$acc data copyin(zstore(1:ndet),elect,ndet,norb)
                 call zombie_alter(zstore,haml,elect,dvecs)
-                
+                !$acc end data
                 GDflg='n'
                 do j=1,ndet
                     call zombiewriter(zstore(j),j,0)
