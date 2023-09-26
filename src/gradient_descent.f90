@@ -103,23 +103,17 @@ MODULE gradient_descent
         haml%diff_ovrlp(:,:,pick)=1.0d0
         if(orb==0)then
             do j=1,ndet
-                haml%diff_ovrlp(2:norb,j,pick)=(zstore(pick)%val(1)%x*zstore(j)%val(1)%x+&
-                zstore(pick)%val(1+norb)%x*zstore(j)%val(norb+1)%x)
-                haml%diff_ovrlp(1,j,pick)=(zstore(pick)%val(1)%dx(1)*zstore(j)%val(1)%x+&
-                zstore(pick)%val(1+norb)%dx(1)*zstore(j)%val(norb+1)%x)     
-                do l=2,norb-1
-                    intermediate=(zstore(pick)%val(l)%x*zstore(j)%val(l)%x+zstore(pick)%val(l+norb)%x*zstore(j)%val(norb+l)%x)
-
-                    haml%diff_ovrlp(1:l-1,j,pick)=haml%diff_ovrlp(1:l-1,j,pick)*intermediate
-                    haml%diff_ovrlp(l+1:norb,j,pick)=haml%diff_ovrlp(l+1:norb,j,pick)*intermediate
-
-                    haml%diff_ovrlp(l,j,pick)=haml%diff_ovrlp(l,j,pick)*(zstore(pick)%val(l)%dx(l)*zstore(j)%val(l)%x+&
-                    zstore(pick)%val(l+norb)%dx(l)*zstore(j)%val(norb+l)%x)     
+                do k=1,norb
+                    do l=1,norb
+                        if(k.ne.l)then
+                            haml%diff_ovrlp(k,j,pick)=haml%diff_ovrlp(k,j,pick)*(zstore(pick)%val(l)%x*zstore(j)%val(l)%x+&
+                            zstore(pick)%val(l+norb)%x*zstore(j)%val(norb+l)%x)
+                        else
+                            haml%diff_ovrlp(k,j,pick)=haml%diff_ovrlp(k,j,pick)*(zstore(pick)%val(l)%dx(k)*zstore(j)%val(l)%x+&
+                            zstore(pick)%val(l+norb)%dx(k)*zstore(j)%val(norb+l)%x)     
+                        end if 
+                    end do 
                 end do
-                intermediate=(zstore(pick)%val(norb)%x*zstore(j)%val(norb)%x+zstore(pick)%val(2*norb)%x*zstore(j)%val(2*norb)%x)
-                haml%diff_ovrlp(1:norb-1,j,pick)=haml%diff_ovrlp(1:norb-1,j,pick)*intermediate
-                haml%diff_ovrlp(norb,j,pick)=haml%diff_ovrlp(norb,j,pick)*(zstore(pick)%val(norb)%dx(norb)*zstore(j)%val(norb)%x+&
-                zstore(pick)%val(2*norb)%dx(norb)*zstore(j)%val(2*norb)%x)
             end do 
             haml%diff_ovrlp(:,j,pick)=0
 
