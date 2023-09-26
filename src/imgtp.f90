@@ -19,48 +19,52 @@ MODULE imgtp
 
         if (errorflag .ne. 0) return
     
-        values%dvec%d=0.0d0
-        values%dvec%d(1)=1.0d0
-    
-        norm=0.0d0
-        do j=1,size
-            temp=0.0d0
-            do l=1,size 
-                temp=temp+values%ovrlp(j,l)*values%dvec%d(l)
-            end do 
-            norm=norm+(temp*values%dvec%d(j))
-        end do 
-    
-        norm = sqrt(abs(norm))
-        values%dvec%d=values%dvec%d/norm
+        values%dvec%d_1=0.0d0
+        values%dvec%d_1(1)=1.0d0
     
         db=beta/timesteps
 
         do k=1,timesteps+1
+            norm=0.0d0
+
+            do j=1,size
+                temp=0.0d0
+                do l=1,size 
+                    temp=temp+values%ovrlp(j,l)*values%dvec%d_1(l)
+                end do 
+                norm=norm+(temp*values%dvec%d_1(j))
+            end do 
+            values%dvec%d_o_d=norm
+            values%dvec%norm = sqrt(abs(norm))
+        
+            values%dvec%d=values%dvec%d_1/values%dvec%norm
+
             ddot=0.0d0
+                
             do j=1,size 
                 temp=0.0d0
                 do l=1,size 
-                    temp = temp + values%kinvh(j,l)*values%dvec%d(l)
+                    temp= temp + values%kinvh(j,l)*values%dvec%d(l)
                 end do 
                 ddot(j)=temp
             end do
         
-            values%dvec%d=values%dvec%d-(db*ddot)
-        
-            norm=0.0d0   
-    
-            do j=1,size
-                temp=0.0d0
-                do l=1,size 
-                    temp=temp+values%ovrlp(j,l)*values%dvec%d(l)
-                end do 
-                norm=norm+(temp*values%dvec%d(j))
-            end do 
-    
-            norm = sqrt(abs(norm))
-            values%dvec%d=values%dvec%d/norm
+            values%dvec%d_1=values%dvec%d-(db*ddot)
         end do
+
+        norm=0.0d0
+
+        do j=1,size
+            temp=0.0d0
+            do l=1,size 
+                temp=temp+values%ovrlp(j,l)*values%dvec%d_1(l)
+            end do 
+            norm=norm+(temp*values%dvec%d_1(j))
+        end do 
+        values%dvec%d_o_d=norm
+        values%dvec%norm = sqrt(abs(norm))
+    
+        values%dvec%d=values%dvec%d_1/values%dvec%norm
 
         result=0.0d0
         do j=1,size
@@ -256,29 +260,27 @@ MODULE imgtp
         if (errorflag .ne. 0) return
         ! Imaginary time Propagation if no gram-schmidt orthogonalization is needed
         if(haml%gram_num.eq.0)then
-            dvecs%d=0.0d0
-            dvecs%d(1)=1.0d0
-        
-            norm=0.0d0
-        
-        
-            do j=1,size
-                temp=0.0d0
-                do l=1,size 
-                    temp=temp+haml%ovrlp(j,l)*dvecs%d(l)
-                end do 
-                norm=norm+(temp*dvecs%d(j))
-            end do 
-        
-            norm = sqrt(abs(norm))
-        
-            dvecs%norm=norm
-        
-            dvecs%d=dvecs%d/norm
+            dvecs%d_1=0.0d0
+            dvecs%d_1(1)=1.0d0
         
             db=beta/timesteps
         
             do k=1,timesteps+1
+                norm=0.0d0
+        
+        
+                do j=1,size
+                    temp=0.0d0
+                    do l=1,size 
+                        temp=temp+haml%ovrlp(j,l)*dvecs%d_1(l)
+                    end do 
+                    norm=norm+(temp*dvecs%d_1(j))
+                end do 
+                dvecs%d_o_d=norm
+                dvecs%norm = sqrt(abs(norm))
+                
+                dvecs%d=dvecs%d_1/dvecs%norm
+        
                 result=0.0d0
             
                 do j=1,size
@@ -290,6 +292,7 @@ MODULE imgtp
                 end do
             
                 erg(k)=result
+               
         
                 ddot=0.0d0
                 
@@ -301,25 +304,23 @@ MODULE imgtp
                     ddot(j)=temp
                 end do
             
-                dvecs%d=dvecs%d-(db*ddot)
+                dvecs%d_1=dvecs%d-(db*ddot)
             
-                norm=0.0d0   
-        
-                do j=1,size
-                    temp=0.0d0
-            
-                    do l=1,size 
-                        temp=temp+haml%ovrlp(j,l)*dvecs%d(l)
-                    end do 
-                    norm=norm+(temp*dvecs%d(j))
-                end do 
-        
-                norm = sqrt(abs(norm))
-                dvecs%norm=norm
-        
-                dvecs%d=dvecs%d/norm
-
             end do
+
+            norm=0.0d0
+            do j=1,size
+                temp=0.0d0
+                do l=1,size 
+                    temp=temp+haml%ovrlp(j,l)*dvecs%d_1(l)
+                end do 
+                norm=norm+(temp*dvecs%d_1(j))
+            end do 
+            dvecs%d_o_d=norm
+            dvecs%norm = sqrt(abs(norm))
+            
+            dvecs%d=dvecs%d_1/dvecs%norm
+            
         else !Imaginary time propagation with GSO
             
             ! ! Set up gs dvectors

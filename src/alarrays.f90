@@ -270,6 +270,7 @@ MODULE alarrays
         ierr=0
     
         allocate(dvecs%d(length),stat=ierr)
+        allocate(dvecs%d_1(length),stat=ierr)
         if (ierr/=0) then
             write(stderr,"(a,i0)") "Error in d allocation. ierr had value ", ierr
             errorflag=1
@@ -294,6 +295,7 @@ MODULE alarrays
         ierr=0
        
         deallocate(dvecs%d,stat=ierr)
+        deallocate(dvecs%d_1,stat=ierr)
         if (ierr/=0) then
             write(stderr,"(a,i0)") "Error in d deallocation. ierr had value ", ierr
             errorflag=1

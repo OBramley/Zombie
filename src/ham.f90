@@ -232,8 +232,7 @@ MODULE ham
         implicit none
         real(wp),dimension(0:)::z1d,z2d
         real(wp)::ovrlp_tot
-        real(wp)::temp
-        integer::j,k
+        integer::j
 
         if (errorflag .ne. 0) return
 
@@ -256,7 +255,7 @@ MODULE ham
         real(wp)::ham_tot
         real(wp)::ov
         real(wp)::temp
-        integer::j,k,l
+        integer::j,k
         
         if (errorflag .ne. 0) return
 

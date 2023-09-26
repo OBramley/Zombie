@@ -90,47 +90,63 @@ MODULE gradient_descent
         type(hamiltonian),intent(inout)::haml
         type(dvector),intent(inout)::dvec
         type(zombiest),dimension(:),intent(in)::zstore
+        real(wp)::ham_c_d,intermediate
+        real(wp),dimension(norb)::ovrlp_tot
         type(dual)::erg
         real(wp),dimension(ndet)::temp
         integer,intent(in)::orb
-        integer::j,st,fn
+        integer::j,k,st,fn,l
        
         if (errorflag .ne. 0) return
 
-        call  haml_ovrlp_column_grad(haml,zstore,ndet,elecs,pick,orb)
-
+        ham_c_d=(dot_product(matmul(haml%hjk,dvec%d%x),dvec%d_1%x)/(dvec%norm)**3)*((-dvec%d_o_d%x)/abs(dvec%d_o_d%x))
+        haml%diff_ovrlp(:,:,pick)=1.0d0
         if(orb==0)then
-            st=1; fn=ndet
+            do j=1,ndet
+                haml%diff_ovrlp(2:norb,j,pick)=(zstore(pick)%val(1)%x*zstore(j)%val(1)%x+&
+                zstore(pick)%val(1+norb)%x*zstore(j)%val(norb+1)%x)
+                haml%diff_ovrlp(1,j,pick)=(zstore(pick)%val(1)%dx(1)*zstore(j)%val(1)%x+&
+                zstore(pick)%val(1+norb)%dx(1)*zstore(j)%val(norb+1)%x)     
+                do l=2,norb-1
+                    intermediate=(zstore(pick)%val(l)%x*zstore(j)%val(l)%x+zstore(pick)%val(l+norb)%x*zstore(j)%val(norb+l)%x)
+
+                    haml%diff_ovrlp(1:l-1,j,pick)=haml%diff_ovrlp(1:l-1,j,pick)*intermediate
+                    haml%diff_ovrlp(l+1:norb,j,pick)=haml%diff_ovrlp(l+1:norb,j,pick)*intermediate
+
+                    haml%diff_ovrlp(l,j,pick)=haml%diff_ovrlp(l,j,pick)*(zstore(pick)%val(l)%dx(l)*zstore(j)%val(l)%x+&
+                    zstore(pick)%val(l+norb)%dx(l)*zstore(j)%val(norb+l)%x)     
+                end do
+                intermediate=(zstore(pick)%val(norb)%x*zstore(j)%val(norb)%x+zstore(pick)%val(2*norb)%x*zstore(j)%val(2*norb)%x)
+                haml%diff_ovrlp(1:norb-1,j,pick)=haml%diff_ovrlp(1:norb-1,j,pick)*intermediate
+                haml%diff_ovrlp(norb,j,pick)=haml%diff_ovrlp(norb,j,pick)*(zstore(pick)%val(norb)%dx(norb)*zstore(j)%val(norb)%x+&
+                zstore(pick)%val(2*norb)%dx(norb)*zstore(j)%val(2*norb)%x)
+            end do 
+            haml%diff_ovrlp(:,j,pick)=0
+
+            do j=1,norb
+                temp=haml%diff_ovrlp(j,:,pick)*dvec%d_1%x
+                temp(pick)=sum(haml%diff_ovrlp(j,:,pick)*dvec%d_1%x)
+                grad_fin%vars(pick,j)=dot_product(temp,dvec%d_1%x)
+            end do
         else
-            st=orb; fn=orb
+            do j=1,ndet
+                do l=1,norb
+                    if(l.ne.orb)then
+                        haml%diff_ovrlp(orb,j,pick)=haml%diff_ovrlp(orb,j,pick)*(zstore(pick)%val(l)%x*zstore(j)%val(l)%x+&
+                        zstore(pick)%val(l+norb)%x*zstore(j)%val(norb+l)%x)
+                    else 
+                        haml%diff_ovrlp(orb,j,pick)=haml%diff_ovrlp(orb,j,pick)*&
+                        (zstore(pick)%val(l)%dx(orb)*zstore(j)%val(l)%x+&
+                        zstore(pick)%val(l+norb)%dx(orb)*zstore(j)%val(norb+l)%x)
+                    end if
+                end do
+            end do 
+            haml%diff_ovrlp(:,j,pick)=0
+            temp=haml%diff_ovrlp(orb,:,pick)*dvec%d_1%x
+            temp(pick)=sum(haml%diff_ovrlp(orb,:,pick)*dvec%d_1%x)
+            grad_fin%vars(pick,orb)=dot_product(temp,dvec%d_1%x)
+           
         end if
-        
-        do j=st,fn
-            temp=haml%diff_hjk(j,:,pick)*dvec%d%x
-            temp(pick)=sum(haml%diff_hjk(j,:,pick)*dvec%d%x)
-            grad_fin%vars(pick,j)=sum(dvec%d%x*temp)
-        end do
-        ! if(d_grad_flg==2)then 
-        !     call kinvh_grad(haml%inv,haml%hjk,haml%ovrlp,haml%kinvh)
-        ! end if
-       
-        ! if(grad_fin%grad_avlb(pick)==d_grad_flg)then 
-        !     return
-        ! else
-        !     ! if(d_grad_flg==2)then
-        !     !     call imaginary_time_prop2(dvec,erg,haml,ndet)
-        !     !     grad_fin%vars(pick,:)=erg(1+timesteps)%dx
-        !     !     grad_fin%grad_avlb(pick)=2
-        !     ! else
-        !         erg=ergcalc_dual(d_ham,dvec%d)
-        !         grad_fin%vars(pick,:)=erg%dx
-                ! grad_fin%grad_avlb(pick)=1
-            ! end if 
-
-        ! end if
-
-        ! print*,grad_fin%vars(pick,:)
-        ! grad_fin%vars(pick,:)=modulo(grad_fin%vars(pick,:), 2.0 * pirl)
        
         call var_check(grad_fin%vars(pick,:))
       
@@ -620,7 +636,7 @@ MODULE gradient_descent
         ! call omp_set_nested(.true.)
         if(epoc_cnt.lt.epoc_max)then
             picker=scramble(ndet-1)
-            ! call full_zs_gd(zstore,elect,dvecs,haml,grad_fin) 
+            call full_zs_gd(zstore,elect,dvecs,haml,grad_fin) 
             call orbital_gd(zstore,grad_fin,elect,dvecs,haml,1000)
             call full_zs_gd(zstore,elect,dvecs,haml,grad_fin) 
             !call orbital_gd(zstore,grad_fin,elect,dvecs,haml,100)

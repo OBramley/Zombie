@@ -43,8 +43,10 @@ MODULE globvars
     type dvector
         integer::n
         type(dual), dimension(:), allocatable::d
+        type(dual), dimension(:), allocatable::d_1
         real(wp), dimension(:,:),allocatable::d_gs
         type(dual):: norm
+        type(dual):: d_o_d
     end type dvector
 
     ! Type defining the 1&2 electron integrals
