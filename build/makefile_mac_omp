@@ -33,16 +33,16 @@ inf.o:inf.f90 infnan_constants.o
 infnan.o:infnan.f90 infnan_constants.o inf.o
 	 $(F90) $(FFLAGS) -c $<
 	 
-vars.o:vars.f90 mod_types.o
+vars.o:vars.f90 mod_types.o  
 	 $(F90) $(FFLAGS) -c $<
 
 alarrays.o:alarrays.f90 vars.o mod_types.o 
 	 $(F90) $(FFLAGS) -c $<
 
-readpars.o:readpars.f90 vars.o
+readpars.o:readpars.f90 vars.o mod_types.o 
 	 $(F90) $(FFLAGS) -c $<
 
-outputs.o:outputs.f90 vars.o
+outputs.o:outputs.f90 vars.o mod_types.o 
 	 $(F90) $(FFLAGS) -c $<
 
 electrons.o:electrons.f90 vars.o alarrays.o
@@ -54,13 +54,13 @@ zom.o:zom.f90 vars.o infnan.o mod_types.o
 ham.o:ham.f90 mod_types.o vars.o alarrays.o  
 	 $(F90) $(FFLAGS) -c $<
 
-imgtp.o:imgtp.f90 vars.o alarrays.o 
+imgtp.o:imgtp.f90 vars.o alarrays.o mod_types.o 
 	 $(F90) $(FFLAGS) -c $<
 
-clean.o:clean.f90 vars.o alarrays.o zom.o ham.o outputs.o readpars.o 
+clean.o:clean.f90 vars.o alarrays.o zom.o ham.o outputs.o readpars.o mod_types.o 
 	 $(F90) $(FFLAGS) -c $<
 
-gradient_descent.o:gradient_descent.f90 vars.o alarrays.o ham.o imgtp.o outputs.o infnan.o zom.o 
+gradient_descent.o:gradient_descent.f90 vars.o alarrays.o ham.o imgtp.o outputs.o infnan.o zom.o mod_types.o 
 	 $(F90) $(FFLAGS) -c $<
 
 # gram_schmidt.o:gram_schmidt.f90 vars.o alarrays.o ham.o gradient_descent.o grad_d.o imgtp.o outputs.o infnan.o zom.o grad_calc.o

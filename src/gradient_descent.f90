@@ -8,6 +8,7 @@ MODULE gradient_descent
     use outputs
     use infnan_mod
     use zom 
+   
 
     implicit none 
     real(wp)::alpha=0.2 ! learning rate reduction
@@ -48,23 +49,23 @@ MODULE gradient_descent
        
         allocate(WORK1(size),IPIV1(size),stat=ierr)
         if (ierr/=0) then
-            write(0,"(a,i0)") "Error in IPIV or WORK1 vector allocation . ierr had value ", ierr
+            write(stderr,"(a,i0)") "Error in IPIV or WORK1 vector allocation . ierr had value ", ierr
             errorflag=1
         end if 
 
       
         Call dgetrf(size, size, temp%inv, size, IPIV1, ierr)
         if (ierr/=0) then
-            write(0,"(a,i0)")"Error in DGETRF",ierr
+            write(stderr,"(a,i0)")"Error in DGETRF",ierr
         end if
         if (ierr==0) call dgetri(size,temp%inv,size,IPIV1,WORK1,size,ierr)
         if (ierr/=0) then
-            write(0,"(a,i0)")"Error in DGETRF",ierr
+            write(stderr,"(a,i0)")"Error in DGETRF",ierr
         end if
 
         deallocate(WORK1,IPIV1,stat=ierr)
         if (ierr/=0) then
-            write(0,"(a,i0)") "Error in IPIV or WORK1 vector deallocation . ierr had value ", ierr
+            write(stderr,"(a,i0)") "Error in IPIV or WORK1 vector deallocation . ierr had value ", ierr
             errorflag=1
         end if
        
@@ -87,28 +88,25 @@ MODULE gradient_descent
         real(wp),dimension(norb,ndet)::ovrlp_dx
         real(wp),dimension(ndet)::temp
         integer,intent(in)::orb
-        integer::j,k,l
+        integer::j,k
        
         if (errorflag .ne. 0) return
 
       
         if(orb==0)then
             if(grad_fin%grad_avlb(1,pick)==0)then
-                ham_c_d=(dot_product(matmul(haml%hjk,dvec%d),dvec%d_1)/(dvec%norm)**3)*(-dvec%d_o_d)
+                call DGEMV("N",ndet,ndet,1.d0,haml%hjk,ndet,dvec%d,1,0.d0,temp,1)
+                ham_c_d=(-dvec%d_o_d/(dvec%norm*dvec%norm*dvec%norm))*dot_product(temp,dvec%d_1)
                 ovrlp_dx=1.0d0
-                !$omp parallel private(j,k,l,temp) shared(zstore,pick,ndet,norb,dvec,ham_c_d,grad_fin) 
-                !$omp do reduction(*:ovrlp_dx) collapse(3)
+                !$omp parallel private(j,k,temp) shared(zstore,ovrlp_dx,pick,ndet,norb,dvec,ham_c_d,grad_fin) 
+                !$omp do collapse(2)
                 do j=1,ndet
                     do k=1,norb
-                        do l=1,norb
-                            if(k.ne.l)then
-                                ovrlp_dx(k,j)=ovrlp_dx(k,j)*(zstore(pick)%val(l)%x*zstore(j)%val(l)%x+&
-                                zstore(pick)%val(l+norb)%x*zstore(j)%val(norb+l)%x)
-                            else
-                                ovrlp_dx(k,j)=ovrlp_dx(k,j)*(zstore(pick)%val(l)%dx(k)*zstore(j)%val(l)%x+&
-                                zstore(pick)%val(l+norb)%dx(k)*zstore(j)%val(norb+l)%x)     
-                            end if 
-                        end do 
+                        ovrlp_dx(k,j)=haml%ovrlp(j,pick)/(zstore(pick)%val(k)%x*zstore(j)%val(k)%x+&
+                        zstore(pick)%val(k+norb)%x*zstore(j)%val(norb+k)%x)
+
+                        ovrlp_dx(k,j)=ovrlp_dx(k,j)*(zstore(pick)%val(k)%dx(k)*zstore(j)%val(k)%x+&
+                        zstore(pick)%val(k+norb)%dx(k)*zstore(j)%val(norb+k)%x)
                     end do
                 end do 
                 !$omp end do
@@ -116,38 +114,38 @@ MODULE gradient_descent
                 ovrlp_dx(:,pick)=0
                 !$omp end critical
                 !$omp do
-                do j=1,norb
-                    temp=ovrlp_dx(j,:)*dvec%d_1
-                    temp(pick)=sum(ovrlp_dx(j,:)*dvec%d_1)
-                    grad_fin%vars(pick,j)=dot_product(temp,dvec%d_1)*ham_c_d
+                do k=1,norb
+                    temp=ovrlp_dx(k,:)*dvec%d_1
+                    temp(pick)=dot_product(ovrlp_dx(k,:),dvec%d_1)
+                    grad_fin%vars(pick,k)=dot_product(temp,dvec%d_1)*ham_c_d
                 end do
                 !$omp end do
                 !$omp end parallel
                 grad_fin%grad_avlb(:,pick)=1
+            else 
+                return
             end if 
         else
             if(grad_fin%grad_avlb(orb,pick)==0)then
-                ham_c_d=(dot_product(matmul(haml%hjk,dvec%d),dvec%d_1)/(dvec%norm)**3)*(-dvec%d_o_d)
+                call DGEMV("N",ndet,ndet,1.d0,haml%hjk,ndet,dvec%d,1,0.d0,temp,1)
+                ham_c_d=(-dvec%d_o_d/(dvec%norm*dvec%norm*dvec%norm))*dot_product(temp,dvec%d_1)
                 ovrlp_dx=1.0d0
-                !$omp parallel do reduction(*: ovrlp_dx)collapse(2) private(j,l) shared(zstore,pick,ndet,norb,orb)
+                !!$omp parallel do reduction(*: ovrlp_dx)collapse(2) private(j,l) shared(zstore,pick,ndet,norb,orb)
                 do j=1,ndet
-                    do l=1,norb
-                        if(l.ne.orb)then
-                            ovrlp_dx(orb,j)=ovrlp_dx(orb,j)*(zstore(pick)%val(l)%x*zstore(j)%val(l)%x+&
-                            zstore(pick)%val(l+norb)%x*zstore(j)%val(norb+l)%x)
-                        else 
-                            ovrlp_dx(orb,j)=ovrlp_dx(orb,j)*&
-                            (zstore(pick)%val(l)%dx(orb)*zstore(j)%val(l)%x+&
-                            zstore(pick)%val(l+norb)%dx(orb)*zstore(j)%val(norb+l)%x)
-                        end if
-                    end do
+                    ovrlp_dx(orb,j)=haml%ovrlp(j,pick)/(zstore(pick)%val(orb)%x*zstore(j)%val(orb)%x+&
+                    zstore(pick)%val(orb+norb)%x*zstore(j)%val(norb+orb)%x)
+
+                    ovrlp_dx(orb,j)=ovrlp_dx(orb,j)*(zstore(pick)%val(orb)%dx(orb)*zstore(j)%val(orb)%x+&
+                    zstore(pick)%val(orb+norb)%dx(orb)*zstore(j)%val(norb+orb)%x)
                 end do 
-                !$omp end parallel do
+                !!$omp end parallel do
                 ovrlp_dx(orb,pick)=0
                 temp=ovrlp_dx(orb,:)*dvec%d_1
-                temp(pick)=sum(ovrlp_dx(orb,:)*dvec%d_1)
+                temp(pick)=dot_product(ovrlp_dx(orb,:),dvec%d_1)
                 grad_fin%vars(pick,orb)=dot_product(temp,dvec%d_1)*ham_c_d
                 grad_fin%grad_avlb(orb,pick)=1
+            else 
+                return
             end if
         end if
        
@@ -196,7 +194,7 @@ MODULE gradient_descent
         allocate(pickerorb(norb),stat=ierr)
         if(ierr==0) allocate(chng_trk2(norb),stat=ierr)
         if (ierr/=0) then
-            write(0,"(a,i0)") "Gradient descent allocations . ierr had value ", ierr
+            write(stderr,"(a,i0)") "Gradient descent allocations . ierr had value ", ierr
             errorflag=1
             return
         end if 
@@ -217,13 +215,13 @@ MODULE gradient_descent
             loops=loops+1
            
             do p=1, ((norb-8)/2)
-                write(6,'(1a)',advance='no') ' '
+                write(stdout,'(1a)',advance='no') ' '
             end do 
-            write(6,"(a)",advance='no') 'Progress'
+            write(stdout,"(a)",advance='no') 'Progress'
             do p=1, ((norb-8)/2)
-                write(6,'(1a)',advance='no') ' '
+                write(stdout,'(1a)',advance='no') ' '
             end do 
-            write(6,"(a)") ' | Zombie state | Previous Energy     | Energy after Gradient Descent steps   | Orbitals altered '
+            write(stdout,"(a)") ' | Zombie state | Previous Energy     | Energy after Gradient Descent steps   | Orbitals altered '
        
             chng_trk=0
             acpt_cnt_2=0  
@@ -236,15 +234,15 @@ MODULE gradient_descent
                 chng_trk2=0
                 acpt_cnt=0
                 pickerorb=scramble_norb(norb)
-
+                call haml_to_grad_do(haml,dvecs,thread)
                 do n=1,norb
                     pickorb=pickerorb(n)
                     call grad_calculate(haml,dvecs,zstore,grad_fin,pickorb)
-                    call haml_to_grad_do(haml,dvecs,thread)
+                    ! call haml_to_grad_do(haml,dvecs,thread)
                     thread%zom=zstore(pick)
                     min_idx = -1
                 
-                    !$omp parallel do num_threads(4) ordered &
+                    !$omp parallel do num_threads(6) ordered &
                     !$omp private(t,lralt_zs,temp)&
                     !$omp shared(min_idx,elect,zstore,grad_fin,thread,loop_max,alpha,b,pick,pickorb,ndet)
                     do lralt_zs=1,loop_max
@@ -282,20 +280,20 @@ MODULE gradient_descent
                         call grad_do_haml_transfer(thread,haml,zstore(pick),dvecs)
                     end if
                     
-                    write(6,'(1a)',advance='no') '|'
+                    write(stdout,'(1a)',advance='no') '|'
                     flush(6)
-                 
+                    call grad_do_haml_partial_transfer(thread,haml,dvecs)
                 end do
                
                 if(acpt_cnt.gt.0)then
-                    write(6,"(a,i3,a,f21.16,a,f21.16,a,*(i0:','))")'  ', pick,'          ', &
+                    write(stdout,"(a,i3,a,f21.16,a,f21.16,a,*(i0:','))")'  ', pick,'          ', &
                     erg_str,'             ',grad_fin%prev_erg,'          ',chng_trk2(1:acpt_cnt) 
                     
                     call zombiewriter(zstore(pick),pick,0)
                     acpt_cnt_2=acpt_cnt_2+1
                     chng_trk(acpt_cnt_2)=pick
                 else 
-                    write(6,"(a,i3,a,f21.16,a,f21.16,a,i0)")'  ',pick,'          ', &
+                    write(stdout,"(a,i3,a,f21.16,a,f21.16,a,i0)")'  ',pick,'          ', &
                     erg_str,'             ',grad_fin%prev_erg,'          ',0
                    
                     rjct_cnt=rjct_cnt+1
@@ -304,7 +302,7 @@ MODULE gradient_descent
                 
             end do
            
-            write(6,"(a,i0,a,f21.16)") "Energy after epoch no. ",epoc_cnt,": ",grad_fin%prev_erg
+            write(stdout,"(a,i0,a,f21.16)") "Energy after epoch no. ",epoc_cnt,": ",grad_fin%prev_erg
           
             if(acpt_cnt_2.gt.0)then
                 call epoc_writer(grad_fin%prev_erg,epoc_cnt,chng_trk,0)
@@ -331,7 +329,7 @@ MODULE gradient_descent
         deallocate(pickerorb,stat=ierr)
         if(ierr==0) deallocate(chng_trk2,stat=ierr)
         if (ierr/=0) then
-            write(0,"(a,i0)") "Gradient descent deallocations . ierr had value ", ierr
+            write(stderr,"(a,i0)") "Gradient descent deallocations . ierr had value ", ierr
             errorflag=1
             return
         end if 
@@ -364,7 +362,7 @@ MODULE gradient_descent
        
        
         if (ierr/=0) then
-            write(0,"(a,i0)") "Gradient descent allocations . ierr had value ", ierr
+            write(stderr,"(a,i0)") "Gradient descent allocations . ierr had value ", ierr
             errorflag=1
             return
         end if 
@@ -384,23 +382,21 @@ MODULE gradient_descent
        
         do while(rjct_cnt_global.lt.(ndet-1)*30)
 
-            write(6,"(a)") '    Zombie state    |     Previous Energy     |    Energy after Gradient Descent step &
+            write(stdout,"(a)") '    Zombie state    |     Previous Energy     |    Energy after Gradient Descent step &
             &   |       Learning rate      | Acceptance count | Rejection count'
             chng_trk=0
             lr_chng_trk=0
             erg_chng_trk=0
-            
-            temp=thread
+            call haml_to_grad_do(haml,dvecs,thread)
             do j=1,(ndet-1)
                 
                 pick=picker(j)
                 
              
                 call grad_calculate(haml,dvecs,zstore,grad_fin,0)
-                call haml_to_grad_do(haml,dvecs,thread)
-                temp=thread
+                ! call haml_to_grad_do(haml,dvecs,thread)
                 min_idx=-1
-                !$omp parallel do ordered num_threads(4) &
+                !$omp parallel do ordered num_threads(6) &
                 !$omp private(t,temp) &
                 !$omp shared(min_idx,elect,zstore,grad_fin,thread,loop_max,alpha,b,pick,ndet)
                 do lralt_temp=1,loop_max
@@ -430,8 +426,7 @@ MODULE gradient_descent
 
                 if(min_idx .eq. -1)then
                     rjct_cnt_global=rjct_cnt_global+1
-                    
-                    write(6,"(a,i3,a,f21.16,a,f21.16,a,f21.16,a,i3,a,i3)") '       ', pick,'              ', &
+                    write(stdout,"(a,i3,a,f21.16,a,f21.16,a,f21.16,a,i3,a,i3)") '       ', pick,'              ', &
                     grad_fin%prev_erg,'               ',0.0,'             ',0.0,'        ',acpt_cnt,'          ',rjct_cnt_global
                    
                 else
@@ -444,19 +439,19 @@ MODULE gradient_descent
                     call zombiewriter(zstore(pick),pick,0)
                     rjct_cnt_global=0
             
-                write(6,"(a,i3,a,f21.16,a,f21.16,a,f21.16,a,i3,a,i3)") '       ', pick,'              ', &
+                write(stdout,"(a,i3,a,f21.16,a,f21.16,a,f21.16,a,i3,a,i3)") '       ', pick,'              ', &
     grad_fin%prev_erg,'               ',thread%erg,'             ',t,'        ',acpt_cnt,'          ',rjct_cnt_global
             
                 grad_fin%grad_avlb=0
-              
                 grad_fin%prev_erg=thread%erg
                 end if
                 flush(6)
+                call grad_do_haml_partial_transfer(thread,haml,dvecs)
                 
             end do
           
            
-            write(6,"(a,i0,a,f21.16,a,i0,a)") "Energy after epoc no. ",epoc_cnt,": ", &
+            write(stdout,"(a,i0,a,f21.16,a,i0,a)") "Energy after epoc no. ",epoc_cnt,": ", &
             grad_fin%prev_erg, ". ", acpt_cnt, " Zombie state(s) altered."
       
             picker=scramble(ndet-1)
@@ -487,7 +482,7 @@ MODULE gradient_descent
         if(ierr==0) deallocate(erg_chng_trk,stat=ierr)
        
         if (ierr/=0) then
-            write(0,"(a,i0)") "Gradient descent deallocations . ierr had value ", ierr
+            write(stderr,"(a,i0)") "Gradient descent deallocations . ierr had value ", ierr
             errorflag=1
             return
         end if 
@@ -526,7 +521,7 @@ MODULE gradient_descent
             ierr=0
             open(unit=450,file='epoc.csv',status="old",iostat=ierr)
             if(ierr/=0)then
-                write(0,"(a,i0)") "Error in opening epoc file to read in. ierr had value ", ierr
+                write(stderr,"(a,i0)") "Error in opening epoc file to read in. ierr had value ", ierr
                 errorflag=1
                 return
             end if
@@ -536,7 +531,7 @@ MODULE gradient_descent
                 if(ierr<0)then
                     exit
                 else if(ierr>0)then
-                    write(0,"(a,i0)") "Error in counting epocs. ierr had value ", ierr
+                    write(stderr,"(a,i0)") "Error in counting epocs. ierr had value ", ierr
                     errorflag=1
                     return
                 else 
@@ -547,7 +542,7 @@ MODULE gradient_descent
             close(450) 
             open(unit=450,file='epoc.csv',status="old",iostat=ierr)
             if(ierr/=0)then
-                write(0,"(a,i0)") "Error in opening epoc file to read in. ierr had value ", ierr
+                write(stderr,"(a,i0)") "Error in opening epoc file to read in. ierr had value ", ierr
                 errorflag=1
                 return
             end if
@@ -558,7 +553,7 @@ MODULE gradient_descent
     
             close(450) 
 
-            write(0,"(a,i0)") "Epoc read in as ", epoc_cnt
+            write(stderr,"(a,i0)") "Epoc read in as ", epoc_cnt
         
             call epoc_writer(grad_fin%prev_erg,epoc_cnt,0,0.0d0,1)
             epoc_cnt=epoc_cnt+1
@@ -566,6 +561,7 @@ MODULE gradient_descent
             call epoc_writer(grad_fin%prev_erg,0,0,0.0d0,0)
         end if
         ! call omp_set_nested(.TRUE.)
+
         allocate(picker(ndet-1),stat=ierr)
         if(ierr==0) allocate(chng_trk(ndet-1),stat=ierr)
         ! call omp_set_nested(.true.)
@@ -646,6 +642,25 @@ MODULE gradient_descent
 
         return
     end function scramble_norb
+
+
+    subroutine grad_do_haml_partial_transfer(in,haml,dvec)
+
+        implicit none
+        type(grad_do),intent(inout)::in
+        type(hamiltonian),intent(in)::haml
+        type(dvector),intent(inout)::dvec
+
+        if (errorflag .ne. 0) return
+
+        in%hjk(:,pick)= haml%hjk(:,pick); in%hjk(pick,:)=haml%hjk(pick,:)
+        in%ovrlp(:,pick)= haml%ovrlp(:,pick); in%ovrlp(pick,:)=haml%ovrlp(pick,:)
+        in%inv=haml%inv
+        in%kinvh=haml%kinvh
+        in%dvec=dvec
+        return 
+
+    end subroutine grad_do_haml_partial_transfer
 
     subroutine grad_do_haml_transfer(in,haml,zstore,dvec)
 

@@ -20,13 +20,13 @@ MODULE electrons
     
         if (errorflag .ne. 0) return
        
-        write(6,"(a)") "Starting one electron integral allocation"
+        write(stdout,"(a)") "Starting one electron integral allocation"
         call  one_electrons(h1ei,e1,an_cr)
-        write(6,"(a)") "completed one electron integral allocation"
+        write(stdout,"(a)") "completed one electron integral allocation"
        
-        write(6,"(a)") "Starting two electron integral allocation"
+        write(stdout,"(a)") "Starting two electron integral allocation"
         call  two_electrons(h2ei,e2,an2_cr2)
-        write(6,"(a)") "completed two electron integral allocation"
+        write(stdout,"(a)") "completed two electron integral allocation"
 
         elecs%num=e1+e2
 
@@ -36,7 +36,7 @@ MODULE electrons
         allocate(elecs%neg_a(norb,elecs%num),stat=ierr)
         allocate(elecs%neg_d(norb,elecs%num),stat=ierr)
         if(ierr/=0) then
-            write(0,"(a,i0)") "Error in electron integral  allocation. ierr had value ", ierr
+            write(stderr,"(a,i0)") "Error in electron integral  allocation. ierr had value ", ierr
             errorflag=1
             return
         end if
@@ -63,13 +63,13 @@ MODULE electrons
 
         open(unit=128, file='integrals/hnuc.csv',status='old',iostat=ierr)
         if (ierr.ne.0) then
-            write(0,"(a)") 'Error in opening hnuc.csv file'
+            write(stderr,"(a)") 'Error in opening hnuc.csv file'
             errorflag = 1
             return
         end if
         read(128,*, iostat=ierr)elecs%hnuc
         if (ierr .ne. 0) then
-            write(0,"(a)") 'Error reading Hnuc'
+            write(stderr,"(a)") 'Error reading Hnuc'
             errorflag = 1
             return
           end if
@@ -79,12 +79,12 @@ MODULE electrons
         call dealloc_oprts(an2_cr2)
         deallocate(h1ei,h2ei,stat=ierr)
         if (ierr/=0) then
-            write(0,"(a,i0)") "Error in h1ei  deallocation. ierr had value ", ierr
+            write(stderr,"(a,i0)") "Error in h1ei  deallocation. ierr had value ", ierr
             errorflag=1
             return
         end if
         
-        write(6,"(a)") "1 & 2 electron integrals successfully generated"
+        write(stdout,"(a)") "1 & 2 electron integrals successfully generated"
     
         return
     
@@ -106,7 +106,7 @@ MODULE electrons
        
         open(unit=131, file='integrals/h2e.csv',status='old',iostat=ierr)
         if (ierr.ne.0) then
-            write(0,"(a)") 'Error in opening hnuc.csv file'
+            write(stderr,"(a)") 'Error in opening hnuc.csv file'
             errorflag = 1
             return
         end if
@@ -122,7 +122,7 @@ MODULE electrons
 
         allocate (h2ei(e2),stat=ierr)
         if (ierr/=0) then
-        write(0,"(a,i0)") "Error in 2 electron integral  allocation. ierr had value ", ierr
+        write(stderr,"(a,i0)") "Error in 2 electron integral  allocation. ierr had value ", ierr
         errorflag=1
         return
         end if
@@ -163,7 +163,7 @@ MODULE electrons
 
         deallocate(read_in, stat=ierr)
         if (ierr/=0) then
-            write(0,"(a,i0)") "Error in read_in  deallocation. ierr had value ", ierr
+            write(stderr,"(a,i0)") "Error in read_in  deallocation. ierr had value ", ierr
             errorflag=1
             return
         end if
@@ -190,7 +190,7 @@ MODULE electrons
     
         open(unit=129, file='integrals/h1e.csv',status='old',iostat=ierr)
         if (ierr.ne.0) then
-            write(0,"(a)") 'Error in opening hnuc.csv file'
+            write(stderr,"(a)") 'Error in opening hnuc.csv file'
             errorflag = 1
             return
         end if
@@ -205,7 +205,7 @@ MODULE electrons
        
         allocate (h1ei(e1), stat=ierr)
         if (ierr/=0) then
-            write(0,"(a,i0)") "Error in electron integral  allocation. ierr had value ", ierr
+            write(stderr,"(a,i0)") "Error in electron integral  allocation. ierr had value ", ierr
             errorflag=1
             return
         end if
@@ -230,7 +230,7 @@ MODULE electrons
          
         deallocate(read_in, stat=ierr)
         if (ierr/=0) then
-            write(0,"(a,i0)") "Error in read_in  deallocation. ierr had value ", ierr
+            write(stderr,"(a,i0)") "Error in read_in  deallocation. ierr had value ", ierr
             errorflag=1
             return
         end if

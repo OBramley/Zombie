@@ -98,7 +98,7 @@ MODULE zom
             total=choose(norb,j)
             allocate(combs(total,j),stat=ierr)
             if(ierr/=0) then
-                write(0,"(a,i0)") "Error in combination matrix allocation. ierr had value ", ierr
+                write(stderr,"(a,i0)") "Error in combination matrix allocation. ierr had value ", ierr
                 errorflag=1
                 cycle
             end if
@@ -113,7 +113,7 @@ MODULE zom
           
             deallocate(combs,stat=ierr)
             if(ierr/=0) then
-                write(0,"(a,i0)") "Error in combination matrix deallocation. ierr had value ", ierr
+                write(stderr,"(a,i0)") "Error in combination matrix deallocation. ierr had value ", ierr
                 errorflag=1
                 cycle
             end if
@@ -146,7 +146,7 @@ MODULE zom
      
     
         if ( (n < 0 ) .or. (k < 0 ) ) then
-           write(0, *) "negative in choose"
+           write(stderr, *) "negative in choose"
            choose = 0
         else
            if ( n < k ) then
@@ -192,7 +192,7 @@ MODULE zom
             allocate(co(j)%combs(0:m_max-1))
          end do
         if(ierr/=0) then
-            write(0,"(a,i0)") "Error in co matrix allocation. ierr had value ", ierr
+            write(stderr,"(a,i0)") "Error in co matrix allocation. ierr had value ", ierr
             errorflag=1
             return
         end if
@@ -217,7 +217,7 @@ MODULE zom
             end do
             deallocate(co(j)%combs)
             if(ierr/=0) then
-                write(0,"(a,i0)") "Error in combs matrix deallocation. ierr had value ", ierr
+                write(stderr,"(a,i0)") "Error in combs matrix deallocation. ierr had value ", ierr
                 errorflag=1
                 return
             end if 
@@ -225,7 +225,7 @@ MODULE zom
         
         deallocate(co)
         if(ierr/=0) then
-            write(0,"(a,i0)") "Error in co matrix deallocation. ierr had value ", ierr
+            write(stderr,"(a,i0)") "Error in co matrix deallocation. ierr had value ", ierr
             errorflag=1
             return
         end if 
@@ -399,8 +399,8 @@ MODULE zom
             case('BB')
                 call gen_biased_zs(zstore)
             case default
-                write(0,"(a)") "Error! Initial zombie type method not recognised!"
-                write(0,"(a)") "This should have been caught at the read stage!"
+                write(stderr,"(a)") "Error! Initial zombie type method not recognised!"
+                write(stderr,"(a)") "This should have been caught at the read stage!"
                 errorflag = 1
                 return
         end select 

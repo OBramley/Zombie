@@ -45,7 +45,7 @@ MODULE clean
             magovrlp=0.0
         end if
         if(ierr/=0) then
-            write(0,"(a,i0)") "Error in combins matrix allocation. ierr had value ", ierr
+            write(stderr,"(a,i0)") "Error in combins matrix allocation. ierr had value ", ierr
             errorflag=1
             return
         end if
@@ -82,7 +82,7 @@ MODULE clean
                     if(ierr==0) deallocate(temporary,stat=ierr)
                     temp_t2=temp_t2*2
                     if(ierr/=0) then
-                        write(0,"(a,i0)") "Error in magovrlp matrix increase. ierr had value ", ierr
+                        write(stderr,"(a,i0)") "Error in magovrlp matrix increase. ierr had value ", ierr
                         errorflag=1
                     end if
                 end if 
@@ -105,14 +105,14 @@ MODULE clean
         !$omp end parallel do 
 
     
-        write(6,"(a,i0)") 'Total combinations with correct spin ',total2
-        write(6,"(a,e25.17e3)") 'The norm for states with correct spin and electrons is ',real(norm)
+        write(stdout,"(a,i0)") 'Total combinations with correct spin ',total2
+        write(stdout,"(a,e25.17e3)") 'The norm for states with correct spin and electrons is ',real(norm)
         
  
         if(pass.eq.1)then 
             open(unit=9,file='slt_ovrlp.csv',status="new", iostat=ierr)
             if(ierr/=0)then
-                write(0,"(a,i0)") "Error in opening slt_ovrlp.csv. ierr had value ", ierr
+                write(stderr,"(a,i0)") "Error in opening slt_ovrlp.csv. ierr had value ", ierr
                 errorflag=1
                 return
             end if
@@ -128,7 +128,7 @@ MODULE clean
                     magovrlp=temporary
                     if(ierr==0) deallocate(temporary,stat=ierr)
                     if(ierr/=0) then
-                        write(0,"(a,i0)") "Error in magovrlp matrix re-size. ierr had value ", ierr
+                        write(stderr,"(a,i0)") "Error in magovrlp matrix re-size. ierr had value ", ierr
                         errorflag=1
                         return
                     end if 
@@ -136,7 +136,7 @@ MODULE clean
             if(ierr==0) allocate(position(total2),stat=ierr)
             if(ierr==0) allocate(excld(total2),stat=ierr)
             if(ierr/=0) then
-                write(0,"(a,i0)") "Error in magovrlp allocation. ierr had value ", ierr
+                write(stderr,"(a,i0)") "Error in magovrlp allocation. ierr had value ", ierr
                 errorflag=1
                 return
             end if
@@ -147,7 +147,7 @@ MODULE clean
             end do
             open(unit=9,file='slt_ovrlp.csv',status="old",access='append',iostat=ierr)
             if(ierr/=0)then
-                write(0,"(a,i0)") "Error in opening slt_ovrlp.csv. ierr had value ", ierr
+                write(stderr,"(a,i0)") "Error in opening slt_ovrlp.csv. ierr had value ", ierr
                 errorflag=1
                 return
             end if
@@ -196,11 +196,11 @@ MODULE clean
         if(ierr==0)  allocate (combs2(total,nume),stat=ierr)
         if(ierr==0)  allocate (combsfix(total,nume),stat=ierr)
         if(ierr/=0) then
-            write(0,"(a,i0)") "Error in combination matrix allocation. ierr had value ", ierr
+            write(stderr,"(a,i0)") "Error in combination matrix allocation. ierr had value ", ierr
             errorflag=1
             return
         end if
-        write(6,"(a,i0)") 'Total combinations ',total
+        write(stdout,"(a,i0)") 'Total combinations ',total
 
 
         ! The occupational combiantions for the correct number of electrons are found 
@@ -231,7 +231,7 @@ MODULE clean
 
         !$OMP barrier
         !$omp master
-        write(6,"(a,i0)") 'Combinations with the first orbital fixed as occupied ',totalf
+        write(stdout,"(a,i0)") 'Combinations with the first orbital fixed as occupied ',totalf
         ! A temporary set of Zombie states is created with the HF states with the correct number of electrons and spin
         !$omp end master
 
@@ -254,13 +254,13 @@ MODULE clean
         !$omp end parallel
 
     
-        write(6,"(a,i0)") 'Combinations with corect spin ',total2
+        write(stdout,"(a,i0)") 'Combinations with corect spin ',total2
         ! A temporary set of Zombie states is created with the HF states with the correct number of electrons and spin
         call alloczs(cstoretemp,total2)
         
         allocate(magovrlp(total2),stat=ierr)
         if(ierr/=0) then
-            write(0,"(a,i0)") "Error in magovrlp allocation. ierr had value ", ierr
+            write(stderr,"(a,i0)") "Error in magovrlp allocation. ierr had value ", ierr
             errorflag=1
             return
         end if
@@ -268,7 +268,7 @@ MODULE clean
         deallocate(combs,stat=ierr)
         if(ierr==0)deallocate(combsfix,stat=ierr)
         if(ierr/=0) then
-            write(0,"(a,i0)") "Error in combination matrix deallocation. ierr had value ", ierr
+            write(stderr,"(a,i0)") "Error in combination matrix deallocation. ierr had value ", ierr
             errorflag=1
             return
         end if
@@ -307,7 +307,7 @@ MODULE clean
             !$omp end do
 
             !$omp master
-            write(6,"(a,i0)") 'Combinations with corect spin and enough contribution ',total3
+            write(stdout,"(a,i0)") 'Combinations with corect spin and enough contribution ',total3
             clean_ndet=total3
             !$omp end master
             
@@ -334,7 +334,7 @@ MODULE clean
         deallocate(magovrlp,stat=ierr)
         if(ierr==0)deallocate(combs2,stat=ierr)
         if(ierr/=0) then
-            write(0,"(a,i0)") "Error in magovrlp deallocation. ierr had value ", ierr
+            write(stderr,"(a,i0)") "Error in magovrlp deallocation. ierr had value ", ierr
             errorflag=1
             return
         end if
@@ -465,27 +465,29 @@ MODULE clean
         nlines=0
         open(unit=204, file='data/clean_ham.csv',status='old',iostat=ierr)
         if (ierr.ne.0) then
-            write(0,"(a,i0)") 'Error in opening clean_ham.csv file',ierr
+            write(stderr,"(a,i0)") 'Error in opening clean_ham.csv file',ierr
             errorflag = 1
-            return
         end if
-
-        do 
-            read(204,*, iostat=ierr)
-            if(ierr<0)then
-                ! write(0,"(a,i0)") "nlines has value ", nlines
-                lines_clean=nlines
-                close(204)
-                return
-            else if (ierr/=0) then
-                write(0,"(a,i0)") "Error in counting h1ea rows. ierr had value ", ierr
-                errorflag=1
-                return
-            end if
-            nlines=nlines+1
-        end do
-
-        return 
+        if(errorflag .eq. 0)then
+            do 
+                read(204,*, iostat=ierr)
+                if(ierr<0)then
+                    ! write(stderr,"(a,i0)") "nlines has value ", nlines
+                    lines_clean=nlines
+                    close(204)
+                    return
+                else if (ierr/=0) then
+                    write(stderr,"(a,i0)") "Error in counting h1ea rows. ierr had value ", ierr
+                    close(204)
+                    errorflag=1
+                    exit
+                end if
+                nlines=nlines+1
+            end do
+        else
+            return
+        end if 
+    
 
     end function lines_clean
 
@@ -507,7 +509,7 @@ MODULE clean
         
         open(unit=204, file='data/FCIconfigs_equilibrium.txt',status='old',iostat=ierr)
         if (ierr.ne.0) then
-            write(0,"(a,i0)") 'Error in opening pyscf cleaning file ',ierr
+            write(stderr,"(a,i0)") 'Error in opening pyscf cleaning file ',ierr
             errorflag = 1
             return
         end if
@@ -516,12 +518,12 @@ MODULE clean
         do 
             read(204,*, iostat=ierr)
             if(ierr<0)then
-                ! write(0,"(a,i0)") "nlines has value ", nlines
+                ! write(stderr,"(a,i0)") "nlines has value ", nlines
                 clean_ndet=nlines
                 close(204)
                 exit
             else if (ierr/=0) then
-                write(0,"(a,i0)") "Error in counting pyscf cleaning file rows. ierr had value ", ierr
+                write(stderr,"(a,i0)") "Error in counting pyscf cleaning file rows. ierr had value ", ierr
                 errorflag=1
                 return
             end if
@@ -532,14 +534,14 @@ MODULE clean
         call alloczs(cstore,clean_ndet)
         allocate(combs(clean_ndet,nume),stat=ierr)
         if (ierr.ne.0) then
-            write(0,"(a,i0)") 'Error in combination matrix allocation',ierr
+            write(stderr,"(a,i0)") 'Error in combination matrix allocation',ierr
             errorflag = 1
             return
         end if
       
         open(unit=204, file='data/FCIconfigs_equilibrium.txt',status='old',iostat=ierr)
         if (ierr.ne.0) then
-            write(0,"(a,i0)") 'Error in opening pyscf cleaning file',ierr
+            write(stderr,"(a,i0)") 'Error in opening pyscf cleaning file',ierr
             errorflag = 1
             return
         end if

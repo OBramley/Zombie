@@ -36,14 +36,14 @@ MODULE gram_schmidt
             ! Allocate 2D zombie array
             allocate(zstore(gramnum+1,ndet),stat=ierr)
             if(ierr/=0)then
-                write(0,"(a,i0)") "Error allocating zstore array ierr had value ",ierr
+                write(stderr,"(a,i0)") "Error allocating zstore array ierr had value ",ierr
                 errorflag=1
                 return
             end if
             ! Allocate 2D array of Hamiltonian objects
             allocate(haml(gramnum+1),stat=ierr)
             if(ierr/=0)then
-                write(0,"(a,i0)") "Error allocating hamiltonian array ierr had value ",ierr
+                write(stderr,"(a,i0)") "Error allocating hamiltonian array ierr had value ",ierr
                 errorflag=1
                 return
             end if
@@ -64,16 +64,16 @@ MODULE gram_schmidt
                         call zombiewriter(zstore(k,j),j,k)
                     end do
                 end do
-                write(6,"(a)") "Zombie states generated"
+                write(stdout,"(a)") "Zombie states generated"
                 ! Allocate first hamiltonian 
                 call allocham(haml(1),ndet,norb)
-                write(6,"(a)") "To hamiltonian gen"
+                write(stdout,"(a)") "To hamiltonian gen"
                 ! Generate hamiltonian values
                 call hamgen(haml(1),zstore(1,:),elect,ndet,an_cr,an2_cr2,1)
                  ! Write hamiltonian to file 
                 call matrixwriter(haml%hjk,ndet,"data/ham.csv")
                 call matrixwriter(haml%ovrlp,ndet,"data/ovlp.csv")
-                write(6,"(a)") "Hamiltonian successfully generated"
+                write(stdout,"(a)") "Hamiltonian successfully generated"
                 ! Allocate excited state hamiltonians 
                 do k=2,gramnum+1
                     call allocham(haml(k),ndet,norb)
@@ -94,19 +94,19 @@ MODULE gram_schmidt
                     end if
                     call read_zombie(zstore(k,:),k)
                 end do
-                write(6,"(a)") "Zombie read in"
+                write(stdout,"(a)") "Zombie read in"
                 ! Allocate excited state hamiltonians
                 do k=1,gramnum+1
                     call allocham(haml(k),ndet,norb)
-                    write(6,"(a)") "To hamiltonian gen"
+                    write(stdout,"(a)") "To hamiltonian gen"
                     call hamgen(haml(k),zstore(k,:),elect,ndet,an_cr,an2_cr2,1)
-                    write(6,"(a)") "Hamiltonian successfully generated"
+                    write(stdout,"(a)") "Hamiltonian successfully generated"
                 end do
             end if
             ! Allocate dvector array
             allocate(dvecs(gramnum+1),stat=ierr)
             if(ierr/=0)then
-                write(0,"(a,i0)") "Error allocating dvecs array ierr had value ",ierr
+                write(stderr,"(a,i0)") "Error allocating dvecs array ierr had value ",ierr
                 errorflag=1
                 return
             end if
@@ -114,7 +114,7 @@ MODULE gram_schmidt
             do k=1 gramnum+1
                 call allocdv(dvecs(k),ndet,norb)
             end do
-            write(6,"(a)") "d-vector allocated"
+            write(stdout,"(a)") "d-vector allocated"
             
             ! Allocate hamiltonian and dvector gram-schmidt specific parts
             do k=2,(gramnum+1)
@@ -125,7 +125,7 @@ MODULE gram_schmidt
           
             call gram_ovrlp_fill(haml,zstore)
            
-            write(6,"(a)") "Gram overlap allocated"
+            write(stdout,"(a)") "Gram overlap allocated"
 
 
             
@@ -133,7 +133,7 @@ MODULE gram_schmidt
             allocate(erg(timesteps+1),stat=ierr)
             if(ierr/=0)then 
                 errorflag=1
-                write(0,"(a,i0)") "Error in erg allocation. ierr had value ", ierr
+                write(stderr,"(a,i0)") "Error in erg allocation. ierr had value ", ierr
             end if
 
             call imaginary_time_prop_gs(dvecs,erg,haml,ndet,gram_ovrlp,0,0)
@@ -149,12 +149,12 @@ MODULE gram_schmidt
                 do j=1,ndet
                     call zombiewriter(zstore(1,j),j,0)
                 end do
-                write(6,"(a)") "Zombie states generated"
+                write(stdout,"(a)") "Zombie states generated"
             else if (zomgflg=='n') then
 
 
                 call read_zombie(zstore(1,:))
-                write(6,"(a)") "Zombie read in"
+                write(stdout,"(a)") "Zombie read in"
             end if
             call flush(6)
             call flush(0)
@@ -173,15 +173,15 @@ MODULE gram_schmidt
 
             if(cleanflg=="n")then
                 call deallocdv(dvecs)
-                write(6,"(a)") "d-vector deallocated"
+                write(stdout,"(a)") "d-vector deallocated"
                 !if(hamgflg=='y')then
                 call dealloczs(zstore)
-                write(6,"(a)") "Zombie states deallocated"
+                write(stdout,"(a)") "Zombie states deallocated"
                 call deallocintgrl(elect)
-                write(6,"(a)") "Electron integrals deallocated"
+                write(stdout,"(a)") "Electron integrals deallocated"
                 call dealloc_oprts(an_cr)
                 call dealloc_oprts(an2_cr2)
-                write(6,"(a)") "creation and annihilation operators deallocated"
+                write(stdout,"(a)") "creation and annihilation operators deallocated"
                 !end if
             end if
 
@@ -193,12 +193,12 @@ MODULE gram_schmidt
             if((cleanflg=="y").or.(cleanflg=="f"))then
 
             else 
-                write(6,"(a)") "The program if here has done nothing except read in some values and then deallocate them"
+                write(stdout,"(a)") "The program if here has done nothing except read in some values and then deallocate them"
                 call deallocintgrl(elect)
-                write(6,"(a)") "Electron integrals deallocated"
+                write(stdout,"(a)") "Electron integrals deallocated"
                 call dealloc_oprts(an_cr)
                 call dealloc_oprts(an2_cr2)
-                write(6,"(a)") "creation and annihilation operators deallocated"
+                write(stdout,"(a)") "creation and annihilation operators deallocated"
             end if 
 
         end if 
@@ -253,7 +253,7 @@ MODULE gram_schmidt
         ierr=0
         allocate(dvecs_copy(ndet),stat=ierr)
         if(ierr/=0)then
-            write(0,"(a,i0)") "Error allocating dvecs_copy array ierr had value ",ierr
+            write(stderr,"(a,i0)") "Error allocating dvecs_copy array ierr had value ",ierr
             errorflag=1
             return
         end if

@@ -319,7 +319,7 @@ MODULE readpars
         end if
         
         
-        write(6,"(a)") "Zombie states succeffuly read in"
+        write(stdout,"(a)") "Zombie states succeffuly read in"
         return
         
     end subroutine read_zombie
@@ -383,7 +383,7 @@ MODULE readpars
             ! end do
         ! end if
 
-        write(6,"(a)") "Cleaning Zombie states succeffuly read in"
+        write(stdout,"(a)") "Cleaning Zombie states succeffuly read in"
         return
         
     end subroutine read_zombie_c

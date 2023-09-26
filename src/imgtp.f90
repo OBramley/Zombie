@@ -12,10 +12,9 @@ MODULE imgtp
         implicit none
         type(grad_do),intent(inout)::values
         integer,intent(in)::size
-        integer::j,k,l
-        real(wp)::norm,result,temp
-        real(wp),dimension(size)::ddot
-        real(wp)::db
+        integer::k
+        real(wp)::norm,db
+        real(wp),dimension(size)::ddot,temp
         
         if (errorflag .ne. 0) return
     
@@ -25,113 +24,26 @@ MODULE imgtp
         db=beta/timesteps
 
         do k=1,timesteps+1
-            norm=0.0d0
-
-            do j=1,size
-                temp=0.0d0
-                do l=1,size 
-                    temp=temp+values%ovrlp(j,l)*values%dvec%d_1(l)
-                end do 
-                norm=norm+(temp*values%dvec%d_1(j))
-            end do 
-        
+            call DGEMV("N",ndet,ndet,1.d0,values%ovrlp,ndet,values%dvec%d_1,1,0.d0,temp,1)
+            norm=dot_product(temp,values%dvec%d_1)
             values%dvec%norm = sqrt(abs(norm))
-        
             values%dvec%d=values%dvec%d_1/values%dvec%norm
 
-            ddot=0.0d0
-                
-            do j=1,size 
-                temp=0.0d0
-                do l=1,size 
-                    temp= temp + values%kinvh(j,l)*values%dvec%d(l)
-                end do 
-                ddot(j)=temp
-            end do
-        
-            values%dvec%d_1=values%dvec%d-(db*ddot)
+            call DGEMV("N",ndet,ndet,db,values%kinvh,ndet,values%dvec%d,1,0.d0,ddot,1)
+            values%dvec%d_1=values%dvec%d-ddot
         end do
 
-        norm=0.0d0
+        call DGEMV("N",ndet,ndet,1.d0,values%ovrlp,ndet,values%dvec%d_1,1,0.d0,temp,1)
+        norm=dot_product(temp,values%dvec%d_1)
 
-        do j=1,size
-            temp=0.0d0
-            do l=1,size 
-                temp=temp+values%ovrlp(j,l)*values%dvec%d_1(l)
-            end do 
-            norm=norm+(temp*values%dvec%d_1(j))
-        end do 
         values%dvec%d_o_d=sign_d_o_d(norm)
         values%dvec%norm = sqrt(abs(norm))
     
         values%dvec%d=values%dvec%d_1/values%dvec%norm
-
-        result=0.0d0
-        do j=1,size
-            temp=0.0d0
-            do l=1,size 
-                temp=temp+values%hjk(j,l)*values%dvec%d(l)
-            end do 
-            result = result + (values%dvec%d(j)*temp)
-        end do
-    
-        values%erg=result
+        call DGEMV("N",ndet,ndet,1.d0,values%hjk,ndet,values%dvec%d,1,0.d0,temp,1)
+        values%erg=dot_product(temp,values%dvec%d)
 
     end subroutine  imaginary_time_erg
-
-    ! Routine for imaginary time propagation
-    ! subroutine imgtime_prop(dvecs,erg,haml)
-
-    !     implicit none
-
-    !     type(dvector),intent(inout)::dvecs
-    !     type(dual), dimension(:),intent(inout)::erg
-    !     type(hamiltonian),intent(in)::haml
-    !     integer::j,k,states
-    !     real(wp)::db,r
-     
-    !     if (errorflag .ne. 0) return
-    
-       
-    !     dvecs%d=0.0d0
-    !     if(imagflg=='n') then
-    !         dvecs%d(j)=1.0d0
-    !         if(zst=='HF') then
-    !             do k=1, ndet
-    !                 call random_number(r)
-    !                 dvecs%d(k)=r
-    !             end do
-    !         end if 
-    !     ! else if(imagflg=='y') then
-    !     !     dvecs%d(1)=1.0
-    !     end if
-        
-       
-    !     states=1
-    !     if(gramflg.eq."y")then
-    !         states=gramnum+1
-    !         ! call gs(dvecs,haml)
-    !     else
-    !         call d_norm(dvecs,haml)
-    !     end if 
-    !     db=beta/timesteps
-       
-    
-    !     do j=1,timesteps+1     
-    !         erg(j)=ergcalc(haml%hjk,dvecs%d)
-    !         call timestep(haml,dvecs,db)
-           
-    !         if(gramflg.eq."y")then
-    !             ! call gs(dvecs,haml)
-    !         else
-    !             call d_norm(dvecs,haml)
-    !         end if
-   
-    !     end do
-
-    !     return
-
-    ! end subroutine imgtime_prop
 
     ! Calculates the energy
     function ergcalc(bham,dvec) result(result)
@@ -141,75 +53,14 @@ MODULE imgtp
         real(wp),intent(in),dimension(:)::dvec
         real(wp),intent(in),dimension(:,:)::bham
         real(wp)::result
-        real(wp)::temp
-        integer::j,l
-      
-        result=0.0d0
-            
-        do j=1,ndet
-            temp=0.0d0
-            do l=1,ndet 
-                temp=temp+bham(j,l)*dvec(l)
-            end do 
-            result = result + (dvec(j)*temp)
-        end do
+        real(wp),dimension(ndet)::temp
+       
+        call DGEMV("N",ndet,ndet,1.d0,bham,ndet,dvec,1,0.d0,temp,1)
+        result=dot_product(temp,dvec)
 
-        ! !$omp parallel
-        ! !$omp workshare
-        ! result=dot_product(dvec,matmul(bham,dvec))
-        ! !$omp end workshare
-        ! !$omp end parallel
-   
         return
        
     end function ergcalc
-
-    ! subroutine d_norm(dvec,haml)
-
-    !     implicit none
-    !     type(dvector),intent(inout)::dvec
-    !     type(hamiltonian),intent(in)::haml
-    !     type(dual)::norm
-
-       
-    !     !$omp parallel 
-    !     !$omp workshare
-    !     norm=abs(dot_product((dvec%d),matmul(haml%ovrlp,(dvec%d))))
-    !     dvec%norm=sqrt(norm)
-    !     !$omp end workshare
-    !     !$omp end parallel
-       
-    !     dvec%d=dvec%d/norm
-
-    !     return
-    
-    ! end subroutine d_norm
-
-
-    ! Takes one timestep
-    ! subroutine timestep(haml,dvec,db) 
-
-    !     implicit none
-
-    !     type(dvector),intent(inout)::dvec
-    !     type(hamiltonian),intent(in)::haml
-    !     real(wp),intent(in)::db
-    !     type(dual),dimension(ndet)::ddot
-
-   
-
-    !     if (errorflag .ne. 0) return
-  
-    !     !$omp parallel 
-    !     !$omp workshare
-    !     ddot= -matmul((haml%kinvh),(dvec%d))
-    !     dvec%d=dvec%d+(db*ddot)
-    !     !$omp end workshare
-    !     !$omp end parallel
-     
-    !     return
-
-    ! end subroutine timestep
 
     subroutine imaginary_time_prop2(dvecs,erg,haml,size)
 
@@ -219,10 +70,10 @@ MODULE imgtp
         real(wp), dimension(:),intent(inout)::erg
         type(hamiltonian),intent(in)::haml
         integer,intent(in)::size
-        integer::j,k,l!,g
-        real(wp)::norm,result,temp
+        integer::k!,g
+        real(wp)::norm
         real(wp)::db
-        real(wp),dimension(size)::ddot
+        real(wp),dimension(size)::ddot,temp
 
 
         if (errorflag .ne. 0) return
@@ -234,58 +85,26 @@ MODULE imgtp
             db=beta/timesteps
         
             do k=1,timesteps+1
-                norm=0.0d0
-        
-        
-                do j=1,size
-                    temp=0.0d0
-                    do l=1,size 
-                        temp=temp+haml%ovrlp(j,l)*dvecs%d_1(l)
-                    end do 
-                    norm=norm+(temp*dvecs%d_1(j))
-                end do 
-                dvecs%norm = sqrt(abs(norm))
-                
-                dvecs%d=dvecs%d_1/dvecs%norm
-        
-                result=0.0d0
             
-                do j=1,size
-                    temp=0.0d0
-                    do l=1,size 
-                        temp=temp+haml%hjk(j,l)*dvecs%d(l)
-                    end do 
-                    result = result + (dvecs%d(j)*temp)
-                end do
-            
-                erg(k)=result
+                call DGEMV("N",ndet,ndet,1.d0,haml%ovrlp,ndet,dvecs%d_1,1,0.d0,temp,1)
+                norm=dot_product(temp,dvecs%d_1)
                
-        
-                ddot=0.0d0
-                
-                do j=1,size 
-                    temp=0.0d0
-                    do l=1,size 
-                        temp= temp + haml%kinvh(j,l)*dvecs%d(l)
-                    end do 
-                    ddot(j)=temp
-                end do
+                dvecs%norm = sqrt(abs(norm))
+                dvecs%d=dvecs%d_1/dvecs%norm
+    
+                call DGEMV("N",ndet,ndet,1.d0,haml%hjk,ndet,dvecs%d,1,0.d0,temp,1)
             
-                dvecs%d_1=dvecs%d-(db*ddot)
+                erg(k)=dot_product(temp,dvecs%d)
+                
+                call DGEMV("N",ndet,ndet,db,haml%kinvh,ndet,dvecs%d,1,0.d0,ddot,1)
+                dvecs%d_1=dvecs%d-ddot
             
             end do
+            call DGEMV("N",ndet,ndet,1.d0,haml%ovrlp,ndet,dvecs%d_1,1,0.d0,temp,1)
+            norm=dot_product(temp,dvecs%d_1)
 
-            norm=0.0d0
-            do j=1,size
-                temp=0.0d0
-                do l=1,size 
-                    temp=temp+haml%ovrlp(j,l)*dvecs%d_1(l)
-                end do 
-                norm=norm+(temp*dvecs%d_1(j))
-            end do 
             dvecs%d_o_d=sign_d_o_d(norm)
             dvecs%norm = sqrt(abs(norm))
-            
             dvecs%d=dvecs%d_1/dvecs%norm
             
         else !Imaginary time propagation with GSO

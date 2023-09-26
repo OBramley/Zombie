@@ -24,7 +24,7 @@ MODULE outputs
         
         open(unit=200,file=filenm,status="new",iostat=ierr)
         if(ierr/=0)then
-            write(0,"(a,i0)") "Error in opening matrix file. ierr had value ", ierr
+            write(stderr,"(a,i0)") "Error in opening matrix file. ierr had value ", ierr
             errorflag=1
             return
         end if
@@ -58,7 +58,7 @@ MODULE outputs
         if(file_exists.eqv..false.) then
             open(unit=200,file=filenm,status="new",iostat=ierr)
             if(ierr/=0)then
-                write(0,"(a,i0)") "Error in opening matrix file. ierr had value ", ierr
+                write(stderr,"(a,i0)") "Error in opening matrix file. ierr had value ", ierr
                 errorflag=1
                 return
             end if
@@ -74,7 +74,7 @@ MODULE outputs
 
             close(200)
         else 
-            write(6,"(a,a)") trim(filenm), " alread exists so not rewriting"
+            write(stdout,"(a,a)") trim(filenm), " alread exists so not rewriting"
         end if 
 
         return
@@ -116,7 +116,7 @@ MODULE outputs
             open(unit=zomnum,file=trim(filenm),status="new",iostat=ierr)
             if(ierr/=0)then
                 close(zomnum)
-                write(0,"(a,i0)") "Error in opening zombie state file. ierr had value ", ierr
+                write(stderr,"(a,i0)") "Error in opening zombie state file. ierr had value ", ierr
                 errorflag=1
                 return
             end if
@@ -140,7 +140,7 @@ MODULE outputs
             open(unit=zomnum,file=trim(filenm),status="old",access='append',iostat=ierr)
             if(ierr/=0)then
                 close(zomnum)
-                write(0,"(a,i0)") "Error in opening zombie state file. ierr had value ", ierr
+                write(stderr,"(a,i0)") "Error in opening zombie state file. ierr had value ", ierr
                 errorflag=1
                 return
             end if
@@ -188,7 +188,7 @@ MODULE outputs
         
         open(unit=zomnum,file=trim(filenm),status="unknown",iostat=ierr)
         if(ierr/=0)then
-            write(0,"(a,i0)") "Error in opening zombie state file. ierr had value ", ierr
+            write(stderr,"(a,i0)") "Error in opening zombie state file. ierr had value ", ierr
             errorflag=1
             return
         end if
@@ -231,7 +231,7 @@ MODULE outputs
         if(file_exists.eqv..false.) then
             open(unit=ergnum,file=trim(filenm),status="new",iostat=ierr)
             if(ierr/=0)then
-                write(0,"(a,i0)") "Error in opening energy file. ierr had value ", ierr
+                write(stderr,"(a,i0)") "Error in opening energy file. ierr had value ", ierr
                 errorflag=1
                 close(ergnum)
                 return
@@ -240,7 +240,7 @@ MODULE outputs
         else 
             open(unit=ergnum,file=trim(filenm),status="old",access='append',iostat=ierr)
             if(ierr/=0)then
-                write(0,"(a,i0)") "Error in opening energy file. ierr had value ", ierr
+                write(stderr,"(a,i0)") "Error in opening energy file. ierr had value ", ierr
                 errorflag=1
                 close(ergnum)
                 return
@@ -275,7 +275,7 @@ MODULE outputs
         if(file_exists.eqv..false.) then
             open(unit=epoc,file='epoc.csv',status="new",iostat=ierr)
             if(ierr/=0)then
-                write(0,"(a,i0)") "Error in opening epoc output file. ierr had value ", ierr
+                write(stderr,"(a,i0)") "Error in opening epoc output file. ierr had value ", ierr
                 errorflag=1
                 return
             end if
@@ -285,7 +285,7 @@ MODULE outputs
         else if(file_exists.eqv..true.) then
             open(unit=epoc,file='epoc.csv',status="old",access='append',iostat=ierr)
             if(ierr/=0)then
-                write(0,"(a,i0)") "Error in opening epoc output file. ierr had value ", ierr
+                write(stderr,"(a,i0)") "Error in opening epoc output file. ierr had value ", ierr
                 errorflag=1
                 return
             end if
@@ -313,7 +313,7 @@ MODULE outputs
        
         open(unit=epoc,file='epoc.csv',status="old",access='append',iostat=ierr)
         if(ierr/=0)then
-            write(0,"(a,i0)") "Error in opening epoc output file. ierr had value ", ierr
+            write(stderr,"(a,i0)") "Error in opening epoc output file. ierr had value ", ierr
             errorflag=1
             return
         end if
@@ -345,7 +345,7 @@ MODULE outputs
        
         open(unit=epoc,file='epoc.csv',status="old",access='append',iostat=ierr)
         if(ierr/=0)then
-            write(0,"(a,i0)") "Error in opening epoc output file. ierr had value ", ierr
+            write(stderr,"(a,i0)") "Error in opening epoc output file. ierr had value ", ierr
             errorflag=1
             return
         end if
@@ -393,7 +393,7 @@ MODULE outputs
         if(file_exists.eqv..false.) then
             open(unit=vec,file="data/dvec_"//trim(stateno)//".csv",status="new",iostat=ierr)
             if(ierr/=0)then
-                write(0,"(a,i0)") "Error in opening dvector file. ierr had value ", ierr
+                write(stderr,"(a,i0)") "Error in opening dvector file. ierr had value ", ierr
                 errorflag=1
                 close(vec)
                 return
@@ -401,7 +401,7 @@ MODULE outputs
         else 
             open(unit=vec,file="data/dvec_"//trim(stateno)//".csv",status="old",access='append',iostat=ierr)
             if(ierr/=0)then
-                write(0,"(a,i0)") "Error in opening dvector file. ierr had value ", ierr
+                write(stderr,"(a,i0)") "Error in opening dvector file. ierr had value ", ierr
                 errorflag=1
                 close(vec)
                 return
@@ -436,7 +436,7 @@ MODULE outputs
         vec=900+p
         open(unit=vec,file="data/clean_dvec_"//trim(stateno)//".csv",status="new",iostat=ierr)
         if(ierr/=0)then
-            write(0,"(a,i0)") "Error in opening dvector file. ierr had value ", ierr
+            write(stderr,"(a,i0)") "Error in opening dvector file. ierr had value ", ierr
             errorflag=1
             return
         end if
@@ -463,7 +463,7 @@ MODULE outputs
     
         open(unit=cleane,file='clean_energy.csv',status="new",iostat=ierr)
         if(ierr/=0)then
-            write(0,"(a,i0)") "Error in opening clean energy output file. ierr had value ", ierr
+            write(stderr,"(a,i0)") "Error in opening clean energy output file. ierr had value ", ierr
             errorflag=1
             return
         end if

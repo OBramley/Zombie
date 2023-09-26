@@ -28,17 +28,17 @@ MODULE ham
         haml%inv=haml%ovrlp
         allocate(WORK1(size),IPIV1(size),stat=ierr)
         if (ierr/=0) then
-            write(0,"(a,i0)") "Error in IPIV or WORK1 vector allocation . ierr had value ", ierr
+            write(stderr,"(a,i0)") "Error in IPIV or WORK1 vector allocation . ierr had value ", ierr
             errorflag=1
         end if 
 
         Call dgetrf(size, size, haml%inv, size, IPIV1, ierr)
         if (ierr/=0) then
-            write(0,"(a,i0)")"Error in DGETRF ",ierr
+            write(stderr,"(a,i0)")"Error in DGETRF ",ierr
         end if
         if (ierr==0) call dgetri(size,haml%inv,size,IPIV1,WORK1,size,ierr)
         if (ierr/=0) then
-            write(0,"(a,i0)")"Error in DGETRI ",ierr
+            write(stderr,"(a,i0)")"Error in DGETRI ",ierr
         end if
 
         deallocate(WORK1,IPIV1)
@@ -87,7 +87,7 @@ MODULE ham
               
             end do 
             if(verb.eq.1)then
-                write(6,"(a,i0,a)") "hamliltonian column ",j, " completed"
+                write(stdout,"(a,i0,a)") "hamliltonian column ",j, " completed"
             end if 
         end do
         !$omp end parallel do
@@ -171,22 +171,38 @@ MODULE ham
         implicit none 
         real(wp),dimension(0:),intent(in)::z1d,z2d
         type(elecintrgl),intent(in)::elecs
-        real(wp)::ham_tot,ov
-        integer::j,k
+        real(wp)::ham_tot
+        integer::j
         
         ham_tot=0.0d0
         !$omp simd
         do j=1,elecs%num
-            ov=elecs%integrals(j)
-            do k=1, norb
-                ov=ov*(z1d(k)*elecs%neg_a(k,j)*z2d(elecs%alive(k,j))+z1d(k+norb)*elecs%neg_d(k,j)*z2d(elecs%dead(k,j)))
-            end do
-            ham_tot=ham_tot+ov
+            ham_tot=ham_tot+haml_singular(z1d,z2d,elecs%alive(:,j),elecs%dead(:,j),&
+            elecs%neg_a(:,j),elecs%neg_d(:,j),elecs%integrals(j))
         end do
         !$omp end simd
         return 
       
     end function haml_vals
+
+    real(wp) function haml_singular(z1d,z2d,alive,dead,neg_a,neg_d,ov)
+
+        implicit none 
+        real(wp),dimension(0:),intent(in)::z1d,z2d
+        integer(int16),dimension(:),intent(in)::alive,dead
+        integer(int8),dimension(:),intent(in)::neg_a,neg_d
+        real(wp),value::ov
+        integer::k
+        
+        !$omp simd
+        do k=1, norb
+            ov=ov*(z1d(k)*neg_a(k)*z2d(alive(k))+z1d(k+norb)*neg_d(k)*z2d(dead(k)))
+        end do
+        !$omp end simd
+        haml_singular=ov
+        return 
+      
+    end function haml_singular
 
 
 END MODULE ham
