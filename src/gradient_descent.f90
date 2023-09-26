@@ -242,7 +242,7 @@ MODULE gradient_descent
                     thread%zom=zstore(pick)
                     min_idx = -1
                 
-                    !$omp parallel do num_threads(6) ordered &
+                    !$omp parallel do ordered &
                     !$omp private(t,lralt_zs,temp)&
                     !$omp shared(min_idx,elect,zstore,grad_fin,thread,loop_max,alpha,b,pick,pickorb,ndet)
                     do lralt_zs=1,loop_max
@@ -277,6 +277,7 @@ MODULE gradient_descent
                         grad_fin%grad_avlb=0
                         grad_fin%prev_erg=thread%erg
                         rjct_cnt_global=0
+                        !$acc update device(zstore(pick))
                         call grad_do_haml_transfer(thread,haml,zstore(pick),dvecs)
                     end if
                     
@@ -379,6 +380,7 @@ MODULE gradient_descent
         call alloc_grad_do(temp,ndet)
         call alloc_grad_do(thread,ndet)
         call haml_to_grad_do(haml,dvecs,thread)
+        temp=thread
        
         do while(rjct_cnt_global.lt.(ndet-1)*30)
 
@@ -396,7 +398,7 @@ MODULE gradient_descent
                 call grad_calculate(haml,dvecs,zstore,grad_fin,0)
                 ! call haml_to_grad_do(haml,dvecs,thread)
                 min_idx=-1
-                !$omp parallel do ordered num_threads(6) &
+                !$omp parallel do ordered &
                 !$omp private(t,temp) &
                 !$omp shared(min_idx,elect,zstore,grad_fin,thread,loop_max,alpha,b,pick,ndet)
                 do lralt_temp=1,loop_max
@@ -435,6 +437,7 @@ MODULE gradient_descent
                     chng_trk(acpt_cnt)=pick
                     lr_chng_trk(acpt_cnt)=t
                     erg_chng_trk(acpt_cnt)=thread%erg
+                    !$acc update device(zstore(pick))
                     call grad_do_haml_transfer(thread,haml,zstore(pick),dvecs)
                     call zombiewriter(zstore(pick),pick,0)
                     rjct_cnt_global=0

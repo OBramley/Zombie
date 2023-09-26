@@ -4,7 +4,7 @@
 # subsequent streamlining alterations have been made 
 
 F90=gfortran
-FFLAGS= -Wall -Wextra -ffast-math -ftree-vectorize -fexternal-blas-march=native -Ofast -O3 -fopenmp 
+FFLAGS= -Wall -Wextra -ffast-math -ftree-vectorize -fexternal-blas -march=native -Ofast -O3 -fopenmp 
 FLINKS= -llapack -lblas
 VPATH=../src
 
