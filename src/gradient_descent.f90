@@ -242,7 +242,7 @@ MODULE gradient_descent
                     thread%zom=zstore(pick)
                     min_idx = -1
                 
-                    !$omp parallel do num_threads(6) ordered &
+                    !$omp parallel do ordered &
                     !$omp private(t,lralt_zs,temp)&
                     !$omp shared(min_idx,elect,zstore,grad_fin,thread,loop_max,alpha,b,pick,pickorb,ndet)
                     do lralt_zs=1,loop_max
@@ -396,7 +396,7 @@ MODULE gradient_descent
                 call grad_calculate(haml,dvecs,zstore,grad_fin,0)
                 ! call haml_to_grad_do(haml,dvecs,thread)
                 min_idx=-1
-                !$omp parallel do ordered num_threads(6) &
+                !$omp parallel do ordered &
                 !$omp private(t,temp) &
                 !$omp shared(min_idx,elect,zstore,grad_fin,thread,loop_max,alpha,b,pick,ndet)
                 do lralt_temp=1,loop_max
@@ -567,7 +567,7 @@ MODULE gradient_descent
         ! call omp_set_nested(.true.)
         if(epoc_cnt.lt.epoc_max)then
             picker=scramble(ndet-1)
-            call full_zs_gd(zstore,elect,dvecs,haml,grad_fin) 
+            ! call full_zs_gd(zstore,elect,dvecs,haml,grad_fin) 
             call orbital_gd(zstore,grad_fin,elect,dvecs,haml,1000)
             call full_zs_gd(zstore,elect,dvecs,haml,grad_fin) 
             !call orbital_gd(zstore,grad_fin,elect,dvecs,haml,100)
