@@ -567,7 +567,7 @@ MODULE gradient_descent
         ! call omp_set_nested(.true.)
         if(epoc_cnt.lt.epoc_max)then
             picker=scramble(ndet-1)
-            call full_zs_gd(zstore,elect,dvecs,haml,grad_fin) 
+            ! call full_zs_gd(zstore,elect,dvecs,haml,grad_fin) 
             call orbital_gd(zstore,grad_fin,elect,dvecs,haml,1000)
             call full_zs_gd(zstore,elect,dvecs,haml,grad_fin) 
             !call orbital_gd(zstore,grad_fin,elect,dvecs,haml,100)

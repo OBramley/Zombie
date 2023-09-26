@@ -14,7 +14,7 @@
 run={
     
     # What is the name of the run
-    'runfolder':'BH_fast_grad',
+    'runfolder':'BH_fast_grad_orbs',
 
     # Amount of time to request on HPC 
     'runtime': "48:00:00",
