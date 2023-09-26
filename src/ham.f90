@@ -122,12 +122,12 @@ MODULE ham
         do j=1,size
             if (j.ne.row) then
                 ovlptot=overlap_1(temp%zom%val%x,zstore(j)%val%x)
-                temp%ovrlp(row,j)=ovlptot
-                temp%ovrlp(j,row)=temp%ovrlp(row,j)
+                temp%ovrlp(j,row)=ovlptot
+                temp%ovrlp(row,j)=temp%ovrlp(j,row)
 
                 hamtot=haml_vals(temp%zom%val%x,zstore(j)%val%x,elecs)+(ovlptot*elecs%hnuc)
-                temp%hjk(row,j)=hamtot
-                temp%hjk(j,row)=temp%hjk(row,j)
+                temp%hjk(j,row)=hamtot
+                temp%hjk(row,j)=temp%hjk(j,row)
 
             else 
                 temp%ovrlp(row,row)=1.0d0
