@@ -14,16 +14,16 @@
 run={
     
     # What is the name of the run
-    'runfolder':'BH_min_duals_50',
+    'runfolder':'BH_fast_grad',
 
     # Amount of time to request on HPC 
     'runtime': "48:00:00",
 
     'nodes':1,
 
-    'cores':8,
+    'cores':12,
 
-    'submissions':1,
+    'submissions':10,
 
     'multiple':1,
 
@@ -286,7 +286,7 @@ zombs={
     'spin':pyscf['spin'],
 
     # Number of Zombie states
-    'ndet':10,#pyscf['norb']*2, 
+    'ndet':100,#pyscf['norb']*2, 
 
     # Type of zombie states. Random (ran), Hartree Fock (HF) or biased (bb)
     'zomtyp':'bb',
