@@ -91,8 +91,7 @@ MODULE gradient_descent
         type(dvector),intent(inout)::dvec
         type(zombiest),dimension(:),intent(in)::zstore
         real(wp)::ham_c_d,intermediate
-        real(wp),dimension(norb)::ovrlp_tot
-        type(dual)::erg
+        real(wp),dimension(norb,ndet)::ovrlp_dx
         real(wp),dimension(ndet)::temp
         integer,intent(in)::orb
         integer::j,k,st,fn,l
@@ -100,45 +99,54 @@ MODULE gradient_descent
         if (errorflag .ne. 0) return
 
         ham_c_d=(dot_product(matmul(haml%hjk,dvec%d%x),dvec%d_1%x)/(dvec%norm)**3)*((-dvec%d_o_d%x)/abs(dvec%d_o_d%x))
-        haml%diff_ovrlp(:,:,pick)=1.0d0
+        ovrlp_dx=1.0d0
         if(orb==0)then
+            !$omp parallel private(j,k,l,temp) shared(zstore,pick,ndet,norb,dvec,ham_c_d,grad_fin) 
+            !$omp do reduction(*:ovrlp_dx) collapse(3)
             do j=1,ndet
                 do k=1,norb
                     do l=1,norb
                         if(k.ne.l)then
-                            haml%diff_ovrlp(k,j,pick)=haml%diff_ovrlp(k,j,pick)*(zstore(pick)%val(l)%x*zstore(j)%val(l)%x+&
+                            ovrlp_dx(k,j)=ovrlp_dx(k,j)*(zstore(pick)%val(l)%x*zstore(j)%val(l)%x+&
                             zstore(pick)%val(l+norb)%x*zstore(j)%val(norb+l)%x)
                         else
-                            haml%diff_ovrlp(k,j,pick)=haml%diff_ovrlp(k,j,pick)*(zstore(pick)%val(l)%dx(k)*zstore(j)%val(l)%x+&
+                            ovrlp_dx(k,j)=ovrlp_dx(k,j)*(zstore(pick)%val(l)%dx(k)*zstore(j)%val(l)%x+&
                             zstore(pick)%val(l+norb)%dx(k)*zstore(j)%val(norb+l)%x)     
                         end if 
                     end do 
                 end do
             end do 
-            haml%diff_ovrlp(:,j,pick)=0
-
+            !$omp end do
+            !$omp critical
+            ovrlp_dx(:,pick)=0
+            !$omp end critical
+            !$omp do
             do j=1,norb
-                temp=haml%diff_ovrlp(j,:,pick)*dvec%d_1%x
-                temp(pick)=sum(haml%diff_ovrlp(j,:,pick)*dvec%d_1%x)
-                grad_fin%vars(pick,j)=dot_product(temp,dvec%d_1%x)
+                temp=ovrlp_dx(j,:)*dvec%d_1%x
+                temp(pick)=sum(ovrlp_dx(j,:)*dvec%d_1%x)
+                grad_fin%vars(pick,j)=dot_product(temp,dvec%d_1%x)*ham_c_d
             end do
+            !$omp end do
+            !$omp end parallel
         else
+            !$omp parallel do reduction(*: ovrlp_dx)collapse(2) private(j,l) shared(zstore,pick,ndet,norb,orb)
             do j=1,ndet
                 do l=1,norb
                     if(l.ne.orb)then
-                        haml%diff_ovrlp(orb,j,pick)=haml%diff_ovrlp(orb,j,pick)*(zstore(pick)%val(l)%x*zstore(j)%val(l)%x+&
+                        ovrlp_dx(orb,j)=ovrlp_dx(orb,j)*(zstore(pick)%val(l)%x*zstore(j)%val(l)%x+&
                         zstore(pick)%val(l+norb)%x*zstore(j)%val(norb+l)%x)
                     else 
-                        haml%diff_ovrlp(orb,j,pick)=haml%diff_ovrlp(orb,j,pick)*&
+                        ovrlp_dx(orb,j)=ovrlp_dx(orb,j)*&
                         (zstore(pick)%val(l)%dx(orb)*zstore(j)%val(l)%x+&
                         zstore(pick)%val(l+norb)%dx(orb)*zstore(j)%val(norb+l)%x)
                     end if
                 end do
             end do 
-            haml%diff_ovrlp(:,j,pick)=0
-            temp=haml%diff_ovrlp(orb,:,pick)*dvec%d_1%x
-            temp(pick)=sum(haml%diff_ovrlp(orb,:,pick)*dvec%d_1%x)
-            grad_fin%vars(pick,orb)=dot_product(temp,dvec%d_1%x)
+            !$omp end parallel do
+            ovrlp_dx(orb,pick)=0
+            temp=ovrlp_dx(orb,:)*dvec%d_1%x
+            temp(pick)=sum(ovrlp_dx(orb,:)*dvec%d_1%x)
+            grad_fin%vars(pick,orb)=dot_product(temp,dvec%d_1%x)*ham_c_d
            
         end if
        
