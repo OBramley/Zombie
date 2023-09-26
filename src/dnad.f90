@@ -114,6 +114,7 @@
 ! #endif
 
 module dnad
+    
     use mod_types, only: wp=>dp, int16, int8 
     use dual_set
 
@@ -125,16 +126,7 @@ module dnad
     real(wp) :: negative_one = -1.0d0
     real(wp), parameter :: PI = ATAN(1.0d0)*4.0      ! pi - Geometric constant
    
-    type,public :: dual ! make this private will create difficulty to use the
-                        ! original write/read commands, hence x and dx are
-                        ! variables which can be accessed using D%x and D%dx in
-                        ! other units using this module in which D is defined
-                        ! as type(dual).
-        sequence
-        real(wp) :: x        ! functional value
-        real(wp), dimension(dual_size):: dx  ! derivative
-
-    end type dual
+   
 
     ! type,public :: dual_complex ! make this private will create difficulty to use the
     !                     ! original write/read commands, hence z and dz are
@@ -146,16 +138,16 @@ module dnad
     !     complex(wp):: dz(dual_size)  ! derivative
     ! end type dual_complex
 
-    type,public :: dual2 ! make this private will create difficulty to use the
-                        ! original write/read commands, hence x and dx are
-                        ! variables which can be accessed using D%x and D%dx in
-                        ! other units using this module in which D is defined
-                        ! as type(dual).
-        sequence
-        real(wp) :: x        ! functional value
-        real(wp), dimension(dual_size2):: dx  ! derivative
+    ! type,public :: dual2 ! make this private will create difficulty to use the
+    !                     ! original write/read commands, hence x and dx are
+    !                     ! variables which can be accessed using D%x and D%dx in
+    !                     ! other units using this module in which D is defined
+    !                     ! as type(dual).
+    !     sequence
+    !     real(wp) :: x        ! functional value
+    !     real(wp), dimension(dual_size2):: dx  ! derivative
 
-    end type dual2
+    ! end type dual2
 
     ! type,public :: dual_complex2 ! make this private will create difficulty to use the
     !                     ! original write/read commands, hence z and dz are

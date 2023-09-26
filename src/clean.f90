@@ -1,7 +1,7 @@
 MODULE clean
 
     use mod_types
-    use dnad
+
     use globvars
     use alarrays
     use zom
@@ -364,15 +364,15 @@ MODULE clean
         if (errorflag .ne. 0) return
 
      
-        zoms%val(1+norb:2*norb)=1.0d0
-        zoms%val(1:norb)=0.0d0
-        zoms%phi(1:norb)=0
+        zoms%val(1+norb:2*norb)%x=1.0d0
+        zoms%val(1:norb)%x=0.0d0
+        zoms%phi(1:norb)%x=0
 
 
         do j=1, size(occ)
-            zoms%val(occ(j))=1.0d0
-            zoms%val(norb+occ(j))=0.0d0
-            zoms%phi(occ(j))=0.5*pirl
+            zoms%val(occ(j))%x=1.0d0
+            zoms%val(norb+occ(j))%x=0.0d0
+            zoms%phi(occ(j))%x=0.5*pirl
         end do
 
         return

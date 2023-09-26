@@ -1,12 +1,22 @@
 MODULE globvars
 
     use mod_types
-    use dnad
+
    
     implicit none 
 
     integer, parameter::wp = dp ! Sets the precision of the program to double precision
 
+    type :: dual ! make this private will create difficulty to use the
+                        ! original write/read commands, hence x and dx are
+                        ! variables which can be accessed using D%x and D%dx in
+                        ! other units using this module in which D is defined
+                        ! as type(dual).
+        sequence
+        real(wp) :: x        ! functional value
+        real(wp), allocatable, dimension(:):: dx  ! derivative
+
+    end type dual
 
     ! Type defining the zombie state
     type zombiest
@@ -27,13 +37,7 @@ MODULE globvars
         real(wp), dimension(:,:), allocatable::ovrlp
         real(wp), dimension(:,:), allocatable::inv
         real(wp), dimension(:,:), allocatable::kinvh
-        real(wp), dimension(:,:,:), allocatable::diff_hjk !ZS to be differentiated,zs is bra or ket, orbital, bra/ket pairing
-        real(wp), dimension(:,:,:), allocatable::diff_ovrlp!ZS to be differntiated, orbital, bra/ket pairing
-        ! real(wp), dimension(:,:,:,:),allocatable::diff_ov_dov
-        ! real(wp), dimension(:,:,:,:),allocatable::diff_in_dhjk
-        !The inverse of the overlap matrix multiplied by the hamiltonian
-        !diff_invh(j,l,k,m) j specifies the dependnce on zs_j, l,k give the
-
+    
         real(wp), dimension(:,:,:), allocatable::gs_ovrlp
         real(wp), dimension(:,:,:), allocatable::gs_kinvh
         real(wp), dimension(:,:,:), allocatable::gs_ovrlp_self
@@ -42,11 +46,11 @@ MODULE globvars
 
     type dvector
         integer::n
-        type(dual), dimension(:), allocatable::d
-        type(dual), dimension(:), allocatable::d_1
+        real(wp), dimension(:), allocatable::d
+        real(wp), dimension(:), allocatable::d_1
         real(wp), dimension(:,:),allocatable::d_gs
-        type(dual):: norm
-        type(dual):: d_o_d
+        real(wp):: norm
+        real(wp):: d_o_d
     end type dvector
 
     ! Type defining the 1&2 electron integrals
@@ -81,7 +85,7 @@ MODULE globvars
         real(wp),dimension(:,:), allocatable::vars
         real(wp):: prev_erg
         real(wp):: current_erg
-        integer,dimension(:),allocatable::grad_avlb
+        integer,dimension(:,:),allocatable::grad_avlb
     end type grad
 
     
@@ -115,18 +119,50 @@ MODULE globvars
     integer::max_teams
     integer::threadpteam
 
+   
     
-
     contains
+
+    elemental subroutine dx_zero(d)
+        type(dual), intent(inout) :: d
+        d%dx = 0.0d0
+
+    end subroutine dx_zero
+
+ !-----------------------------------------
+    ! COS of dual numbers
+    ! <res, dres> = cos(<u, du>) = <cos(u), -sin(u) * du>
+    !----------------------------------------
+    elemental function cos_d(u) result(res)
+        type(dual), intent(in) :: u
+        type(dual) :: res
+
+        res%x = cos(u%x)
+        res%dx = -sin(u%x) * u%dx
+
+    end function cos_d
+
+    !-----------------------------------------
+    ! SIN of dual numbers
+    ! <res, dres> = sin(<u, du>) = <sin(u), cos(u) * du>
+    !----------------------------------------
+    elemental function sin_d(u) result(res)
+        type(dual), intent(in) :: u
+        type(dual) :: res
+
+        res%x = sin(u%x)
+        res%dx = cos(u%x) * u%dx
+
+    end function sin_d
 
     subroutine val_set_whole(this)
         implicit none
         class(zombiest),intent(inout)::this
       
-        this%val(0)=0.0d0
+        this%val(0)%x=0.0d0
   
-        this%val(1:norb)=sin(this%phi)
-        this%val(1+norb:2*norb)=cos(this%phi)
+        this%val(1:norb)=sin_d(this%phi)
+        this%val(1+norb:2*norb)=cos_d(this%phi)
     
         return
 
@@ -138,8 +174,8 @@ MODULE globvars
         integer,intent(in)::n
 
      
-        this%val(n)=sin(this%phi(n))
-        this%val(n+norb)=cos(this%phi(n))
+        this%val(n)=sin_d(this%phi(n))
+        this%val(n+norb)=cos_d(this%phi(n))
        
     
         return

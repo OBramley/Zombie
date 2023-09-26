@@ -1,7 +1,6 @@
 MODULE zom 
 
     use mod_types
-    use dnad
     use globvars
     use infnan_mod
     contains
@@ -38,23 +37,15 @@ MODULE zom
                 call val_set(zstore(j))
             end do
             if(rhf_1=='y') then
-                ! do k=1,nel
-                !     zstore(1)%phi(k)=0.5*pirl
-                !     zstore(1)%val((2*k)-1)=1
-                !     zstore(1)%phi(2*k)=0
-                ! end do
-                ! do k=nel+1,norb
-                !     zstore(1)%phi(k)=0
-                !     zstore(1)%val((2*k)-1)=0
-                !     zstore(1)%val(2*k)=1
-                ! end do
 
-                zstore(1)%phi(1:nel)=0.5*pirl
-                zstore(1)%phi(nel+1:)=0
-                zstore(1)%val(1:norb)=0 
-                zstore(1)%val(norb+1:)=1 
-                zstore(1)%val(1:nel)=1
-                zstore(1)%val(norb+1:norb+nel)=0
+                zstore(1)%phi(1:nel)%x=0.5*pirl
+                zstore(1)%phi(nel+1:)%x=0
+                zstore(1)%val(1:norb)%x=0 
+                zstore(1)%val(norb+1:)%x=1 
+                zstore(1)%val(1:nel)%x=1
+                zstore(1)%val(norb+1:norb+nel)%x=0
+                call dx_zero(zstore(1)%phi)
+                call dx_zero(zstore(1)%val)
                 ! zstore(1)%sin(1:nel)=cmplx(1,0.0d0,kind=8)
                 ! zstore(1)%cos(1:nel)=cmplx(0,0.0d0,kind=8)
             end if 
@@ -253,18 +244,18 @@ MODULE zom
         if (errorflag .ne. 0) return
 
 
-        zom%val(1+norb:2*norb)=1.0d0
-        zom%val(1:norb)=0.0d0
-        zom%phi(1:norb)=0
+        zom%val(1+norb:2*norb)%x=1.0d0
+        zom%val(1:norb)%x=0.0d0
+        zom%phi(1:norb)%x=0
 
         do j=1, norb
             if(occ(j)==0)then
                 return
             end if
             
-            zom%val(occ(j))=1.0d0
-            zom%val(norb+occ(j))=0.0d0
-            zom%phi(occ(j))=0.5*pirl
+            zom%val(occ(j))%x=1.0d0
+            zom%val(norb+occ(j))%x=0.0d0
+            zom%phi(occ(j))%x=0.5*pirl
   
         end do
 
@@ -285,7 +276,7 @@ MODULE zom
         if (errorflag .ne. 0) return
  
         call musig(mu,sig)
-        
+        print*,"In Zombie"
         if(imagflg=='n') then
             !$omp parallel shared(zstore) private(j,k)
             !$omp do
@@ -300,7 +291,7 @@ MODULE zom
                         val=2*pirl*(ZBQLU01(1))
                     end if
                     
-                    zstore(j)%phi(2*k-1)=val
+                    zstore(j)%phi(2*k-1)%x=val
                     val=-1
                     do while(val.lt.0)
                         val=2*pirl*random_normal(mu(k),sig(k))
@@ -308,15 +299,15 @@ MODULE zom
                     if((is_nan(val).eqv..true.))then
                         val=2*pirl*(ZBQLU01(1)) 
                     end if 
-                    zstore(j)%phi(2*k)=val
+                    zstore(j)%phi(2*k)%x=val
                 end do
                 !$omp end critical
+               
                 if(GDflg.eq.'y')then
                     call dual_grad_setup(zstore(j))
                 end if
-              
+               
                 call val_set(zstore(j))
-                
                 ! zstore(j)%val(1:norb) = sin(zstore(j)%phi)
                 ! zstore(j)%val(norb+1:2*norb)=cos(zstore(j)%phi)
              
@@ -324,23 +315,14 @@ MODULE zom
             !$omp end do
             !$omp end parallel
             if(rhf_1=='y') then
-                ! do k=1,nel
-                !     zstore(1)%phi(k)=0.5*pirl
-                !     zstore(1)%val((2*k)-1)=1
-                !     zstore(1)%phi(2*k)=0
-                ! end do
-                ! do k=nel+1,norb
-                !     zstore(1)%phi(k)=0
-                !     zstore(1)%val((2*k)-1)=0
-                !     zstore(1)%val(2*k)=1
-                ! end do
-
-                zstore(1)%phi(1:nel)=0.5*pirl
-                zstore(1)%phi(nel+1:)=0
-                zstore(1)%val(1:norb)=0 
-                zstore(1)%val(norb+1:)=1 
-                zstore(1)%val(1:nel)=1
-                zstore(1)%val(norb+1:norb+nel)=0
+                zstore(1)%phi(1:nel)%x=0.5*pirl
+                zstore(1)%phi(nel+1:)%x=0
+                zstore(1)%val(1:norb)%x=0 
+                zstore(1)%val(norb+1:)%x=1 
+                zstore(1)%val(1:nel)%x=1
+                zstore(1)%val(norb+1:norb+nel)%x=0
+                call dx_zero(zstore(1)%phi)
+                call dx_zero(zstore(1)%val)
             end if 
         else if(imagflg=='y')then
             print*,"not yet written"

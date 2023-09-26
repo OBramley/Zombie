@@ -21,7 +21,7 @@ run={
 
     'nodes':1,
 
-    'cores':10,
+    'cores':1,
 
     'submissions':1,
 

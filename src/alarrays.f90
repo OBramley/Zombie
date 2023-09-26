@@ -2,7 +2,6 @@ MODULE alarrays
 
     use mod_types
     use globvars
-    use dnad
 
     contains
 
@@ -100,7 +99,7 @@ MODULE alarrays
         implicit none
         type(zombiest),intent(inout)::zs
 
-        integer::ierr
+        integer::ierr,j
 
         if (errorflag .ne. 0) return
 
@@ -119,8 +118,15 @@ MODULE alarrays
             return
         end if
        
-        zs%val=0.0d0
-        zs%phi(1:norb)=0.0d0
+        call allocdual(zs%val(0),norb)
+        do j=1,norb 
+            call allocdual(zs%phi(j),norb)
+            call allocdual(zs%val(j),norb)
+            call allocdual(zs%val(j+norb),norb)
+        end do 
+       
+        zs%val%x=0.0d0
+        zs%phi%x=0.0d0
         return
     end subroutine alloczf
 
@@ -155,11 +161,18 @@ MODULE alarrays
 
         type(zombiest),intent(inout)::zs
 
-        integer::ierr
+        integer::ierr,j
 
         if (errorflag .ne. 0) return
 
         ierr = 0
+
+        call deallocdual(zs%val(0))
+        do j=1,norb 
+            call deallocdual(zs%phi(j))
+            call deallocdual(zs%val(j))
+            call deallocdual(zs%val(j+norb))
+        end do 
 
        deallocate(zs%val, stat=ierr)
        deallocate(zs%phi, stat=ierr)
@@ -204,17 +217,6 @@ MODULE alarrays
         ham%hjk(1:size,1:size)=0.0d0
         ham%ovrlp(1:size,1:size)=0.0d0
         ham%inv(1:size,1:size)=0.0d0
-        if(GDflg.eq.'y')then  
-            if(ierr==0) allocate(ham%diff_hjk(diff_size,size,size), stat=ierr)
-            if(ierr==0) allocate(ham%diff_ovrlp(diff_size,size,size), stat=ierr)
-            if (ierr/=0) then
-                write(stderr,"(a,i0)") "Error in GD Hamiltonian allocation. ierr had value ", ierr
-                errorflag=1
-                return
-            end if
-            ham%diff_hjk=0.0
-            ham%diff_ovrlp=0.0
-        end if
         ham%gram_num=0
         return
     end subroutine allocham
@@ -243,16 +245,7 @@ MODULE alarrays
             return
         end if
 
-        if(GDflg.eq.'y')then  
-            if(ierr==0) deallocate(ham%diff_hjk, stat=ierr)
-            if(ierr==0) deallocate(ham%diff_ovrlp, stat=ierr)
-            if (ierr/=0) then
-                write(stderr,"(a,i0)") "Error in GD Hamiltonian deallocation. ierr had value ", ierr
-                errorflag=1
-                return
-            end if
-        end if
-
+    
         return
 
     end subroutine deallocham
@@ -322,7 +315,7 @@ MODULE alarrays
 
         
         allocate(gradients%vars(num,length),stat=ierr)
-        if (ierr==0)allocate(gradients%grad_avlb(num),stat=ierr)
+        if (ierr==0)allocate(gradients%grad_avlb(length,num),stat=ierr)
         if (ierr/=0) then
             write(stderr,"(a,i0)") "Error in gradient matrix allocation. ierr had value ", ierr
             errorflag=1
@@ -548,7 +541,47 @@ MODULE alarrays
 
     end subroutine dealloc_grad_do
 
+    subroutine allocdual(dual_1,size)
 
+        implicit none 
+        type(dual),intent(inout)::dual_1
+        integer,intent(in)::size
+
+        integer::ierr=0
+
+        if (errorflag .ne. 0) return
+
+        allocate(dual_1%dx(size), stat=ierr)
+        if(ierr/=0)then 
+            write(stderr,"(a,i0)") "Error in dual vector allocation. ierr had value ", ierr
+            errorflag=1
+            return
+        end if
+        dual_1%dx=0.0d0
+
+        return 
+
+    end subroutine allocdual
+
+    subroutine deallocdual(dual_1)
+
+        implicit none 
+        type(dual),intent(inout)::dual_1
+
+        integer::ierr=0
+
+        if (errorflag .ne. 0) return
+
+        deallocate(dual_1%dx, stat=ierr)
+        if(ierr/=0)then 
+            write(stderr,"(a,i0)") "Error in dual vector deallocation. ierr had value ", ierr
+            errorflag=1
+            return
+        end if
+
+        return 
+
+    end subroutine deallocdual
 
 END MODULE alarrays
 

@@ -1,7 +1,6 @@
 MODULE outputs
     use mod_types
     use globvars
-    use dnad
 
     interface epoc_writer
 
@@ -196,8 +195,8 @@ MODULE outputs
         end if
 
         if(imagflg=='n') then
-            write(zomnum,'(*(e25.17e3 :", "))') ((zom%val(j)),j=1+norb,2*norb)
-            write(zomnum,'(*(e25.17e3 :", "))') ((zom%val(j)),j=1,norb)
+            write(zomnum,'(*(e25.17e3 :", "))') ((zom%val(j)%x),j=1+norb,2*norb)
+            write(zomnum,'(*(e25.17e3 :", "))') ((zom%val(j)%x),j=1,norb)
             ! write(zomnum,'(*(e25.17e3 :", "))') (REAL(zom%dead(j)),j=1,norb)
             ! write(zomnum,'(*(e25.17e3 :", "))') (REAL(zom%alive(j)),j=1,norb)
         else if(imagflg=='y') then
@@ -215,7 +214,7 @@ MODULE outputs
 
         implicit none
 
-        type(dual), dimension(:),intent(in)::erg 
+        real(wp), dimension(:),intent(in)::erg 
         character(LEN=*),intent(in)::filenm
         real::db
         integer,intent(in)::j
@@ -249,7 +248,7 @@ MODULE outputs
             write(ergnum,*)' '
         end if
         
-        write(ergnum,'(*(e25.17e3 :", "))') ((erg(k)%x),k=1,timesteps+1)
+        write(ergnum,'(*(e25.17e3 :", "))') ((erg(k)),k=1,timesteps+1)
         if(imagflg=='y')then
             ! write(ergnum,'(*(e25.17e3 :", "))') (CMPLX(erg(k)),k=1,timesteps+1)
         end if
@@ -385,7 +384,7 @@ MODULE outputs
     subroutine dvec_writer(d,size,p)
 
         implicit none
-        type(dual),dimension(:),intent(in)::d
+        real(wp),dimension(:),intent(in)::d
         character(LEN=4)::stateno
         integer,intent(in)::size,p
         integer::ierr,j,vec
@@ -418,9 +417,9 @@ MODULE outputs
         end if
        
         if(imagflg=='n')then
-            write(vec,'(*(e25.17e3 :", "))') ((d(j)%x),j=1,size)
+            write(vec,'(*(e25.17e3 :", "))') ((d(j)),j=1,size)
         else if(imagflg=='y')then
-            write(vec,'(*(1x,es25.17e3 :", "))') ((d(j)%x),j=1,size*2)
+            write(vec,'(*(1x,es25.17e3 :", "))') ((d(j)),j=1,size*2)
         end if
         close(vec)
         return
@@ -431,7 +430,7 @@ MODULE outputs
 
         implicit none
         ! complex(wp),dimension(:),intent(in)::d
-        type(dual),dimension(:),intent(in)::d
+        real(wp),dimension(:),intent(in)::d
         character(LEN=4)::stateno
         integer,intent(in)::size,p
         integer::ierr,j,vec
@@ -449,9 +448,9 @@ MODULE outputs
             return
         end if
         if(imagflg=='n')then
-            write(vec,'(*(e25.17e3 :", "))') ((d(j)%x),j=1,size)
+            write(vec,'(*(e25.17e3 :", "))') ((d(j)),j=1,size)
         else if(imagflg=='y')then
-            write(vec,'(*(1x,es25.17e3 :", "))') ((d(j)%x),j=1,size*2)
+            write(vec,'(*(1x,es25.17e3 :", "))') ((d(j)),j=1,size*2)
         end if
         close(vec)
         return

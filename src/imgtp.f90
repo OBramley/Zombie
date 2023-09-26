@@ -1,8 +1,9 @@
 MODULE imgtp
+    
     use mod_types
     use globvars
     use alarrays
-    use dnad
+   
     contains
 
 
@@ -16,7 +17,6 @@ MODULE imgtp
         real(wp),dimension(size)::ddot
         real(kind=8)::db
         
-
         if (errorflag .ne. 0) return
     
         values%dvec%d_1=0.0d0
@@ -133,37 +133,6 @@ MODULE imgtp
 
     ! end subroutine imgtime_prop
 
-    function ergcalc_dual(bham,dvec) result(result)
-
-        implicit none
-
-        type(dual),intent(in),dimension(:)::dvec
-        type(dual),intent(in),dimension(:,:)::bham
-        type(dual)::result
-        type(dual)::temp
-        integer::j,l
-        if (errorflag .ne. 0) return
-
-        result=0.0d0
-            
-        do j=1,ndet
-            temp=0.0d0
-            do l=1,ndet 
-                temp=temp+bham(j,l)*dvec(l)
-            end do 
-            result = result + (dvec(j)*temp)
-        end do
-
-        ! !$omp parallel
-        ! !$omp workshare
-        ! result=dot_product(dvec,matmul(bham,dvec))
-        ! !$omp end workshare
-        ! !$omp end parallel
-   
-        return
-       
-    end function ergcalc_dual
-
     ! Calculates the energy
     function ergcalc(bham,dvec) result(result)
 
@@ -248,13 +217,13 @@ MODULE imgtp
         implicit none
 
         type(dvector),intent(inout)::dvecs
-        type(dual), dimension(:),intent(inout)::erg
+        real(wp), dimension(:),intent(inout)::erg
         type(hamiltonian),intent(in)::haml
         integer,intent(in)::size
         integer::j,k,l,g
-        type(dual)::norm,result,temp
+        real(wp)::norm,result,temp
         real(kind=8)::db
-        type(dual),dimension(size)::ddot
+        real(wp),dimension(size)::ddot
 
 
         if (errorflag .ne. 0) return

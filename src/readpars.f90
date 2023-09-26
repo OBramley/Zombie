@@ -2,8 +2,7 @@ MODULE readpars
 
     use mod_types
     use globvars
-    use dnad
-
+   
     contains
 
     subroutine readrunconds   !   Level 1 Subroutine
@@ -272,7 +271,7 @@ MODULE readpars
        
 
                 read(zomnum,*) phi
-                zstore(j)%phi=phi
+                zstore(j)%phi%x=phi
                 if(GDflg.eq.'y')then
                     do k=1,norb
                         zstore(j)%phi(k)%dx(k)=1.0d0
@@ -350,13 +349,13 @@ MODULE readpars
                 read(zomnum,*) dead
                 read(zomnum,*) alive
                 close(zomnum)
-                cstore(j)%val(norb+1:2*norb)=dead
-                cstore(j)%val(1:norb)=alive
+                cstore(j)%val(norb+1:2*norb)%x=dead
+                cstore(j)%val(1:norb)%x=alive
                 do k=1, norb
-                    if(cstore(j)%val(k).eq.1)then
-                        cstore(j)%phi(k)=0.5*pirl
+                    if(cstore(j)%val(k)%x.eq.1)then
+                        cstore(j)%phi(k)%x=0.5*pirl
                     else
-                        cstore(j)%phi(k)=0
+                        cstore(j)%phi(k)%x=0
                     end if 
                 end do
             end do
