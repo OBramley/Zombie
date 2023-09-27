@@ -11,11 +11,11 @@ MODULE gradient_descent
    
 
     implicit none 
-    real(wp)::alpha=0.2 ! learning rate reduction
+    real(wp)::alpha=0.4 ! learning rate reduction
     real(wp)::b=5.0D2   !starting learning rate
     integer::epoc_max=2000
     integer::epoc_cnt !epoc counter
-    integer::loop_max=16 !max number of loops in gd
+    integer::loop_max=8 !max number of loops in gd
     integer::rjct_cnt_global=0
     integer::pick !Chosen zombie state
     integer,dimension(:),allocatable::picker
@@ -243,7 +243,7 @@ MODULE gradient_descent
             
                     do lralt_zs=1,loop_max
                         temp=thread
-                        t=b*alpha**(lralt_zs-1)
+                        t=b*((alpha/(lralt_zs))**(lralt_zs-1))
                     
                         temp%zom%phi(pickorb)%x = thread%zom%phi(pickorb)%x-(t*grad_fin%vars(pick,pickorb))
                         call val_set(temp%zom,pickorb)
@@ -261,11 +261,12 @@ MODULE gradient_descent
                             rjct_cnt_global=0
                             call grad_do_haml_transfer(temp,haml,zstore(pick),dvecs)
                             thread=temp
+                            grad_fin%grad_avlb=0
+                            grad_fin%prev_erg=thread%erg
                             exit
                         end if
                     end do
                     
-                   
                     write(stdout,'(1a)',advance='no') '|'
                     flush(6)
                 end do
@@ -383,7 +384,8 @@ MODULE gradient_descent
               
                 do lralt_temp=1,loop_max
                     temp=thread
-                    t=b*(alpha**(lralt_temp-1))
+                    t=b*((alpha/(lralt_temp))**(lralt_temp-1))
+                    ! t=b*(alpha**(lralt_temp-1))
                     temp%zom=zstore(pick)
                     temp%zom%phi=zstore(pick)%phi
                     temp%zom%phi%x=zstore(pick)%phi%x-(t*grad_fin%vars(pick,:))
