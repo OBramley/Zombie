@@ -14,7 +14,7 @@
 run={
     
     # What is the name of the run
-    'runfolder':'Be_atom',
+    'runfolder':'Li_new_ham_testing',
 
     # Amount of time to request on HPC 
     'runtime': "48:00:00",
@@ -140,21 +140,21 @@ pyscf={
 #     'nel':3
 # }
 
-pyscf={
-     # The units the geometry of the molecule is set up in
-    'units':'atom',
-     # The geometry of the molecule being investigated
-    'atoms': 'Be 0 0 0',
-    # The type of basis used to generate the 1 and 2 electron integrals
-    'bs' : 'cc-pVDZ',
-    # How verbose do you want the PyScf output to be in your terminal?
-    'verbosity' : 4,
-    'symmetry' :True,
-    'spin':0,
-    'charge':0,
-    'norb': 14,
-    'nel':4
-}
+# pyscf={
+#      # The units the geometry of the molecule is set up in
+#     'units':'atom',
+#      # The geometry of the molecule being investigated
+#     'atoms': 'Be 0 0 0',
+#     # The type of basis used to generate the 1 and 2 electron integrals
+#     'bs' : 'cc-pVDZ',
+#     # How verbose do you want the PyScf output to be in your terminal?
+#     'verbosity' : 4,
+#     'symmetry' :True,
+#     'spin':0,
+#     'charge':0,
+#     'norb': 14,
+#     'nel':4
+# }
 
 # pyscf={
 #      # The units the geometry of the molecule is set up in
@@ -286,7 +286,7 @@ zombs={
     'spin':pyscf['spin'],
 
     # Number of Zombie states
-    'ndet':50,#pyscf['norb']*2, 
+    'ndet':10,#pyscf['norb']*2, 
 
     # Type of zombie states. Random (ran), Hartree Fock (HF) or biased (bb)
     'zomtyp':'bb',

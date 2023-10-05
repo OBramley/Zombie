@@ -120,7 +120,7 @@ program MainZombie
             write(stdout,"(a)") "Imaginary time propagation finished"
        
             write(stdout,"(a,f21.16)") "Initial energy: ", erg(timesteps+1)
-      
+         
             call dvec_writer(dvecs%d,ndet,0)
             call energywriter(erg,"energy.csv",0)
        
