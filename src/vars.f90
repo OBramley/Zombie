@@ -57,12 +57,9 @@ MODULE globvars
     type elecintrgl
         integer::num
         real(wp), dimension(:), allocatable::integrals
-        integer(int16),dimension(:,:), allocatable::alive
-        integer(int16),dimension(:,:), allocatable::dead
-        integer(int8),dimension(:,:), allocatable::neg_a
-        integer(int8),dimension(:,:), allocatable::neg_d
+        integer,dimension(:,:),allocatable::orbital_choice
+        integer,dimension(:,:),allocatable::orbital_choice2
         real(wp) :: hnuc
-
     end type elecintrgl
 
     type oprts

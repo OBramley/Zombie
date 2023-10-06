@@ -13,9 +13,9 @@ MODULE gradient_descent
     implicit none 
     real(wp)::alpha=0.2 ! learning rate reduction
     real(wp)::b=5.0D2   !starting learning rate
-    integer::epoc_max=2000
+    integer::epoc_max=10000
     integer::epoc_cnt !epoc counter
-    integer::loop_max=16 !max number of loops in gd
+    integer::loop_max=10 !max number of loops in gd
     integer::rjct_cnt_global=0
     integer::pick !Chosen zombie state
     integer,dimension(:),allocatable::picker
@@ -27,24 +27,25 @@ MODULE gradient_descent
     ! calcualiton of certain results. This minimises the (slow) applicaiton of the creation and annihilaiton operators
 
     ! Subroutine that controls and calcualtes all of the hamiltonian variables 
-    subroutine he_full_row(temp,zstore,elecs,size)
+    subroutine he_full_row(temp,zstore,elecs,size,orb)
 
         implicit none 
 
         type(grad_do),intent(inout)::temp
         type(zombiest),dimension(:),intent(in)::zstore
         type(elecintrgl),intent(in)::elecs
-        integer,intent(in)::size
+        integer,intent(in)::size,orb
         integer, allocatable,dimension(:)::IPIV1
         real(dp),allocatable,dimension(:)::WORK1
         integer::ierr=0
 
 
         if (errorflag .ne. 0) return
-       
-        call haml_ovrlp_column(temp,zstore,ndet,elecs,pick)
-        ! call haml_ovrlp_column_gpu(temp_d,zstore_d,size,elecs_d,pick)
-        ! temp=temp_d
+        if(orb.eq.0)then
+             call haml_ovrlp_column(temp,zstore,ndet,elecs,pick)
+        else
+            call haml_ovrlp_column_orb(temp,zstore,ndet,elecs,pick,orb)
+        end if
         temp%inv=temp%ovrlp
        
         allocate(WORK1(size),IPIV1(size),stat=ierr)
@@ -102,16 +103,11 @@ MODULE gradient_descent
                 !$omp do collapse(2)
                 do j=1,ndet
                     do k=1,norb
-                        ovrlp_dx(k,j)=haml%ovrlp(j,pick)/(zstore(pick)%val(k)%x*zstore(j)%val(k)%x+&
-                        zstore(pick)%val(k+norb)%x*zstore(j)%val(norb+k)%x)
-
-                        ovrlp_dx(k,j)=ovrlp_dx(k,j)*(zstore(pick)%val(k)%dx(k)*zstore(j)%val(k)%x+&
-                        zstore(pick)%val(k+norb)%dx(k)*zstore(j)%val(norb+k)%x)
+                        ovrlp_dx(k,j)=haml%ovrlp(j,pick)*tan(zstore(j)%phi(k)%x-zstore(pick)%phi(k)%x)
                     end do
                 end do 
                 !$omp end do
                 !$omp critical
-                ovrlp_dx(:,pick)=0
                 !$omp end critical
                 !$omp do
                 do k=1,norb
@@ -132,12 +128,8 @@ MODULE gradient_descent
                 ovrlp_dx=1.0d0
                 !!$omp parallel do reduction(*: ovrlp_dx)collapse(2) private(j,l) shared(zstore,pick,ndet,norb,orb)
                 do j=1,ndet
-                    ovrlp_dx(orb,j)=haml%ovrlp(j,pick)/(zstore(pick)%val(orb)%x*zstore(j)%val(orb)%x+&
-                    zstore(pick)%val(orb+norb)%x*zstore(j)%val(norb+orb)%x)
-
-                    ovrlp_dx(orb,j)=ovrlp_dx(orb,j)*(zstore(pick)%val(orb)%dx(orb)*zstore(j)%val(orb)%x+&
-                    zstore(pick)%val(orb+norb)%dx(orb)*zstore(j)%val(norb+orb)%x)
-                end do 
+                    ovrlp_dx(orb,j)=haml%ovrlp(j,pick)*tan(zstore(j)%phi(orb)%x-zstore(pick)%phi(orb)%x)
+                end do  
                 !!$omp end parallel do
                 ovrlp_dx(orb,pick)=0
                 temp=ovrlp_dx(orb,:)*dvec%d_1
@@ -148,9 +140,9 @@ MODULE gradient_descent
                 return
             end if
         end if
-       
+    
         call var_check(grad_fin%vars(pick,:))
-      
+       
         return
 
     end subroutine grad_calculate
@@ -180,7 +172,7 @@ MODULE gradient_descent
         type(grad),intent(inout)::grad_fin
         integer,intent(in)::maxloop
         type(grad_do)::temp,thread
-        integer::rjct_cnt,acpt_cnt,pickorb,loops,lralt_zs,acpt_cnt_2,min_idx
+        integer::rjct_cnt,acpt_cnt,pickorb,loops,lralt_zs,acpt_cnt_2
         real(dp)::t,erg_str
         integer::j,n,p
         integer,dimension(:),allocatable::chng_trk2,pickerorb
@@ -207,10 +199,10 @@ MODULE gradient_descent
         loops=0
         p=70-norb
      
-    
+        lralt_zs=0
         call haml_to_grad_do(haml,dvecs,temp)
         thread=temp
-
+        grad_fin%grad_avlb=0 
         do while(rjct_cnt.lt.(norb*100))
             loops=loops+1
            
@@ -225,8 +217,7 @@ MODULE gradient_descent
        
             chng_trk=0
             acpt_cnt_2=0  
-        
-            ! temp=thread
+            t=b*(alpha**lralt_zs)
             do j=1,ndet-1
                
                 erg_str=grad_fin%prev_erg
@@ -235,55 +226,30 @@ MODULE gradient_descent
                 acpt_cnt=0
                 pickerorb=scramble_norb(norb)
                 call haml_to_grad_do(haml,dvecs,thread)
+
                 do n=1,norb
                     pickorb=pickerorb(n)
                     call grad_calculate(haml,dvecs,zstore,grad_fin,pickorb)
-                    ! call haml_to_grad_do(haml,dvecs,thread)
                     thread%zom=zstore(pick)
-                    min_idx = -1
-                
-                    !$omp parallel do ordered &
-                    !$omp private(t,lralt_zs,temp)&
-                    !$omp shared(min_idx,elect,zstore,grad_fin,thread,loop_max,alpha,b,pick,pickorb,ndet)
-                    do lralt_zs=1,loop_max
-                        if(min_idx.eq.-1)then
-                            temp=thread
-                            t=b*alpha**(lralt_zs-1)
-                        
-                            temp%zom%phi(pickorb)%x = thread%zom%phi(pickorb)%x-(t*grad_fin%vars(pick,pickorb))
-                            call val_set(temp%zom,pickorb)
-                            call he_full_row(temp,zstore,elect,ndet)
+                    temp=thread
+                    temp%zom%phi(pickorb)%x = thread%zom%phi(pickorb)%x-(t*grad_fin%vars(pick,pickorb))
+                    call val_set(temp%zom,pickorb)
+                    call he_full_row(temp,zstore,elect,ndet,pickorb)
+                    call imaginary_time_erg(temp,ndet)
                     
-                            call imaginary_time_erg(temp,ndet)
-                        
-                            if((temp%erg .lt. grad_fin%prev_erg))then
-                                !$omp critical
-                                if(min_idx.eq.-1)then
-                                    thread=temp
-                                    min_idx = lralt_zs
-                                end if
-                                !$omp end critical
-                            end if
-                        else 
-                            continue
-                        end if 
-                    end do
-                    !$omp end parallel do
-
-                    if(min_idx .ne. -1)then
+                    if((temp%erg .lt. grad_fin%prev_erg))then
                         acpt_cnt=acpt_cnt+1
                         chng_trk2(acpt_cnt)=pickorb
                         rjct_cnt=0
-                        grad_fin%grad_avlb=0
-                        grad_fin%prev_erg=thread%erg
                         rjct_cnt_global=0
-                        !$acc update device(zstore(pick))
-                        call grad_do_haml_transfer(thread,haml,zstore(pick),dvecs)
+                        call grad_do_haml_transfer(temp,haml,zstore(pick),dvecs)
+                        thread=temp
+                        grad_fin%grad_avlb=0
+                        grad_fin%prev_erg=temp%erg
                     end if
-                    
+                
                     write(stdout,'(1a)',advance='no') '|'
                     flush(6)
-                    call grad_do_haml_partial_transfer(thread,haml,dvecs)
                 end do
                
                 if(acpt_cnt.gt.0)then
@@ -300,10 +266,9 @@ MODULE gradient_descent
                     rjct_cnt=rjct_cnt+1
                     rjct_cnt_global=rjct_cnt_global+1   
                 end if
-                
             end do
            
-            write(stdout,"(a,i0,a,f21.16)") "Energy after epoch no. ",epoc_cnt,": ",grad_fin%prev_erg
+        write(stdout,"(a,i0,a,f21.16,a,f10.5)") "Energy after epoch no. ",epoc_cnt,": ",grad_fin%prev_erg, "    Learning rate:",t
           
             if(acpt_cnt_2.gt.0)then
                 call epoc_writer(grad_fin%prev_erg,epoc_cnt,chng_trk,0)
@@ -312,12 +277,27 @@ MODULE gradient_descent
                 loops=loops-1
             end if 
 
+            if(acpt_cnt_2.lt.((ndet/2)+1))then
+                lralt_zs=lralt_zs+1
+                if(lralt_zs.gt.loop_max)then
+                    lralt_zs=0
+                end if
+            end if 
+
+            if(acpt_cnt_2.gt.(3*ndet/4))then
+                lralt_zs=lralt_zs-1
+                if(lralt_zs.lt.0)then
+                    lralt_zs=0
+                end if
+            end if
+         
             picker=scramble(ndet-1)
            
             if(loops.ge.maxloop)then
                 grad_fin%grad_avlb=0
                 exit
             end if
+
             acpt_cnt_2=0
             if(epoc_cnt.gt.epoc_max)then 
                 exit 
@@ -370,7 +350,7 @@ MODULE gradient_descent
        
     
         acpt_cnt=0  !counts how many ZS have been changed
-       
+        lralt_temp=1
         if(epoc_cnt.eq.1)then
             orb_cnt=2
         else
@@ -390,66 +370,43 @@ MODULE gradient_descent
             lr_chng_trk=0
             erg_chng_trk=0
             call haml_to_grad_do(haml,dvecs,thread)
+            t=b*((alpha/(lralt_temp))**(lralt_temp-1))
             do j=1,(ndet-1)
                 
                 pick=picker(j)
-                
-             
                 call grad_calculate(haml,dvecs,zstore,grad_fin,0)
-                ! call haml_to_grad_do(haml,dvecs,thread)
-                min_idx=-1
-                !$omp parallel do ordered &
-                !$omp private(t,temp) &
-                !$omp shared(min_idx,elect,zstore,grad_fin,thread,loop_max,alpha,b,pick,ndet)
-                do lralt_temp=1,loop_max
+                temp=thread
+                temp%zom=zstore(pick)
+                temp%zom%phi=zstore(pick)%phi
+                temp%zom%phi%x=zstore(pick)%phi%x-(t*grad_fin%vars(pick,:))
+                call val_set(temp%zom)
+                call he_full_row(temp,zstore,elect,ndet,0)
+                call imaginary_time_erg(temp,ndet)
 
-                    if(min_idx.eq.-1)then
-                        temp=thread
-                        t=b*(alpha**(lralt_temp-1))
-                        temp%zom=zstore(pick)
-                        temp%zom%phi=zstore(pick)%phi
-                        temp%zom%phi%x=zstore(pick)%phi%x-(t*grad_fin%vars(pick,:))
-                        call val_set(temp%zom)
-                        call he_full_row(temp,zstore,elect,ndet)
-                        call imaginary_time_erg(temp,ndet)
-                        if(temp%erg .lt. grad_fin%prev_erg)then
-                           !$omp critical
-                            if(min_idx.eq.-1)then
-                                min_idx = lralt_temp
-                                thread=temp
-                            end if
-                            !$omp end critical
-                        end if
-                    else 
-                        continue
-                    end if
-                end do
-                !$omp end parallel do
-
-                if(min_idx .eq. -1)then
-                    rjct_cnt_global=rjct_cnt_global+1
-                    write(stdout,"(a,i3,a,f21.16,a,f21.16,a,f21.16,a,i3,a,i3)") '       ', pick,'              ', &
-                    grad_fin%prev_erg,'               ',0.0,'             ',0.0,'        ',acpt_cnt,'          ',rjct_cnt_global
-                   
-                else
+                if(temp%erg .lt. grad_fin%prev_erg)then
                     t=b*(alpha**(min_idx-1))
                     acpt_cnt=acpt_cnt+1
                     chng_trk(acpt_cnt)=pick
                     lr_chng_trk(acpt_cnt)=t
-                    erg_chng_trk(acpt_cnt)=thread%erg
+                    erg_chng_trk(acpt_cnt)=temp%erg
                     !$acc update device(zstore(pick))
-                    call grad_do_haml_transfer(thread,haml,zstore(pick),dvecs)
+                    call grad_do_haml_transfer(temp,haml,zstore(pick),dvecs)
                     call zombiewriter(zstore(pick),pick,0)
                     rjct_cnt_global=0
             
-                write(stdout,"(a,i3,a,f21.16,a,f21.16,a,f21.16,a,i3,a,i3)") '       ', pick,'              ', &
-    grad_fin%prev_erg,'               ',thread%erg,'             ',t,'        ',acpt_cnt,'          ',rjct_cnt_global
-            
-                grad_fin%grad_avlb=0
-                grad_fin%prev_erg=thread%erg
+                    write(stdout,"(a,i3,a,f21.16,a,f21.16,a,f21.16,a,i3,a,i3)") '       ', pick,'              ', &
+    grad_fin%prev_erg,'               ',temp%erg,'             ',t,'        ',acpt_cnt,'          ',rjct_cnt_global
+        
+                    grad_fin%grad_avlb=0
+                    grad_fin%prev_erg=temp%erg
+                    min_idx=-1
+                else
+                    rjct_cnt_global=rjct_cnt_global+1
+                    write(stdout,"(a,i3,a,f21.16,a,f21.16,a,f21.16,a,i3,a,i3)") '       ', pick,'              ', &
+                    grad_fin%prev_erg,'               ',0.0,'             ',0.0,'        ',acpt_cnt,'          ',rjct_cnt_global
                 end if
+
                 flush(6)
-                call grad_do_haml_partial_transfer(thread,haml,dvecs)
                 
             end do
           
@@ -461,8 +418,26 @@ MODULE gradient_descent
             if(acpt_cnt.gt.0)then
                 call epoc_writer(grad_fin%prev_erg,epoc_cnt,chng_trk,erg_chng_trk,lr_chng_trk,0)
                 epoc_cnt=epoc_cnt+1
+            else 
+                if(lralt_temp.eq.16)then
+                    exit
+                end if
             end if
-           
+
+            if(acpt_cnt.lt.((ndet/2)+1))then
+                lralt_temp=lralt_temp+1
+                if(lralt_temp.gt.loop_max)then
+                    lralt_temp=0
+                end if
+            end if 
+
+            if(acpt_cnt.gt.(3*ndet/4))then
+                lralt_temp=lralt_temp-1
+                if(lralt_temp.lt.0)then
+                    lralt_temp=0
+                end if
+            end if
+
             orb_cnt=orb_cnt-1
           
             if(rjct_cnt_global.ge.(ndet+1))then
@@ -518,7 +493,6 @@ MODULE gradient_descent
 
         call allocgrad(grad_fin,ndet,norb)
         grad_fin%prev_erg=ergcalc(haml%hjk,dvecs%d)
-      
         epoc_cnt=1 !epoc counter
         if(rstrtflg.eq.'y')then 
             ierr=0
@@ -572,8 +546,8 @@ MODULE gradient_descent
             picker=scramble(ndet-1)
             ! call full_zs_gd(zstore,elect,dvecs,haml,grad_fin) 
             call orbital_gd(zstore,grad_fin,elect,dvecs,haml,1000)
-            call full_zs_gd(zstore,elect,dvecs,haml,grad_fin) 
-            !call orbital_gd(zstore,grad_fin,elect,dvecs,haml,100)
+            ! call full_zs_gd(zstore,elect,dvecs,haml,grad_fin) 
+            call orbital_gd(zstore,grad_fin,elect,dvecs,haml,epoc_max-epoc_cnt)
             
         end if 
 
