@@ -68,7 +68,7 @@ MODULE ham
        
         if (errorflag .ne. 0) return 
        
-        call omp_set_nested(.TRUE.)
+        ! call omp_set_nested(.TRUE.)
 
         do j=1,size
             !$omp  parallel do & 
