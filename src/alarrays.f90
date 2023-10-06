@@ -16,10 +16,8 @@ MODULE alarrays
         if (errorflag .ne. 0) return
 
         allocate (elecs%integrals(n), stat=ierr)
-        if(ierr==0) allocate (elecs%alive(norb,n),stat=ierr)
-        if(ierr==0) allocate (elecs%dead(norb,n),stat=ierr)
-        if(ierr==0) allocate (elecs%neg_a(norb,n),stat=ierr)
-        if(ierr==0) allocate (elecs%neg_d(norb,n),stat=ierr)
+        allocate (elecs%orbital_choice(norb,n), stat=ierr)
+        allocate (elecs%orbital_choice2(0:norb,n), stat=ierr)
 
         if (ierr/=0) then
             write(stderr,"(a,i0)") "Error in electron integral  deallocation. ierr had value ", ierr
@@ -42,10 +40,8 @@ MODULE alarrays
 
        
         deallocate (elecs%integrals, stat=ierr)
-        if(ierr==0) deallocate (elecs%alive,stat=ierr)
-        if(ierr==0) deallocate (elecs%dead,stat=ierr)
-        if(ierr==0) deallocate (elecs%neg_a,stat=ierr)
-        if(ierr==0) deallocate (elecs%neg_d,stat=ierr)
+        deallocate (elecs%orbital_choice, stat=ierr)
+        deallocate (elecs%orbital_choice2, stat=ierr)
 
         if (ierr/=0) then
             write(stderr,"(a,i0)") "Error in electron integral  deallocation. ierr had value ", ierr
@@ -293,6 +289,8 @@ MODULE alarrays
        
         allocate(gradients%vars(num,length),stat=ierr)
         if (ierr==0)allocate(gradients%grad_avlb(length,num),stat=ierr)
+        if (ierr==0)allocate(gradients%ovrlp_grad(length,num,num),stat=ierr)
+        if (ierr==0)allocate(gradients%ovrlp_grad_avlb(length,num,num),stat=ierr)
         if (ierr/=0) then
             write(stderr,"(a,i0)") "Error in gradient matrix allocation. ierr had value ", ierr
             errorflag=1
@@ -317,6 +315,8 @@ MODULE alarrays
         
         deallocate(gradients%vars,stat=ierr)
         if (ierr==0)deallocate(gradients%grad_avlb,stat=ierr)
+        if (ierr==0)deallocate(gradients%ovrlp_grad,stat=ierr)
+        if (ierr==0)deallocate(gradients%ovrlp_grad_avlb,stat=ierr)
         if (ierr/=0) then
             write(stderr,"(a,i0)") "Error in gradient matrix deallocation. ierr had value ", ierr
             errorflag=1
