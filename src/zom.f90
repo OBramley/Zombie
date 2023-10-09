@@ -29,23 +29,18 @@ MODULE zom
                        dummy=2*pirl*(ZBQLU01(1)) 
                     end do
                     !$omp end critical
-                    zstore(j)%phi(k)%x=dummy
+                    zstore(j)%phi(k)=dummy
                 end do
-                if(GDflg.eq.'y')then
-                    call dual_grad_setup(zstore(j))
-                end if
                 call val_set(zstore(j))
             end do
             if(rhf_1=='y') then
 
-                zstore(1)%phi(1:nel)%x=0.5*pirl
-                zstore(1)%phi(nel+1:)%x=0
-                zstore(1)%val(1:norb)%x=0 
-                zstore(1)%val(norb+1:)%x=1 
-                zstore(1)%val(1:nel)%x=1
-                zstore(1)%val(norb+1:norb+nel)%x=0
-                call dx_zero(zstore(1)%phi)
-                call dx_zero(zstore(1)%val)
+                zstore(1)%phi(1:nel)=0.5*pirl
+                zstore(1)%phi(nel+1:)=0
+                zstore(1)%val(1:norb)=0 
+                zstore(1)%val(norb+1:)=1 
+                zstore(1)%val(1:nel)=1
+                zstore(1)%val(norb+1:norb+nel)=0
                 ! zstore(1)%sin(1:nel)=cmplx(1,0.0d0,kind=8)
                 ! zstore(1)%cos(1:nel)=cmplx(0,0.0d0,kind=8)
             end if 
@@ -245,18 +240,18 @@ MODULE zom
         if (errorflag .ne. 0) return
 
 
-        zom%val(1+norb:2*norb)%x=1.0d0
-        zom%val(1:norb)%x=0.0d0
-        zom%phi(1:norb)%x=0
+        zom%val(1+norb:2*norb)=1.0d0
+        zom%val(1:norb)=0.0d0
+        zom%phi(1:norb)=0
 
         do j=1, norb
             if(occ(j)==0)then
                 return
             end if
             
-            zom%val(occ(j))%x=1.0d0
-            zom%val(norb+occ(j))%x=0.0d0
-            zom%phi(occ(j))%x=0.5*pirl
+            zom%val(occ(j))=1.0d0
+            zom%val(norb+occ(j))=0.0d0
+            zom%phi(occ(j))=0.5*pirl
   
         end do
 
@@ -292,7 +287,7 @@ MODULE zom
                         val=2*pirl*(ZBQLU01(1))
                     end if
                     
-                    zstore(j)%phi(2*k-1)%x=val
+                    zstore(j)%phi(2*k-1)=val
                     val=-1
                     do while(val.lt.0)
                         val=2*pirl*random_normal(mu(k),sig(k))
@@ -300,13 +295,9 @@ MODULE zom
                     if((is_nan(val).eqv..true.))then
                         val=2*pirl*(ZBQLU01(1)) 
                     end if 
-                    zstore(j)%phi(2*k)%x=val
+                    zstore(j)%phi(2*k)=val
                 end do
                 !$omp end critical
-               
-                if(GDflg.eq.'y')then
-                    call dual_grad_setup(zstore(j))
-                end if
                
                 call val_set(zstore(j))
                 ! zstore(j)%val(1:norb) = sin(zstore(j)%phi)
@@ -316,14 +307,12 @@ MODULE zom
             !$omp end do
             !$omp end parallel
             if(rhf_1=='y') then
-                zstore(1)%phi(1:nel)%x=0.5*pirl
-                zstore(1)%phi(nel+1:)%x=0
-                zstore(1)%val(1:norb)%x=0 
-                zstore(1)%val(norb+1:)%x=1 
-                zstore(1)%val(1:nel)%x=1
-                zstore(1)%val(norb+1:norb+nel)%x=0
-                call dx_zero(zstore(1)%phi)
-                call dx_zero(zstore(1)%val)
+                zstore(1)%phi(1:nel)=0.5*pirl
+                zstore(1)%phi(nel+1:)=0
+                zstore(1)%val(1:norb)=0 
+                zstore(1)%val(norb+1:)=1 
+                zstore(1)%val(1:nel)=1
+                zstore(1)%val(norb+1:norb+nel)=0
             end if 
         else if(imagflg=='y')then
             print*,"not yet written"
@@ -365,23 +354,6 @@ MODULE zom
         return
 
     end subroutine
-
-    subroutine dual_grad_setup(zs)
-
-        implicit none
-        type(zombiest),intent(inout)::zs
-
-        integer::k
-        if (errorflag .ne. 0) return
-
-        do k=1,norb
-            zs%phi(k)%dx(k)=1.0d0
-        end do 
-       
-
-        return 
-    
-    end subroutine dual_grad_setup
 
     subroutine genzf(zstore,num)
         

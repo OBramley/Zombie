@@ -7,22 +7,12 @@ MODULE globvars
 
     integer, parameter::wp = dp ! Sets the precision of the program to double precision
 
-    type :: dual ! make this private will create difficulty to use the
-                        ! original write/read commands, hence x and dx are
-                        ! variables which can be accessed using D%x and D%dx in
-                        ! other units using this module in which D is defined
-                        ! as type(dual).
-        sequence
-        real(wp) :: x        ! functional value
-        real(wp), allocatable, dimension(:):: dx  ! derivative
-
-    end type dual
-
+   
     ! Type defining the zombie state
     type zombiest
-        type(dual),dimension(:),allocatable::phi
+        real(wp),dimension(:),allocatable::phi
         ! real(wp),dimension(:),allocatable::img
-        type(dual),dimension(:),allocatable::val
+        real(wp),dimension(:),allocatable::val
     end type zombiest
 
     interface val_set
@@ -122,48 +112,14 @@ MODULE globvars
     
     contains
 
-    elemental subroutine dx_zero(d)
-        type(dual), intent(inout) :: d
-        d%dx = 0.0d0
-
-    end subroutine dx_zero
-
- !-----------------------------------------
-    ! COS of dual numbers
-    ! <res, dres> = cos(<u, du>) = <cos(u), -sin(u) * du>
-    !----------------------------------------
-    elemental function cos_d(u) result(res)
-        type(dual), intent(in) :: u
-        type(dual) :: res
-        
-        allocate(res%dx(size(u%dx)))
-        res%x = cos(u%x)
-        res%dx = -sin(u%x) * u%dx
-
-    end function cos_d
-
-    !-----------------------------------------
-    ! SIN of dual numbers
-    ! <res, dres> = sin(<u, du>) = <sin(u), cos(u) * du>
-    !----------------------------------------
-    elemental function sin_d(u) result(res)
-        type(dual), intent(in) :: u
-        type(dual) :: res
-
-        allocate(res%dx(size(u%dx)))
-        res%x = sin(u%x)
-        res%dx = cos(u%x) * u%dx
-
-    end function sin_d
-
     subroutine val_set_whole(this)
         implicit none
         class(zombiest),intent(inout)::this
       
-        this%val(0)%x=0.0d0
+        this%val(0)=0.0d0
   
-        this%val(1:norb)=sin_d(this%phi)
-        this%val(1+norb:2*norb)=cos_d(this%phi)
+        this%val(1:norb)=sin(this%phi)
+        this%val(1+norb:2*norb)=cos(this%phi)
     
         return
 
@@ -175,8 +131,8 @@ MODULE globvars
         integer,intent(in)::n
 
      
-        this%val(n)=sin_d(this%phi(n))
-        this%val(n+norb)=cos_d(this%phi(n))
+        this%val(n)=sin(this%phi(n))
+        this%val(n+norb)=cos(this%phi(n))
        
     
         return
@@ -189,9 +145,9 @@ MODULE globvars
         integer(int8)::s
 
         if(x>0) then
-            s=1
-        else if(x<0) then
             s=-1
+        else if(x<0) then
+            s=1
         else
             s=0
         end if

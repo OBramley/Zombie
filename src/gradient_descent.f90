@@ -97,7 +97,7 @@ MODULE gradient_descent
         if(orb==0)then
             if(grad_fin%grad_avlb(1,pick)==0)then
                 call DGEMV("N",ndet,ndet,1.d0,haml%hjk,ndet,dvec%d,1,0.d0,temp,1)
-                ham_c_d=(-dvec%d_o_d/(dvec%norm*dvec%norm*dvec%norm))*dot_product(temp,dvec%d_1)
+                ham_c_d=(dvec%d_o_d/(dvec%norm*dvec%norm*dvec%norm))*dot_product(temp,dvec%d_1)
                 ovrlp_dx=1.0d0
                 !$omp parallel private(j,k,temp) shared(zstore,ovrlp_dx,pick,ndet,norb,dvec,ham_c_d,grad_fin) 
                 !$omp do collapse(2)
@@ -105,8 +105,8 @@ MODULE gradient_descent
                     do k=1,norb
                         if(grad_fin%ovrlp_grad_avlb(k,j,pick).eq.0)then
                             grad_fin%ovrlp_grad(k,j,pick)=haml%ovrlp(j,pick)*&
-                            (zstore(j)%val(k)%x*zstore(pick)%val(k+norb)%x-zstore(j)%val(k+norb)%x*zstore(pick)%val(k)%x)/&
-                            (zstore(j)%val(k)%x*zstore(pick)%val(k)%x+zstore(j)%val(k+norb)%x*zstore(pick)%val(k+norb)%x)
+                            (zstore(j)%val(k)*zstore(pick)%val(k+norb)-zstore(j)%val(k+norb)*zstore(pick)%val(k))/&
+                            (zstore(j)%val(k)*zstore(pick)%val(k)+zstore(j)%val(k+norb)*zstore(pick)%val(k+norb))
                             grad_fin%ovrlp_grad_avlb(k,j,pick)=1
                         end if 
                     end do
@@ -129,21 +129,21 @@ MODULE gradient_descent
         else
             if(grad_fin%grad_avlb(orb,pick)==0)then
                 call DGEMV("N",ndet,ndet,1.d0,haml%hjk,ndet,dvec%d,1,0.d0,temp,1)
-                ham_c_d=(-dvec%d_o_d/(dvec%norm*dvec%norm*dvec%norm))*dot_product(temp,dvec%d_1)
+                ham_c_d=(dvec%d_o_d/(dvec%norm*dvec%norm*dvec%norm))*dot_product(temp,dvec%d_1)
                 ovrlp_dx=1.0d0
-                !!$omp parallel do reduction(*: ovrlp_dx)collapse(2) private(j,l) shared(zstore,pick,ndet,norb,orb)
+                !$omp parallel do private(j) shared(zstore,grad_fin,haaml,pick,ndet,norb,orb)
                 do j=1,ndet
                     if(grad_fin%ovrlp_grad_avlb(orb,j,pick).eq.0)then
                         grad_fin%ovrlp_grad(orb,j,pick)=haml%ovrlp(j,pick)*&
-                        (zstore(j)%val(orb)%x*zstore(pick)%val(orb+norb)%x-zstore(j)%val(orb+norb)%x*zstore(pick)%val(orb)%x)/&
-                        (zstore(j)%val(orb)%x*zstore(pick)%val(orb)%x+zstore(j)%val(orb+norb)%x*zstore(pick)%val(orb+norb)%x)
+                        (zstore(j)%val(orb)*zstore(pick)%val(orb+norb)-zstore(j)%val(orb+norb)*zstore(pick)%val(orb))/&
+                        (zstore(j)%val(orb)*zstore(pick)%val(orb)+zstore(j)%val(orb+norb)*zstore(pick)%val(orb+norb))
                         grad_fin%ovrlp_grad_avlb(orb,j,pick)=1
                     end if
                 end do  
-                !!$omp end parallel do
+                !$omp end parallel do
                 ovrlp_dx(orb,pick)=0
-                temp=grad_fin%ovrlp_grad(orb,:,pick) !ovrlp_dx(orb,:)*dvec%d_1
-                temp(pick)=dot_product(grad_fin%ovrlp_grad(orb,:,pick),dvec%d_1) !dot_product(ovrlp_dx(orb,:),dvec%d_1)
+                temp=grad_fin%ovrlp_grad(orb,:,pick)
+                temp(pick)=dot_product(grad_fin%ovrlp_grad(orb,:,pick),dvec%d_1)
                 grad_fin%vars(pick,orb)=dot_product(temp,dvec%d_1)*ham_c_d
                 grad_fin%grad_avlb(orb,pick)=1
             else 
@@ -242,7 +242,7 @@ MODULE gradient_descent
                     call grad_calculate(haml,dvecs,zstore,grad_fin,pickorb)
                     thread%zom=zstore(pick)
                     temp=thread
-                    temp%zom%phi(pickorb)%x = thread%zom%phi(pickorb)%x-(t*grad_fin%vars(pick,pickorb))
+                    temp%zom%phi(pickorb) = thread%zom%phi(pickorb)-(t*grad_fin%vars(pick,pickorb))
                     call val_set(temp%zom,pickorb)
                     call he_full_row(temp,zstore,elect,ndet,pickorb)
                     call imaginary_time_erg(temp,ndet)
@@ -390,7 +390,7 @@ MODULE gradient_descent
                 temp=thread
                 temp%zom=zstore(pick)
                 temp%zom%phi=zstore(pick)%phi
-                temp%zom%phi%x=zstore(pick)%phi%x-(t*grad_fin%vars(pick,:))
+                temp%zom%phi=zstore(pick)%phi-(t*grad_fin%vars(pick,:))
                 call val_set(temp%zom)
                 call he_full_row(temp,zstore,elect,ndet,0)
                 call imaginary_time_erg(temp,ndet)
