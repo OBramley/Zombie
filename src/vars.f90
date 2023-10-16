@@ -13,6 +13,8 @@ MODULE globvars
         real(wp),dimension(:),allocatable::phi
         ! real(wp),dimension(:),allocatable::img
         real(wp),dimension(:),allocatable::val
+        real(wp)::num
+        real(wp)::num_strt
     end type zombiest
 
     interface val_set

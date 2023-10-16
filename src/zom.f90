@@ -267,7 +267,7 @@ MODULE zom
         real(wp)::mu((norb/2)),sig(norb/2)
         real(wp)::val
         integer::j,k
-      
+       
 
         if (errorflag .ne. 0) return
  
@@ -317,6 +317,9 @@ MODULE zom
         else if(imagflg=='y')then
             print*,"not yet written"
         end if
+
+       
+
         return
 
     end subroutine gen_biased_zs

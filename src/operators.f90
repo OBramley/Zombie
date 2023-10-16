@@ -1,5 +1,6 @@
 MODULE operators
 
+    use mod_types
     use globvars
     use alarrays
 
@@ -14,8 +15,7 @@ MODULE operators
         implicit none
         type(zombiest),intent(inout)::zs
         integer, intent(in)::iorb
-        ! integer:: j
-
+    
         if (errorflag .ne. 0) return
 
         zs%val(iorb)=zs%val(iorb+norb)
@@ -32,8 +32,6 @@ MODULE operators
         implicit none
         type(zombiest),intent(inout)::zs
         integer, intent(in)::iorb
-        ! integer:: j
-
         if (errorflag .ne. 0) return
 
         zs%val(norb+iorb)=zs%val(iorb)
@@ -51,10 +49,7 @@ MODULE operators
         type(zombiest),intent(in)::z1,z2
         real(wp)::temp
         real(wp),dimension(norb)::cc, dd, mult, multb
-        integer:: j, ierr,iorb 
-
-        if (errorflag .ne. 0) return
-        ierr=0
+        integer:: j
 
         do j=1, norb
             mult(j)=(z1%val(j))*z2%val(j)
@@ -69,9 +64,14 @@ MODULE operators
         do j=(norb-1),1,-(1)
             dd(j)=dd(j+1)*multb(j)
         end do
+        ! print*, "cc", cc
+        ! print*, "dd", dd
+        ! print*, "mult", mult
+        ! print*, "multb", multb
+
         temp=mult(1)*dd(2)
         do j=2, (norb-2)
-            temp = temp+cc(j-1)*mult(j)*dd(j+1)
+            temp = temp+(cc(j-1)*mult(j)*dd(j+1))
         end do
         temp=temp+cc(norb-1)*mult(norb)
 
@@ -101,10 +101,7 @@ MODULE operators
         type(zombiest),intent(in)::z1,z2
         real(wp)::temp
         type(zombiest),dimension(:),allocatable::zt
-        integer:: j, ierr
-
-        if (errorflag .ne. 0) return
-        ierr=0
+        integer:: j
 
         call alloczs(zt,norb)
        
@@ -167,9 +164,6 @@ MODULE operators
         type(zombiest),intent(in)::zs
         integer:: j
         real(wp)::tt 
-
-        if (errorflag .ne. 0) return
-
         do j=1, norb
             tt=zs%val(j+norb) + zs%val(j)
             if(tt==0)then
@@ -215,8 +209,6 @@ MODULE operators
         integer, dimension(orb)::bini
         integer::jt,k
 
-        if (errorflag .ne. 0) return
-
         if(j>=2**orb) then
             write(0) "j too big"
             errorflag=1
@@ -245,8 +237,6 @@ MODULE operators
         integer, dimension(orb),intent(in)::bini
         integer::temp, j 
 
-        if (errorflag .ne. 0) return
-
         temp=0
         do j=1,orb
             temp = temp + ((2**j)*bini(j))
@@ -265,12 +255,8 @@ MODULE operators
         type(zombiest),intent(in)::z1,z2
         real(wp)::temp
         real(wp),dimension(norb)::cc, dd, mult, multb
-        integer:: j, ierr 
+        integer:: j
 
-        if (errorflag .ne. 0) return
-        ierr=0
-
-       
         do j=1, norb
             mult(j)=(z1%val(j))*z2%val(j)
             multb(j)=mult(j) + (z1%val(j+norb))*z2%val(j+norb)
@@ -304,11 +290,10 @@ MODULE operators
         type(zombiest),intent(in)::z1,z2
         real(wp)::temp
         type(zombiest),dimension(:),allocatable::zt
-        integer:: j, ierr,orb 
+        integer:: j,orb 
 
         if (errorflag .ne. 0) return
-        ierr=0
-
+    
         temp=0.0d0
         call alloczs(zt,norb)
 
@@ -338,12 +323,9 @@ MODULE operators
         type(zombiest),intent(in)::z1,z2
         real(wp)::tot,p1,p2,p3
         real(wp),dimension(norb)::cc, dd, ss, tt
-        integer:: j, ierr,kmax,a,b,k,l  
+        integer:: j,kmax,a,b,k,l  
 
-        if (errorflag .ne. 0) return
-        ierr=0
-
-     
+        
         kmax=norb/2
         
         do j=1, kmax
@@ -406,8 +388,6 @@ MODULE operators
         
         implicit none
         type(zombiest),intent(in)::z1,z2
-
-        if (errorflag .ne. 0) return
         
         stotfast=spsmfast(z1,z2)-szf(z1,z2)+sz2f(z1,z2)
         return

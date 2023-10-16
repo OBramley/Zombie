@@ -91,7 +91,6 @@ MODULE alarrays
         implicit none
         type(zombiest),intent(inout)::zs
         integer::ierr=0
-        integer::j
 
         if (errorflag .ne. 0) return
 
@@ -142,7 +141,6 @@ MODULE alarrays
 
         type(zombiest),intent(inout)::zs
         integer::ierr=0
-        integer::j
 
         if (errorflag .ne. 0) return
 

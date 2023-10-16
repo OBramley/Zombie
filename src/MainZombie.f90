@@ -11,6 +11,7 @@ program MainZombie
     use clean
     use zom
     use gradient_descent
+    use operators
     use omp_lib
 
     implicit none
@@ -24,12 +25,13 @@ program MainZombie
     real(wp), dimension(:),allocatable::erg
     type(hamiltonian)::clean_haml
     type(dvector)::dvec_clean
-    real(wp)::clean_norm, clean_erg
+    real(wp)::clean_norm, clean_erg,num1,num2
     character(LEN=100) :: CWD
-    real(wp):: starttime, stoptime, runtime
+    real(wp):: starttime, stoptime, runtime,t
     integer(wp):: randseed
-    integer::ierr=0, istat=0
+    integer::a,k,ierr=0, istat=0
     ! DOUBLE PRECISION, external::ZBQLU01
+    type(zombiest)::temp_Z
 
     call CPU_TIME(starttime) !used to calculate the runtime, which is output at the end
     write(stdout,"(a)") " ________________________________________________________________ "
@@ -75,6 +77,38 @@ program MainZombie
             write(stdout,"(a)") "Zombie states allocated"
             if(zomgflg=='y')then
                 call genzf(zstore,ndet)
+                call alloczf(temp_Z)
+                zstore(1)%num=numf(zstore(1),zstore(1))
+                zstore(1)%num_strt=zstore(1)%num
+                do j=2,ndet
+                    a=0
+                    zstore(j)%num=numf(zstore(j),zstore(j))
+                    k=0
+                    do while((abs(zstore(j)%num-nel).gt.0.0001))
+                    
+                        t=500*(0.2**a)
+                        temp_Z%phi=zstore(j)%phi-2*t*(zstore(j)%val(1:norb)*zstore(j)%val(1+norb:2*norb))
+                        call val_set(temp_Z)
+                        temp_z%num=numf(temp_Z,temp_Z)
+                        if(abs(temp_z%num-nel).lt.abs(zstore(j)%num-nel))then
+                            zstore(j)=temp_z
+                            ! zstore(j)%phi=temp_z%phi
+                            ! zstore(j)%val=temp_z%val
+                            ! zstore(j)%num=temp_z%num
+                        else
+                            a=a+1
+                            if(a.gt.20)then
+                                a=0
+                            end if 
+                        end if
+                        k=k+1
+                        if(k.gt.100000)then
+                            exit
+                        end if
+                    end do
+                    zstore(j)%num_strt=zstore(j)%num
+                end do 
+                call dealloczf(temp_Z)
                 do j=1,ndet
                     call zombiewriter(zstore(j),j,0)
                 end do
@@ -120,7 +154,7 @@ program MainZombie
             write(stdout,"(a)") "Imaginary time propagation finished"
        
             write(stdout,"(a,f21.16)") "Initial energy: ", erg(timesteps+1)
-         
+            
             call dvec_writer(dvecs%d,ndet,0)
             call energywriter(erg,"energy.csv",0)
        
@@ -130,9 +164,15 @@ program MainZombie
                 call zombie_alter(zstore,haml,elect,dvecs)
                 !$acc end data
                 GDflg='n'
+                num1=0.0d0;num2=0.0d0
                 do j=1,ndet
                     call zombiewriter(zstore(j),j,0)
+                    num1=num1+zstore(j)%num_strt
+                    zstore(j)%num=numf(zstore(j),zstore(j))
+                    print*,zstore(j)%num_strt, zstore(j)%num
+                    num2=num2+zstore(j)%num
                 end do
+                print*,num1/ndet,num2/ndet
                 dvecs%d=0.0d0
                 allocate(erg(timesteps+1),stat=ierr)
                 call imaginary_time_prop2(dvecs,erg,haml,ndet)

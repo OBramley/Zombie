@@ -65,9 +65,9 @@ MODULE ham
         type(elecintrgl),intent(in)::elecs
         integer,intent(in)::verb,size
         integer::j,k
-       
+         
         if (errorflag .ne. 0) return 
-       
+      
         ! call omp_set_nested(.TRUE.)
 
         do j=1,size
@@ -82,7 +82,7 @@ MODULE ham
                 write(stdout,"(a,i0,a)") "hamliltonian column ",j, " completed"
             end if 
         end do
-      
+    
         !$omp  parallel do
         do j=1,size
             do k=j,size
