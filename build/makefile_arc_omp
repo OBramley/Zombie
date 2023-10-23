@@ -15,7 +15,7 @@ VPATH=../src
 
 all: ZOMBIE
 
-ZOMBIE:randgen.o mod_types.o vars.o infnan_constants.o inf.o infnan.o alarrays.o readpars.o outputs.o electrons.o zom.o ham.o imgtp.o clean.o gradient_descent.o MainZombie.o #gram_schmidt.o
+ZOMBIE:randgen.o mod_types.o vars.o infnan_constants.o inf.o infnan.o alarrays.o operators.o readpars.o outputs.o electrons.o zom.o ham.o imgtp.o clean.o gradient_descent.o MainZombie.o #gram_schmidt.o
 		 $(F90) $(FFLAGS) -o $@ $^ $(FLINKS)
 
 
@@ -40,6 +40,9 @@ vars.o:vars.f90 mod_types.o
 	 $(F90) $(FFLAGS) -c $<
 
 alarrays.o:alarrays.f90 vars.o mod_types.o 
+	 $(F90) $(FFLAGS) -c $<
+
+operators.o:operators.f90 vars.o alarrays.o mod_types.o 
 	 $(F90) $(FFLAGS) -c $<
 
 readpars.o:readpars.f90 vars.o mod_types.o 
@@ -69,7 +72,7 @@ gradient_descent.o:gradient_descent.f90 vars.o alarrays.o ham.o imgtp.o outputs.
 # gram_schmidt.o:gram_schmidt.f90 vars.o alarrays.o ham.o gradient_descent.o grad_d.o imgtp.o outputs.o infnan.o zom.o grad_calc.o
 # 	 $(F90) $(FFLAGS) -c $<
 
-MainZombie.o:MainZombie.f90 randgen.o mod_types.o vars.o infnan_constants.o inf.o infnan.o alarrays.o readpars.o outputs.o electrons.o zom.o ham.o imgtp.o clean.o gradient_descent.o  #gram_schmidt.o
+MainZombie.o:MainZombie.f90 randgen.o mod_types.o vars.o infnan_constants.o inf.o infnan.o alarrays.o operators.o readpars.o outputs.o electrons.o zom.o ham.o imgtp.o clean.o gradient_descent.o  #gram_schmidt.o
 	 $(F90) $(FFLAGS) -c $<
 
 # This entry allows you to type " make clean " to get rid of

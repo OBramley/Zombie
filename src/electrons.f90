@@ -213,8 +213,6 @@ MODULE electrons
         real(wp), dimension(M):: sort2
         integer :: l, j, cnt,chck
         integer,dimension(8)::check_val
-        ! =[1,2,3,-1,-2,-3,-4,0]
-        ! Extract the leftmost values (first column) of each row
         
         cnt=0
         do l=1,8

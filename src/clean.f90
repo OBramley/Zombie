@@ -90,13 +90,13 @@ MODULE clean
                 !$omp flush(total2,magovrlp,temp_t2)
                 call zomhfc(zs,combins)
                 do k=1,ndet
-                    ovrlp1=product((zs%val(1:norb)%x*zstore(k)%val(1:norb)%x)+&
-                    (zs%val(1+norb:)%x*zstore(k)%val(1+norb:)%x))*dvec%d(k)
+                    ovrlp1=product((zs%val(1:norb)*zstore(k)%val(1:norb))+&
+                    (zs%val(1+norb:)*zstore(k)%val(1+norb:)))*dvec%d(k)
                     if(pass.ne.1)then
                         magovrlp(total2)=magovrlp(total2)+ovrlp1
                     end if
                     do l=1,ndet
-                        ovrlp2=product((zs%val(1:norb)%x*zstore(l)%val(1:norb)%x)+(zs%val(1+norb:)%x*zstore(l)%val(1+norb:)%x))
+                        ovrlp2=product((zs%val(1:norb)*zstore(l)%val(1:norb))+(zs%val(1+norb:)*zstore(l)%val(1+norb:)))
                         norm=norm + (dvec%d(l)*ovrlp1*ovrlp2)
                     end do
                 end do
@@ -292,8 +292,8 @@ MODULE clean
                 magnitude=0.0
                 ! magnitude=(0.0,0.0)
                 do k=1, ndet
-                    magnitude=magnitude+product((cstore(j)%val(1:norb)%x*zstore(k)%val(1:norb)%x)+&
-                    (cstore(j)%val(1+norb:)%x*zstore(k)%val(1+norb:)%x))    
+                    magnitude=magnitude+product((cstore(j)%val(1:norb)*zstore(k)%val(1:norb))+&
+                    (cstore(j)%val(1+norb:)*zstore(k)%val(1+norb:)))    
                     ! overlap(cstoretemp(j),zstore(k))
                 end do
                 ! if(abs(REAL(magnitude))>0.0005) then
@@ -366,15 +366,15 @@ MODULE clean
         if (errorflag .ne. 0) return
 
      
-        zoms%val(1+norb:2*norb)%x=1.0d0
-        zoms%val(1:norb)%x=0.0d0
-        zoms%phi(1:norb)%x=0
+        zoms%val(1+norb:2*norb)=1.0d0
+        zoms%val(1:norb)=0.0d0
+        zoms%phi(1:norb)=0
 
 
         do j=1, size(occ)
-            zoms%val(occ(j))%x=1.0d0
-            zoms%val(norb+occ(j))%x=0.0d0
-            zoms%phi(occ(j))%x=0.5*pirl
+            zoms%val(occ(j))=1.0d0
+            zoms%val(norb+occ(j))=0.0d0
+            zoms%phi(occ(j))=0.5*pirl
         end do
 
         return
@@ -402,14 +402,14 @@ MODULE clean
         do j=1,cleantot
             do k=1, ndet
                 ! ovrlp1=overlap(cleanzom(j),zstore(k))
-                ovrlp1=product((cleanzom(j)%val(1:norb)%x*zstore(k)%val(1:norb)%x)+&
-                (cleanzom(j)%val(1+norb:)%x*zstore(k)%val(1+norb:)%x))
+                ovrlp1=product((cleanzom(j)%val(1:norb)*zstore(k)%val(1:norb))+&
+                (cleanzom(j)%val(1+norb:)*zstore(k)%val(1+norb:)))
                 dvec_clean%d(j)=dvec_clean%d(j)+(dvec%d(k)*ovrlp1)
                 
                 do l=1, ndet
                     ! ovrlp2=overlap(zstore(l),cleanzom(j))
-                    ovrlp2=product((cleanzom(j)%val(1:norb)%x*zstore(l)%val(1:norb)%x)+&
-                    (cleanzom(j)%val(1+norb:)%x*zstore(l)%val(1+norb:)%x))
+                    ovrlp2=product((cleanzom(j)%val(1:norb)*zstore(l)%val(1:norb))+&
+                    (cleanzom(j)%val(1+norb:)*zstore(l)%val(1+norb:)))
                     ! norm = norm + (conjg(dvec%d(l))*dvec%d(k)*ovrlp2*ovrlp1)
                     norm = norm + (dvec%d(l))*dvec%d(k)*ovrlp2*ovrlp1
                 end do

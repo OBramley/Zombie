@@ -272,12 +272,8 @@ MODULE readpars
        
 
                 read(zomnum,*) phi
-                zstore(j)%phi%x=phi
-                if(GDflg.eq.'y')then
-                    do k=1,norb
-                        zstore(j)%phi(k)%dx(k)=1.0d0
-                    end do 
-                end if
+                zstore(j)%phi=phi
+               
                 call val_set(zstore(j))
                 ! zstore(j)%val(1:norb)=sin(zstore(j)%phi)
                 ! zstore(j)%val(norb+1:2*norb)=cos(zstore(j)%phi)
@@ -286,10 +282,7 @@ MODULE readpars
                 close(zomnum)
                
             end do
-            if(rhf_1=='y') then
-                call dx_zero(zstore(1)%phi)
-                call dx_zero(zstore(1)%val)
-            end if 
+           
         else if(imagflg=='y')then
             ! do j=1, ndet
             !     write(num,"(i4.4)")j
@@ -350,13 +343,13 @@ MODULE readpars
                 read(zomnum,*) dead
                 read(zomnum,*) alive
                 close(zomnum)
-                cstore(j)%val(norb+1:2*norb)%x=dead
-                cstore(j)%val(1:norb)%x=alive
+                cstore(j)%val(norb+1:2*norb)=dead
+                cstore(j)%val(1:norb)=alive
                 do k=1, norb
-                    if(int(cstore(j)%val(k)%x).eq.1)then
-                        cstore(j)%phi(k)%x=0.5*pirl
+                    if(int(cstore(j)%val(k)).eq.1)then
+                        cstore(j)%phi(k)=0.5*pirl
                     else
-                        cstore(j)%phi(k)%x=0
+                        cstore(j)%phi(k)=0
                     end if 
                 end do
             end do
