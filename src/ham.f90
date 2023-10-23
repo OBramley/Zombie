@@ -68,7 +68,7 @@ MODULE ham
        
         if (errorflag .ne. 0) return 
        
-        call omp_set_nested(.TRUE.)
+        ! call omp_set_nested(.TRUE.)
 
         do j=1,size
             !$omp  parallel do & 
@@ -190,7 +190,7 @@ MODULE ham
         real(wp),dimension(elecs%num)::ovrlp_vec
         
        
-        ovrlp=1.0d0
+        ovrlp=1.0d0; ov=1.0d0
         if(sm==0)then
             !$omp simd
             do j=1,norb
@@ -276,7 +276,7 @@ MODULE ham
         integer::j,k,strt,l
         real(wp),dimension(elecs%num)::ovrlp_vec
         
-    
+        ov=1.0d0
         if(sm==0)then
             !$omp simd
             do j=1,norb

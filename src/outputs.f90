@@ -300,11 +300,12 @@ MODULE outputs
         
     end subroutine epoc_writer_int
 
-    subroutine epoc_writer_array_orbital(erg,step,chng_trk,pass)
+    subroutine epoc_writer_array_orbital(erg,step,lr,chng_trk,pass)
 
         implicit none
         real(wp),intent(in)::erg
         integer,intent(in)::step,pass
+        real(wp),intent(in)::lr
         integer,dimension(:),intent(in)::chng_trk
         integer::k
         integer::ierr=0, epoc=450
@@ -318,10 +319,10 @@ MODULE outputs
             return
         end if
         if(pass.eq.1)then
-            write(epoc,'(i0,",",e25.17e3,",",a,",",*(i0:", "))') step,erg,"   ",(chng_trk(k),k=1,ndet-1)
+            write(epoc,'(i0,",",e25.17e3,",",e25.17e3,",",*(i0:", "))') step,erg,lr,(chng_trk(k),k=1,ndet-1)
          
         else
-            write(epoc,'(i0,",",e25.17e3,",",a,",",*(i0:", "))') step,erg,"   ",(chng_trk(k),k=1,ndet-1)
+            write(epoc,'(i0,",",e25.17e3,",",e25.17e3,",",*(i0:", "))') step,erg,lr,(chng_trk(k),k=1,ndet-1)
         
         end if
         close(epoc)

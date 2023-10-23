@@ -83,6 +83,8 @@ MODULE globvars
         real(wp):: prev_erg
         real(wp):: current_erg
         integer,dimension(:,:),allocatable::grad_avlb
+        real(wp),dimension(:,:,:),allocatable::ovrlp_grad
+        integer,dimension(:,:,:),allocatable::ovrlp_grad_avlb
     end type grad
 
     
