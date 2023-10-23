@@ -77,38 +77,40 @@ program MainZombie
             write(stdout,"(a)") "Zombie states allocated"
             if(zomgflg=='y')then
                 call genzf(zstore,ndet)
-                call alloczf(temp_Z)
-                zstore(1)%num=numf(zstore(1),zstore(1))
-                zstore(1)%num_strt=zstore(1)%num
-                do j=2,ndet
-                    a=0
-                    zstore(j)%num=numf(zstore(j),zstore(j))
-                    k=0
-                    do while((abs(zstore(j)%num-nel).gt.0.0001))
+                ! call alloczf(temp_Z)
+                ! zstore(1)%num=numf(zstore(1),zstore(1))
+                ! zstore(1)%num_strt=zstore(1)%num
+                ! do j=2,ndet
+                !     a=0
+                !     zstore(j)%num=numf(zstore(j),zstore(j))
+                !     k=0
+                !     do while((abs(zstore(j)%num-nel).gt.0.001))
                     
-                        t=500*(0.2**a)
-                        temp_Z%phi=zstore(j)%phi-2*t*(zstore(j)%val(1:norb)*zstore(j)%val(1+norb:2*norb))
-                        call val_set(temp_Z)
-                        temp_z%num=numf(temp_Z,temp_Z)
-                        if(abs(temp_z%num-nel).lt.abs(zstore(j)%num-nel))then
-                            zstore(j)=temp_z
-                            ! zstore(j)%phi=temp_z%phi
-                            ! zstore(j)%val=temp_z%val
-                            ! zstore(j)%num=temp_z%num
-                        else
-                            a=a+1
-                            if(a.gt.20)then
-                                a=0
-                            end if 
-                        end if
-                        k=k+1
-                        if(k.gt.100000)then
-                            exit
-                        end if
-                    end do
-                    zstore(j)%num_strt=zstore(j)%num
-                end do 
-                call dealloczf(temp_Z)
+                !         t=500*(0.2**a)
+                !         temp_Z%phi=zstore(j)%phi-2*t*(zstore(j)%val(1:norb)*zstore(j)%val(1+norb:2*norb))
+                !         call val_set(temp_Z)
+                !         temp_z%num=numf(temp_Z,temp_Z)
+                !         if(abs(temp_z%num-nel).lt.abs(zstore(j)%num-nel))then
+                !             zstore(j)=temp_z
+                !             ! zstore(j)%phi=temp_z%phi
+                !             ! zstore(j)%val=temp_z%val
+                !             ! zstore(j)%num=temp_z%num
+                !         else
+                !             a=a+1
+                !             if(a.gt.20)then
+                !                 a=0
+                !             end if 
+                !         end if
+                !         k=k+1
+                !         if(k.gt.1000000)then
+                !             exit
+                !         end if
+                !     end do
+                !     zstore(j)%num_strt=zstore(j)%num
+                    
+                ! end do 
+                ! call dealloczf(temp_Z)
+                
                 do j=1,ndet
                     call zombiewriter(zstore(j),j,0)
                 end do
