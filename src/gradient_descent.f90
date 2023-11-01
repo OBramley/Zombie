@@ -18,6 +18,7 @@ MODULE gradient_descent
     integer::epoc_cnt !epoc counter
     integer::loop_max=10 !max number of loops in gd
     integer::rjct_cnt_global=0
+    integer::ndet_increase=10
     integer::pick !Chosen zombie state
     integer,dimension(:),allocatable::picker
     integer,dimension(:),allocatable::chng_trk
@@ -176,7 +177,7 @@ MODULE gradient_descent
 
         implicit none 
 
-        type(zombiest),dimension(:),intent(inout)::zstore
+        type(zombiest),dimension(:),allocatable,intent(inout)::zstore
         type(elecintrgl),intent(in)::elect
         type(dvector),intent(inout)::dvecs
         type(hamiltonian),intent(inout)::haml
@@ -184,10 +185,11 @@ MODULE gradient_descent
         integer,intent(in)::maxloop
         type(grad_do)::temp,thread
         integer::rjct_cnt,acpt_cnt,pickorb,loops,lralt_zs,acpt_cnt_2
-        real(wp)::t,erg_str,num,chng
+        real(wp)::t,erg_str,chng
         integer::j,n,p,chng_chng
         integer,dimension(:),allocatable::chng_trk2,pickerorb
         integer::ierr=0
+        type(zombiest),dimension(:),allocatable::zstore_temp
 
         if (errorflag .ne. 0) return
      
@@ -229,7 +231,7 @@ MODULE gradient_descent
             chng_trk=0
             acpt_cnt_2=0  
             t=b*(alpha**lralt_zs)
-            ! t=0.001
+            
             do j=1,ndet-1
                
                 erg_str=grad_fin%prev_erg
@@ -251,8 +253,8 @@ MODULE gradient_descent
                     call he_full_row(temp,zstore,elect,ndet,pickorb)
                     call imaginary_time_erg(temp,ndet)
                     ! temp%zom%num=numf(temp%zom,temp%zom)
-                    ! if(temp%erg .lt. grad_fin%prev_erg)then
-                    if(temp%erg .lt. grad_fin%prev_erg+chng*t*grad_fin%vars(pick,pickorb)*grad_fin%vars(pick,pickorb))then 
+                    if(temp%erg .lt. grad_fin%prev_erg)then
+                    ! if(temp%erg .lt. grad_fin%prev_erg+chng*t*grad_fin%vars(pick,pickorb)*grad_fin%vars(pick,pickorb))then 
                         acpt_cnt=acpt_cnt+1
                         chng_trk2(acpt_cnt)=pickorb
                         rjct_cnt=0
@@ -301,12 +303,47 @@ MODULE gradient_descent
                 end if
             end if 
 
-            if(acpt_cnt_2.gt.(3*ndet/4))then
-                lralt_zs=lralt_zs-1
-                if(lralt_zs.lt.0)then
-                    lralt_zs=0
-                end if
-            end if
+            ! if(acpt_cnt_2.gt.(3*ndet/4))then
+            !     lralt_zs=lralt_zs-1
+            !     if(lralt_zs.lt.0)then
+            !         lralt_zs=0
+            !     end if
+            ! end if
+
+            if((modulo(epoc_cnt,200).eq.0).and.(ndet.lt.300))then
+                ndet=ndet+ndet_increase
+                call alloczs(zstore_temp,ndet)
+                call gen_biased_zs(zstore_temp)
+                zstore_temp(1:(ndet-ndet_increase))=zstore
+                call dealloczs(zstore)
+                call alloczs(zstore,ndet)
+                zstore=zstore_temp
+                call dealloczs(zstore_temp)
+                call deallocham(haml)
+                call allocham(haml,ndet)
+                call dealloc_grad_do(temp)
+                call dealloc_grad_do(thread)
+                call deallocdv(dvecs)
+                call allocdv(dvecs,ndet)
+                call hamgen(haml,zstore,elect,ndet,1)
+                call alloc_grad_do(temp,ndet)
+                call alloc_grad_do(thread,ndet)
+                call haml_to_grad_do(haml,dvecs,temp)
+                call imaginary_time_erg(temp,ndet)
+                call deallocgrad(grad_fin)
+                call allocgrad(grad_fin,ndet,norb)
+                grad_fin%prev_erg=temp%erg 
+                grad_fin%grad_avlb=0
+                grad_fin%ovrlp_grad_avlb=0
+                dvecs=temp%dvec
+                thread=temp
+                deallocate(picker,stat=ierr)
+                allocate(picker(ndet-1),stat=ierr)
+                do j=(ndet-ndet_increase+1),ndet
+                    call zombiewriter(zstore(j),j,0)
+                end do
+                lralt_zs=0
+            end if 
          
             picker=scramble(ndet-1)
            
@@ -314,11 +351,12 @@ MODULE gradient_descent
                 grad_fin%grad_avlb=0
                 exit
             end if
-            if(modulo(epoc_cnt,chng_chng)==0)then
-                chng=chng*alpha
-                chng_chng=chng_chng+100
-                lralt_zs=0
-            end if
+
+            ! if(modulo(epoc_cnt,chng_chng)==0)then
+            !     chng=chng*alpha
+            !     chng_chng=chng_chng+100
+            !     lralt_zs=0
+            ! end if
             
             acpt_cnt_2=0
             if(epoc_cnt.gt.epoc_max)then 
@@ -347,7 +385,7 @@ MODULE gradient_descent
 
         implicit none 
 
-        type(zombiest),dimension(:),intent(inout)::zstore
+        type(zombiest),dimension(:),allocatable,intent(inout)::zstore
         type(elecintrgl),intent(in)::elect
         type(dvector),intent(inout)::dvecs
         type(hamiltonian),intent(inout)::haml
@@ -517,7 +555,7 @@ MODULE gradient_descent
 
         implicit none
 
-        type(zombiest),dimension(:),intent(inout)::zstore
+        type(zombiest),dimension(:),allocatable,intent(inout)::zstore
         type(elecintrgl),intent(in)::elect
         type(dvector),intent(inout)::dvecs
         type(hamiltonian),intent(inout)::haml
