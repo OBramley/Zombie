@@ -296,7 +296,7 @@ MODULE gradient_descent
                 loops=loops-1
             end if 
 
-            if(acpt_cnt_2.lt.((ndet/2)+1))then
+            if(acpt_cnt_2.lt.((2*(ndet-1)/3)+1))then
                 lralt_zs=lralt_zs+1
                 if(lralt_zs.gt.loop_max)then
                     lralt_zs=0
