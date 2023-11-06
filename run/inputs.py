@@ -14,7 +14,7 @@
 run={
     
     # What is the name of the run
-    'runfolder':'F_atom_increase',
+    'runfolder':'F_atom_increase2',
 
     # Amount of time to request on HPC 
     'runtime': "48:00:00",
