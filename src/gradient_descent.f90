@@ -18,7 +18,7 @@ MODULE gradient_descent
     integer::epoc_cnt !epoc counter
     integer::loop_max=10 !max number of loops in gd
     integer::rjct_cnt_global=0
-    integer::ndet_increase=5
+    integer::ndet_increase=2
     integer::pick !Chosen zombie state
     integer,dimension(:),allocatable::picker
     integer,dimension(:),allocatable::chng_trk
@@ -296,7 +296,7 @@ MODULE gradient_descent
                 loops=loops-1
             end if 
 
-            if(acpt_cnt_2.lt.((2*(ndet-1)/3)+1))then
+            if(acpt_cnt_2.lt.((3*(ndet-1)/4)+1))then
                 lralt_zs=lralt_zs+1
                 if(lralt_zs.gt.loop_max)then
                     lralt_zs=0
@@ -310,7 +310,7 @@ MODULE gradient_descent
             !     end if
             ! end if
 
-            if((modulo(epoc_cnt,50).eq.0).and.(ndet.lt.250))then
+            if((modulo(epoc_cnt,50).eq.0).and.(ndet.lt.300))then
                 ndet=ndet+ndet_increase
                 call alloczs(zstore_temp,ndet)
                 call gen_biased_zs(zstore_temp)

@@ -49,6 +49,9 @@ program MainZombie
     call initialise
     call readrunconds
     call restart_chk
+    if(rstrtflg.eq.'y')then
+        ndet=zom_count()
+    end if 
 
     open(unit=570, file="/dev/urandom", access="stream", &
     form="unformatted", action="read", status="old", iostat=istat)
@@ -125,7 +128,6 @@ program MainZombie
         end if 
     end if
 
-   
     if(propflg=="y")then
         if (gramflg.eq."n") then 
             ! generate Hamiltonian and overlap

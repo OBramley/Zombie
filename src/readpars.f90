@@ -201,6 +201,37 @@ MODULE readpars
 
     end subroutine readrunconds
 
+    function zom_count() result(N)
+        implicit none
+        integer::N
+        character(len=4)::num
+        integer::j
+        character(LEN=20)::filenm
+        logical::file_exist
+
+
+        if (errorflag .ne. 0) return
+
+        file_exist=.true.
+        j=1
+        do while(file_exist.eqv..true.)
+            if(GDflg.eq.'y')then
+                write(num,"(i4.4)")(j+1000)
+            else
+                write(num,"(i4.4)")j
+            end if
+            filenm="data/zombie_"//trim(num)//".csv"
+            inquire(file=trim(filenm),exist=file_exist)
+            if(file_exist.eqv..true.)then
+                j=j+1
+            end if
+        end do
+
+        N=j-1 
+        return
+
+    end function zom_count
+
     subroutine read_zombie(zstore,gst)
 
         implicit none
