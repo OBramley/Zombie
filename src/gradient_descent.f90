@@ -16,7 +16,7 @@ MODULE gradient_descent
     real(wp)::b=5.0D2   !starting learning rate
     integer::epoc_max=100000
     integer::epoc_cnt !epoc counter
-    integer::loop_max=10 !max number of loops in gd
+    integer::loop_max=5 !10 !max number of loops in gd
     integer::rjct_cnt_global=0
     integer::ndet_increase=2
     integer::pick !Chosen zombie state
@@ -186,7 +186,7 @@ MODULE gradient_descent
         type(grad_do)::temp,thread
         integer::rjct_cnt,acpt_cnt,pickorb,loops,lralt_zs,acpt_cnt_2
         real(wp)::t,erg_str,chng
-        integer::j,n,p,chng_chng
+        integer::j,n,p,chng_chng,tracker
         integer,dimension(:),allocatable::chng_trk2,pickerorb
         integer::ierr=0
         type(zombiest),dimension(:),allocatable::zstore_temp
@@ -215,7 +215,7 @@ MODULE gradient_descent
         lralt_zs=0
         call haml_to_grad_do(haml,dvecs,temp)
         thread=temp
-       
+        tracker=0
         do while(rjct_cnt.lt.(norb*100))
             loops=loops+1
            
@@ -300,6 +300,7 @@ MODULE gradient_descent
                 lralt_zs=lralt_zs+1
                 if(lralt_zs.gt.loop_max)then
                     lralt_zs=0
+                    tracker=tracker+1
                 end if
             end if 
 
@@ -309,8 +310,9 @@ MODULE gradient_descent
             !         lralt_zs=0
             !     end if
             ! end if
-
-            if((modulo(epoc_cnt,50).eq.0).and.(ndet.lt.300))then
+            if((tracker.eq.10).and.(ndet.lt.150))then
+                tracker=0
+            ! if((modulo(epoc_cnt,50).eq.0).and.(ndet.lt.150))then
                 ndet=ndet+ndet_increase
                 call alloczs(zstore_temp,ndet)
                 call gen_biased_zs(zstore_temp)
