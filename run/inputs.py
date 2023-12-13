@@ -14,7 +14,7 @@
 run={
     
     # What is the name of the run
-    'runfolder':'BH_bs_350_max',
+    'runfolder':'BH_bs_350_max_big_1',
 
     # Amount of time to request on HPC 
     'runtime': "48:00:00",

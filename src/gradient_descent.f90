@@ -289,7 +289,9 @@ MODULE gradient_descent
             end do
            
         write(stdout,"(a,i0,a,f21.16,a,f10.5)") "Energy after epoch no. ",epoc_cnt,": ",grad_fin%prev_erg, "    Learning rate:",t
-            loop_max_reset_cnt=loop_max_reset_cnt+1
+            if((acpt_cnt_2.lt.ndet-1).or.(lralt_zs.gt.3))then
+                loop_max_reset_cnt=loop_max_reset_cnt+1
+            end if
             if(acpt_cnt_2.gt.0)then
                 call epoc_writer(grad_fin%prev_erg,epoc_cnt,t,chng_trk,0)
                 epoc_cnt=epoc_cnt+1
@@ -297,7 +299,8 @@ MODULE gradient_descent
                 loops=loops-1
             end if 
 
-            if(acpt_cnt_2.lt.((3*(ndet-1)/4)+1))then
+            if(((acpt_cnt_2.eq.0).and.(lralt_zs.lt.4)).or.((acpt_cnt_2.lt.((3*(ndet-1)/4)+1)).and.lralt_zs.gt.3))then
+            ! if(acpt_cnt_2.lt.((3*(ndet-1)/4)+1))then
                 lralt_zs=lralt_zs+1
                 loop_max_reset_cnt=0
                 if(lralt_zs.gt.loop_max)then
@@ -313,7 +316,7 @@ MODULE gradient_descent
             !         lralt_zs=0
             !     end if
             ! end if
-            if((tracker.eq.10).and.(ndet.lt.350))then
+            if((tracker.eq.3).and.(ndet.lt.350))then
                 tracker=0
                 loop_max_reset_cnt=0
             ! if((modulo(epoc_cnt,50).eq.0).and.(ndet.lt.150))then
@@ -354,7 +357,7 @@ MODULE gradient_descent
             end if 
 
             
-            if(loop_max_reset_cnt.eq.11)then
+            if(loop_max_reset_cnt.eq.5)then
                 lralt_zs=lralt_zs+1
                 loop_max_reset_cnt=0
                 if(lralt_zs.gt.loop_max)then
