@@ -14,11 +14,11 @@ MODULE gradient_descent
     implicit none 
     real(wp)::alpha=0.2 ! learning rate reduction
     real(wp)::b=5.0D2   !starting learning rate
-    integer::epoc_max=100000
+    integer::epoc_max=1000000
     integer::epoc_cnt !epoc counter
     integer::loop_max=5 !10 !max number of loops in gd
     integer::rjct_cnt_global=0
-    integer::ndet_increase=2
+    integer::ndet_increase=1
     integer::pick !Chosen zombie state
     integer,dimension(:),allocatable::picker
     integer,dimension(:),allocatable::chng_trk
@@ -184,7 +184,7 @@ MODULE gradient_descent
         type(grad),intent(inout)::grad_fin
         integer,intent(in)::maxloop
         type(grad_do)::temp,thread
-        integer::rjct_cnt,acpt_cnt,pickorb,loops,lralt_zs,acpt_cnt_2
+        integer::rjct_cnt,acpt_cnt,pickorb,loops,lralt_zs,acpt_cnt_2,loop_max_reset_cnt
         real(wp)::t,erg_str,chng
         integer::j,n,p,chng_chng,tracker
         integer,dimension(:),allocatable::chng_trk2,pickerorb
@@ -216,6 +216,7 @@ MODULE gradient_descent
         call haml_to_grad_do(haml,dvecs,temp)
         thread=temp
         tracker=0
+        loop_max_reset_cnt=0
         do while(rjct_cnt.lt.(norb*100))
             loops=loops+1
            
@@ -288,7 +289,9 @@ MODULE gradient_descent
             end do
            
         write(stdout,"(a,i0,a,f21.16,a,f10.5)") "Energy after epoch no. ",epoc_cnt,": ",grad_fin%prev_erg, "    Learning rate:",t
-          
+            if((acpt_cnt_2.lt.ndet-1).or.(lralt_zs.gt.3))then
+                loop_max_reset_cnt=loop_max_reset_cnt+1
+            end if
             if(acpt_cnt_2.gt.0)then
                 call epoc_writer(grad_fin%prev_erg,epoc_cnt,t,chng_trk,0)
                 epoc_cnt=epoc_cnt+1
@@ -296,11 +299,14 @@ MODULE gradient_descent
                 loops=loops-1
             end if 
 
-            if(acpt_cnt_2.lt.((3*(ndet-1)/4)+1))then
+            if(((acpt_cnt_2.eq.0).and.(lralt_zs.lt.4)).or.((acpt_cnt_2.lt.((2*(ndet-1)/3)+1)).and.lralt_zs.gt.3))then
+            ! if(acpt_cnt_2.lt.((3*(ndet-1)/4)+1))then
                 lralt_zs=lralt_zs+1
+                loop_max_reset_cnt=0
                 if(lralt_zs.gt.loop_max)then
                     lralt_zs=0
                     tracker=tracker+1
+                    loop_max_reset_cnt=0
                 end if
             end if 
 
@@ -310,8 +316,9 @@ MODULE gradient_descent
             !         lralt_zs=0
             !     end if
             ! end if
-            if((tracker.eq.10).and.(ndet.lt.150))then
+            if((tracker.eq.3).and.(ndet.lt.350))then
                 tracker=0
+                loop_max_reset_cnt=0
             ! if((modulo(epoc_cnt,50).eq.0).and.(ndet.lt.150))then
                 ndet=ndet+ndet_increase
                 call alloczs(zstore_temp,ndet)
@@ -348,7 +355,16 @@ MODULE gradient_descent
                 end do
                 lralt_zs=0
             end if 
-         
+
+            
+            if(loop_max_reset_cnt.eq.5)then
+                lralt_zs=lralt_zs+1
+                loop_max_reset_cnt=0
+                if(lralt_zs.gt.loop_max)then
+                    lralt_zs=0
+                end if
+            end if
+
             picker=scramble(ndet-1)
            
             if(loops.ge.maxloop)then
