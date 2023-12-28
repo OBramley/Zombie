@@ -18,7 +18,7 @@ MODULE gradient_descent
     integer::epoc_cnt !epoc counter
     integer::loop_max=5 !10 !max number of loops in gd
     integer::rjct_cnt_global=0
-    integer::ndet_increase=1
+    integer::ndet_increase=10
     integer::pick !Chosen zombie state
     integer,dimension(:),allocatable::picker
     integer,dimension(:),allocatable::chng_trk
@@ -254,7 +254,8 @@ MODULE gradient_descent
                     call he_full_row(temp,zstore,elect,ndet,pickorb)
                     call imaginary_time_erg(temp,ndet)
                     ! temp%zom%num=numf(temp%zom,temp%zom)
-                    if(temp%erg .lt. grad_fin%prev_erg)then
+                    if(grad_fin%prev_erg-temp%erg.ge.1.0d-9)then
+                    ! if(temp%erg .lt. grad_fin%prev_erg)then
                     ! if(temp%erg .lt. grad_fin%prev_erg+chng*t*grad_fin%vars(pick,pickorb)*grad_fin%vars(pick,pickorb))then 
                         acpt_cnt=acpt_cnt+1
                         chng_trk2(acpt_cnt)=pickorb
@@ -292,23 +293,41 @@ MODULE gradient_descent
             if((acpt_cnt_2.lt.ndet-1).or.(lralt_zs.gt.3))then
                 loop_max_reset_cnt=loop_max_reset_cnt+1
             end if
+            loop_max_reset_cnt=loop_max_reset_cnt+1
             if(acpt_cnt_2.gt.0)then
                 call epoc_writer(grad_fin%prev_erg,epoc_cnt,t,chng_trk,0)
                 epoc_cnt=epoc_cnt+1
+                if((lralt_zs.lt.4).and.(tracker.gt.0.and.(acpt_cnt_2.gt.(ndet-1)/4)))then
+                    tracker=tracker-1
+                end if
             else
                 loops=loops-1
+                loop_max_reset_cnt=100
             end if 
 
-            if(((acpt_cnt_2.eq.0).and.(lralt_zs.lt.4)).or.((acpt_cnt_2.lt.((3*(ndet-1)/4)+1)).and.lralt_zs.gt.3))then
-            ! if(acpt_cnt_2.lt.((3*(ndet-1)/4)+1))then
+            ! if(((acpt_cnt_2.eq.0).and.(lralt_zs.lt.4)).or.((acpt_cnt_2.lt.((3*(ndet-1)/4)+1)).and.lralt_zs.gt.3))then
+            ! if(((acpt_cnt_2.eq.0).and.(lralt_zs.lt.4)).or.((acpt_cnt_2.lt.((3*(ndet-1)/4)+1)).and.lralt_zs.gt.3))then
+            ! if(((acpt_cnt_2.eq.0).and.(lralt_zs.lt.4)).or.((acpt_cnt_2.lt.(((ndet-1)/2))).and.lralt_zs.gt.3))then
+            ! ! if(acpt_cnt_2.lt.((3*(ndet-1)/4)+1))then
+            !     lralt_zs=lralt_zs+1
+            !     loop_max_reset_cnt=0
+            !     if(lralt_zs.gt.loop_max)then
+            !         lralt_zs=0
+            !         tracker=tracker+1
+            !         loop_max_reset_cnt=0
+            !     end if
+            ! end if 
+
+            if((loop_max_reset_cnt.ge.10).or.(acpt_cnt_2.eq.0))then
                 lralt_zs=lralt_zs+1
                 loop_max_reset_cnt=0
                 if(lralt_zs.gt.loop_max)then
                     lralt_zs=0
-                    tracker=tracker+1
-                    loop_max_reset_cnt=0
+                    if(acpt_cnt_2.lt.((ndet-1)/2))then
+                        tracker=tracker+1
+                    end if
                 end if
-            end if 
+            end if
 
             ! if(acpt_cnt_2.gt.(3*ndet/4))then
             !     lralt_zs=lralt_zs-1
@@ -316,54 +335,63 @@ MODULE gradient_descent
             !         lralt_zs=0
             !     end if
             ! end if
-            if((tracker.eq.3).and.(ndet.lt.350))then
-                tracker=0
-                loop_max_reset_cnt=0
-            ! if((modulo(epoc_cnt,50).eq.0).and.(ndet.lt.150))then
-                ndet=ndet+ndet_increase
-                call alloczs(zstore_temp,ndet)
-                call gen_biased_zs(zstore_temp)
-                zstore_temp(1:(ndet-ndet_increase))=zstore
-                call dealloczs(zstore)
-                call alloczs(zstore,ndet)
-                zstore=zstore_temp
-                call dealloczs(zstore_temp)
-                call deallocham(haml)
-                call allocham(haml,ndet)
-                call dealloc_grad_do(temp)
-                call dealloc_grad_do(thread)
-                call deallocdv(dvecs)
-                call allocdv(dvecs,ndet)
-                call hamgen(haml,zstore,elect,ndet,1)
-                call alloc_grad_do(temp,ndet)
-                call alloc_grad_do(thread,ndet)
-                call haml_to_grad_do(haml,dvecs,temp)
-                call imaginary_time_erg(temp,ndet)
-                call deallocgrad(grad_fin)
-                call allocgrad(grad_fin,ndet,norb)
-                grad_fin%prev_erg=temp%erg 
-                grad_fin%grad_avlb=0
-                grad_fin%ovrlp_grad_avlb=0
-                dvecs=temp%dvec
-                thread=temp
-                deallocate(picker,stat=ierr)
-                allocate(picker(ndet-1),stat=ierr)
-                deallocate(chng_trk,stat=ierr)
-                allocate(chng_trk(ndet-1),stat=ierr)
-                do j=(ndet-ndet_increase+1),ndet
-                    call zombiewriter(zstore(j),j,0)
-                end do
-                lralt_zs=0
+            if((tracker.ge.2).and.(ndet.lt.350))then
+                if((acpt_cnt_2.eq.0))then
+                    ! if((ndet.lt.10).or.(grad_fin%prev_erg.lt.-25.035).or.(acpt_cnt_2.eq.0))then
+                        tracker=0
+                        loop_max_reset_cnt=0
+                        ndet=ndet+ndet_increase
+                        call alloczs(zstore_temp,ndet)
+                        call gen_biased_zs(zstore_temp)
+                        zstore_temp(1:(ndet-ndet_increase))=zstore
+                        call dealloczs(zstore)
+                        call alloczs(zstore,ndet)
+                        zstore=zstore_temp
+                        call dealloczs(zstore_temp)
+                        call deallocham(haml)
+                        call allocham(haml,ndet)
+                        call dealloc_grad_do(temp)
+                        call dealloc_grad_do(thread)
+                        call deallocdv(dvecs)
+                        call allocdv(dvecs,ndet)
+                        call hamgen(haml,zstore,elect,ndet,1)
+                        call alloc_grad_do(temp,ndet)
+                        call alloc_grad_do(thread,ndet)
+                        call haml_to_grad_do(haml,dvecs,temp)
+                        call imaginary_time_erg(temp,ndet)
+                        call deallocgrad(grad_fin)
+                        call allocgrad(grad_fin,ndet,norb)
+                        grad_fin%prev_erg=temp%erg 
+                        grad_fin%grad_avlb=0
+                        grad_fin%ovrlp_grad_avlb=0
+                        dvecs=temp%dvec
+                        thread=temp
+                        deallocate(picker,stat=ierr)
+                        allocate(picker(ndet-1),stat=ierr)
+                        deallocate(chng_trk,stat=ierr)
+                        allocate(chng_trk(ndet-1),stat=ierr)
+                        ! do j=1,ndet
+                        !     call zombiewriter(zstore(j),j,0)
+                        ! end do
+
+                        do j=(ndet-ndet_increase+1),ndet
+                            call zombiewriter(zstore(j),j,0)
+                        end do
+                        lralt_zs=0
+                    end if 
             end if 
 
             
-            if(loop_max_reset_cnt.eq.5)then
-                lralt_zs=lralt_zs+1
-                loop_max_reset_cnt=0
-                if(lralt_zs.gt.loop_max)then
-                    lralt_zs=0
-                end if
-            end if
+            ! if(loop_max_reset_cnt.ge.15)then
+            !     lralt_zs=lralt_zs+1
+            !     loop_max_reset_cnt=0
+            !     if(lralt_zs.gt.loop_max)then
+            !         lralt_zs=0
+            !         if(acpt_cnt_2.lt.((ndet-1)/2))then
+            !             tracker=tracker+1
+            !         end if
+            !     end if
+            ! end if
 
             picker=scramble(ndet-1)
            
