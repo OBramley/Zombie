@@ -316,7 +316,8 @@ MODULE gradient_descent
             !         lralt_zs=0
             !     end if
             ! end if
-            if((tracker.eq.3).and.(ndet.lt.350))then
+            ! if((tracker.eq.3).and.(ndet.lt.350))then
+            if((tracker.ge.3).and.(grad_fin%prev_erg.lt.-25.19).and.(ndet.lt.350))then
                 tracker=0
                 loop_max_reset_cnt=0
             ! if((modulo(epoc_cnt,50).eq.0).and.(ndet.lt.150))then
