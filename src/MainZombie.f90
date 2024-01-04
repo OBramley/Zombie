@@ -113,6 +113,11 @@ program MainZombie
                     
                 ! end do 
                 ! call dealloczf(temp_Z)
+                print*,numf(zstore(2),zstore(2))
+                print*,numf(zstore(3),zstore(3))
+                print*,numf(zstore(2),zstore(3))
+                print*,numf(zstore(3),zstore(2))
+                stop
                 
                 do j=1,ndet
                     call zombiewriter(zstore(j),j,0)
