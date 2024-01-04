@@ -14,14 +14,14 @@
 run={
     
     # What is the name of the run
-    'runfolder':'BH_150_then_increase',
+    'runfolder':'BH_increase_by_10_start_50',
 
     # Amount of time to request on HPC 
     'runtime': "48:00:00",
 
     'nodes':1,
 
-    'cores':10,
+    'cores':8,
 
     'submissions':15,
 
@@ -338,7 +338,7 @@ zombs={
     'spin':pyscf['spin'],
 
     # Number of Zombie states
-    'ndet':150,#pyscf['norb']*2, 
+    'ndet':50,#pyscf['norb']*2, 
 
     # Type of zombie states. Random (ran), Hartree Fock (HF) or biased (bb)
     'zomtyp':'bb',
