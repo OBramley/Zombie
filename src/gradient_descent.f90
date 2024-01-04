@@ -297,9 +297,9 @@ MODULE gradient_descent
             if(acpt_cnt_2.gt.0)then
                 call epoc_writer(grad_fin%prev_erg,epoc_cnt,t,chng_trk,0)
                 epoc_cnt=epoc_cnt+1
-                if((lralt_zs.lt.4).and.(tracker.gt.0.and.(acpt_cnt_2.gt.(ndet-1)/4)))then
-                    tracker=tracker-1
-                end if
+                ! if((lralt_zs.lt.4).and.(tracker.gt.0.and.(acpt_cnt_2.gt.(ndet-1)/4)))then
+                !     tracker=tracker-1
+                ! end if
             else
                 loops=loops-1
                 loop_max_reset_cnt=100
@@ -318,12 +318,12 @@ MODULE gradient_descent
             !     end if
             ! end if 
 
-            if((loop_max_reset_cnt.ge.10).or.(acpt_cnt_2.eq.0))then
+            if((loop_max_reset_cnt.ge.2).or.(acpt_cnt_2.eq.0))then
                 lralt_zs=lralt_zs+1
                 loop_max_reset_cnt=0
                 if(lralt_zs.gt.loop_max)then
                     lralt_zs=0
-                    if(acpt_cnt_2.lt.((ndet-1)/2))then
+                    if(acpt_cnt_2.lt.((ndet-1)/4))then
                         tracker=tracker+1
                     end if
                 end if
@@ -335,8 +335,8 @@ MODULE gradient_descent
             !         lralt_zs=0
             !     end if
             ! end if
-            if((tracker.ge.2).and.(ndet.lt.350))then
-                if((acpt_cnt_2.eq.0))then
+            if((tracker.ge.1).and.(ndet.lt.350))then
+                ! if((acpt_cnt_2.eq.0))then
                     ! if((ndet.lt.10).or.(grad_fin%prev_erg.lt.-25.035).or.(acpt_cnt_2.eq.0))then
                         tracker=0
                         loop_max_reset_cnt=0
@@ -378,7 +378,7 @@ MODULE gradient_descent
                             call zombiewriter(zstore(j),j,0)
                         end do
                         lralt_zs=0
-                    end if 
+                    ! end if 
             end if 
 
             
