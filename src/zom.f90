@@ -276,7 +276,7 @@ MODULE zom
             !$omp parallel shared(zstore) private(j,k)
             !$omp do
             do j=1, ndet
-                zstore(j)%phi=0
+                zstore(j)%phi=0.0001
                 if(nel.gt.4)then
                     zstore(j)%phi(1:4)=0.5*pirl
                     if(modulo(nel,2)==0) then

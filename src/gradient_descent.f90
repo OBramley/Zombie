@@ -254,7 +254,7 @@ MODULE gradient_descent
                     call he_full_row(temp,zstore,elect,ndet,pickorb)
                     call imaginary_time_erg(temp,ndet)
                     ! temp%zom%num=numf(temp%zom,temp%zom)
-                    ! if(grad_fin%prev_erg-temp%erg.ge.1.0d-9)then
+                    ! if(grad_fin%prev_erg-temp%erg.ge.1.0d-14)then
                     if(temp%erg .lt. grad_fin%prev_erg)then
                     ! if(temp%erg .lt. grad_fin%prev_erg+chng*t*grad_fin%vars(pick,pickorb)*grad_fin%vars(pick,pickorb))then 
                         acpt_cnt=acpt_cnt+1
@@ -278,6 +278,7 @@ MODULE gradient_descent
                     erg_str,'             ',grad_fin%prev_erg,'          ',chng_trk2(1:acpt_cnt) 
                     
                     call zombiewriter(zstore(pick),pick,0)
+                  
                     acpt_cnt_2=acpt_cnt_2+1
                     chng_trk(acpt_cnt_2)=pick
                 else 
@@ -292,8 +293,8 @@ MODULE gradient_descent
         write(stdout,"(a,i0,a,f21.16,a,f10.5)") "Energy after epoch no. ",epoc_cnt,": ",grad_fin%prev_erg, "    Learning rate:",t
             ! if((acpt_cnt_2.lt.ndet-1).or.(lralt_zs.gt.3))then
                 ! loop_max_reset_cnt=loop_max_reset_cnt+1
-            if((lralt_zs.gt.2).or.(acpt_cnt_2.lt.(ndet)/3).or.(acpt_cnt_2.lt.2))then
-                loop_max_reset_cnt=loop_max_reset_cnt+5
+            if((acpt_cnt_2.lt.(ndet)/3).or.(acpt_cnt_2.lt.2))then
+                loop_max_reset_cnt=loop_max_reset_cnt+1
             end if
             loop_max_reset_cnt=loop_max_reset_cnt+1
             if(acpt_cnt_2.gt.0)then
