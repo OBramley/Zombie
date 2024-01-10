@@ -272,7 +272,7 @@ os.environ["OMP_CANCELLATION"]="TRUE"
 #         f.write("#$ -l coproc_v100=1 \n")
 #         f.write("#$ -P feps-gpu \n")
 #     f.write("#$ -l h_rt="+inputs.run['runtime']+"\n")
-#     f.write("#$ -l h_vmem=2G \n")
+#     f.write("#$ -l h_vmem=1G \n")
 #     f.write("export OMP_CANCELLATION=true \n")
 #     f.write("module add mkl \n")
 #     # f.write('time ./d_check.exe')
