@@ -254,8 +254,8 @@ MODULE gradient_descent
                     call he_full_row(temp,zstore,elect,ndet,pickorb)
                     call imaginary_time_erg(temp,ndet)
                     ! temp%zom%num=numf(temp%zom,temp%zom)
-                    if(grad_fin%prev_erg-temp%erg.ge.1.0d-9)then
-                    ! if(temp%erg .lt. grad_fin%prev_erg)then
+                    ! if(grad_fin%prev_erg-temp%erg.ge.1.0d-9)then
+                    if(temp%erg .lt. grad_fin%prev_erg)then
                     ! if(temp%erg .lt. grad_fin%prev_erg+chng*t*grad_fin%vars(pick,pickorb)*grad_fin%vars(pick,pickorb))then 
                         acpt_cnt=acpt_cnt+1
                         chng_trk2(acpt_cnt)=pickorb

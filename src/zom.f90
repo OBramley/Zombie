@@ -26,7 +26,8 @@ MODULE zom
                     dummy=-1
                     !$omp critical
                     do while((dummy.lt.0))
-                       dummy=2*pirl*(ZBQLU01(1)) 
+                    !    dummy=2*pirl*(ZBQLU01(1)) 
+                       dummy=0.5*pirl*(ZBQLU01(1)) 
                     end do
                     !$omp end critical
                     zstore(j)%phi(k)=dummy
