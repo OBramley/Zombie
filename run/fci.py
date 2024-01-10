@@ -61,5 +61,10 @@ fci_solver = fci.FCI(mol, myhf.mo_coeff)
 e_fci, myci = fci_solver.kernel(h1e=h1e, eri=eri)
 print(e_fci)
 print((myci.shape))
-
-
+count=0
+for i in range(len(myci)):
+    for j in range(len(myci[0])):
+        if(myci[i][j]!=0):
+            count+=1
+            
+print(count)

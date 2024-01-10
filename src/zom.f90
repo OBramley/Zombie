@@ -21,7 +21,6 @@ MODULE zom
         
         if(imagflg=='n') then
             do j=1,num
-                
                 do k=1,norb
                     dummy=-1
                     !$omp critical
@@ -278,27 +277,62 @@ MODULE zom
             !$omp parallel shared(zstore) private(j,k)
             !$omp do
             do j=1, ndet
-                !$omp critical
-                do k=1,norb/2
-                    val=-1
-                    do while(val.lt.0)
-                        val=2*pirl*random_normal(mu(k),sig(k)) 
-                    end do
-                    if((is_nan(val).eqv..true.))then
-                        val=2*pirl*(ZBQLU01(1))
+                zstore(j)%phi=0.0001
+                if(nel.gt.4)then
+                    zstore(j)%phi(1:4)=0.5*pirl
+                    if(modulo(nel,2)==0) then
+                        do k=5,nel+4
+                             !$omp critical
+                            zstore(j)%phi(k)=0.5*pirl*ZBQLU01(1)
+                            !$omp end critical
+                        end do
+                    else
+                        do k=5,nel+5
+                            !$omp critical
+                            zstore(j)%phi(k)=0.5*pirl*ZBQLU01(1)
+                            !$omp end critical
+                        end do
                     end if
+                else
+                    zstore(j)%phi(1:2)=0.5*pirl
+                    if(modulo(nel,2)==0) then
+                        do k=3,nel+4
+                            !$omp critical
+                            zstore(j)%phi(k)=0.5*pirl*ZBQLU01(1)
+                            !$omp end critical
+                        end do
+                    else
+                        do k=3,nel+5
+                             !$omp critical
+                            zstore(j)%phi(k)=0.5*pirl*ZBQLU01(1)
+                            !$omp end critical
+                        end do
+                    end if
+                end if 
+
+
+
+                ! !$omp critical
+                ! do k=1,norb/2
+                !     val=-1
+                !     do while(val.lt.0)
+                !         val=2*pirl*random_normal(mu(k),sig(k)) 
+                !     end do
+                !     if((is_nan(val).eqv..true.))then
+                !         val=2*pirl*(ZBQLU01(1))
+                !     end if
                     
-                    zstore(j)%phi(2*k-1)=val
-                    val=-1
-                    do while(val.lt.0)
-                        val=2*pirl*random_normal(mu(k),sig(k))
-                    end do
-                    if((is_nan(val).eqv..true.))then
-                        val=2*pirl*(ZBQLU01(1)) 
-                    end if 
-                    zstore(j)%phi(2*k)=val
-                end do
-                !$omp end critical
+                !     zstore(j)%phi(2*k-1)=val
+                !     val=-1
+                !     do while(val.lt.0)
+                !         val=2*pirl*random_normal(mu(k),sig(k))
+                !     end do
+                !     if((is_nan(val).eqv..true.))then
+                !         val=2*pirl*(ZBQLU01(1)) 
+                !     end if 
+                !     zstore(j)%phi(2*k)=val
+                ! end do
+                ! !$omp end critical
                
                 call val_set(zstore(j))
                 ! zstore(j)%val(1:norb) = sin(zstore(j)%phi)
