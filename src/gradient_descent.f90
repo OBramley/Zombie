@@ -13,12 +13,12 @@ MODULE gradient_descent
 
     implicit none 
     real(wp)::alpha=0.2 ! learning rate reduction
-    real(wp)::b=5.0D2   !starting learning rate
+    real(wp)::b=2.5D3   !starting learning rate
     integer::epoc_max=1000000
     integer::epoc_cnt !epoc counter
-    integer::loop_max=5 !10 !max number of loops in gd
+    integer::loop_max=6 !10 !max number of loops in gd
     integer::rjct_cnt_global=0
-    integer::ndet_increase=5
+    integer::ndet_increase=1
     integer::pick !Chosen zombie state
     integer,dimension(:),allocatable::picker
     integer,dimension(:),allocatable::chng_trk
@@ -186,7 +186,7 @@ MODULE gradient_descent
         type(grad_do)::temp,thread
         integer::rjct_cnt,acpt_cnt,pickorb,loops,lralt_zs,acpt_cnt_2,loop_max_reset_cnt
         real(wp)::t,erg_str,chng
-        integer::j,n,p,chng_chng,tracker
+        integer::j,n,p,chng_chng,tracker,lralt_extra
         integer,dimension(:),allocatable::chng_trk2,pickerorb
         integer::ierr=0
         type(zombiest),dimension(:),allocatable::zstore_temp
@@ -213,6 +213,8 @@ MODULE gradient_descent
         chng=0.0000001
         chng_chng=100
         lralt_zs=0
+        lralt_extra=0
+        ! lralt_zs=3
         call haml_to_grad_do(haml,dvecs,temp)
         thread=temp
         tracker=0
@@ -243,7 +245,7 @@ MODULE gradient_descent
                 call haml_to_grad_do(haml,dvecs,thread)
 
                 do n=1,norb
-                    pickorb=pickerorb(n)
+                    pickorb=n !pickerorb(n)
                     call grad_calculate(haml,dvecs,zstore,grad_fin,pickorb)
                     thread%zom=zstore(pick)
                     temp=thread
@@ -254,8 +256,8 @@ MODULE gradient_descent
                     call he_full_row(temp,zstore,elect,ndet,pickorb)
                     call imaginary_time_erg(temp,ndet)
                     ! temp%zom%num=numf(temp%zom,temp%zom)
-                    ! if(grad_fin%prev_erg-temp%erg.ge.1.0d-14)then
-                    if(temp%erg .lt. grad_fin%prev_erg)then
+                    if(grad_fin%prev_erg-temp%erg.ge.1.0d-11)then
+                    ! if(temp%erg .lt. grad_fin%prev_erg)then
                     ! if(temp%erg .lt. grad_fin%prev_erg+chng*t*grad_fin%vars(pick,pickorb)*grad_fin%vars(pick,pickorb))then 
                         acpt_cnt=acpt_cnt+1
                         chng_trk2(acpt_cnt)=pickorb
@@ -293,10 +295,10 @@ MODULE gradient_descent
         write(stdout,"(a,i0,a,f21.16,a,f10.5)") "Energy after epoch no. ",epoc_cnt,": ",grad_fin%prev_erg, "    Learning rate:",t
             ! if((acpt_cnt_2.lt.ndet-1).or.(lralt_zs.gt.3))then
                 ! loop_max_reset_cnt=loop_max_reset_cnt+1
-            if((acpt_cnt_2.lt.(ndet)/3).or.(acpt_cnt_2.lt.2))then
-                loop_max_reset_cnt=loop_max_reset_cnt+1
-            end if
-            loop_max_reset_cnt=loop_max_reset_cnt+1
+            ! if((acpt_cnt_2.lt.(ndet)/2).or.(acpt_cnt_2.lt.2).or.(lralt_zs.gt.2))then
+            !     loop_max_reset_cnt=loop_max_reset_cnt+3
+            ! end if
+            ! loop_max_reset_cnt=loop_max_reset_cnt+1
             if(acpt_cnt_2.gt.0)then
                 call epoc_writer(grad_fin%prev_erg,epoc_cnt,t,chng_trk,0)
                 epoc_cnt=epoc_cnt+1
@@ -306,6 +308,7 @@ MODULE gradient_descent
             else
                 loops=loops-1
                 loop_max_reset_cnt=100
+                lralt_extra=lralt_extra+1
             end if 
 
             ! if(((acpt_cnt_2.eq.0).and.(lralt_zs.lt.4)).or.((acpt_cnt_2.lt.((3*(ndet-1)/4)+1)).and.lralt_zs.gt.3))then
@@ -321,27 +324,22 @@ MODULE gradient_descent
             !     end if
             ! end if 
 
-            if((loop_max_reset_cnt.ge.10).or.(acpt_cnt_2.eq.0))then
+            ! if((loop_max_reset_cnt.ge.6).or.(acpt_cnt_2.eq.0))then
                 lralt_zs=lralt_zs+1
-                loop_max_reset_cnt=0
-                if(lralt_zs.gt.loop_max)then
-                    lralt_zs=0
-                    if((acpt_cnt_2.lt.((ndet-1)/4).or.(acpt_cnt_2.lt.2)))then
-                        tracker=tracker+1
-                    end if
+                ! loop_max_reset_cnt=0
+            if(lralt_zs.gt.loop_max)then
+                lralt_zs=lralt_extra
+                ! lralt_zs=3
+                if((acpt_cnt_2.lt.((ndet)/3).or.((acpt_cnt_2.lt.3))))then
+                    tracker=tracker+1
                 end if
             end if
-
-            ! if(acpt_cnt_2.gt.(3*ndet/4))then
-            !     lralt_zs=lralt_zs-1
-            !     if(lralt_zs.lt.0)then
-            !         lralt_zs=0
-            !     end if
             ! end if
+
+
             if((tracker.ge.1).and.(ndet.lt.350))then
-                ! if((acpt_cnt_2.eq.0))then
-                    ! if((ndet.lt.10).or.(grad_fin%prev_erg.lt.-25.035).or.(acpt_cnt_2.eq.0))then
                         tracker=0
+                        lralt_extra=0
                         loop_max_reset_cnt=0
                         ndet=ndet+ndet_increase
                         call alloczs(zstore_temp,ndet)
@@ -373,28 +371,12 @@ MODULE gradient_descent
                         allocate(picker(ndet-1),stat=ierr)
                         deallocate(chng_trk,stat=ierr)
                         allocate(chng_trk(ndet-1),stat=ierr)
-                        ! do j=1,ndet
-                        !     call zombiewriter(zstore(j),j,0)
-                        ! end do
-
                         do j=(ndet-ndet_increase+1),ndet
                             call zombiewriter(zstore(j),j,0)
                         end do
                         lralt_zs=0
-                    ! end if 
+                        ! lralt_zs=3
             end if 
-
-            
-            ! if(loop_max_reset_cnt.ge.15)then
-            !     lralt_zs=lralt_zs+1
-            !     loop_max_reset_cnt=0
-            !     if(lralt_zs.gt.loop_max)then
-            !         lralt_zs=0
-            !         if(acpt_cnt_2.lt.((ndet-1)/2))then
-            !             tracker=tracker+1
-            !         end if
-            !     end if
-            ! end if
 
             picker=scramble(ndet-1)
            

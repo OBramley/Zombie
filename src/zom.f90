@@ -293,7 +293,7 @@ MODULE zom
                             !$omp end critical
                         end do
                     end if
-                else
+                else if(nel.eq.4)then
                     zstore(j)%phi(1:2)=0.5*pirl
                     if(modulo(nel,2)==0) then
                         do k=3,nel+4
@@ -308,6 +308,21 @@ MODULE zom
                             !$omp end critical
                         end do
                     end if
+                else 
+                    if(modulo(nel,2)==0) then
+                        do k=1,nel+4
+                            !$omp critical
+                            zstore(j)%phi(k)=0.5*pirl*ZBQLU01(1)
+                            !$omp end critical
+                        end do
+                    else
+                        do k=1,nel+5
+                             !$omp critical
+                            zstore(j)%phi(k)=0.5*pirl*ZBQLU01(1)
+                            !$omp end critical
+                        end do
+                    end if
+
                 end if 
 
 
