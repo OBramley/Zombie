@@ -20,7 +20,7 @@ MODULE electrons
         integer(int16),dimension(:,:), allocatable::dead
         integer(int8),dimension(:,:), allocatable::neg_a
         integer(int8),dimension(:,:), allocatable::neg_d
-        integer::e1,e2,cnt,j,k,cnt2,strt,fin
+        integer::e1,e2,cnt,j,k,cnt2,strt,fin,neg
         integer,dimension(8)::use_c
         integer::ierr=0
     

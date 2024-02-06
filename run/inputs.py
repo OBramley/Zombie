@@ -14,7 +14,7 @@
 run={
     
     # What is the name of the run
-    'runfolder':'Li_15',
+    'runfolder':'1',
 
     # Amount of time to request on HPC 
     'runtime': "48:00:00",
@@ -338,7 +338,7 @@ zombs={
     'spin':pyscf['spin'],
 
     # Number of Zombie states
-    'ndet':15,#pyscf['norb']*2, 
+    'ndet':30,#pyscf['norb']*2, 
 
     # Type of zombie states. Random (ran), Hartree Fock (HF) or biased (bb)
     'zomtyp':'bb',

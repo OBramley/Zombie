@@ -18,7 +18,7 @@ MODULE gradient_descent
     integer::epoc_cnt !epoc counter
     integer::loop_max=6 !10 !max number of loops in gd
     integer::rjct_cnt_global=0
-    integer::ndet_increase=1
+    integer::ndet_increase=5
     integer::pick !Chosen zombie state
     integer,dimension(:),allocatable::picker
     integer,dimension(:),allocatable::chng_trk
