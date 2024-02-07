@@ -6,7 +6,7 @@ MODULE ham
     use omp_lib
   
     contains
-
+    
     !Level 0 Hamiltonian Routine
     ! Subroutine that controls and calcualtes all of the hamiltonian variables 
     subroutine hamgen(haml,zstore,elecs,size,verb)
@@ -184,21 +184,23 @@ MODULE ham
         real(wp),intent(inout)::ovrlp,ham_tot
         type(elecintrgl),intent(in)::elecs
         integer,intent(in)::sm
-        real(wp),dimension(norb)::div,an,cr,bth,ng
+        real(wp),dimension(4,norb)::perts
+        real(wp),dimension(norb)::div,bth
         real(wp)::ov,aa,dd,ad,da
-        integer::j,k,strt,l
+        integer::j,k,l
         real(wp),dimension(elecs%num)::ovrlp_vec
         
-       
         ovrlp=1.0d0; ov=1.0d0
         if(sm==0)then
             !$omp simd
             do j=1,norb
                 dd=z1d(j+norb)*z2d(norb+j)
-                cr(j)=z1d(j)*z2d(norb+j) 
-                an(j)=z1d(j+norb)*z2d(j)
                 bth(j)=z1d(j)*z2d(j)
-                ng(j)=(-bth(j)+dd)
+                perts(1,j)=z1d(j+norb)*z2d(j)
+                perts(2,j)=z1d(j+norb)*z2d(j)
+                perts(3,j)=z1d(j)*z2d(j)
+                perts(4,j)=(-bth(j)+dd)
+
             end do
             !$omp end simd
             ham_tot=elecs%hnuc
@@ -210,10 +212,10 @@ MODULE ham
                 ad=z1d(j)*z2d(norb+j)
                 da=z1d(j+norb)*z2d(j)
                 div(j)=aa+dd
-                cr(j)=ad/div(j) 
-                an(j)=da/div(j)
-                bth(j)=aa/div(j)
-                ng(j)=(-aa+dd)/div(j)
+                perts(1,j)=da/div(j)
+                perts(2,j)=ad/div(j) 
+                perts(3,j)=aa/div(j)
+                perts(4,j)=(-aa+dd)/div(j)
                 ovrlp=ovrlp*div(j)
             end do
             !$omp end simd
@@ -223,47 +225,29 @@ MODULE ham
         ovrlp_vec=ovrlp
         !$omp simd
         do k=1,norb
-            strt=1
+            !!$omp parallel do shared(ovrlp_vec,elecs), private(l,ov,j) 
             do l=1,elecs%orbital_choice2(0,k)
-                if(elecs%orbital_choice(k,strt).eq.0)then
-                    strt=elecs%orbital_choice2(k,l)+1
-                    cycle
-                else if (elecs%orbital_choice(k,strt).lt.0)then
-                    if(elecs%orbital_choice(k,strt).eq.-4)then
-                        ov=ovrlp_vec(strt)*ng(k)
-                    else if(elecs%orbital_choice(k,strt).eq.-1)then
-                        ov=ovrlp_vec(strt)*(-an(k))
-                    else if(elecs%orbital_choice(k,strt).eq.-2)then
-                        ov=ovrlp_vec(strt)*(-cr(k))
-                    else if(elecs%orbital_choice(k,strt).eq.-3)then
-                        ov=ovrlp_vec(strt)*(-bth(k))
-                    end if 
-                else
-                    if(elecs%orbital_choice(k,strt).eq.1)then
-                        ov=ovrlp_vec(strt)*an(k)
-                    else if(elecs%orbital_choice(k,strt).eq.2)then
-                        ov=ovrlp_vec(strt)*cr(k)
-                    else if(elecs%orbital_choice(k,strt).eq.3)then
-                        ov=ovrlp_vec(strt)*bth(k)
-                    end if
-                end if
-                do j=strt,elecs%orbital_choice2(k,l)
+                ov=ovrlp_vec(elecs%orbital_choice2(k,(l*2)-1))*&
+                perts(elecs%orbital_choice(k,elecs%orbital_choice2(k,(l*2)-1)),k)
+                do j=elecs%orbital_choice2(k,(l*2)-1),elecs%orbital_choice2(k,l*2)
                     ovrlp_vec(j)=ov
                 end do
-                strt=elecs%orbital_choice2(k,l)+1
             end do
+            !!$omp end parallel do
         end do
         !$omp end simd
+        !!$omp parallel do reduction(+:ham_tot)
         !$omp simd
         do j=1,elecs%num
             ham_tot=ham_tot+(ovrlp_vec(j)*elecs%integrals(j))
         end do
-        !$omp end simd
-       
+                  !$omp end simd
+        !!$omp end parallel do
+
+    
         return 
       
     end subroutine haml_vals_2
-
 
     subroutine haml_vals_2_orb(z1d,z2d,ovrlp,ham_tot,elecs,sm,orb)
         implicit none 
@@ -271,9 +255,10 @@ MODULE ham
         real(wp),intent(inout)::ovrlp,ham_tot
         type(elecintrgl),intent(in)::elecs
         integer,intent(in)::sm,orb
-        real(wp),dimension(norb)::div,an,cr,bth,ng
+        real(wp),dimension(4,norb)::perts
+        real(wp),dimension(norb)::div,bth
         real(wp)::ov,aa,dd,ad,da
-        integer::j,k,strt,l
+        integer::j,k,l
         real(wp),dimension(elecs%num)::ovrlp_vec
         
         ov=1.0d0
@@ -281,10 +266,12 @@ MODULE ham
             !$omp simd
             do j=1,norb
                 dd=z1d(j+norb)*z2d(norb+j)
-                cr(j)=z1d(j)*z2d(norb+j) 
-                an(j)=z1d(j+norb)*z2d(j)
                 bth(j)=z1d(j)*z2d(j)
-                ng(j)=(-bth(j)+dd)
+
+                perts(1,j)=z1d(j+norb)*z2d(j)
+                perts(2,j)=z1d(j+norb)*z2d(j)
+                perts(3,j)=z1d(j)*z2d(j)
+                perts(4,j)=(-bth(j)+dd)
             end do
             !$omp end simd
             ham_tot=elecs%hnuc
@@ -296,10 +283,10 @@ MODULE ham
                 ad=z1d(j)*z2d(norb+j)
                 da=z1d(j+norb)*z2d(j)
                 div(j)=aa+dd
-                cr(j)=ad/div(j) 
-                an(j)=da/div(j)
-                bth(j)=aa/div(j)
-                ng(j)=(-aa+dd)/div(j)
+                perts(1,j)=da/div(j)
+                perts(2,j)=ad/div(j) 
+                perts(3,j)=aa/div(j)
+                perts(4,j)=(-aa+dd)/div(j)
             end do
             !$omp end simd
             ovrlp=ovrlp*div(orb)
@@ -307,44 +294,27 @@ MODULE ham
         end if 
         
         ovrlp_vec=ovrlp
+
         !$omp simd
         do k=1,norb
-            strt=1
+            !!$omp parallel do shared(ovrlp_vec,elecs), private(l,ov,j) 
             do l=1,elecs%orbital_choice2(0,k)
-                if(elecs%orbital_choice(k,strt).eq.0)then
-                    strt=elecs%orbital_choice2(k,l)+1
-                    cycle
-                else if (elecs%orbital_choice(k,strt).lt.0)then
-                    if(elecs%orbital_choice(k,strt).eq.-4)then
-                        ov=ovrlp_vec(strt)*ng(k)
-                    else if(elecs%orbital_choice(k,strt).eq.-1)then
-                        ov=ovrlp_vec(strt)*(-an(k))
-                    else if(elecs%orbital_choice(k,strt).eq.-2)then
-                        ov=ovrlp_vec(strt)*(-cr(k))
-                    else if(elecs%orbital_choice(k,strt).eq.-3)then
-                        ov=ovrlp_vec(strt)*(-bth(k))
-                    end if 
-                else
-                    if(elecs%orbital_choice(k,strt).eq.1)then
-                        ov=ovrlp_vec(strt)*an(k)
-                    else if(elecs%orbital_choice(k,strt).eq.2)then
-                        ov=ovrlp_vec(strt)*cr(k)
-                    else if(elecs%orbital_choice(k,strt).eq.3)then
-                        ov=ovrlp_vec(strt)*bth(k)
-                    end if
-                end if
-                do j=strt,elecs%orbital_choice2(k,l)
+                ov=ovrlp_vec(elecs%orbital_choice2(k,(l*2)-1))*&
+                perts(elecs%orbital_choice(k,elecs%orbital_choice2(k,(l*2)-1)),k)
+                do j=elecs%orbital_choice2(k,(l*2)-1),elecs%orbital_choice2(k,l*2)
                     ovrlp_vec(j)=ov
                 end do
-                strt=elecs%orbital_choice2(k,l)+1
             end do
+            !!$omp end parallel do
         end do
         !$omp end simd
-        !$omp simd
+          !$omp simd
+        !!$omp parallel do reduction(+:ham_tot)
         do j=1,elecs%num
             ham_tot=ham_tot+(ovrlp_vec(j)*elecs%integrals(j))
         end do
         !$omp end simd
+        !!$omp end parallel do
        
         return 
       
