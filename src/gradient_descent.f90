@@ -18,7 +18,7 @@ MODULE gradient_descent
     integer::epoc_cnt !epoc counter
     integer::loop_max=6 !10 !max number of loops in gd
     integer::rjct_cnt_global=0
-    integer::ndet_increase=1
+    integer::ndet_increase=5
     integer::pick !Chosen zombie state
     integer,dimension(:),allocatable::picker
     integer,dimension(:),allocatable::chng_trk
@@ -211,7 +211,11 @@ MODULE gradient_descent
         loops=0
         p=70-norb
         chng=0.0000001
-        chng_chng=100
+        if(epoc_cnt.gt.2)then
+            chng_chng=150
+        else
+            chng_chng=250
+        end if
         lralt_zs=0
         lralt_extra=0
         ! lralt_zs=3
@@ -229,14 +233,14 @@ MODULE gradient_descent
             do p=1, ((norb-8)/2)
                 write(stdout,'(1a)',advance='no') ' '
             end do 
-            write(stdout,"(a)") ' | Zombie state | Previous Energy     | Energy after Gradient Descent steps   | Orbitals altered '
+            write(stdout,"(a)")'   | Zombie state | Previous Energy     | Energy after Gradient Descent steps   | Orbitals altered '
        
             chng_trk=0
             acpt_cnt_2=0  
             t=b*(alpha**lralt_zs)
             
             do j=1,ndet-1
-               
+                write(stdout,'(i3)',advance='no') j
                 erg_str=grad_fin%prev_erg
                 pick=picker(j)
                 chng_trk2=0
@@ -256,8 +260,8 @@ MODULE gradient_descent
                     call he_full_row(temp,zstore,elect,ndet,pickorb)
                     call imaginary_time_erg(temp,ndet)
                     ! temp%zom%num=numf(temp%zom,temp%zom)
-                    if(grad_fin%prev_erg-temp%erg.ge.1.0d-11)then
-                    ! if(temp%erg .lt. grad_fin%prev_erg)then
+                    ! if(grad_fin%prev_erg-temp%erg.ge.1.0d-11)then
+                    if(temp%erg .lt. grad_fin%prev_erg)then
                     ! if(temp%erg .lt. grad_fin%prev_erg+chng*t*grad_fin%vars(pick,pickorb)*grad_fin%vars(pick,pickorb))then 
                         acpt_cnt=acpt_cnt+1
                         chng_trk2(acpt_cnt)=pickorb
@@ -308,9 +312,11 @@ MODULE gradient_descent
             else
                 loops=loops-1
                 loop_max_reset_cnt=100
-                lralt_extra=lralt_extra+1
             end if 
 
+            if(acpt_cnt_2.lt.(0.15*ndet))then 
+                lralt_extra=lralt_extra+1
+            end if 
             ! if(((acpt_cnt_2.eq.0).and.(lralt_zs.lt.4)).or.((acpt_cnt_2.lt.((3*(ndet-1)/4)+1)).and.lralt_zs.gt.3))then
             ! if(((acpt_cnt_2.eq.0).and.(lralt_zs.lt.4)).or.((acpt_cnt_2.lt.((3*(ndet-1)/4)+1)).and.lralt_zs.gt.3))then
             ! if(((acpt_cnt_2.eq.0).and.(lralt_zs.lt.4)).or.((acpt_cnt_2.lt.(((ndet-1)/2))).and.lralt_zs.gt.3))then
@@ -326,6 +332,7 @@ MODULE gradient_descent
 
             ! if((loop_max_reset_cnt.ge.6).or.(acpt_cnt_2.eq.0))then
                 lralt_zs=lralt_zs+1
+                chng_chng=chng_chng-1
                 ! loop_max_reset_cnt=0
             if(lralt_zs.gt.loop_max)then
                 lralt_zs=lralt_extra
@@ -337,7 +344,8 @@ MODULE gradient_descent
             ! end if
 
 
-            if((tracker.ge.1).and.(ndet.lt.350))then
+            if((tracker.ge.1).or.(chng_chng.le.0))then!.and.(ndet.lt.10))then
+                if(ndet.lt.40)then
                         tracker=0
                         lralt_extra=0
                         loop_max_reset_cnt=0
@@ -376,6 +384,22 @@ MODULE gradient_descent
                         end do
                         lralt_zs=0
                         ! lralt_zs=3
+                        chng_chng=150
+                else if(loop_max.lt.12)then
+                    loop_max=loop_max+1
+                    tracker=0
+                    lralt_extra=0
+                    loop_max_reset_cnt=0
+                    lralt_zs=0
+                    chng_chng=100
+                else 
+                    tracker=0
+                    lralt_extra=0
+                    loop_max_reset_cnt=0
+                    lralt_zs=0
+                    chng_chng=100
+                end if   
+                
             end if 
 
             picker=scramble(ndet-1)

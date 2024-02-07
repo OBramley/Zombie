@@ -169,7 +169,9 @@ MODULE electrons
             end do
             orbital_choice2(0,k)=cnt2
         end do
-    
+        
+
+
         cnt=maxval(orbital_choice2(0,1:norb))
         allocate(elecs%orbital_choice2(0:norb,cnt),stat=ierr)
         if(ierr/=0) then
