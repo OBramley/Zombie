@@ -15,13 +15,12 @@ MODULE electrons
         type(oprts)::an_cr,an2_cr2
         real(wp), dimension(:), allocatable::h1ei
         real(wp), dimension(:), allocatable::h2ei
-        integer,dimension(:,:),allocatable::orbital_choice2
+        integer,dimension(:,:),allocatable::orbital_choice2,orbital_choice2_temp
         integer(int16),dimension(:,:), allocatable::alive
         integer(int16),dimension(:,:), allocatable::dead
         integer(int8),dimension(:,:), allocatable::neg_a
         integer(int8),dimension(:,:), allocatable::neg_d
-        integer::e1,e2,cnt,j,k,cnt2,strt,fin
-        integer,dimension(8)::use_c
+        integer::e1,e2,cnt,j,k,cnt2,neg
         integer::ierr=0
     
         if (errorflag .ne. 0) return
@@ -91,10 +90,11 @@ MODULE electrons
         end if
 
         !0 - no change; 1 - annihilation (cos*sin in dead); 2 - creation (sin*cos in alive); 
-        !3 - both creation and annihilation (sin*sin); -4 - negative alive; -5 - negative dead; -6 - both alive and dead negative 
+        !3 - both creation and annihilation (sin*sin); 4 - negative alive; -5 - negative dead; -6 - both alive and dead negative 
         allocate(elecs%orbital_choice(norb,elecs%num),stat=ierr)
         elecs%orbital_choice=0
         do j=1,elecs%num
+            neg=0
             do k=1,norb
                 if(alive(k,j).eq.k)then
                     if(dead(k,j).eq.(k+norb))then
@@ -109,7 +109,7 @@ MODULE electrons
                             end if
                         else
                             if(neg_d(k,j).eq.1)then
-                                elecs%orbital_choice(k,j)=-4
+                                elecs%orbital_choice(k,j)=4
                             else 
                                write(stdout,"(a)") "Error in electron integral allocations cannot have negaitve dead and alive"
                                errorflag=1 
@@ -120,7 +120,8 @@ MODULE electrons
                         if(neg_a(k,j).eq.1)then
                             elecs%orbital_choice(k,j)=3
                         else
-                            elecs%orbital_choice(k,j)=-3
+                            elecs%orbital_choice(k,j)=3
+                            neg=neg+1
                         end if 
                     end if 
                 else if(alive(k,j).eq.(k+norb))then
@@ -128,7 +129,8 @@ MODULE electrons
                         if(neg_a(k,j).eq.1)then
                             elecs%orbital_choice(k,j)=2
                         else
-                            elecs%orbital_choice(k,j)=-2
+                            elecs%orbital_choice(k,j)=2
+                            neg=neg+1
                         end if
                     end if
                 else if(alive(k,j).eq.0)then
@@ -136,12 +138,15 @@ MODULE electrons
                         if(neg_d(k,j).eq.1)then
                             elecs%orbital_choice(k,j)=1
                         else
-                            elecs%orbital_choice(k,j)=-1
+                            elecs%orbital_choice(k,j)=1
+                            neg=neg+1
                         end if 
                     end if 
                 end if
             end do 
-   
+            if(modulo(neg,2).ne.0)then
+                elecs%integrals(j)=elecs%integrals(j)*(-1)
+            end if
         end do 
 
         allocate(orbital_choice2(0:norb,elecs%num),stat=ierr)
@@ -150,50 +155,78 @@ MODULE electrons
             errorflag=1
             return
         end if
-
+   
         cnt2=0
         orbital_choice2=0
-        call sorter(elecs%orbital_choice(1,:),orbital_choice2(1,:),use_c,cnt2)
-        orbital_choice2(0,1)=cnt2
-        call sort_rows(elecs%orbital_choice,elecs%integrals,norb,elecs%num,1,use_c)
       
-        do k=2,norb
-            strt=1
-            fin=0
-            cnt2=0
-            do j=1,orbital_choice2(0,k-1)
-                fin=strt-1+orbital_choice2(k-1,j)
-                call sorter(elecs%orbital_choice(k,strt:fin),orbital_choice2(k,:),use_c,cnt2)
-                call sort_rows(elecs%orbital_choice(:,strt:fin),elecs%integrals(strt:fin),norb,orbital_choice2(k-1,j),k,use_c)
-                strt=fin+1
-            end do
-            orbital_choice2(0,k)=cnt2
+        do k=1,norb
+            call sorts(elecs%orbital_choice,elecs%integrals,norb,elecs%num,k)
+        end do 
+      
+        cnt=elecs%orbital_choice(1,1)
+        do j=2,elecs%num
+            if(elecs%orbital_choice(1,j).ne.cnt)then
+                orbital_choice2(0,1)=orbital_choice2(0,1)+1
+                orbital_choice2(1,orbital_choice2(0,1))=j-1
+                cnt=elecs%orbital_choice(1,j)
+            end if
         end do
-        
-
-
+        orbital_choice2(0,1)=orbital_choice2(0,1)+1
+        orbital_choice2(1,orbital_choice2(0,1))=elecs%num
+        do k=2, norb
+            cnt=elecs%orbital_choice(k,1)
+            cnt2=1
+            do j=2,elecs%num
+                if((elecs%orbital_choice(k,j).ne.cnt).or.(j.gt.orbital_choice2(k-1,cnt2)))then
+                    orbital_choice2(0,k)=orbital_choice2(0,k)+1
+                    orbital_choice2(k,orbital_choice2(0,k))=j-1
+                    cnt=elecs%orbital_choice(k,j)
+                    if((j.gt.orbital_choice2(k-1,cnt2)))then
+                        cnt2=cnt2+1
+                    end if
+                end if
+                
+            end do
+            orbital_choice2(0,k)=orbital_choice2(0,k)+1
+            orbital_choice2(k,orbital_choice2(0,k))=elecs%num
+        end do
         cnt=maxval(orbital_choice2(0,1:norb))
+      
+        allocate(orbital_choice2_temp(0:norb,cnt),stat=ierr)
+        if(ierr/=0) then
+            write(stderr,"(a,i0)") "Error in orbital_choice2_temp  allocation. ierr had value ", ierr
+            errorflag=1
+            return
+        end if
+        orbital_choice2_temp=0
+        do k=1,norb
+            cnt=1
+            do j=1,orbital_choice2(0,k)
+                if(elecs%orbital_choice(k,orbital_choice2(k,j)).ne.0)then
+                    orbital_choice2_temp(0,k)=orbital_choice2_temp(0,k)+1
+                    orbital_choice2_temp(k,(orbital_choice2_temp(0,k)*2)-1)=cnt
+                    orbital_choice2_temp(k,(orbital_choice2_temp(0,k)*2))=orbital_choice2(k,j)
+                    cnt=orbital_choice2(k,j)+1
+                else 
+                    cnt=orbital_choice2(k,j)+1
+                end if
+            end do
+        end do
+        cnt=2*maxval(orbital_choice2_temp(0,1:norb))
         allocate(elecs%orbital_choice2(0:norb,cnt),stat=ierr)
         if(ierr/=0) then
             write(stderr,"(a,i0)") "Error in eelcs%orbital_choice2  allocation. ierr had value ", ierr
             errorflag=1
             return
         end if
-    
-        elecs%orbital_choice2=orbital_choice2(:,1:cnt)
-        do k=1,norb
-            strt=1
-            do j=1,orbital_choice2(0,k)
-                fin=strt-1+orbital_choice2(k,j)
-                elecs%orbital_choice2(k,j)=fin
-                strt=fin+1
-            end do
-        end do 
+        elecs%orbital_choice2=orbital_choice2_temp(0:norb,1:cnt)
+       
         deallocate(alive,stat=ierr)
         deallocate(dead,stat=ierr)
         deallocate(neg_a,stat=ierr)
         deallocate(neg_d,stat=ierr)
         deallocate(orbital_choice2,stat=ierr)
+        deallocate(orbital_choice2_temp,stat=ierr)
         if(ierr/=0) then
             write(stderr,"(a,i0)") "Error in orbital_choice2  deallocation. ierr had value ", ierr
             errorflag=1
@@ -201,71 +234,71 @@ MODULE electrons
         end if
         
         write(stdout,"(a)") "1 & 2 electron integrals successfully generated"
-    
+       
         return
     
     end subroutine electronintegrals
 
-    subroutine sort_rows(arr,arr2,N,M,col,check_val)
+    subroutine sorts(arr,arr2,N,M,col)
         implicit none
         integer, intent(in) :: M, N,col
         integer, dimension(:,:),intent(inout) :: arr
         real(wp), dimension(:),intent(inout) :: arr2
         integer, dimension(N,M)::sort
         real(wp), dimension(M):: sort2
-        integer :: l, j, cnt,chck
-        integer,dimension(8)::check_val
-        
+        integer :: l, j, k, cnt,cnt2
+        integer,dimension(5)::check_val=[4,2,1,3,0]
+        integer, dimension(col)::chck
+        logical::break=.false.
         cnt=0
-        do l=1,8
-            chck=check_val(l)
-            do j=1,M
-                if(arr(col,j).eq.chck)then
-                    cnt=cnt+1
-                    sort(:,cnt)=arr(:,j)
-                    sort2(cnt)=arr2(j)
-                end if
+        cnt2=1
+
+        if(col==1)then 
+            do l=1,5
+                chck(1)=check_val(l)
+                do j=1,M
+                    if(arr(col,j).eq.chck(col))then
+                        cnt=cnt+1
+                        sort(:,cnt)=arr(:,j)
+                        sort2(cnt)=arr2(j)
+                    end if
+                end do
             end do
-        end do
+        else 
+            do while(cnt2.lt.M)
+                chck(1:col-1)=arr(1:col-1,cnt2)
+                if(chck(col-1).eq.4)then
+                    check_val=[2,4,1,3,0]
+                else 
+                    check_val=[4,2,1,3,0]
+                end if
+                do l=1,5
+                    chck(col)=check_val(l)
+                    break=.false.
+                    do j=cnt2,M
+                        do k=1,col-1
+                            if(arr(k,j).ne.chck(k))then 
+                                break=.true.
+                            end if 
+                        end do 
+                        if(break.eqv..true.)then 
+                            exit
+                        end if 
+                        if(arr(col,j).eq.chck(col))then
+                            cnt=cnt+1
+                            sort(:,cnt)=arr(:,j)
+                            sort2(cnt)=arr2(j)
+                        end if
+                    end do
+                end do
+                cnt2=cnt+1
+            end do
+        end if
         arr=sort
         arr2=sort2
        
-    end subroutine sort_rows
+    end subroutine sorts
 
-    subroutine sorter(to_check,totals,order,num)
-
-        implicit none
-       
-        integer,intent(in),dimension(:)::to_check
-        integer,intent(inout),dimension(:)::totals
-        integer,intent(inout),dimension(8)::order
-        integer,intent(inout)::num
-        integer,dimension(8)::temp,check_val=[1,2,3,-1,-2,-3,-4,0]
-        logical,dimension(8)::hide
-        integer::j,l,cnt
-        
-        order=0
-        cnt=0
-        hide=.true.
-        do j=1,8
-            temp(j)=count(to_check==check_val(j))
-            if(temp(j).ne.0)then
-                cnt=cnt+1
-            end if
-        end do
-    
-        do j=1,8
-            l=maxloc(temp,1,hide)
-            order(j)=check_val(l)
-            totals(j+num)=temp(l)
-            hide(l)=.false.
-        end do
-       
-        num=num+cnt
-
-    end subroutine sorter
-    
-    
     subroutine two_electrons(h2ei,e2,an2_cr2)
     
         implicit none 

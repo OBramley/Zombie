@@ -345,7 +345,7 @@ MODULE gradient_descent
 
 
             if((tracker.ge.1).or.(chng_chng.le.0))then!.and.(ndet.lt.10))then
-                if(ndet.lt.40)then
+                if(ndet.lt.300)then
                         tracker=0
                         lralt_extra=0
                         loop_max_reset_cnt=0
