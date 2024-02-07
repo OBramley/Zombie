@@ -211,7 +211,11 @@ MODULE gradient_descent
         loops=0
         p=70-norb
         chng=0.0000001
-        chng_chng=100
+        if(epoc_cnt.gt.2)then
+            chng_chng=150
+        else
+            chng_chng=250
+        end if
         lralt_zs=0
         lralt_extra=0
         ! lralt_zs=3
@@ -229,7 +233,7 @@ MODULE gradient_descent
             do p=1, ((norb-8)/2)
                 write(stdout,'(1a)',advance='no') ' '
             end do 
-            write(stdout,"(a)") ' | Zombie state | Previous Energy     | Energy after Gradient Descent steps   | Orbitals altered '
+            write(stdout,"(a)")'   | Zombie state | Previous Energy     | Energy after Gradient Descent steps   | Orbitals altered '
        
             chng_trk=0
             acpt_cnt_2=0  
@@ -297,6 +301,9 @@ MODULE gradient_descent
             else
                 loops=loops-1
                 loop_max_reset_cnt=100
+            end if 
+
+            if(acpt_cnt_2.lt.(0.15*ndet))then 
                 lralt_extra=lralt_extra+1
             end if 
 
@@ -310,9 +317,9 @@ MODULE gradient_descent
             end if
            
 
-
-            if((tracker.ge.1).and.(ndet.lt.350))then
-                        tracker=0
+            if((tracker.ge.1).or.(chng_chng.le.0))then!.and.(ndet.lt.10))then
+                if(ndet.lt.300)then                        
+                    tracker=0
                         lralt_extra=0
                         loop_max_reset_cnt=0
                         ndet=ndet+ndet_increase
@@ -349,6 +356,23 @@ MODULE gradient_descent
                             call zombiewriter(zstore(j),j,0)
                         end do
                         lralt_zs=0
+                        ! lralt_zs=3
+                        chng_chng=150
+                else if(loop_max.lt.12)then
+                    loop_max=loop_max+1
+                    tracker=0
+                    lralt_extra=0
+                    loop_max_reset_cnt=0
+                    lralt_zs=0
+                    chng_chng=100
+                else 
+                    tracker=0
+                    lralt_extra=0
+                    loop_max_reset_cnt=0
+                    lralt_zs=0
+                    chng_chng=100
+                end if   
+                
             end if 
 
             picker=scramble(ndet-1)
