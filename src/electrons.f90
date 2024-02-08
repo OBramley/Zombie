@@ -147,7 +147,7 @@ MODULE electrons
                 elecs%integrals(j)=elecs%integrals(j)*(-1)
             end if
         end do 
-
+        print*, counter2(elecs%orbital_choice)
         allocate(orbital_choice2(0:norb,elecs%num*2),stat=ierr)
         if(ierr/=0) then
             write(stderr,"(a,i0)") "Error in orbital_choice2  allocation. ierr had value ", ierr
@@ -247,9 +247,7 @@ MODULE electrons
         real(wp), dimension(M):: sort2
         integer :: l, j, k, cnt,cnt2
         integer,dimension(5)::check_val
-        ! integer, dimension(col)::chck
         integer::chck
-        logical::break=.false.
         cnt=0
         cnt2=1
 
@@ -320,16 +318,24 @@ MODULE electrons
         indices=indices-1
     end function counter
 
-    function counter2(arr) result(vals)
+    function counter2(arr) result(indices)
         implicit none
-        integer, dimension(:),intent(in)::arr
+        integer, dimension(:,:),intent(in)::arr
         integer,dimension(5)::vals
-        integer::j
-        j=1
+        integer,dimension(norb)::vals_2
+        integer,dimension(norb)::indices
+        integer::j,k
 
-        do j=0,4
-            vals(j+1)=count(arr(:)==j)
+        do k=1,norb
+            do j=0,4
+                vals(j+1)=count(arr(k,:)==j)
+            end do
+            vals_2(k)=maxval(vals)
         end do
+        do j=norb,1,-1
+            indices(j)=maxloc(vals_2,1)
+            vals(indices(j))=-10
+        end do 
      
     end function counter2
 
