@@ -307,13 +307,13 @@ MODULE ham
             end do
             !!$omp end parallel do
         end do
-        !$omp end simd
-          !$omp simd
+        !!$omp end simd
+        !$omp simd
         !!$omp parallel do reduction(+:ham_tot)
         do j=1,elecs%num
             ham_tot=ham_tot+(ovrlp_vec(j)*elecs%integrals(j))
         end do
-        !$omp end simd
+        !!$omp end simd
         !!$omp end parallel do
        
         return 
