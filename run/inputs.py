@@ -14,14 +14,14 @@
 run={
     
     # What is the name of the run
-    'runfolder':'test_li2',
+    'runfolder':'Li_test',
 
     # Amount of time to request on HPC 
     'runtime': "48:00:00",
 
     'nodes':1,
 
-    'cores':15,
+    'cores':8,
 
     'submissions':25,
 
@@ -107,39 +107,39 @@ run={
 #     'nel':6
 # }
 
-pyscf={
-     # The units the geometry of the molecule is set up in
-    'units':'Angstrom',
-     # The geometry of the molecule being investigated
-    'atoms': 'Li 0 0 0; Li 0 0 2.673',
-    # The type of basis used to generate the 1 and 2 electron integrals
-    'bs' : 'sto-3g',
-    # How verbose do you want the PyScf output to be in your terminal?
-    'verbosity' : 4,
-    'symmetry' :True,
-    'spin':0,
-    'charge':0,
-    'symmetry_subgroup' : 0, #0 is code for A1 point group
-    'norb': 10,
-    'nel':6
-}
-
 # pyscf={
 #      # The units the geometry of the molecule is set up in
 #     'units':'Angstrom',
 #      # The geometry of the molecule being investigated
 #     'atoms': 'Li 0 0 0; Li 0 0 2.673',
 #     # The type of basis used to generate the 1 and 2 electron integrals
-#     'bs' : 'cc-pVDZ',
+#     'bs' : 'sto-3g',
 #     # How verbose do you want the PyScf output to be in your terminal?
 #     'verbosity' : 4,
 #     'symmetry' :True,
 #     'spin':0,
 #     'charge':0,
 #     'symmetry_subgroup' : 0, #0 is code for A1 point group
-#     'norb': 28,
+#     'norb': 10,
 #     'nel':6
 # }
+
+pyscf={
+     # The units the geometry of the molecule is set up in
+    'units':'Angstrom',
+     # The geometry of the molecule being investigated
+    'atoms': 'Li 0 0 0; Li 0 0 2.673',
+    # The type of basis used to generate the 1 and 2 electron integrals
+    'bs' : 'cc-pVDZ',
+    # How verbose do you want the PyScf output to be in your terminal?
+    'verbosity' : 4,
+    'symmetry' :True,
+    'spin':0,
+    'charge':0,
+    'symmetry_subgroup' : 0, #0 is code for A1 point group
+    'norb': 28,
+    'nel':6
+}
 
 # pyscf={
 #      # The units the geometry of the molecule is set up in
