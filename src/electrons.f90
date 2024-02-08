@@ -149,7 +149,7 @@ MODULE electrons
             end if
         end do 
 
-        allocate(orbital_choice2(0:norb,elecs%num),stat=ierr)
+        allocate(orbital_choice2(0:norb,elecs%num*2),stat=ierr)
         if(ierr/=0) then
             write(stderr,"(a,i0)") "Error in orbital_choice2  allocation. ierr had value ", ierr
             errorflag=1

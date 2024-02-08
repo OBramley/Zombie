@@ -186,7 +186,7 @@ MODULE gradient_descent
         type(grad_do)::temp,thread
         integer::rjct_cnt,acpt_cnt,pickorb,loops,lralt_zs,acpt_cnt_2,loop_max_reset_cnt
         real(wp)::t,erg_str,chng
-        integer::j,n,p,chng_chng,tracker,lralt_extra
+        integer::j,n,p,chng_chng,tracker,lralt_extra,strt,end
         integer,dimension(:),allocatable::chng_trk2,pickerorb
         integer::ierr=0
         type(zombiest),dimension(:),allocatable::zstore_temp
@@ -203,7 +203,8 @@ MODULE gradient_descent
             errorflag=1
             return
         end if 
-
+        strt=1
+        end=nel
         chng_trk2=0 !stores which orbitals in the ZS have changed 
         rjct_cnt=0 !tracks how many rejections 
         acpt_cnt=0  !counts how many ZS have been changed
@@ -212,9 +213,9 @@ MODULE gradient_descent
         p=70-norb
         chng=0.0000001
         if(epoc_cnt.gt.2)then
-            chng_chng=150
+            chng_chng=250 !150
         else
-            chng_chng=250
+            chng_chng=400 !250
         end if
         lralt_zs=0
         lralt_extra=0
@@ -248,7 +249,7 @@ MODULE gradient_descent
                 pickerorb=scramble_norb(norb)
                 call haml_to_grad_do(haml,dvecs,thread)
 
-                do n=1,norb
+                do n=strt,end !(nel*3) !1,norb
                     pickorb=n !pickerorb(n)
                     call grad_calculate(haml,dvecs,zstore,grad_fin,pickorb)
                     thread%zom=zstore(pick)
@@ -315,36 +316,33 @@ MODULE gradient_descent
             end if 
 
             if(acpt_cnt_2.lt.(0.15*ndet))then 
-                lralt_extra=lralt_extra+1
+                ! lralt_extra=lralt_extra+1
+                
             end if 
-            ! if(((acpt_cnt_2.eq.0).and.(lralt_zs.lt.4)).or.((acpt_cnt_2.lt.((3*(ndet-1)/4)+1)).and.lralt_zs.gt.3))then
-            ! if(((acpt_cnt_2.eq.0).and.(lralt_zs.lt.4)).or.((acpt_cnt_2.lt.((3*(ndet-1)/4)+1)).and.lralt_zs.gt.3))then
-            ! if(((acpt_cnt_2.eq.0).and.(lralt_zs.lt.4)).or.((acpt_cnt_2.lt.(((ndet-1)/2))).and.lralt_zs.gt.3))then
-            ! ! if(acpt_cnt_2.lt.((3*(ndet-1)/4)+1))then
-            !     lralt_zs=lralt_zs+1
-            !     loop_max_reset_cnt=0
-            !     if(lralt_zs.gt.loop_max)then
-            !         lralt_zs=0
-            !         tracker=tracker+1
-            !         loop_max_reset_cnt=0
-            !     end if
-            ! end if 
-
-            ! if((loop_max_reset_cnt.ge.6).or.(acpt_cnt_2.eq.0))then
-                lralt_zs=lralt_zs+1
-                chng_chng=chng_chng-1
-                ! loop_max_reset_cnt=0
+           
+            
+            lralt_zs=lralt_zs+1
+            chng_chng=chng_chng-1
             if(lralt_zs.gt.loop_max)then
                 lralt_zs=lralt_extra
-                ! lralt_zs=3
-                if((acpt_cnt_2.lt.((ndet)/3).or.((acpt_cnt_2.lt.3))))then
-                    tracker=tracker+1
+                end=end+4
+                strt=strt+4
+                if(end.gt.norb)then
+                    if(end.lt.norb+4)then
+                        end=norb
+                        strt=norb-nel
+                    else
+                        end=nel 
+                        strt=1
+                    end if
                 end if
+                ! if((acpt_cnt_2.lt.((ndet)/3).or.((acpt_cnt_2.lt.3))))then
+                !     tracker=tracker+1
+                ! end if
             end if
-            ! end if
 
 
-            if((tracker.ge.1).or.(chng_chng.le.0))then!.and.(ndet.lt.10))then
+            if(((tracker.ge.1).or.(chng_chng.le.0)).and.(strt.eq.1))then!.and.(ndet.lt.10))then
                 if(ndet.lt.300)then
                         tracker=0
                         lralt_extra=0
@@ -383,8 +381,7 @@ MODULE gradient_descent
                             call zombiewriter(zstore(j),j,0)
                         end do
                         lralt_zs=0
-                        ! lralt_zs=3
-                        chng_chng=150
+                        chng_chng=250 !150
                 else if(loop_max.lt.12)then
                     loop_max=loop_max+1
                     tracker=0
