@@ -294,6 +294,16 @@ MODULE electrons
                 cnt2=cnt+1
             end do
         end if
+        if(cnt.ne.M)then
+            if(cnt.eq.M-1)then
+                sort(:,M)=arr(:,M)
+                sort2(M)=arr2(M)
+            else
+                write(stderr,"(a)") "Error in sorting"
+                errorflag=1
+                return
+            end if
+        end if 
         arr=sort
         arr2=sort2
        
