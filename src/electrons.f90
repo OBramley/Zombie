@@ -2,7 +2,6 @@ MODULE electrons
 
     use globvars
     use alarrays
-    
     contains
     
     ! Program to generate one and two electron integrals from PyScf
@@ -15,7 +14,7 @@ MODULE electrons
         type(oprts)::an_cr,an2_cr2
         real(wp), dimension(:), allocatable::h1ei
         real(wp), dimension(:), allocatable::h2ei
-        integer,dimension(:,:),allocatable::orbital_choice2,orbital_choice2_temp
+        integer,dimension(:,:),allocatable::orbital_choice2,orbital_choice2_temp,orbital_choice
         integer(int16),dimension(:,:), allocatable::alive
         integer(int16),dimension(:,:), allocatable::dead
         integer(int8),dimension(:,:), allocatable::neg_a
@@ -91,8 +90,9 @@ MODULE electrons
 
         !0 - no change; 1 - annihilation (cos*sin in dead); 2 - creation (sin*cos in alive); 
         !3 - both creation and annihilation (sin*sin); 4 - negative alive; -5 - negative dead; -6 - both alive and dead negative 
+        allocate(orbital_choice(norb,elecs%num),stat=ierr)
         allocate(elecs%orbital_choice(norb,elecs%num),stat=ierr)
-        elecs%orbital_choice=0
+        orbital_choice=0
         do j=1,elecs%num
             neg=0
             do k=1,norb
@@ -100,7 +100,7 @@ MODULE electrons
                     if(dead(k,j).eq.(k+norb))then
                         if(neg_a(k,j).eq.1)then
                             if(neg_d(k,j).eq.1)then
-                                elecs%orbital_choice(k,j)=0
+                                orbital_choice(k,j)=0
                             else 
                                 write(stdout,"(a)") "Error in electron integral allocations cannot have negaitve &
                                 & dead and occupied alive"
@@ -109,7 +109,7 @@ MODULE electrons
                             end if
                         else
                             if(neg_d(k,j).eq.1)then
-                                elecs%orbital_choice(k,j)=4
+                                orbital_choice(k,j)=4
                             else 
                                write(stdout,"(a)") "Error in electron integral allocations cannot have negaitve dead and alive"
                                errorflag=1 
@@ -118,27 +118,27 @@ MODULE electrons
                         end if 
                     else if(dead(k,j).eq.0)then
                         if(neg_a(k,j).eq.1)then
-                            elecs%orbital_choice(k,j)=3
+                            orbital_choice(k,j)=3
                         else
-                            elecs%orbital_choice(k,j)=3
+                            orbital_choice(k,j)=3
                             neg=neg+1
                         end if 
                     end if 
                 else if(alive(k,j).eq.(k+norb))then
                     if(dead(k,j).eq.0)then
                         if(neg_a(k,j).eq.1)then
-                            elecs%orbital_choice(k,j)=2
+                            orbital_choice(k,j)=2
                         else
-                            elecs%orbital_choice(k,j)=2
+                            orbital_choice(k,j)=2
                             neg=neg+1
                         end if
                     end if
                 else if(alive(k,j).eq.0)then
                     if(dead(k,j).eq.k)then
                         if(neg_d(k,j).eq.1)then
-                            elecs%orbital_choice(k,j)=1
+                            orbital_choice(k,j)=1
                         else
-                            elecs%orbital_choice(k,j)=1
+                            orbital_choice(k,j)=1
                             neg=neg+1
                         end if 
                     end if 
@@ -148,7 +148,12 @@ MODULE electrons
                 elecs%integrals(j)=elecs%integrals(j)*(-1)
             end if
         end do 
-
+        allocate(elecs%orbital_choice3(norb))
+        elecs%orbital_choice3=counter2(orbital_choice)
+        do k=1,norb 
+            elecs%orbital_choice(k,:)=orbital_choice(elecs%orbital_choice3(k),:)
+        end do 
+        deallocate(orbital_choice,stat=ierr)
         allocate(orbital_choice2(0:norb,elecs%num*2),stat=ierr)
         if(ierr/=0) then
             write(stderr,"(a,i0)") "Error in orbital_choice2  allocation. ierr had value ", ierr
@@ -247,17 +252,17 @@ MODULE electrons
         integer, dimension(N,M)::sort
         real(wp), dimension(M):: sort2
         integer :: l, j, k, cnt,cnt2
-        integer,dimension(5)::check_val=[4,2,1,3,0]
-        integer, dimension(col)::chck
-        logical::break=.false.
+        integer,dimension(5)::check_val
+        integer::chck
         cnt=0
         cnt2=1
 
         if(col==1)then 
+            check_val=counter(arr(1,:))
             do l=1,5
-                chck(1)=check_val(l)
+                chck=check_val(l)
                 do j=1,M
-                    if(arr(col,j).eq.chck(col))then
+                    if(arr(col,j).eq.chck)then
                         cnt=cnt+1
                         sort(:,cnt)=arr(:,j)
                         sort2(cnt)=arr2(j)
@@ -266,32 +271,23 @@ MODULE electrons
             end do
         else 
             do while(cnt2.lt.M)
-                chck(1:col-1)=arr(1:col-1,cnt2)
-                if(chck(col-1).eq.4)then
-                    check_val=[2,4,1,3,0]
-                else 
-                    check_val=[4,2,1,3,0]
-                end if
+                do k=cnt2,M
+                    if(arr(col-1,k).ne.arr(col-1,cnt2))then   
+                        exit 
+                    end if
+                end do 
+                check_val=counter(arr(col,cnt2:k-1))
                 do l=1,5
-                    chck(col)=check_val(l)
-                    break=.false.
-                    do j=cnt2,M
-                        do k=1,col-1
-                            if(arr(k,j).ne.chck(k))then 
-                                break=.true.
-                            end if 
-                        end do 
-                        if(break.eqv..true.)then 
-                            exit
-                        end if 
-                        if(arr(col,j).eq.chck(col))then
+                    chck=check_val(l)
+                    do j=cnt2,k-1
+                        if(arr(col,j).eq.chck)then
                             cnt=cnt+1
                             sort(:,cnt)=arr(:,j)
                             sort2(cnt)=arr2(j)
                         end if
                     end do
                 end do
-                cnt2=cnt+1
+                cnt2=cnt+1 
             end do
         end if
         if(cnt.ne.M)then
@@ -308,6 +304,47 @@ MODULE electrons
         arr2=sort2
        
     end subroutine sorts
+
+    function counter(arr) result(indices)
+        implicit none
+        integer, dimension(:),intent(in)::arr
+        integer,dimension(5)::vals
+        integer,dimension(5)::indices
+        integer::j
+        j=1
+
+        do j=0,4
+            vals(j+1)=count(arr(:)==j)
+        end do
+     
+        do j=5,1,-1
+           indices(j)=maxloc(vals,1)
+            vals(indices(j))=-10
+        end do 
+        indices=indices-1
+    end function counter
+
+    function counter2(arr) result(indices)
+        implicit none
+        integer, dimension(:,:),intent(in)::arr
+        integer,dimension(5)::vals
+        integer,dimension(norb)::vals_2
+        integer,dimension(norb)::indices
+        integer::j,k
+
+        do k=1,norb
+            do j=0,4
+                vals(j+1)=count(arr(k,:)==j)
+            end do
+            vals_2(k)=maxval(vals)
+        end do
+    
+        do j=norb,1,-1
+            indices(j)=maxloc(vals_2,1)
+            vals_2(indices(j))=-10
+        end do 
+     
+    end function counter2
 
     subroutine two_electrons(h2ei,e2,an2_cr2)
     

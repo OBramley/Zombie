@@ -51,6 +51,7 @@ MODULE globvars
         real(wp), dimension(:), allocatable::integrals
         integer,dimension(:,:),allocatable::orbital_choice
         integer,dimension(:,:),allocatable::orbital_choice2
+        integer,dimension(:),allocatable::orbital_choice3
         real(wp) :: hnuc
     end type elecintrgl
 

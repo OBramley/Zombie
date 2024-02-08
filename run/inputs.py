@@ -14,7 +14,7 @@
 run={
     
     # What is the name of the run
-    'runfolder':'BH_30_faster_ham',
+    'runfolder':'BH_test',
 
     # Amount of time to request on HPC 
     'runtime': "48:00:00",
@@ -189,21 +189,21 @@ run={
 #     'nel':7
 # }
 
-pyscf={
-     # The units the geometry of the molecule is set up in
-    'units':'atom',
-     # The geometry of the molecule being investigated
-    'atoms': 'F 0 0 0',
-    # The type of basis used to generate the 1 and 2 electron integrals
-    'bs' : 'cc-pVDZ',
-    # How verbose do you want the PyScf output to be in your terminal?
-    'verbosity' : 4,
-    'symmetry' :True,
-    'spin':1,
-    'charge':0,
-    'norb': 14,
-    'nel':9
-}
+# pyscf={
+#      # The units the geometry of the molecule is set up in
+#     'units':'atom',
+#      # The geometry of the molecule being investigated
+#     'atoms': 'F 0 0 0',
+#     # The type of basis used to generate the 1 and 2 electron integrals
+#     'bs' : 'cc-pVDZ',
+#     # How verbose do you want the PyScf output to be in your terminal?
+#     'verbosity' : 4,
+#     'symmetry' :True,
+#     'spin':1,
+#     'charge':0,
+#     'norb': 14,
+#     'nel':9
+# }
 
 # pyscf={
 #      # The units the geometry of the molecule is set up in

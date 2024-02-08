@@ -203,8 +203,8 @@ MODULE gradient_descent
             errorflag=1
             return
         end if 
-        strt=3
-        end=16
+        ! strt=1
+        ! end=nel
         chng_trk2=0 !stores which orbitals in the ZS have changed 
         rjct_cnt=0 !tracks how many rejections 
         acpt_cnt=0  !counts how many ZS have been changed
@@ -249,7 +249,7 @@ MODULE gradient_descent
                 pickerorb=scramble_norb(norb)
                 call haml_to_grad_do(haml,dvecs,thread)
 
-                do n=strt,end !nborstrt,end !(nel*3) !1,norb
+                do n=1, norb
                     pickorb=n !pickerorb(n)
                     call grad_calculate(haml,dvecs,zstore,grad_fin,pickorb)
                     thread%zom=zstore(pick)
@@ -314,26 +314,24 @@ MODULE gradient_descent
             chng_chng=chng_chng-1
             if(lralt_zs.gt.loop_max)then
                 lralt_zs=lralt_extra
-                if(end.eq.norb)then
-                    end=16
-                    strt=3
-                    lralt_extra=0
-                end if
-                if(modulo(epoc_cnt,4).eq.0)then 
-                    end=norb
-                    strt=1
-                    lralt_extra=0
-                end if 
+                ! end=end+4
+                ! strt=strt+4
+                ! if(end.gt.norb)then
+                !     if(end.lt.norb+4)then
+                !         end=norb
+                !         strt=norb-nel
+                !     else
+                !         end=nel 
+                !         strt=1
+                !     end if
+                ! end if
                 if((acpt_cnt_2.lt.((ndet)/3).or.((acpt_cnt_2.lt.3))))then
                     tracker=tracker+1
-                    end=norb
-                    strt=1
-                    lralt_extra=0
                 end if
             end if
 
 
-            if(((tracker.ge.2).or.(chng_chng.le.0)))then!.and.(strt.eq.1))then!.and.(ndet.lt.10))then
+            if(((tracker.ge.1).or.(chng_chng.le.0)))then!.and.(strt.eq.1))then!.and.(ndet.lt.10))then
                 if(ndet.lt.300)then
                         end=16
                         strt=3
@@ -374,7 +372,7 @@ MODULE gradient_descent
                             call zombiewriter(zstore(j),j,0)
                         end do
                         lralt_zs=0
-                        chng_chng=20 !150
+                        chng_chng=150
                 else if(loop_max.lt.12)then
                     loop_max=loop_max+1
                     tracker=0

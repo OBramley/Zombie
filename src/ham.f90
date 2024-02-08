@@ -21,10 +21,22 @@ MODULE ham
         real(wp),allocatable,dimension(:)::WORK1
         integer::ierr=0
 
+        real(wp):: starttime, stoptime, runtime
         if (errorflag .ne. 0) return
-       
+        call CPU_TIME(starttime) 
         call haml_ovrlp_comb(haml,zstore,elecs,size,verb)
-        
+        call CPU_TIME(stoptime)
+        runtime = stoptime-starttime
+        if (runtime/3600.0d0 .gt. 1.0d0)then
+            runtime = runtime/3600.0d0
+            write(stdout,"(a,es12.5,a)") 'Time taken : ', runtime, ' hours'
+        else if (runtime/60.0d0 .gt. 1.0d0)then
+            runtime = runtime/60.0d0
+            write(stdout,"(a,es12.5,a)") 'Time taken : ', runtime , ' mins'
+        else
+            write(stdout,"(a,es12.5,a)") 'Time taken : ', runtime, ' seconds'
+        end if
+
         haml%inv=haml%ovrlp
         allocate(WORK1(size),IPIV1(size),stat=ierr)
         if (ierr/=0) then
@@ -228,7 +240,7 @@ MODULE ham
             !!$omp parallel do shared(ovrlp_vec,elecs), private(l,ov,j) 
             do l=1,elecs%orbital_choice2(0,k)
                 ov=ovrlp_vec(elecs%orbital_choice2(k,(l*2)-1))*&
-                perts(elecs%orbital_choice(k,elecs%orbital_choice2(k,(l*2)-1)),k)
+                perts(elecs%orbital_choice(k,elecs%orbital_choice2(k,(l*2)-1)),elecs%orbital_choice3(k))
                 do j=elecs%orbital_choice2(k,(l*2)-1),elecs%orbital_choice2(k,l*2)
                     ovrlp_vec(j)=ov
                 end do
@@ -300,7 +312,7 @@ MODULE ham
             !!$omp parallel do shared(ovrlp_vec,elecs), private(l,ov,j) 
             do l=1,elecs%orbital_choice2(0,k)
                 ov=ovrlp_vec(elecs%orbital_choice2(k,(l*2)-1))*&
-                perts(elecs%orbital_choice(k,elecs%orbital_choice2(k,(l*2)-1)),k)
+                perts(elecs%orbital_choice(k,elecs%orbital_choice2(k,(l*2)-1)),elecs%orbital_choice3(k))
                 do j=elecs%orbital_choice2(k,(l*2)-1),elecs%orbital_choice2(k,l*2)
                     ovrlp_vec(j)=ov
                 end do
