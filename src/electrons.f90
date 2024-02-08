@@ -2,7 +2,6 @@ MODULE electrons
 
     use globvars
     use alarrays
-    
     contains
     
     ! Program to generate one and two electron integrals from PyScf
@@ -247,17 +246,19 @@ MODULE electrons
         integer, dimension(N,M)::sort
         real(wp), dimension(M):: sort2
         integer :: l, j, k, cnt,cnt2
-        integer,dimension(5)::check_val=[4,2,1,3,0]
-        integer, dimension(col)::chck
+        integer,dimension(5)::check_val
+        ! integer, dimension(col)::chck
+        integer::chck
         logical::break=.false.
         cnt=0
         cnt2=1
 
         if(col==1)then 
+            check_val=counter(arr(1,:))
             do l=1,5
-                chck(1)=check_val(l)
+                chck=check_val(l)
                 do j=1,M
-                    if(arr(col,j).eq.chck(col))then
+                    if(arr(col,j).eq.chck)then
                         cnt=cnt+1
                         sort(:,cnt)=arr(:,j)
                         sort2(cnt)=arr2(j)
@@ -266,32 +267,23 @@ MODULE electrons
             end do
         else 
             do while(cnt2.lt.M)
-                chck(1:col-1)=arr(1:col-1,cnt2)
-                if(chck(col-1).eq.4)then
-                    check_val=[2,4,1,3,0]
-                else 
-                    check_val=[4,2,1,3,0]
-                end if
+                do k=cnt2,M
+                    if(arr(col-1,k).ne.arr(col-1,cnt2))then   
+                        exit 
+                    end if
+                end do 
+                check_val=counter(arr(col,cnt2:k-1))
                 do l=1,5
-                    chck(col)=check_val(l)
-                    break=.false.
-                    do j=cnt2,M
-                        do k=1,col-1
-                            if(arr(k,j).ne.chck(k))then 
-                                break=.true.
-                            end if 
-                        end do 
-                        if(break.eqv..true.)then 
-                            exit
-                        end if 
-                        if(arr(col,j).eq.chck(col))then
+                    chck=check_val(l)
+                    do j=cnt2,k-1
+                        if(arr(col,j).eq.chck)then
                             cnt=cnt+1
                             sort(:,cnt)=arr(:,j)
                             sort2(cnt)=arr2(j)
                         end if
                     end do
                 end do
-                cnt2=cnt+1
+                cnt2=cnt+1 
             end do
         end if
         if(cnt.ne.M)then
@@ -308,6 +300,38 @@ MODULE electrons
         arr2=sort2
        
     end subroutine sorts
+
+    function counter(arr) result(indices)
+        implicit none
+        integer, dimension(:),intent(in)::arr
+        integer,dimension(5)::vals
+        integer,dimension(5)::indices
+        integer::j
+        j=1
+
+        do j=0,4
+            vals(j+1)=count(arr(:)==j)
+        end do
+     
+        do j=5,1,-1
+           indices(j)=maxloc(vals,1)
+            vals(indices(j))=-10
+        end do 
+        indices=indices-1
+    end function counter
+
+    function counter2(arr) result(vals)
+        implicit none
+        integer, dimension(:),intent(in)::arr
+        integer,dimension(5)::vals
+        integer::j
+        j=1
+
+        do j=0,4
+            vals(j+1)=count(arr(:)==j)
+        end do
+     
+    end function counter2
 
     subroutine two_electrons(h2ei,e2,an2_cr2)
     
