@@ -265,7 +265,7 @@ MODULE zom
         type(zombiest),dimension(:),intent(inout)::zstore
         DOUBLE PRECISION, external::ZBQLU01
         real(wp)::mu((norb/2)),sig(norb/2)
-        real(wp)::val
+        ! real(wp)::val
         integer::j,k
        
 

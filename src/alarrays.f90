@@ -18,6 +18,7 @@ MODULE alarrays
         allocate (elecs%integrals(n), stat=ierr)
         allocate (elecs%orbital_choice(norb,n), stat=ierr)
         allocate (elecs%orbital_choice2(0:norb,n), stat=ierr)
+        allocate (elecs%orbital_choice3(norb), stat=ierr)
 
         if (ierr/=0) then
             write(stderr,"(a,i0)") "Error in electron integral  deallocation. ierr had value ", ierr
@@ -42,6 +43,7 @@ MODULE alarrays
         deallocate (elecs%integrals, stat=ierr)
         deallocate (elecs%orbital_choice, stat=ierr)
         deallocate (elecs%orbital_choice2, stat=ierr)
+        deallocate (elecs%orbital_choice3, stat=ierr)
 
         if (ierr/=0) then
             write(stderr,"(a,i0)") "Error in electron integral  deallocation. ierr had value ", ierr
