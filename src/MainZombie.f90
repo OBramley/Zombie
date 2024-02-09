@@ -12,6 +12,7 @@ program MainZombie
     use zom
     use gradient_descent
     use operators
+    use neural_network
     use omp_lib
 
     implicit none
@@ -74,6 +75,7 @@ program MainZombie
         write(stdout,"(a)") "Setting electron"
         call electronintegrals(elect)
         write(stdout,"(a)") "Electrons allocated"
+        call neural_network_control(10,elect)
         if (gramflg.eq."n") then 
             ! generate zombie states
             call alloczs(zstore,ndet)
