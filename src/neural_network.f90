@@ -212,11 +212,11 @@ subroutine trial_data_creation(trial_data_array,elecs,size,num_epochs)
     call alloczf(z1)
     call alloczf(z2)
 
-    !$omp parallel do private(z1,z2,ind,j,l,k) shared(trial_data_array,elecs,size,norb)
+    !$omp parallel do collapse(3) private(z1,z2,ind) shared(trial_data_array,elecs,size,norb)
     do l=1,size 
-        do j=1,norb 
-            do k=1, size
-                ind = (l - 1) * size * norb + (j - 1) * size + k
+        do k=1,size 
+            do j=1, norb
+                ind = (l - 1) * size * size + (k - 1) * norb + j
                 print*,ind
                 if(l==k)then 
                     trial_data_array(ind)%orbital=j

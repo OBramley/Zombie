@@ -75,7 +75,7 @@ program MainZombie
         write(stdout,"(a)") "Setting electron"
         call electronintegrals(elect)
         write(stdout,"(a)") "Electrons allocated"
-        call neural_network_control(10,elect)
+        ! call neural_network_control(10,elect)
         if (gramflg.eq."n") then 
             ! generate zombie states
             call alloczs(zstore,ndet)
@@ -166,9 +166,7 @@ program MainZombie
        
             if(GDflg.eq."y")then
                 deallocate(erg,stat=ierr)
-                !$acc data copyin(zstore(1:ndet),elect,ndet,norb)
                 call zombie_alter(zstore,haml,elect,dvecs)
-                !$acc end data
                 GDflg='n'
                 num1=0.0d0;num2=0.0d0
                 do j=1,ndet

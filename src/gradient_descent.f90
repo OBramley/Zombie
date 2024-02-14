@@ -18,7 +18,7 @@ MODULE gradient_descent
     integer::epoc_cnt !epoc counter
     integer::loop_max=6 !10 !max number of loops in gd
     integer::rjct_cnt_global=0
-    integer::ndet_increase=5
+    integer::ndet_increase=1 !5
     integer::pick !Chosen zombie state
     integer,dimension(:),allocatable::picker
     integer,dimension(:),allocatable::chng_trk
@@ -213,9 +213,9 @@ MODULE gradient_descent
         p=70-norb
         chng=0.0000001
         if(epoc_cnt.gt.2)then
-            chng_chng=150
+            chng_chng=350
         else
-            chng_chng=250
+            chng_chng=450
         end if
         lralt_zs=0
         lralt_extra=0
@@ -325,14 +325,14 @@ MODULE gradient_descent
                 !         strt=1
                 !     end if
                 ! end if
-                if((acpt_cnt_2.lt.((ndet)/3).or.((acpt_cnt_2.lt.3))))then
+                if((acpt_cnt_2.lt.((ndet)/3).or.((ndet.gt.3).and.(acpt_cnt_2.lt.3))))then
                     tracker=tracker+1
                 end if
             end if
 
 
             if(((tracker.ge.1).or.(chng_chng.le.0)))then!.and.(strt.eq.1))then!.and.(ndet.lt.10))then
-                if(ndet.lt.300)then
+                if(ndet.lt.50)then
                         end=16
                         strt=3
                         tracker=0
@@ -372,8 +372,8 @@ MODULE gradient_descent
                             call zombiewriter(zstore(j),j,0)
                         end do
                         lralt_zs=0
-                        chng_chng=150
-                else if(loop_max.lt.12)then
+                        chng_chng=350
+                else if(loop_max.lt.9)then
                     loop_max=loop_max+1
                     tracker=0
                     lralt_extra=0
