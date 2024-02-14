@@ -1,19 +1,21 @@
-import inputs
+import json
+import sys
 from pyscf import gto, scf, ao2mo, fci, mcscf,lib 
 from functools import reduce
 import numpy
-from pyscf.fci import cistring,fci_slow
-from pyscf.fci import fci_slow
 
+name=sys.argv[1]
+with open(name) as json_file:
+    pyscf_ins=json.load(json_file)
 
-if(inputs.pyscf['units']=='atom'):
+if(pyscf_ins['units']=='atom'):
         mol = gto.M(
-        atom = inputs.pyscf['atoms'],
-        basis = inputs.pyscf['bs'],
-        verbose = inputs.pyscf['verbosity'],
-        spin=inputs.pyscf['spin'],
-        charge=inputs.pyscf['charge'],
-        # symmetry_subgroup = inputs.pyscf['symmetry_subgroup'], #0 is code for A1 point group
+        atom = pyscf_ins['atoms'],
+        basis = pyscf_ins['bs'],
+        verbose = pyscf_ins['verbosity'],
+        spin=pyscf_ins['spin'],
+        charge=pyscf_ins['charge'],
+        # symmetry_subgroup = pyscf_ins['symmetry_subgroup'], #0 is code for A1 point group
         )
         myhf=scf.RHF(mol)
         myhf.kernel()
@@ -32,14 +34,14 @@ if(inputs.pyscf['units']=='atom'):
        
 else:
     mol = gto.M(
-    unit = inputs.pyscf['units'],
-    atom = inputs.pyscf['atoms'],
-    basis = inputs.pyscf['bs'],
-    verbose = inputs.pyscf['verbosity'],
-    symmetry = inputs.pyscf['symmetry'],
-    spin=inputs.pyscf['spin'],
-    charge=inputs.pyscf['charge'],
-    # symmetry_subgroup = inputs.pyscf['symmetry_subgroup'], #0 is code for A1 point group
+    unit = pyscf_ins['units'],
+    atom = pyscf_ins['atoms'],
+    basis = pyscf_ins['bs'],
+    verbose = pyscf_ins['verbosity'],
+    symmetry = pyscf_ins['symmetry'],
+    spin=pyscf_ins['spin'],
+    charge=pyscf_ins['charge'],
+    # symmetry_subgroup = pyscf_ins['symmetry_subgroup'], #0 is code for A1 point group
     )
     myhf=scf.RHF(mol)
     myhf.kernel()

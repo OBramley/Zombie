@@ -1,4 +1,3 @@
-import inputs
 import numpy 
 import csv 
 
@@ -94,9 +93,8 @@ def two_elec_setup(norb,H2ei,EXDIR1):
 
 
 
-def elec_writer(h1e,eri_full,EXDIR1):
+def elec_writer(h1e,eri_full,norb,EXDIR1):
 
-    norb=int(inputs.zombs['norb']*2)
     H1ei = spatospin1(h1e,norb)
     H2ei = spatospin2(eri_full,norb)
 
