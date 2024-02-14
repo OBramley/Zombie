@@ -5,10 +5,27 @@ MODULE readpars
    
     contains
 
-    subroutine readrunconds   !   Level 1 Subroutine
+    subroutine readrunconds()
         implicit none
-        character(LEN=100)::LINE1, LINE2, LINE3, LINE4, LINE5, LINE6, LINE7, LINE8,LINE9, LINE10
-        character(LEN=100):: LINE11,LINE12, LINE13, LINE14, LINE15, LINE16, LINE17
+        
+        if (errorflag .ne. 0) return
+        call readrunconds_main
+        if (errorflag .ne. 0) return
+        if(GDflg.eq.'y')then
+            call readrunconds_grad
+            if (errorflag .ne. 0) return
+        end if
+        if(gramflg.eq.'y')then
+            call readrunconds_gram
+        end if
+        return 
+        
+    end subroutine readrunconds
+
+    subroutine readrunconds_main   !   Level 1 Subroutine
+        implicit none
+        character(LEN=100)::LINE1, LINE2, LINE3, LINE4, LINE5, LINE6, LINE7, LINE8, LINE9, LINE10
+        character(LEN=100):: LINE11,LINE12, LINE13, LINE14, LINE15, LINE16
         integer::n
         integer::ierr=0
 
@@ -23,86 +40,84 @@ MODULE readpars
         end if
 
         read(140,*,iostat=ierr)LINE1, LINE2, LINE3, LINE4, LINE5, LINE6, LINE7, LINE8,LINE9, LINE10
-        read(140,*,iostat=ierr)LINE11, LINE12, LINE13,LINE14, LINE15, LINE16, LINE17
+        read(140,*,iostat=ierr)LINE11, LINE12, LINE13,LINE14, LINE15, LINE16
         if (ierr.ne.0) then
             write(stderr,"(a,i0)") "Error reading rundata.csv of input file",ierr
             errorflag = 1
+            close(140)
             return
         end if
         close(140)
       
         ! print*,LINE1, LINE2, LINE3, LINE4, LINE5, LINE6, LINE7, LINE8, LINE17, LINE18
         ! print*,LINE9, LINE10, LINE11,LINE12, LINE13, LINE14, LINE15, LINE16
-        n=0        
-        if((LINE1(1:1).eq.'y').or.(LINE1(1:1).eq.'Y')) then
+        n=0
+        read(LINE1,*,iostat=ierr)ndet
+        if(ierr/=0) then
+            write(stderr,"(a,a)") "Error reading number of zombie states. Read ", trim(LINE1)
+            errorflag=1
+            return
+        end if
+        n=n+1
+        read(LINE2,*,iostat=ierr)randseed
+        if(ierr/=0) then
+            write(stderr,"(a,a)") "Error reading random seed. Read ", trim(LINE2)
+            errorflag=1
+            return
+        end if
+        n=n+1
+        if((LINE3(1:1).eq.'y').or.(LINE3(1:1).eq.'Y')) then
             zomgflg="y"
-        else if((LINE1(1:1).eq.'n').or.(LINE1(1:1).eq.'N')) then
+        else if((LINE3(1:1).eq.'n').or.(LINE3(1:1).eq.'N')) then
             zomgflg="n"
         else
-            write(stderr,"(a,a)") "Error. zomflg value must be YES/NO. Read ", trim(LINE1)
+            write(stderr,"(a,a)") "Error. zomflg value must be YES/NO. Read ", trim(LINE3)
             errorflag=1
             return
         end if
         n=n+1
-        if((LINE2(1:1).eq.'y').or.(LINE2(1:1).eq.'Y')) then
+        if((LINE4(1:1).eq.'y').or.(LINE4(1:1).eq.'Y')) then
             hamgflg="y"
-        else if((LINE2(1:1).eq.'n').or.(LINE2(1:1).eq.'N')) then
+        else if((LINE4(1:1).eq.'n').or.(LINE4(1:1).eq.'N')) then
             hamgflg="n"
         else
-            write(stderr,"(a,a)") "Error. hamflg value must be YES/NO. Read ", trim(LINE2)
+            write(stderr,"(a,a)") "Error. hamflg value must be YES/NO. Read ", trim(LINE4)
             errorflag=1
             return
         end if
         n=n+1
-        if((LINE3(1:1)=='y').or.(LINE3(1:1).eq.'Y')) then
-            propflg="y"
-        else if((LINE3(1:1)=='n').or.(LINE3(1:1).eq.'N')) then
-            propflg="n"
+        if((LINE5(1:1)=='y').or.(LINE5(1:1).eq.'Y')) then
+            cleanflg="y"
+        else if((LINE5(1:1)=='n').or.(LINE5(1:1).eq.'N')) then
+            cleanflg="n"
+        else if((LINE5(1:1)=='f').or.(LINE5(1:1).eq.'F')) then
+            cleanflg="f"
         else
-            write(stderr,"(a,a)") "Error. imaginary time flag must be YES/NO. Read ", trim(LINE3)
-            errorflag=1
-            return
-        end if
-        n=n+1
-        read(LINE4,*,iostat=ierr)beta
-        if(ierr/=0) then
-            write(stderr,"(a,a)") "Error reading beta Read ", trim(LINE4)
-            errorflag=1
-            return
-        end if
-        n=n+1
-        read(LINE5,*,iostat=ierr)timesteps
-        if(ierr/=0) then
-            write(stderr,"(a,a)") "Error reading timesteps. Read ", trim(LINE5)
+            write(stderr,"(a,a)") "Error. cleaning flag must be YES/NO/f. Read ", trim(LINE5)
             errorflag=1
             return
         end if
         n=n+1
         if((LINE6(1:1)=='y').or.(LINE6(1:1).eq.'Y')) then
-            cleanflg="y"
+            propflg="y"
         else if((LINE6(1:1)=='n').or.(LINE6(1:1).eq.'N')) then
-            cleanflg="n"
-        else if((LINE6(1:1)=='f').or.(LINE6(1:1).eq.'F')) then
-            cleanflg="f"
+            propflg="n"
         else
-            write(stderr,"(a,a)") "Error. cleaning flag must be YES/NO/f. Read ", trim(LINE6)
+            write(stderr,"(a,a)") "Error. imaginary time flag must be YES/NO. Read ", trim(LINE6)
             errorflag=1
             return
         end if
         n=n+1
-        if((LINE7(1:1)=='y').or.(LINE7(1:1).eq.'Y')) then
-            gramflg="y"
-        else if((LINE7(1:1)=='n').or.(LINE7(1:1).eq.'N')) then
-            gramflg="n"
-        else
-            write(stderr,"(a,a)") "Error. Gram Schmidt flag must be YES/NO. Read ", trim(LINE7)
-            errorflag=1
-            return
-        end if
-        n=n+1
-        read(LINE8,*,iostat=ierr)gramnum
+        read(LINE7,*,iostat=ierr)beta
         if(ierr/=0) then
-            write(stderr,"(a,a)") "Error reading number of GS states. Read ", trim(LINE8)
+            write(stderr,"(a,a)") "Error reading beta Read ", trim(LINE7)
+            errorflag=1
+            return
+        end if
+        n=n+1
+        read(LINE8,*,iostat=ierr)timesteps
+        if(ierr/=0) then
+            write(stderr,"(a,a)") "Error reading timesteps. Read ", trim(LINE8)
             errorflag=1
             return
         end if
@@ -118,11 +133,11 @@ MODULE readpars
         end if
         n=n+1 
         if((LINE10(1:1)=='y').or.(LINE10(1:1).eq.'Y')) then
-            rstrtflg="y"
+            gramflg="y"
         else if((LINE10(1:1)=='n').or.(LINE10(1:1).eq.'N')) then
-            rstrtflg="n"
+            gramflg="n"
         else
-            write(stderr,"(a,a)") "Error. Restart flag must be YES/NO. Read ", trim(LINE10)
+            write(stderr,"(a,a)") "Error. Gram Schmidt flag must be YES/NO. Read ", trim(LINE10)
             errorflag=1
             return
         end if
@@ -149,57 +164,195 @@ MODULE readpars
             return
         end if
         n=n+1
-        read(LINE14,*,iostat=ierr)ndet
-        if(ierr/=0) then
-            write(stderr,"(a,a)") "Error reading number of zombie states. Read ", trim(LINE14)
+        if((LINE14(1:1)=='r').or.(LINE14(1:1).eq.'R')) then
+            zst="RN"
+        else if((LINE14(1:1)=='h').or.(LINE14(1:1).eq.'H')) then
+            zst="HF"
+        else if((LINE14(1:1)=='b').or.(LINE14(1:1).eq.'B')) then
+            zst="BB"
+        else
+            write(stderr,"(a,a)") "Error. Zombie state type must be hf/ran/bb. Read ", trim(LINE14)
             errorflag=1
             return
         end if
         n=n+1
-        if((LINE15(1:1)=='r').or.(LINE15(1:1).eq.'R')) then
-            zst="RN"
-        else if((LINE15(1:1)=='h').or.(LINE15(1:1).eq.'H')) then
-            zst="HF"
-        else if((LINE15(1:1)=='b').or.(LINE15(1:1).eq.'B')) then
-            zst="BB"
+        if((LINE15(1:1)=='y').or.(LINE15(1:1).eq.'Y')) then
+            rhf_1="y"
+        else if((LINE15(1:1)=='n').or.(LINE15(1:1).eq.'N')) then
+            rhf_1="n"
         else
-            write(stderr,"(a,a)") "Error. Zombie state type must be hf/ran/bb. Read ", trim(LINE15)
+            write(stderr,"(a,a)") "Error. rhf_1 flag must be YES/NO. Read ", trim(LINE15)
             errorflag=1
             return
         end if
         n=n+1
         if((LINE16(1:1)=='y').or.(LINE16(1:1).eq.'Y')) then
-            rhf_1="y"
-        else if((LINE16(1:1)=='n').or.(LINE16(1:1).eq.'N')) then
-            rhf_1="n"
-        else
-            write(stderr,"(a,a)") "Error. rhf_1 flag must be YES/NO. Read ", trim(LINE16)
-            errorflag=1
-            return
-        end if
-        n=n+1
-        if((LINE17(1:1)=='y').or.(LINE17(1:1).eq.'Y')) then
             imagflg="y"
-        else if((LINE17(1:1)=='n').or.(LINE17(1:1).eq.'N')) then
+        else if((LINE16(1:1)=='n').or.(LINE16(1:1).eq.'N')) then
             imagflg="n"
         else
-            write(stderr,"(a,a)") "Error. imagflg flag must be YES/NO. Read ", trim(LINE17)
+            write(stderr,"(a,a)") "Error. imagflg flag must be YES/NO. Read ", trim(LINE16)
             errorflag=1
             return
         end if
         n=n+1
-
-        if (n.ne.17) then
+        if(n.ne.16) then
             write(stderr,"(a)") "Not all required variables read in readrunconds subroutine"
-            write(stderr,"(a,i0,a)") "Read a total of ", n, "of an expected 17 parameters"
+            write(stderr,"(a,i0,a)") "Read a total of ", n, "of an expected 16 parameters"
             errorflag = 1
             return
-          end if
-
-          return
+        end if
         
+    end subroutine readrunconds_main
 
-    end subroutine readrunconds
+    subroutine readrunconds_grad
+        implicit none
+        character(LEN=100)::LINE1, LINE2, LINE3, LINE4, LINE5, LINE6, LINE7, LINE8
+        integer::n
+        integer::ierr=0
+
+        if (errorflag .ne. 0) return
+
+        open(unit=140,file='rundata.csv',status='old',iostat=ierr)
+        if (ierr.ne.0) then
+          write(stderr,"(a)") 'Error in opening rundata.csv file'
+          errorflag = 1
+          return
+        end if
+        read(140,*,iostat=ierr)
+        read(140,*,iostat=ierr)
+       
+        read(140,*,iostat=ierr)LINE1, LINE2, LINE3, LINE4, LINE5, LINE6, LINE7, LINE8
+        if (ierr.ne.0) then
+            write(stderr,"(a,i0)") "Error reading rundata.csv of input file",ierr
+            errorflag = 1
+            close(140)
+            return
+        end if
+        close(140)
+      
+        n=0
+        read(LINE1,*,iostat=ierr)epoc_max
+        if(ierr/=0) then
+            write(stderr,"(a,a)") "Error reading epoc maximum. Read ", trim(LINE1)
+            errorflag=1
+            return
+        end if
+        n=n+1
+        read(LINE2,*,iostat=ierr)lr
+        if(ierr/=0) then
+            write(stderr,"(a,a)") "Error reading starting learning rate. Read ", trim(LINE2)
+            errorflag=1
+            return
+        end if
+        n=n+1
+        read(LINE3,*,iostat=ierr)lr_alpha
+        if(ierr/=0) then
+            write(stderr,"(a,a)") "Error reading starting learning rate decay rate. Read ", trim(LINE3)
+            errorflag=1
+            return
+        end if
+        n=n+1
+        read(LINE4,*,iostat=ierr)lr_loop_max
+        if(ierr/=0) then
+            write(stderr,"(a,a)") "Error reading learnign rate loop_max", trim(LINE4)
+            errorflag=1
+            return
+        end if
+        n=n+1
+        if((LINE5(1:1)=='y').or.(LINE5(1:1).eq.'Y')) then
+            n=n+1
+            read(LINE6,*,iostat=ierr)ndet_max
+            if(ierr/=0) then
+                write(stderr,"(a,a)") "Error read ndet_max. Read ", trim(LINE6)
+                errorflag=1
+                return
+            end if
+            n=n+1
+            read(LINE7,*,iostat=ierr)blind_clone_num
+            if(ierr/=0) then
+                write(stderr,"(a,a)") "Error reading reading blind clone number. Read ", trim(LINE7)
+                errorflag=1
+                return
+            end if
+            n=n+1
+            read(LINE8,*,iostat=ierr)ndet_increase
+            if(ierr/=0) then
+                write(stderr,"(a,a)") "Error reading number of determinants to incease by. Read ", trim(LINE8)
+                errorflag=1
+                return
+            end if
+            n=n+1
+        else if((LINE5(1:1)=='n').or.(LINE5(1:1).eq.'N')) then
+            n=n+1
+            ndet_max=ndet
+            n=n+1
+            blind_clone_num=350
+            n=n+1
+            ndet_increase=0
+            n=n+1
+        else
+            write(stderr,"(a,a)") "Error. Clone flag must be YES/NO. Read ", trim(LINE5)
+            errorflag=1
+            return
+        end if
+            
+        if(n.ne.8) then
+            write(stderr,"(a)") "Not all required variables needed for Gradient Descent read in."
+            write(stderr,"(a,i0,a)") "Read a total of ", n, "of an expected 8 parameters"
+            errorflag = 1
+            return
+        end if
+         
+        return
+
+    end subroutine readrunconds_grad
+
+    subroutine readrunconds_gram
+        implicit none
+        character(LEN=100)::LINE1 !, LINE2, LINE3, LINE4, LINE5, LINE6, LINE7, LINE8, LINE9, LINE10
+        !character(LEN=100):: LINE11,LINE12, LINE13, LINE14, LINE15, LINE16
+        integer::n
+        integer::ierr=0
+
+        if (errorflag .ne. 0) return
+        open(unit=140,file='rundata.csv',status='old',iostat=ierr)
+        if (ierr.ne.0) then
+          write(stderr,"(a)") 'Error in opening rundata.csv file'
+          errorflag = 1
+          return
+        end if
+        read(140,*,iostat=ierr)
+        read(140,*,iostat=ierr)
+        read(140,*,iostat=ierr)
+
+        read(140,*,iostat=ierr)LINE1
+        if (ierr.ne.0) then
+            write(stderr,"(a,i0)") "Error reading rundata.csv of input file",ierr
+            errorflag = 1
+            close(140)
+            return
+        end if
+        close(140)
+
+        n=0
+        read(LINE1,*,iostat=ierr)gramnum
+        if(ierr/=0) then
+            write(stderr,"(a,a)") "Error reading number of GS states. Read ", trim(LINE1)
+            errorflag=1
+            return
+        end if
+        n=n+1
+        if(n.ne.1) then
+            write(stderr,"(a)") "Not all required variables needed for Gram Schmidt Orthogonalisation read in."
+            write(stderr,"(a,i0,a)") "Read a total of ", n, "of an expected 1 parameters"
+            errorflag = 1
+            return
+        end if
+        
+        return 
+
+    end subroutine readrunconds_gram
 
     function zom_count() result(N)
         implicit none

@@ -129,18 +129,17 @@ MODULE operators
         type(zombiest),intent(in)::zs
         integer:: j
 
-        if (errorflag .ne. 0) return
-
         do j=1, norb
-            if(zs%val(j+norb)==0.0d0)then
-                if((zs%val(j)==1.0d0).or.(zs%val(j)==-1.0d0)) then
+            if(zs%val(j+norb).lt.1.0d-15)then
+                if((abs(zs%val(j)-1.0d0).lt.1.0d-15).or.(abs(zs%val(j)+1.0d0).lt.1.0d-15))then
                     CYCLE
                 else
                     isdet=.false.
                     return
                 end if
-            else if((zs%val(j+norb)==1.0d0).or.(zs%val(j+norb)==-1.0d0)) then
-                if(zs%val(j)==0.0d0) then
+                
+            else if((abs(zs%val(j+norb)-1.0d0).lt.1.0d-15).or.(abs(zs%val(j+norb)+1.0d0).lt.1.0d-15))then
+                if(zs%val(j).lt.1.0d-15) then
                     CYCLE
                 else
                     isdet=.false.
@@ -166,7 +165,7 @@ MODULE operators
         real(wp)::tt 
         do j=1, norb
             tt=zs%val(j+norb) + zs%val(j)
-            if(tt==0)then
+            if(tt.lt.1.0d-15)then
                 iszero=.true.
                 return
             end if
@@ -188,7 +187,7 @@ MODULE operators
         
         do j=1, norb
             tt=(zs%val(j)*zs%val(j))+(zs%val(j+norb)*zs%val(j+norb))
-            if(tt==0.0)then
+            if(tt.lt.1.0d-15)then
                 occ_iszero=.true.
                 exit
             end if
@@ -292,8 +291,7 @@ MODULE operators
         type(zombiest),dimension(:),allocatable::zt
         integer:: j,orb 
 
-        if (errorflag .ne. 0) return
-    
+     
         temp=0.0d0
         call alloczs(zt,norb)
 

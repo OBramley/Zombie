@@ -73,8 +73,8 @@ contains
         
         if (month .ge. 3) then
             ! account for leap years
-            if(dmod(dble(year),4.0d0) .eq. 0d0) then
-            if (dmod(dble(year),100d0).eq. 0d0)  then
+            if(dmod(dble(year),4.0d0) .lt. 1.0d-14) then
+            if (dmod(dble(year),100d0).lt. 1.0d-14)  then
                 yearday= yearday+28
             else
                 yearday = yearday + 29
@@ -145,8 +145,7 @@ contains
         integer :: SS,MM,HH,DD,counter
         real(real64) :: TMPVAR1,DSS,DMM,DHH,DDD
         integer,dimension(8) :: values
-        integer,external :: yearday
-      
+       
         !	Ensure we don't call this more than once in a program
         IF (INIT.GE.1) THEN
             IF(INIT.EQ.1) THEN
@@ -179,15 +178,15 @@ contains
      
             SEED = IDINT(DSS+DMM+DHH+DDD)
             if(fu .gt. 0) then
-                write(fu,*) "  Seed from clock ",SEED
+                write(fu,*) "Seed from clock ",SEED
             else 
-                write(output_unit,*) "  Seed from clock ",SEED
+                write(output_unit,*) "Seed from clock ",SEED
             end if 
         else
             if(fu .gt. 0) then
-                write(fu,*) "  Seed ", SEED
+                write(fu,*) "Seed ", SEED
             else 
-                write(output_unit,*) "  Seed from clock ",SEED             
+                write(output_unit,*) "Seed  ",SEED             
             end if
                 TMPVAR1 = DMOD(DBLE(SEED),B)
             end if
@@ -217,10 +216,12 @@ contains
     ! the output was identical up to the 16th decimal place
     ! after 10^10 calls, so we're probably OK ...
     !*****************************************************************
-    FUNCTION ZBQLU01()
+    FUNCTION ZBQLU01(dummy)
         implicit none
         real(real64):: ZBQLU01,X,B2,BINV
-       
+        integer::dummy
+
+        !$omp critical
         B2 = B
         BINV = 1.0D0/B
 
@@ -241,6 +242,7 @@ contains
         end do 
        
         ZBQLU01 = X/B2
+        !$omp end critical
         
     END FUNCTION ZBQLU01
 
@@ -287,8 +289,8 @@ contains
         real(real64)::X1,X2,ZBQLUAB
               
         ! Even if X1 > X2, this will work as X2-X1 will then be -ve
-        if (X1.NE.X2) THEN
-            ZBQLUAB = X1 + ( (B-X1)*ZBQLU01() )
+        if (abs(X1-X2).lt.1.0d-15) THEN
+            ZBQLUAB = X1 + ( (B-X1)*ZBQLU01(1) )
         ELSE
             ZBQLUAB = X1
             WRITE(output_unit,"(a)") "****WARNING**** (function ZBQLUAB) Upper and lower limits on uniform &
@@ -310,7 +312,7 @@ contains
             RETURN
         ENDIF
     
-        ZBQLEXP = -DLOG(ZBQLU01())*MU
+        ZBQLEXP = -DLOG(ZBQLU01(1))*MU
     
     END function ZBQLEXP
     !*****************************************************************
@@ -320,10 +322,11 @@ contains
     FUNCTION ZBQLNOR(MU,SIGMA)
         implicit none
         real(real64)::THETA,R,ZBQLNOR,MU,SIGMA
-    
+        
+        !$omp critical 
         IF (STATUS.LE.0) THEN
-            THETA = 2.0D0*PI*ZBQLU01()
-            R = DSQRT( -2.0D0*DLOG(ZBQLU01()) )
+            THETA = 2.0D0*PI*ZBQLU01(1)
+            R = DSQRT( -2.0D0*DLOG(ZBQLU01(1)) )
             ZBQLNOR = (R*DCOS(THETA))
             SPARE = (R*DSIN(THETA))
             STATUS = 1
@@ -331,7 +334,7 @@ contains
             ZBQLNOR = SPARE
             STATUS = 0
         ENDIF
-    
+        !$omp end critical
         ZBQLNOR = MU + (SIGMA*ZBQLNOR)
     
     END function ZBQLNOR
@@ -339,7 +342,7 @@ contains
     ! Returns a random number binomially distributed (N,P)
     FUNCTION ZBQLBIN(N,P)
         implicit none
-        real(real64)::P,ZBQLBET1
+        real(real64)::P
         real(real64)::PP,PPP,G,Y,TINY
         INTEGER N,ZBQLBIN,IZ,NN
 
@@ -432,13 +435,13 @@ contains
 
         IF (P.GT.0.9D0) THEN
             ZBQLGEO = ZBQLGEO + 1 
-            U = ZBQLU01()
+            U = ZBQLU01(1)
             do while(U.GT.P)
                 ZBQLGEO = ZBQLGEO + 1
-                U = ZBQLU01()
+                U = ZBQLU01(1)
             end do
         ELSE
-            U = ZBQLU01()
+            U = ZBQLU01(1)
             ! For tiny P, 1-p will be stored inaccurately and log(1-p) may
             ! be zero. In this case approximate log(1-p) by -p
             IF (P.GT.TINY) THEN
@@ -489,11 +492,11 @@ contains
             end do 
             Y = DEXP(-MU1)
             X = 1.0D0
-            X = X*ZBQLU01()
+            X = X*ZBQLU01(1)
 
             do while (X.GT.Y)
                 ZBQLPOI = ZBQLPOI + 1
-                X = X*ZBQLU01()
+                X = X*ZBQLU01(1)
             end do 
             ! For really huge values of MU, use rejection sampling as in 
             ! Press et al (1992) - large numbers mean some accuracy may be
@@ -501,20 +504,20 @@ contains
         ELSE
             TMP1 = DSQRT(2.0D0*MU)
             TMP2 = ZBQLLG(MU+1.0D0)-(MU*DLOG(MU))
-            call ZBQLPOI_y_value(X,Y,MU,TMP1,ZBQLPOI)
+            call ZBQLPOI_y_value(Y,MU,TMP1,ZBQLPOI)
             X = DBLE(ZBQLPOI)
             T = (X*DLOG(MU)-ZBQLLG(X+1.0D0)) + TMP2
             do
                 IF (DABS(T).LT.1.0D2) THEN
                     T = 0.9D0*(1.0D0+(Y*Y))*DEXP(T)
-                    IF (ZBQLU01().GT.T) then 
+                    IF (ZBQLU01(1).GT.T) then 
                         call ZBQLPOI_x_y_T_value(X,Y,MU,TMP1,TMP2,ZBQLPOI)
                     else 
                         exit
                     end if
                 else 
                     T = DLOG(0.9D0*(1.0D0+(Y*Y))) + T
-                    IF (DLOG(ZBQLU01()).GT.T) then 
+                    IF (DLOG(ZBQLU01(1)).GT.T) then 
                         call ZBQLPOI_x_y_T_value(X,Y,MU,TMP1,TMP2,ZBQLPOI)
                     else 
                         exit
@@ -525,25 +528,25 @@ contains
         
     END function ZBQLPOI
 
-    subroutine ZBQLPOI_y_value(X,Y,MU,TMP1,ZBQLPOI)
+    subroutine ZBQLPOI_y_value(Y,MU,TMP1,ZBQLPOI_val)
         implicit none
-        real(real64)::X,Y,MU,TMP1
-        INTEGER ZBQLPOI
-        Y = DTAN(PI*ZBQLU01())
-        ZBQLPOI = INT(MU + (TMP1*Y))
-        do while(ZBQLPOI.LT.0)
-            Y = DTAN(PI*ZBQLU01())
-            ZBQLPOI = INT(MU + (TMP1*Y))
+        real(real64)::Y,MU,TMP1
+        INTEGER ZBQLPOI_val
+        Y = DTAN(PI*ZBQLU01(1))
+        ZBQLPOI_val = INT(MU + (TMP1*Y))
+        do while(ZBQLPOI_val.LT.0)
+            Y = DTAN(PI*ZBQLU01(1))
+            ZBQLPOI_val = INT(MU + (TMP1*Y))
         end do
     end subroutine ZBQLPOI_y_value
 
-    subroutine ZBQLPOI_x_y_T_value(X,Y,MU,TMP1,TMP2,ZBQLPOI)
+    subroutine ZBQLPOI_x_y_T_value(X,Y,MU,TMP1,TMP2,ZBQLPOI_val)
         implicit none
         real(real64)::X,Y,T,MU,TMP1,TMP2
-        INTEGER ZBQLPOI
+        INTEGER ZBQLPOI_val
 
-        call ZBQLPOI_y_value(X,Y,MU,TMP1,ZBQLPOI)
-        X = DBLE(ZBQLPOI)
+        call ZBQLPOI_y_value(Y,MU,TMP1,ZBQLPOI_val)
+        X = DBLE(ZBQLPOI_val)
         T = (X*DLOG(MU)-ZBQLLG(X+1.0D0)) + TMP2
 
     end subroutine ZBQLPOI_x_y_T_value
@@ -554,21 +557,21 @@ contains
     ! parameter H)
     FUNCTION ZBQLGAM(G,H)
         implicit none
-        real(real64)::C,D,R,ZBQLGAM,G,H,A,z1,z2,B1,B2,M
+        real(real64)::D,R,ZBQLGAM,G,H,A,z1,z2,B1,B2,M
         real(real64)::U1,U2,U,V,TEST,X
         real(real64)::c1,c2,c3,c4,c5,w
-        
+        logical::flag=.true.
         ZBQLGAM = 0.0D0
         
         IF ( (G.LE.0.0D0).OR.(H.LT.0.0D0) ) THEN
             WRITE(error_unit,"(a)") "****ERROR**** Illegal parameter value in ZBQLGAM, both parameters must be positive"
             RETURN
         ENDIF
-        
+        !$omp critical 
         IF (G.LT.1.0D0) THEN
             do 
-                u=ZBQLU01()
-                v=ZBQLU01()
+                u=ZBQLU01(1)
+                v=ZBQLU01(1)
                 if (u.gt.exp(1.0d0)/(g+exp(1.0d0)))then 
                     ZBQLGAM=-log((g+exp(1.0d0))*(1.0d0-u)/(g*exp(1.0d0)))
                     if (v.gt.ZBQLGAM**(g-1.0))then 
@@ -585,18 +588,18 @@ contains
                 end if
             end do 
             ZBQLGAM=ZBQLGAM/h
-            RETURN
+            flag=.false.
         ELSE IF (G.LT.2.0D0) THEN
             M = 0.0D0
-        elseif (G.gt.10.0d0) then
+        ELSE IF (G.gt.10.0d0) then
             c1=g-1.0d0
             c2=(g-1.0d0/(6.0d0*g))/c1
             c3=2.0d0/c1
             c4=c3+2.0d0
             c5=1.0d0/sqrt(g)
             do 
-                u=ZBQLU01()
-                v=ZBQLU01()
+                u=ZBQLU01(1)
+                v=ZBQLU01(1)
                 if (g.gt.2.50d0) then
                     u=v+c5*(1.0d0-1.860d0*u)
                 end if 
@@ -610,45 +613,46 @@ contains
                 end if
             end do 
             ZBQLGAM=c1*w/h 
-            return
+            flag=.false.
         ELSE
             M = -(G-2.0D0) 
         ENDIF
-
-        R = 0.50D0
-        a = ((g-1.0d0)/exp(1.0d0))**((g-1.0d0)/(r+1.0d0))
-        C = (R*(M+G)+1.0D0)/(2.0D0*R)
-        D = M*(R+1.0D0)/R
-        z1 = C-DSQRT(C*C-D)
+        if(flag.eqv..true.)then
+            R = 0.50D0
+            a = ((g-1.0d0)/exp(1.0d0))**((g-1.0d0)/(r+1.0d0))
+            C = (R*(M+G)+1.0D0)/(2.0D0*R)
+            D = M*(R+1.0D0)/R
+            z1 = C-DSQRT(C*C-D)
     
-        ! On some systems (e.g. g77 0.5.24 on Linux 2.4.24), C-DSQRT(C*C)
-        ! is not exactly zero - this needs trapping if negative.
+            ! On some systems (e.g. g77 0.5.24 on Linux 2.4.24), C-DSQRT(C*C)
+            ! is not exactly zero - this needs trapping if negative.
     
-        IF ((Z1-M.LT.0.0D0).AND.(Z1-M.GT.-1.0D-12)) Z1 = M
-        z2 = C+DSQRT(C*C-D)
-        B1=(z1*(z1-M)**(R*(G-1.0D0)/(R+1.0D0)))*DEXP(-R*(z1-M)/(R+1.0D0))
-        B2=(z2*(z2-M)**(R*(G-1.0D0)/(R+1.0D0)))*DEXP(-R*(z2-M)/(R+1.0D0))
-        do 
-            U1=ZBQLU01()
-            U2=ZBQLU01()
-            U=A*U1
-            V=B1+(B2-B1)*U2
-            X=V/(U**R)
-            IF (X.LE.M) cycle
-            TEST = ((X-M)**((G-1)/(R+1)))*EXP(-(X-M)/(R+1.0D0))
-            IF (U.LE.TEST) THEN
-               ZBQLGAM = (X-M)/H
-               return
-            ENDIF
-        end do 
-           
+            IF ((Z1-M.LT.0.0D0).AND.(Z1-M.GT.-1.0D-12)) Z1 = M
+            z2 = C+DSQRT(C*C-D)
+            B1=(z1*(z1-M)**(R*(G-1.0D0)/(R+1.0D0)))*DEXP(-R*(z1-M)/(R+1.0D0))
+            B2=(z2*(z2-M)**(R*(G-1.0D0)/(R+1.0D0)))*DEXP(-R*(z2-M)/(R+1.0D0))
+            do 
+                U1=ZBQLU01(1)
+                U2=ZBQLU01(1)
+                U=A*U1
+                V=B1+(B2-B1)*U2
+                X=V/(U**R)
+                IF (X.LE.M) cycle
+                TEST = ((X-M)**((G-1)/(R+1)))*EXP(-(X-M)/(R+1.0D0))
+                IF (U.LE.TEST) THEN
+                    ZBQLGAM = (X-M)/H
+                    exit
+                ENDIF
+            end do 
+        end if
+        !$omp end critical    
         
     END function ZBQLGAM
     !**************************************************************
     ! Returns a random number, beta distributed with degrees of freedom NU1 and NU2.
     FUNCTION ZBQLBET1(NU1,NU2)
         implicit none
-        real(real64)::NU1,NU2,ZBQLBET1,ZBQLU01,X1,X2
+        real(real64)::NU1,NU2,ZBQLBET1,X1,X2
         
         ZBQLBET1 = 0.0D0
         
@@ -665,8 +669,8 @@ contains
               
         IF ( (NU1.LT.0.9D0).AND.(NU2.LT.0.9D0) ) THEN
             do
-                X1 = ZBQLU01()
-                X2 = ZBQLU01()
+                X1 = ZBQLU01(1)
+                X2 = ZBQLU01(1)
                 IF ( (X1**(1.0D0/NU1))+(X2**(1.0D0/NU2)).GT.1.0D0) cycle    
                 X1 = (DLOG(X2)/NU2) - (DLOG(X1)/NU1)
                 ZBQLBET1 = (1.0D0 + DEXP(X1))**(-1)
@@ -690,20 +694,20 @@ contains
     !**************************************************************
     ! Returns a random number, Weibull distributed with shape parameter
     ! A and location parameter B, i.e. density is
-    ! f(x) = ( A/(B**A) ) * x**(A-1) * EXP( -(x/B)**A )
-    FUNCTION ZBQLWEI(A,B)
+    ! f(x) = ( H/(G**H) ) * x**(H-1) * EXP( -(x/G)**H )
+    FUNCTION ZBQLWEI(H,G)
         implicit none
-        real(real64)::A,B,ZBQLWEI,U
+        real(real64)::H,G,ZBQLWEI,U
         
         ZBQLWEI = 0.0D0
         
-        IF ( (A.LE.0.0).OR.(B.LE.0.0) ) THEN
+        IF ( (H.LE.0.0).OR.(G.LE.0.0) ) THEN
             WRITE(error_unit,"(a)") "****ERROR**** Illegal parameter value in ZBQLWEI, both parameters must be positive"
             RETURN
         ENDIF
     
-        U = ZBQLU01()
-        ZBQLWEI = B * ( (-DLOG(U))**(1.0D0/A) )
+        U = ZBQLU01(1)
+        ZBQLWEI = G * ( (-DLOG(U))**(1.0D0/H) )
 
     END function ZBQLWEI
 
@@ -733,23 +737,23 @@ contains
     END function ZBQLNB
     !**************************************************************
     ! Returns a random number, Pareto distributed with parameters
-    ! A and B. The density is A*(B**A) / (B+X)**(A+1) for X > 0.
+    ! H and G. The density is H*(G**H) / (G+X)**(H+1) for X > 0.
     ! (this is slightly nonstandard - see documentation in 
     ! randgen.txt). The algorithm is straightforward - it uses the
     ! inverse CDF method.
-    FUNCTION ZBQLPAR(A,B)
+    FUNCTION ZBQLPAR(H,G)
         implicit none
-        real(real64)::A,B,ZBQLPAR,U
+        real(real64)::H,G,ZBQLPAR,U
         
         ZBQLPAR = 0.0D0
         
-        IF ( (A.LE.0.0D0).OR.(B.LE.0.0D0) ) THEN
+        IF ( (H.LE.0.0D0).OR.(G.LE.0.0D0) ) THEN
             WRITE(error_unit,"(a)") "****ERROR**** Illegal parameter value in ZBQLPAR, both parameters must be positive"
             RETURN
         ENDIF
          
-        U = ZBQLU01()
-        ZBQLPAR = B * (U**(-1.0D0/A)-1.0D0)
+        U = ZBQLU01(1)
+        ZBQLPAR = G * (U**(-1.0D0/H)-1.0D0)
         
        
     END function ZBQLPAR

@@ -5,8 +5,7 @@
 
 
 F90= gfortran
-FFLAGS= -g -fbacktrace -Wall -Wextra -ffast-math -ftree-vectorize -march=native -Ofast -O3 -fopenmp
-  #-fopenacc #-O3 -Ofast
+FFLAGS= -Wall -Wextra -ffast-math -ftree-vectorize -funroll-loops -march=native -Ofast -O3 -fopenmp
 # F90= ifort
 # FFLAGS=  -fp-model fast=2 -qopt-report=2 -qopt-report-phase=vec -unroll -xHost -fast -O3 -qopenmp -qopenacc#-O3 -Ofast
 FLINKS= $(ARC_LINALG_FFLAGS)
@@ -16,13 +15,13 @@ VPATH=../src
 
 all: ZOMBIE
 
-ZOMBIE:randgen.o mod_types.o vars.o infnan_constants.o inf.o infnan.o alarrays.o operators.o readpars.o outputs.o electrons.o zom.o ham.o imgtp.o clean.o gradient_descent.o MainZombie.o neural_network.o #gram_schmidt.o
+ZOMBIE:randgen_mod.o mod_types.o vars.o infnan_constants.o inf.o infnan.o alarrays.o operators.o readpars.o outputs.o electrons.o zom.o ham.o imgtp.o clean.o gradient_descent.o MainZombie.o #neural_network.o #gram_schmidt.o
 		 $(F90) $(FFLAGS) -o $@ $^ $(FLINKS)
 
 
 # Compile steps
 
-randgen.o:randgen.f
+randgen_mod.o:randgen_mod.f90
 	 $(F90) $(FFLAGS) -c $<
 
 mod_types.o:mod_types.f90
@@ -55,7 +54,7 @@ outputs.o:outputs.f90 vars.o mod_types.o
 electrons.o:electrons.f90 vars.o alarrays.o
 	 $(F90) $(FFLAGS) -c $<
 
-zom.o:zom.f90 vars.o infnan.o mod_types.o 
+zom.o:zom.f90 vars.o infnan.o mod_types.o randgen_mod.o
 	 $(F90) $(FFLAGS) -c $<
 	 
 ham.o:ham.f90 mod_types.o vars.o alarrays.o  
@@ -67,16 +66,16 @@ imgtp.o:imgtp.f90 vars.o alarrays.o mod_types.o
 clean.o:clean.f90 vars.o alarrays.o zom.o ham.o outputs.o readpars.o mod_types.o 
 	 $(F90) $(FFLAGS) -c $<
 
-gradient_descent.o:gradient_descent.f90 vars.o alarrays.o ham.o imgtp.o outputs.o infnan.o zom.o mod_types.o 
+# neural_network.o:neural_network.f90 vars.o alarrays.o mod_types.o 
+#	 $(F90) $(FFLAGS) -c $<
+
+gradient_descent.o:gradient_descent.f90 vars.o alarrays.o ham.o imgtp.o outputs.o infnan.o zom.o mod_types.o operators.o randgen_mod.o #neural_network.o
 	 $(F90) $(FFLAGS) -c $<
 
 # gram_schmidt.o:gram_schmidt.f90 vars.o alarrays.o ham.o gradient_descent.o grad_d.o imgtp.o outputs.o infnan.o zom.o grad_calc.o
 # 	 $(F90) $(FFLAGS) -c $<
 
-neural_network.o:neural_network.f90 vars.o alarrays.o mod_types.o 
-	 $(F90) $(FFLAGS) -c $<
-
-MainZombie.o:MainZombie.f90 randgen.o mod_types.o vars.o infnan_constants.o inf.o infnan.o alarrays.o operators.o readpars.o outputs.o electrons.o zom.o ham.o imgtp.o clean.o gradient_descent.o neural_network.o #gram_schmidt.o
+MainZombie.o:MainZombie.f90 randgen_mod.o mod_types.o vars.o infnan_constants.o inf.o infnan.o operators.o alarrays.o readpars.o outputs.o electrons.o zom.o ham.o imgtp.o clean.o gradient_descent.o #neural_network.o #gram_schmidt.o
 	 $(F90) $(FFLAGS) -c $<
 
 # This entry allows you to type " make clean " to get rid of

@@ -2,8 +2,6 @@ import inputs
 import numpy 
 import csv 
 
-
-
 def spatospin1(H1ea,norb):
     """Converting H1ea from spatial to spin"""
     if norb%2 != 0:

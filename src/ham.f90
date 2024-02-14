@@ -22,7 +22,9 @@ MODULE ham
         integer::ierr=0
 
         real(wp):: starttime, stoptime, runtime
+
         if (errorflag .ne. 0) return
+
         call CPU_TIME(starttime) 
         call haml_ovrlp_comb(haml,zstore,elecs,size,verb)
         call CPU_TIME(stoptime)
@@ -60,6 +62,41 @@ MODULE ham
         return 
 
     end subroutine hamgen
+
+    subroutine hamgen_inv(haml,size)
+
+        implicit none 
+
+        type(hamiltonian), intent(inout)::haml
+        integer,intent(in)::size
+        integer, allocatable,dimension(:)::IPIV1
+        real(wp),allocatable,dimension(:)::WORK1
+        integer::ierr=0
+
+        if (errorflag .ne. 0) return
+        haml%inv=haml%ovrlp
+        allocate(WORK1(size),IPIV1(size),stat=ierr)
+        if (ierr/=0) then
+            write(stderr,"(a,i0)") "Error in IPIV or WORK1 vector allocation . ierr had value ", ierr
+            errorflag=1
+        end if 
+
+        Call dgetrf(size, size, haml%inv, size, IPIV1, ierr)
+        if (ierr/=0) then
+            write(stderr,"(a,i0)")"Error in DGETRF ",ierr
+        end if
+        if (ierr==0) call dgetri(size,haml%inv,size,IPIV1,WORK1,size,ierr)
+        if (ierr/=0) then
+            write(stderr,"(a,i0)")"Error in DGETRI ",ierr
+        end if
+
+        deallocate(WORK1,IPIV1)
+
+        call DGEMM("N","N",size,size,size,1.d0,haml%inv,size,haml%hjk,size,0.d0,haml%kinvh,size)
+
+        return 
+
+    end subroutine hamgen_inv
 
     !##############################################################################################################################
     
@@ -279,7 +316,6 @@ MODULE ham
             do j=1,norb
                 dd=z1d(j+norb)*z2d(norb+j)
                 bth(j)=z1d(j)*z2d(j)
-
                 perts(1,j)=z1d(j+norb)*z2d(j)
                 perts(2,j)=z1d(j+norb)*z2d(j)
                 perts(3,j)=z1d(j)*z2d(j)
