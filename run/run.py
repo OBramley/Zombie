@@ -156,7 +156,8 @@ EXDIR1=EXDIR+"/"+inputs.setup['runfolder']
 shutil.copy2("inputs.py",EXDIR1)
 shutil.copy2("graph.py",EXDIR1)
 shutil.copy2("restart.py",EXDIR1)
-shutil.copy2("combine.py",EXDIR1)
+if(inputs.setup['multiple']>1): 
+    shutil.copy2("combine.py",EXDIR1)
 if((inputs.setup['elecs']=='no')):
     shutil.copytree(inputs.setup['datafolder']+'/integrals',EXDIR1+"/integrals")
 elif((inputs.setup['elecs']=='mol')):
