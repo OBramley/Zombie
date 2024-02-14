@@ -1,6 +1,7 @@
 program MainZombie
     
     use mod_types
+    use randgen
     use globvars
     use readpars
     use alarrays
@@ -12,7 +13,7 @@ program MainZombie
     use zom
     use gradient_descent
     use operators
-    use neural_network
+    ! use neural_network
     use omp_lib
 
     implicit none
@@ -28,11 +29,9 @@ program MainZombie
     type(dvector)::dvec_clean
     real(wp)::clean_norm, clean_erg,num1,num2
     character(LEN=100) :: CWD
-    real(wp):: starttime, stoptime, runtime,t
-    integer(wp):: randseed
-    integer::a,k,ierr=0, istat=0
-    ! DOUBLE PRECISION, external::ZBQLU01
-    type(zombiest)::temp_Z
+    real(wp):: starttime, stoptime, runtime
+    integer::ierr=0, istat=0
+    ! type(neural_network_layer),dimension(:),allocatable::neural_net
 
     call CPU_TIME(starttime) !used to calculate the runtime, which is output at the end
     write(stdout,"(a)") " ________________________________________________________________ "
@@ -53,69 +52,33 @@ program MainZombie
     if(rstrtflg.eq.'y')then
         ndet=zom_count()
     end if 
-
-    open(unit=570, file="/dev/urandom", access="stream", &
-    form="unformatted", action="read", status="old", iostat=istat)
-    if (istat == 0) then
-        read(570) randseed    ! This takes the random seed from the true-random bin. If
-        close(570)           ! the urandom bin does not exist the random seed is set
-    else                   ! to zero which forces the date to be used
-        randseed=0
+    if(randseed.eq.0)then
+        open(unit=570, file="/dev/urandom", access="stream", &
+        form="unformatted", action="read", status="old", iostat=istat)
+        if (istat == 0) then
+            read(570) randseed    ! This takes the random seed from the true-random bin. If
+            close(570)           ! the urandom bin does not exist the random seed is set
+        else                   ! to zero which forces the date to be used
+            randseed=0
+        end if
+        randseed =  abs(randseed)    ! Negative seed values seem to cause instability
     end if
-    randseed =  abs(randseed)    ! Negative seed values seem to cause instability
-  
     call ZBQLINI(randseed,0)   ! Generates the seed value using the UCL random library
-   
     write(stdout,"(a)") "Random seed set"
-
-
+   
     ! generate 1 and 2 electron integrals
     if((cleanflg=="y").or.(cleanflg=="f").or.((hamgflg=='y')).or.(GDflg=='y'))then
        
         write(stdout,"(a)") "Setting electron"
         call electronintegrals(elect)
         write(stdout,"(a)") "Electrons allocated"
-        call neural_network_control(10,elect)
+        
         if (gramflg.eq."n") then 
             ! generate zombie states
             call alloczs(zstore,ndet)
             write(stdout,"(a)") "Zombie states allocated"
             if(zomgflg=='y')then
-                call genzf(zstore,ndet)
-                ! call alloczf(temp_Z)
-                ! zstore(1)%num=numf(zstore(1),zstore(1))
-                ! zstore(1)%num_strt=zstore(1)%num
-                ! do j=2,ndet
-                !     a=0
-                !     zstore(j)%num=numf(zstore(j),zstore(j))
-                !     k=0
-                !     do while((abs(zstore(j)%num-nel).gt.0.001))
-                    
-                !         t=500*(0.2**a)
-                !         temp_Z%phi=zstore(j)%phi-2*t*(zstore(j)%val(1:norb)*zstore(j)%val(1+norb:2*norb))
-                !         call val_set(temp_Z)
-                !         temp_z%num=numf(temp_Z,temp_Z)
-                !         if(abs(temp_z%num-nel).lt.abs(zstore(j)%num-nel))then
-                !             zstore(j)=temp_z
-                !             ! zstore(j)%phi=temp_z%phi
-                !             ! zstore(j)%val=temp_z%val
-                !             ! zstore(j)%num=temp_z%num
-                !         else
-                !             a=a+1
-                !             if(a.gt.20)then
-                !                 a=0
-                !             end if 
-                !         end if
-                !         k=k+1
-                !         if(k.gt.1000000)then
-                !             exit
-                !         end if
-                !     end do
-                !     zstore(j)%num_strt=zstore(j)%num
-                    
-                ! end do 
-                ! call dealloczf(temp_Z)
-                
+                call genzf(zstore,ndet) 
                 do j=1,ndet
                     call zombiewriter(zstore(j),j,0)
                 end do
@@ -146,6 +109,7 @@ program MainZombie
             if(hamgflg=='y')then
                 write(stdout,"(a)") "To hamiltonian gen"
                 call hamgen(haml,zstore,elect,ndet,1)
+                ! call neural_network_control(10000,elect,haml,zstore,neural_net)
                 call matrixwriter(haml%hjk,ndet,"data/ham.csv")
                 call matrixwriter(haml%ovrlp,ndet,"data/ovlp.csv")
                 write(stdout,"(a)") "Hamiltonian successfully generated"
@@ -166,9 +130,7 @@ program MainZombie
        
             if(GDflg.eq."y")then
                 deallocate(erg,stat=ierr)
-                !$acc data copyin(zstore(1:ndet),elect,ndet,norb)
-                call zombie_alter(zstore,haml,elect,dvecs)
-                !$acc end data
+                call zombie_alter(zstore,haml,elect,dvecs)!,neural_net)
                 GDflg='n'
                 num1=0.0d0;num2=0.0d0
                 do j=1,ndet

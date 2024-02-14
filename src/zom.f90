@@ -1,6 +1,7 @@
 MODULE zom 
 
     use mod_types
+    use randgen
     use globvars
     use infnan_mod
     contains
@@ -15,7 +16,7 @@ MODULE zom
         integer, intent(in)::num
         integer::j,k
         real(wp)::dummy
-        DOUBLE PRECISION, external::ZBQLU01
+
         if (errorflag .ne. 0) return
 
         
@@ -263,63 +264,48 @@ MODULE zom
 
         implicit none
         type(zombiest),dimension(:),intent(inout)::zstore
-        DOUBLE PRECISION, external::ZBQLU01
-        real(wp)::mu((norb/2)),sig(norb/2)
+        ! real(wp)::mu((norb/2)),sig(norb/2)
         ! real(wp)::val
         integer::j,k
        
 
         if (errorflag .ne. 0) return
  
-        call musig(mu,sig)
+        ! call musig(mu,sig)
         print*,"In Zombie"
         if(imagflg=='n') then
-            !$omp parallel shared(zstore) private(j,k)
-            !$omp do
             do j=1, ndet
                 zstore(j)%phi=0.0001
                 if(nel.gt.4)then
                     zstore(j)%phi(1:4)=0.5*pirl
                     if(modulo(nel,2)==0) then
                         do k=5,nel+4
-                             !$omp critical
                             zstore(j)%phi(k)=0.5*pirl*ZBQLU01(1)
-                            !$omp end critical
                         end do
                     else
                         do k=5,nel+5
-                            !$omp critical
                             zstore(j)%phi(k)=0.5*pirl*ZBQLU01(1)
-                            !$omp end critical
                         end do
                     end if
                 else if(nel.eq.4)then
                     zstore(j)%phi(1:2)=0.5*pirl
                     if(modulo(nel,2)==0) then
                         do k=3,nel+4
-                            !$omp critical
                             zstore(j)%phi(k)=0.5*pirl*ZBQLU01(1)
-                            !$omp end critical
                         end do
                     else
                         do k=3,nel+5
-                             !$omp critical
                             zstore(j)%phi(k)=0.5*pirl*ZBQLU01(1)
-                            !$omp end critical
                         end do
                     end if
                 else 
                     if(modulo(nel,2)==0) then
                         do k=1,nel+4
-                            !$omp critical
                             zstore(j)%phi(k)=0.5*pirl*ZBQLU01(1)
-                            !$omp end critical
                         end do
                     else
                         do k=1,nel+5
-                             !$omp critical
                             zstore(j)%phi(k)=0.5*pirl*ZBQLU01(1)
-                            !$omp end critical
                         end do
                     end if
 
@@ -354,8 +340,6 @@ MODULE zom
                 ! zstore(j)%val(norb+1:2*norb)=cos(zstore(j)%phi)
              
             end do
-            !$omp end do
-            !$omp end parallel
             if(rhf_1=='y') then
                 zstore(1)%phi(1:nel)=0.5*pirl
                 zstore(1)%phi(nel+1:)=0
@@ -434,39 +418,39 @@ MODULE zom
     end subroutine genzf
 
 
-    FUNCTION random_normal(MU,SIGMA)
-        !
-        !       Returns a random number Normally distributed with mean
-        !       MU and standard deviation |SIGMA|, using the Box-Muller
-        !       algorithm
-        !
-        DOUBLE PRECISION THETA,R,ZBQLNOR,random_normal,PI,MU,SIGMA
-        DOUBLE PRECISION SPARE
-        INTEGER STATUS
-        SAVE STATUS,SPARE,PI
-        DOUBLE PRECISION p
-        DATA STATUS /-1/
+    ! FUNCTION random_normal(MU,SIGMA)
+    !     !
+    !     !       Returns a random number Normally distributed with mean
+    !     !       MU and standard deviation |SIGMA|, using the Box-Muller
+    !     !       algorithm
+    !     !
+    !     DOUBLE PRECISION THETA,R,ZBQLNOR,random_normal,PI,MU,SIGMA
+    !     DOUBLE PRECISION SPARE
+    !     INTEGER STATUS
+    !     SAVE STATUS,SPARE,PI
+    !     DOUBLE PRECISION p
+    !     DATA STATUS /-1/
         
-        IF (STATUS.EQ.-1) PI = 4.0D0*DATAN(1.0D0)
+    !     IF (STATUS.EQ.-1) PI = 4.0D0*DATAN(1.0D0)
 
-        IF (STATUS.LE.0) THEN
-        call random_number(p)
-        THETA = 2.0D0*PI*p 
-        call random_number(p)
+    !     IF (STATUS.LE.0) THEN
+    !     call random_number(p)
+    !     THETA = 2.0D0*PI*p 
+    !     call random_number(p)
 
-        R = DSQRT( -2.0D0*DLOG(p) )
+    !     R = DSQRT( -2.0D0*DLOG(p) )
 
-        ZBQLNOR = (R*DCOS(THETA))
-        SPARE = (R*DSIN(THETA))
-        STATUS = 1
-        ELSE
-        ZBQLNOR = SPARE
-        STATUS = 0
-        ENDIF
+    !     ZBQLNOR = (R*DCOS(THETA))
+    !     SPARE = (R*DSIN(THETA))
+    !     STATUS = 1
+    !     ELSE
+    !     ZBQLNOR = SPARE
+    !     STATUS = 0
+    !     ENDIF
 
-        ZBQLNOR = MU + (SIGMA*ZBQLNOR)
-        random_normal=ZBQLNOR
+    !     ZBQLNOR = MU + (SIGMA*ZBQLNOR)
+    !     random_normal=ZBQLNOR
 
-    END
+    ! END
 
 END MODULE zom

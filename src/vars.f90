@@ -80,6 +80,26 @@ MODULE globvars
         integer,dimension(:,:,:),allocatable::ovrlp_grad_avlb
     end type grad
 
+    type trial_data
+        real(wp)::dead
+        real(wp)::alive
+        real(wp)::new_ham
+        real(wp)::old_ham
+        integer::orbital
+        integer::diag
+        integer::rhf
+        integer::z1
+        integer::z2
+        real(wp),dimension(:),allocatable::input_features
+    end type trial_data
+
+    type neural_network_layer
+        real(wp),dimension(:,:),allocatable::weights
+        real(wp),dimension(:),allocatable::biases
+        real(wp),dimension(:),allocatable::hidden_layer
+        real(wp)::output
+    end type neural_network_layer
+
     
     integer::ndet       ! Number of Zombie states
     integer::norb       ! Number of spin orbitals
@@ -89,6 +109,7 @@ MODULE globvars
     integer::timesteps  ! Number of time steps
     character(LEN=2)::zst !Type of zombie state to be generated
 
+   
     character(LEN=1)::rstrtflg   ! Flag to restart program
     character(LEN=1)::GDflg      ! Flag to decide if to use Gradient descent 
     character(LEN=1)::zomgflg    ! Flag to generate zombie states or not
@@ -100,11 +121,23 @@ MODULE globvars
     integer::gramnum             ! Number of additional states to be generated for GS orthogonalisation
     character(LEN=1)::rhf_1      ! Flag to decide if the first zombie state should be st as the RHF determinant
     character(LEN=1)::imagflg    ! Flag to decide if zombie states are imaginary or real
+    integer(wp):: randseed       ! Random seed
     real(wp), parameter::pirl  = ATAN(1.0d0)*4.0d0      ! pi
     real(wp), parameter :: sqrtpi = sqrt(pirl)  ! square root of pi
     complex(wp)::i      ! The imagianry unit
 
     integer:: errorflag      ! Error flag
+    
+
+    !!!!!! Gradient descent variables!!!!!!
+    real(wp)::lr  ! learning rate
+    real(wp)::lr_alpha ! learning rate reduction
+    integer::epoc_max ! maximum number of epochs
+    integer::lr_loop_max    ! maximum number of learning rates
+    integer::ndet_increase ! number of determinants to increase by
+    integer::blind_clone_num !number of steps before blind cloning
+    integer::ndet_max ! maximum number of determinants
+    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
     integer::num_devices     !number of devices 
     integer::max_threads
@@ -169,7 +202,14 @@ MODULE globvars
         beta=0
         timesteps=0
         gramnum=0
-
+        lr=0  
+        lr_alpha=0 
+        epoc_max=0 
+        lr_loop_max=0    
+        ndet_increase=0 
+        blind_clone_num=0
+        ndet_max=0 
+        rstrtflg='n'
         errorflag=0
 
         i = (0.0d0,1.0d0)

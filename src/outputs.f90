@@ -259,10 +259,10 @@ MODULE outputs
 
     end subroutine energywriter
 
-    subroutine epoc_writer_int(erg,step,chng_trk,lr,pass)
+    subroutine epoc_writer_int(erg,step,chng_trk,learningr,pass)
 
         implicit none
-        real(wp),intent(in)::erg,lr 
+        real(wp),intent(in)::erg,learningr 
         integer,intent(in)::step,pass
         integer,intent(in)::chng_trk
         logical :: file_exists
@@ -290,9 +290,9 @@ MODULE outputs
                 return
             end if
             if(pass.eq.1)then
-                write(epoc,'(i0,",",e25.17e3,",",e25.17e3,",",i0)') step,erg,lr,chng_trk
+                write(epoc,'(i0,",",e25.17e3,",",e25.17e3,",",i0)') step,erg,learningr,chng_trk
             else
-                write(epoc,'(i0,",",e25.17e3,",",e25.17e3,",",i0)') step,erg,lr,chng_trk
+                write(epoc,'(i0,",",e25.17e3,",",e25.17e3,",",i0)') step,erg,learningr,chng_trk
             end if
             close(epoc)
         end if
@@ -300,12 +300,12 @@ MODULE outputs
         
     end subroutine epoc_writer_int
 
-    subroutine epoc_writer_array_orbital(erg,step,lr,chng_trk,pass)
+    subroutine epoc_writer_array_orbital(erg,step,learningr,chng_trk,pass)
 
         implicit none
         real(wp),intent(in)::erg
         integer,intent(in)::step,pass
-        real(wp),intent(in)::lr
+        real(wp),intent(in)::learningr
         integer,dimension(:),intent(in)::chng_trk
         integer::k
         integer::ierr=0, epoc=450
@@ -319,10 +319,10 @@ MODULE outputs
             return
         end if
         if(pass.eq.1)then
-            write(epoc,'(i0,",",e25.17e3,",",e25.17e3,",",*(i0:", "))') step,erg,lr,(chng_trk(k),k=1,ndet-1)
+            write(epoc,'(i0,",",e25.17e3,",",e25.17e3,",",*(i0:", "))') step,erg,learningr,(chng_trk(k),k=1,ndet-1)
          
         else
-            write(epoc,'(i0,",",e25.17e3,",",e25.17e3,",",*(i0:", "))') step,erg,lr,(chng_trk(k),k=1,ndet-1)
+            write(epoc,'(i0,",",e25.17e3,",",e25.17e3,",",*(i0:", "))') step,erg,learningr,(chng_trk(k),k=1,ndet-1)
         
         end if
         close(epoc)
@@ -331,11 +331,11 @@ MODULE outputs
         
     end subroutine epoc_writer_array_orbital
 
-    subroutine epoc_writer_array(erg,step,chng_trk,erg_dim,lr,pass)
+    subroutine epoc_writer_array(erg,step,chng_trk,erg_dim,learningr,pass)
 
         implicit none
         real(wp),intent(in)::erg
-        real(wp),dimension(:),intent(in)::lr,erg_dim 
+        real(wp),dimension(:),intent(in)::learningr,erg_dim 
         integer,intent(in)::step,pass
         integer,dimension(:),intent(in)::chng_trk
         integer::k
@@ -355,7 +355,7 @@ MODULE outputs
                 if(chng_trk(k).eq.0)then
                     EXIT 
                 end if 
-                write(epoc,'(a,",",e25.17e3,",",e25.17e3,",",i0)') "   ",erg_dim(k),lr(k),chng_trk(k)
+                write(epoc,'(a,",",e25.17e3,",",e25.17e3,",",i0)') "   ",erg_dim(k),learningr(k),chng_trk(k)
             end do
             write(epoc,'(i0,",",e25.17e3,",",a,",",*(i0:", "))') step,erg,"   ",(chng_trk(k),k=1,ndet-1)
         else
@@ -364,7 +364,7 @@ MODULE outputs
                 if(chng_trk(k).eq.0)then
                     EXIT 
                 end if 
-                write(epoc,'(a,",",e25.17e3,",",e25.17e3,",",i0)') "   ",erg_dim(k),lr(k),chng_trk(k)
+                write(epoc,'(a,",",e25.17e3,",",e25.17e3,",",i0)') "   ",erg_dim(k),learningr(k),chng_trk(k)
             end do
             write(epoc,'(i0,",",e25.17e3,",",a,",",*(i0:", "))') step,erg,"   ",(chng_trk(k),k=1,ndet-1)
         end if
