@@ -129,7 +129,6 @@ else:
 
 
 
-
 command_line="rclone copy /nobackup/cm14oab/"+inputs.run['runfolder']+" onedrive:PhD/Zombie/arc_results/"+inputs.run['runfolder']
 proc=subprocess.Popen(shlex.split(command_line))
 try:

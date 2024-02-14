@@ -560,7 +560,7 @@ contains
         real(real64)::D,R,ZBQLGAM,G,H,A,z1,z2,B1,B2,M
         real(real64)::U1,U2,U,V,TEST,X
         real(real64)::c1,c2,c3,c4,c5,w
-        
+        logical::flag=.true.
         ZBQLGAM = 0.0D0
         
         IF ( (G.LE.0.0D0).OR.(H.LT.0.0D0) ) THEN
@@ -588,10 +588,10 @@ contains
                 end if
             end do 
             ZBQLGAM=ZBQLGAM/h
-            RETURN
+            flag=.false.
         ELSE IF (G.LT.2.0D0) THEN
             M = 0.0D0
-        elseif (G.gt.10.0d0) then
+        ELSE IF (G.gt.10.0d0) then
             c1=g-1.0d0
             c2=(g-1.0d0/(6.0d0*g))/c1
             c3=2.0d0/c1
@@ -613,37 +613,38 @@ contains
                 end if
             end do 
             ZBQLGAM=c1*w/h 
-            return
+            flag=.false.
         ELSE
             M = -(G-2.0D0) 
         ENDIF
-
-        R = 0.50D0
-        a = ((g-1.0d0)/exp(1.0d0))**((g-1.0d0)/(r+1.0d0))
-        C = (R*(M+G)+1.0D0)/(2.0D0*R)
-        D = M*(R+1.0D0)/R
-        z1 = C-DSQRT(C*C-D)
+        if(flag.eqv..true.)then
+            R = 0.50D0
+            a = ((g-1.0d0)/exp(1.0d0))**((g-1.0d0)/(r+1.0d0))
+            C = (R*(M+G)+1.0D0)/(2.0D0*R)
+            D = M*(R+1.0D0)/R
+            z1 = C-DSQRT(C*C-D)
     
-        ! On some systems (e.g. g77 0.5.24 on Linux 2.4.24), C-DSQRT(C*C)
-        ! is not exactly zero - this needs trapping if negative.
+            ! On some systems (e.g. g77 0.5.24 on Linux 2.4.24), C-DSQRT(C*C)
+            ! is not exactly zero - this needs trapping if negative.
     
-        IF ((Z1-M.LT.0.0D0).AND.(Z1-M.GT.-1.0D-12)) Z1 = M
-        z2 = C+DSQRT(C*C-D)
-        B1=(z1*(z1-M)**(R*(G-1.0D0)/(R+1.0D0)))*DEXP(-R*(z1-M)/(R+1.0D0))
-        B2=(z2*(z2-M)**(R*(G-1.0D0)/(R+1.0D0)))*DEXP(-R*(z2-M)/(R+1.0D0))
-        do 
-            U1=ZBQLU01(1)
-            U2=ZBQLU01(1)
-            U=A*U1
-            V=B1+(B2-B1)*U2
-            X=V/(U**R)
-            IF (X.LE.M) cycle
-            TEST = ((X-M)**((G-1)/(R+1)))*EXP(-(X-M)/(R+1.0D0))
-            IF (U.LE.TEST) THEN
-               ZBQLGAM = (X-M)/H
-               return
-            ENDIF
-        end do 
+            IF ((Z1-M.LT.0.0D0).AND.(Z1-M.GT.-1.0D-12)) Z1 = M
+            z2 = C+DSQRT(C*C-D)
+            B1=(z1*(z1-M)**(R*(G-1.0D0)/(R+1.0D0)))*DEXP(-R*(z1-M)/(R+1.0D0))
+            B2=(z2*(z2-M)**(R*(G-1.0D0)/(R+1.0D0)))*DEXP(-R*(z2-M)/(R+1.0D0))
+            do 
+                U1=ZBQLU01(1)
+                U2=ZBQLU01(1)
+                U=A*U1
+                V=B1+(B2-B1)*U2
+                X=V/(U**R)
+                IF (X.LE.M) cycle
+                TEST = ((X-M)**((G-1)/(R+1)))*EXP(-(X-M)/(R+1.0D0))
+                IF (U.LE.TEST) THEN
+                    ZBQLGAM = (X-M)/H
+                    exit
+                ENDIF
+            end do 
+        end if
         !$omp end critical    
         
     END function ZBQLGAM

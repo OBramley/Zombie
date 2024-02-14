@@ -129,7 +129,7 @@ grad={
     #functions to increase the basis set by.
     'clone':'y',
     'clone_max':50,
-    'clone_steps':4, #450,
+    'clone_steps':450,
     'clone_num':1
 } 
 
