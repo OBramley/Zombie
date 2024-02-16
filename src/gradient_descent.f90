@@ -296,7 +296,7 @@ MODULE gradient_descent
                 loops=loops-1
             end if 
 
-            if((acpt_cnt_2.lt.(0.15*ndet)).and.(extra_flag.eq.0).and.(lralt_zs.eq.lralt_extra))then 
+            if((acpt_cnt_2.lt.(0.15*ndet)).and.(extra_flag.eq.0).and.(lralt_zs.eq.lralt_extra).and.(tracker.gt.-1))then 
                 lralt_extra=lralt_extra+1
                 extra_flag=1
             end if 
@@ -306,7 +306,8 @@ MODULE gradient_descent
             if(lralt_zs.gt.lr_loop_max)then
                 lralt_zs=lralt_extra
                 extra_flag=0
-                if((acpt_cnt_2.lt.((ndet)/3).or.((ndet.gt.5).and.(acpt_cnt_2.lt.3))))then
+                
+                if((acpt_cnt_2.lt.((ndet)/3)).or.((ndet.gt.5).and.(acpt_cnt_2.lt.3)).or.(tracker.lt.0))then
                     tracker=tracker+1
                 end if
             end if
@@ -315,7 +316,7 @@ MODULE gradient_descent
 
             if(((tracker.ge.1).or.(chng_chng.le.0)))then
                 if(ndet.lt.ndet_max)then
-                    tracker=0
+                    tracker=-1
                     extra_flag=1
                     lralt_extra=0
                     deallocate(picker,stat=ierr)
