@@ -3,7 +3,7 @@
     "atoms": "F 0 0 0",
     "bs" : "cc-pVDZ",
     "verbosity" : 2,
-    "symmetry" :"True",
+    "symmetry" :true,
     "spin":1,
     "charge":0,
     "norb": 14,

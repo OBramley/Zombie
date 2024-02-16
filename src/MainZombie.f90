@@ -44,7 +44,7 @@ program MainZombie
     write(stdout,"(a)") ""
     write(stdout,"(a)") ""
 
-  
+    
     istat=0
     call initialise
     call readrunconds

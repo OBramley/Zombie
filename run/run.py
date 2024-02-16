@@ -6,30 +6,29 @@
 # 
 ###################################################################################################
 import sys
-# import inputs
 import os
 import socket
 import getpass
 import shutil
 import subprocess
 import math 
-from pyscf import gto, scf, ao2mo
-from functools import reduce
-import numpy
 import csv
-from integral_write import elec_writer
+from integral_write import molpro_read,pyscf_do
 import json 
 
+print("Check input paramaters",end="")
 with open('inputs.json') as f:
     inputs=json.load(f)
-
+print("...",end="")
 if(inputs['setup']['elecs']=='pyscf'):
+    if not os.path.isfile('PyScf_json/'+inputs['pyscf_file']+'.json'):
+        sys.exit("No Pyscf json file found in correct folder either create one or change the input name")
     with open('PyScf_json/'+inputs['pyscf_file']+'.json') as json_file:
         pyscf_ins=json.load(json_file)
     inputs['zombs']['norb']= pyscf_ins['norb']
     inputs['zombs']['nel']= pyscf_ins['nel']
     inputs['zombs']['spin']= pyscf_ins['spin']
-
+print("...",end="")
 # Checking input paramaters 
 if(isinstance(inputs['setup']['nodes'],int)==False):
     sys.exit("Number of folders must be an integer")
@@ -49,7 +48,7 @@ elif(inputs['zombs']['norb']<1):
     # sys.exit("Not enough zombie states. Must be 2 or greater")
 elif(inputs['zombs']['zomtyp'] not in {'ran','HF','bb','hf'}):
     sys.exit("Type of zombie state must be ran, HF or bb")
-elif(inputs['setup']['elecs'] not in {'pyscf','mol','no'}):
+elif(inputs['setup']['elecs'] not in {'pyscf','mol','no','integrals'}):
     sys.exit("one and two electron integral paramter must be 'pyscf', 'mol' or 'no'")
 elif(inputs['run']['zomgen'] not in {'y','n'}):
     sys.exit("Generation of a new set of zombie states must be either 'y' or 'n'")
@@ -61,39 +60,50 @@ elif(isinstance(inputs['run']['timesteps'],int)==False):
     sys.exit("Beta must be an integer")
 elif(inputs['run']['gram'] not in {'y','n'}):
     sys.exit("The Gram Schmidt pramater must be either 'y' or 'n'")
-
 elif(inputs['run']['clean'] not in {'y','n','f'}):
     sys.exit("Setting cleaning on or off must be 'y' or 'n' or 'f' (to clean from a previously generated file)")
-
+print("...",end="")
 if(inputs['zombs']['zomtyp']=='HF'):
     ndetcheck=0
     for i in range((inputs['zombs']['norb']*2)+1):
         ndetcheck=ndetcheck+math.comb(inputs['zombs']['norb']*2,i)
     if(inputs['run']['ndet']!=ndetcheck):
         sys.exit('A Hartree Fock Basis for',inputs['zombs']['norb'], 'orbitals should have', ndetcheck, 'basis functions')
-
-if(inputs['setup']['elecs']=='mol'):
+print("...",end="")
+if(inputs['setup']['elecs']=='no'):
+    if not os.path.isfile(inputs['setup']['datafolder']+'/'+inputs['files']['elecfile']):
+        sys.exit("No electron integral input file either put one into the data file, change the name or select pyscf for automatic setup")
+elif(inputs['setup']['elecs']=='integrals'):
+    if not os.path.isfile(inputs['setup']['datafolder']+'/integrals'):
+        sys.exit("No electron integral folder")
+    else:
+        if not os.path.isfile(inputs['setup']['datafolder']+'/integrals/h1e.csv'):
+            sys.exit("No one-electron integral file")
+        elif not os.path.isfile(inputs['setup']['datafolder']+'/integrals/h2e.csv'):
+            sys.exit("No two-electron integral file")
+        elif not os.path.isfile(inputs['setup']['datafolder']+'/integrals/hnuc.csv'):
+            sys.exit("No nuclear energy integral file")
+elif(inputs['setup']['elecs']=='mol'):
     if not os.path.isfile(inputs['setup']['datafolder']+'/'+ inputs['files']['elecfile']):
         sys.exit("No Molpro input file")
-
-if(inputs['setup']['elecs']=='no' and inputs['run']['hamgen']=='y'):
-    if not os.path.isfile(inputs['setup']['datafolder']+'/integrals'):
-        sys.exit("No electron integral input file")
-
-if(inputs['setup']['elecs']=='no'and inputs['run']['hamgen']=='n'):
+elif(inputs['setup']['elecs']=='pyscf'):
+        if not os.path.isfile('PyScf_json/'+inputs['pyscf_file']+'.json'):
+            sys.exit("No Pyscf json file found in correct folder existed before what did you do?!")
+print("...",end="")
+if(inputs['run']['hamgen']=='n'):
     if not os.path.isfile(inputs['setup']['datafolder']+'/'+ inputs['files']['hamfile']):
         sys.exit("No Hamiltonian input file")
-
+print("...",end="")
 if(inputs['run']['clean']=='f'):
     if not os.path.isfile(inputs['setup']['datafolder']+'/'+ inputs['files']['cleanham']):
         sys.exit("No clean hamiltonian")
-
+print("...",end="")
 if(inputs['run']['gram']=='y'):
     if(isinstance(inputs['gram']['gramnum'],int)==False):
         sys.exit("Number of states for Gram Schmidt must be an integer")
     elif(inputs['run']['gramnum']<2):
         sys.exit("If using Gram Schmidt more than one state must investigated")
-
+print("...",end="")
 if(inputs['run']['grad']=='y'):
     if(inputs['run']['hamgen']=='n'):
         sys.exit("If using gradient descent a new Hamiltonian must be generated")
@@ -119,7 +129,7 @@ if(inputs['run']['grad']=='y'):
         sys.exit("Clone steps must be an integer")
     elif(isinstance(inputs['grad']['clone_num'],int)==False):
         sys.exit("Number of additional clones must be an integer")
-
+print("...",end="")
 if(inputs['setup']['multiple']>1):
     if(isinstance(inputs['run']['multiple'],int)==False):
         sys.exit("Multiple runs must be an integer")
@@ -129,18 +139,20 @@ if(inputs['setup']['multiple']>1):
         if((inputs['setup']['multiple']%inputs['setup']['subnode'])!=0):
             sys.exit("Number of multiple basis sets must be divisible by number of subnodes so the program can split the basis evenly")
 
-
-print("Arguments checked")
-# Hopefully temporary solution but current one to set the size of the dual paramter is to just write a tiny fortran module to set 
-# the size of the dual array
+print("Complete")
    
 # Check if on HPC
 Hostname=socket.gethostname()
-if((Hostname==("login2.arc4.leeds.ac.uk"))or(Hostname==("login1.arc4.leeds.ac.uk"))or(Hostname==("login2.arc3.leeds.ac.uk"))or(Hostname==("login1.arc3.leeds.ac.uk"))):
+if((Hostname==("login2.arc4.leeds.ac.uk"))or(Hostname==("login1.arc4.leeds.ac.uk"))):
     HPCFLG=1
+    print("On ARC4")
+elif((Hostname==("login2.arc3.leeds.ac.uk"))or(Hostname==("login1.arc3.leeds.ac.uk"))):
+    HPCFLG=1
+    print("On ARC3")
 else:
     HPCFLG=0
 
+print("Setting up execution folders",end="")
 # Make Execution folder
 if(HPCFLG==0):
     if not os.path.exists("../EXEC"):
@@ -149,7 +161,7 @@ if(HPCFLG==0):
 else:    
     os.environ['LOGNAME']
     EXDIR="/nobackup/"+getpass.getuser()
-
+print("...",end="")
 # Check for run folder and make it
 if os.path.exists(EXDIR+"/"+inputs['setup']['runfolder']):
     value=input("File already exists do you want to delete it? y/n\n")
@@ -157,106 +169,54 @@ if os.path.exists(EXDIR+"/"+inputs['setup']['runfolder']):
         shutil.rmtree(EXDIR+"/"+inputs['setup']['runfolder'])
     else:
         sys.exit("Runfolder already exists. Change the Runfolder name or delete/move it")
-
+print("...",end="")
 os.mkdir(EXDIR+"/"+inputs['setup']['runfolder'])
 EXDIR1=EXDIR+"/"+inputs['setup']['runfolder']
-
-
+print("...",end="")
+multflg=0
+print("Complete")
+print("Copying files to execution folder",end="")
 shutil.copy2("inputs.json",EXDIR1)
+print("...",end="")
 shutil.copy2('PyScf_json/'+inputs['pyscf_file']+'.json',EXDIR1)
+print("...",end="")
 shutil.copy2("graph.py",EXDIR1)
+print("...",end="")
 shutil.copy2("restart.py",EXDIR1)
+print("...",end="")
 if(inputs['setup']['multiple']>1): 
     shutil.copy2("combine.py",EXDIR1)
-if((inputs['setup']['elecs']=='no')):
-    shutil.copytree(inputs['setup']['datafolder']+'/integrals',EXDIR1+"/integrals")
-elif((inputs['setup']['elecs']=='mol')):
-    os.mkdir(EXDIR1+"/integrals")
-    shutil.copy2(inputs['setup']['datafolder']+'/'+inputs['files']['elecfile'],EXDIR1+"/integrals")
-if(inputs['setup']['elecs']=='pyscf'):
-    os.mkdir(EXDIR1+"/integrals")
-    if(pyscf_ins['units']=='atom'):
-        mol = gto.M(
-        atom = pyscf_ins['atoms'],
-        basis = pyscf_ins['bs'],
-        verbose = pyscf_ins['verbosity'],
-        spin=pyscf_ins['spin'],
-        charge=pyscf_ins['charge'],
-        # symmetry_subgroup = pyscf_ins['symmetry_subgroup'], #0 is code for A1 point group
-        )
-        myhf=scf.RHF(mol)
-        myhf.kernel()
-        c = myhf.mo_coeff
-        # Get 1-electron integrals and convert to MO basis
-        h1e = reduce(numpy.dot, (c.T, myhf.get_hcore(), c))
-        # Get 2-electron integrals and transform them
-        eri = ao2mo.kernel(mol, c)
-        # Ignore all permutational symmetry, and write as four-index tensor, in chemical notation
-        eri_full = ao2mo.restore(1, eri, c.shape[1])
-        # Scalar nuclear repulsion energy
-        Hnuc = myhf.energy_nuc()
-       
-    else:
-        mol = gto.M(
-        unit = pyscf_ins['units'],
-        atom = pyscf_ins['atoms'],
-        basis = pyscf_ins['bs'],
-        verbose = pyscf_ins['verbosity'],
-        symmetry = pyscf_ins['symmetry'],
-        spin=pyscf_ins['spin'],
-        charge=pyscf_ins['charge'],
-        # symmetry_subgroup = pyscf_ins['symmetry_subgroup'], #0 is code for A1 point group
-        )
-        myhf=scf.RHF(mol)
-        myhf.kernel()
-        """Obtaining one and two electron integrals from pyscf calculation
-        Code adapted from George Booth"""
-        # Extract AO->MO transformation matrix
-        c = myhf.mo_coeff
-        # Get 1-electron integrals and convert to MO basis
-        h1e = reduce(numpy.dot, (c.T, myhf.get_hcore(), c))
-        # Get 2-electron integrals and transform them
-        eri = ao2mo.kernel(mol, c)
-        # Ignore all permutational symmetry, and write as four-index tensor, in chemical notation
-        eri_full = ao2mo.restore(1, eri, c.shape[1])
-        # Scalar nuclear repulsion energy
-        Hnuc = myhf.energy_nuc()
-
-    
-    with open(EXDIR1+"/integrals/hnuc.csv",'w', newline='')as csvfile:
-        spamwriter=csv.writer(csvfile)
-        spamwriter.writerow([Hnuc,0])
-
-
-multflg=0
-
+print("...",end="")
 if(inputs['run']['zomgen']=='n')or(inputs['run']['clean']=='f'):
     shutil.copytree(inputs['setup']['datafile'],EXDIR1+'/data')
 else:
     os.mkdir(EXDIR1+'/data')
-
+print("...",end="")
 if(inputs['run']['hamgen']=='n')or(inputs['run']['imagprop']=='n'):
     shutil.copytree(inputs['setup']['datafile']+'/'+inputs['files']['hamfile'],EXDIR1+'/data/ham.csv')
     shutil.copytree(inputs['setup']['datafile']+'/'+inputs['files']['ovrlfile'],EXDIR1+'/data/ovlp.csv')
+print("Complete")
 
-elec_writer(h1e,eri_full,2*(inputs['zombs']['norb']),EXDIR1)
-
-if(HPCFLG==1)and(inputs['setup']['multiple']>1):
-    multflg=inputs['setup']['multiple']
-    for i in range(multflg):
-        os.mkdir(EXDIR1+'/node_'+str(i+1))
-        shutil.copytree((EXDIR1+'/data'),(EXDIR1+'/node_'+str(i+1)+'/data'))
-        shutil.copytree((EXDIR1+'/integrals'),(EXDIR1+'/node_'+str(i+1)+'/integrals'))
-        with open(EXDIR1+'/node_'+str(i+1)+'/rundata.csv','w',newline='')as file:
-            writer = csv.writer(file)
-            writer.writerow(inputs['run'].values())
-            writer.writerow(inputs['zombs'].values())
-            if(inputs['run']['grad']=='y'):
-                writer.writerow(inputs['grad'].values())
-            if(inputs['run']['gram']=='y'):
-                writer.writerow(inputs['gram'].values())
-else:
-    with open(EXDIR1+'/rundata.csv','w',newline='')as file:
+print("Setting up electron integral files",end="")
+if((inputs['setup']['elecs']=='no')):
+    os.mkdir(EXDIR1+"/integrals")
+    shutil.copy2(inputs['setup']['datafolder']+'/'+inputs['files']['elecfile'],EXDIR1+"/integrals/elec_sorted.csv")
+    print("...",end="")
+elif((inputs['setup']['elecs']=='integrals')):
+    shutil.copytree(inputs['setup']['datafolder']+'/integrals',EXDIR1+"/integrals")
+    print("...",end="")
+elif((inputs['setup']['elecs']=='mol')):
+    os.mkdir(EXDIR1+"/integrals")
+    molpro_read(inputs['setup']['datafolder']+'/'+inputs['files']['elecfile'],2*(inputs['zombs']['norb']),EXDIR1)
+    shutil.copy2(inputs['setup']['datafolder']+'/'+inputs['files']['elecfile'],EXDIR1+"/integrals")
+    print("...",end="")
+if(inputs['setup']['elecs']=='pyscf'):
+    os.mkdir(EXDIR1+"/integrals")
+    pyscf_do(pyscf_ins,2*(inputs['zombs']['norb']),EXDIR1)
+    print("...",end="")
+print("Complete")
+print("Writing runfile",end="")
+with open(EXDIR1+'/rundata.csv','w',newline='')as file:
         writer = csv.writer(file)
         writer.writerow(inputs['run'].values())
         writer.writerow(inputs['zombs'].values())
@@ -264,7 +224,22 @@ else:
             writer.writerow(inputs['grad'].values())
         if(inputs['run']['gram']=='y'):
             writer.writerow(inputs['gram'].values())
+print("...",end="")
+print("Complete")
 
+if(HPCFLG==1)and(inputs['setup']['multiple']>1):
+    print("Setting up multiple runs",end="")
+    multflg=inputs['setup']['multiple']
+    for i in range(multflg):
+        os.mkdir(EXDIR1+'/node_'+str(i+1))
+
+        shutil.copytree((EXDIR1+'/data'),(EXDIR1+'/node_'+str(i+1)+'/data'))
+        shutil.copytree((EXDIR1+'/integrals'),(EXDIR1+'/node_'+str(i+1)+'/integrals'))
+        shutil.copy2((EXDIR1+'/rundata.csv'),(EXDIR1+'/node_'+str(i+1)+'/rundata.csv'))
+        print("...",end="")
+    print("Complete")
+
+print("Compiling Fortran modules")
 os.chdir("../build")
 if(inputs['setup']['cores']==1):
     if(HPCFLG==1):
@@ -289,12 +264,10 @@ elif(inputs['setup']['cores']>1):
         shutil.copy2("../build/makefile_mac_omp","../build/Makefile")
         subprocess.run(["make"])
 
-
 shutil.copy2("ZOMBIE",EXDIR1)
 if(multflg>1):
     for i in range(multflg):
         shutil.copy2("ZOMBIE",EXDIR1+'/node_'+str(i+1))
-
 os.chdir(EXDIR1)
 HPCFLG=0
 if(HPCFLG==1):
@@ -336,10 +309,6 @@ else:
         os.environ["OMP_NUM_THREADS"]=str(inputs['setup']['cores'])
     subprocess.run(["./ZOMBIE"])
 
-# if(inputs['run']['cores']!=1): 
-#     os.environ["OMP_NUM_THREADS"]=str(inputs['run']['cores'])   
-# os.environ["OMP_CANCELLATION"]="TRUE"   
-# subprocess.run(["./ZOMBIE"])
  
 
     

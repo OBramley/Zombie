@@ -1,7 +1,7 @@
 { 
-    "pyscf_file":"BH_613g_star_star.json",
+    "pyscf_file":"BH_631g_star_star",
     "setup":{
-        "runfolder":"be_new_test",
+        "runfolder":"BH_test_new_run",
         "runtime": "48:00:00",
         "nodes":1,
         "cores":10,
@@ -14,7 +14,7 @@
     },
 
     "run":{
-        "ndet":5,
+        "ndet":10,
         "seed":2,
         "zomgen":"y",
         "hamgen":"y",
@@ -42,8 +42,8 @@
         "learning_rate_decay":0.2,
         "decay_steps":6,
         "clone":"y",
-        "clone_max":40,
-        "clone_steps":350,
+        "clone_max":300,
+        "clone_steps":450,
         "clone_num":1
     }, 
 
