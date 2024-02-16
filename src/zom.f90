@@ -282,9 +282,15 @@ MODULE zom
                         do k=5,nel+4
                             zstore(j)%phi(k)=0.5*pirl*ZBQLU01(1)
                         end do
+                        do k=nel+5,norb
+                            zstore(j)%phi(k)=zstore(j)%phi(k)*ZBQLU01(1)
+                        end do
                     else
                         do k=5,nel+5
                             zstore(j)%phi(k)=0.5*pirl*ZBQLU01(1)
+                        end do
+                        do k=nel+6,norb
+                            zstore(j)%phi(k)=zstore(j)%phi(k)*ZBQLU01(1)
                         end do
                     end if
                 else if(nel.eq.4)then
@@ -293,9 +299,15 @@ MODULE zom
                         do k=3,nel+4
                             zstore(j)%phi(k)=0.5*pirl*ZBQLU01(1)
                         end do
+                        do k=nel+5,norb
+                            zstore(j)%phi(k)=zstore(j)%phi(k)*ZBQLU01(1)
+                        end do
                     else
                         do k=3,nel+5
                             zstore(j)%phi(k)=0.5*pirl*ZBQLU01(1)
+                        end do
+                        do k=nel+6,norb
+                            zstore(j)%phi(k)=zstore(j)%phi(k)*ZBQLU01(1)
                         end do
                     end if
                 else 
@@ -303,9 +315,15 @@ MODULE zom
                         do k=1,nel+4
                             zstore(j)%phi(k)=0.5*pirl*ZBQLU01(1)
                         end do
+                        do k=nel+5,norb
+                            zstore(j)%phi(k)=zstore(j)%phi(k)*ZBQLU01(1)
+                        end do
                     else
                         do k=1,nel+5
                             zstore(j)%phi(k)=0.5*pirl*ZBQLU01(1)
+                        end do
+                        do k=nel+6,norb
+                            zstore(j)%phi(k)=zstore(j)%phi(k)*ZBQLU01(1)
                         end do
                     end if
 

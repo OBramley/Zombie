@@ -151,9 +151,9 @@ MODULE globvars
     subroutine val_set_whole(this)
         implicit none
         class(zombiest),intent(inout)::this
-      
         this%val(0)=0.0d0
-  
+        
+        ! this%phi(:)=modulo(this%phi(:),0.5*pirl)
         this%val(1:norb)=sin(this%phi)
         this%val(1+norb:2*norb)=cos(this%phi)
     
@@ -166,7 +166,7 @@ MODULE globvars
         class(zombiest),intent(inout)::this
         integer,intent(in)::n
 
-     
+        this%phi(n)=modulo(this%phi(n),0.5*pirl)
         this%val(n)=sin(this%phi(n))
         this%val(n+norb)=cos(this%phi(n))
        
