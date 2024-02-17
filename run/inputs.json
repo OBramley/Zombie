@@ -4,7 +4,7 @@
         "runfolder":"BH_test_new_run",
         "runtime": "48:00:00",
         "nodes":1,
-        "cores":10,
+        "cores":15,
         "submissions":25,
         "multiple":1,
         "subnode":1,
@@ -42,8 +42,8 @@
         "learning_rate_decay":0.2,
         "decay_steps":6,
         "clone":"y",
-        "clone_max":300,
-        "clone_steps":450,
+        "clone_max":100,
+        "clone_steps":350,
         "clone_num":1
     }, 
 
