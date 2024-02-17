@@ -31,7 +31,6 @@ MODULE gram_schmidt
 
         ierr=0
 
-
         if(GDflg.eq."y")then
             ! Allocate 2D zombie array
             allocate(zstore(gramnum+1,ndet),stat=ierr)
