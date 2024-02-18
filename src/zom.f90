@@ -15,22 +15,13 @@ MODULE zom
         type(zombiest),dimension(:),intent(inout)::zstore
         integer, intent(in)::num
         integer::j,k
-        real(wp)::dummy
 
         if (errorflag .ne. 0) return
 
-        
         if(imagflg=='n') then
             do j=1,num
                 do k=1,norb
-                    dummy=-1
-                    !$omp critical
-                    do while((dummy.lt.0))
-                    !    dummy=2*pirl*(ZBQLU01(1)) 
-                       dummy=0.5*pirl*(ZBQLU01(1)) 
-                    end do
-                    !$omp end critical
-                    zstore(j)%phi(k)=dummy
+                    zstore(j)%phi(k)=2*pirl*(ZBQLU01(1)) 
                 end do
                 call val_set(zstore(j))
             end do
@@ -42,8 +33,6 @@ MODULE zom
                 zstore(1)%val(norb+1:)=1 
                 zstore(1)%val(1:nel)=1
                 zstore(1)%val(norb+1:norb+nel)=0
-                ! zstore(1)%sin(1:nel)=cmplx(1,0.0d0,kind=8)
-                ! zstore(1)%cos(1:nel)=cmplx(0,0.0d0,kind=8)
             end if 
             
         else if(imagflg=='y')then

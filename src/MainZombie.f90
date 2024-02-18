@@ -96,7 +96,6 @@ program MainZombie
     if((gramflg.eq."y").and.(gramwave.gt.1))then
         ! call gram_schmidt_control(elect)
     else
-        print*,'here'
         if(propflg=="y")then
             ! generate Hamiltonian and overlap
             call allocham(haml,ndet)
@@ -142,20 +141,16 @@ program MainZombie
                 end if
                 call allocdvgram(dvecs,gramnum,ndet)
                 write(stdout,"(a)") "Imaginary time propagation started"
-                call imaginary_time(dvecs,erg(1,:),haml,ndet)
+                call imaginary_time(dvecs,erg,haml,ndet)
                 write(stdout,"(a)") "Imaginary time propagation finished"
                 write(stdout,"(a,f21.16)") "Initial ground state energy: ", erg(1,timesteps+1)
                 call dvec_writer(dvecs%d,ndet,0)
                 do k=1,gramnum
                     write(stdout,"(a,i1,a,f21.16)") "Initial excited state, ",k," energy: ", erg(k+1,timesteps+1)
-                    call dvec_writer(dvecs%d_gs(k,:),ndet,k+1)
+                    call dvec_writer(dvecs%d_gs(k,:),ndet,k)
                 end do 
-                call dvec_writer(dvecs%d,ndet,0)
                 call energywriter(erg,"energy.csv",0)
                 write(stdout,"(a)") "Imaginary time propagation finished"
-       
-
-
             end if 
            
             
@@ -190,6 +185,23 @@ program MainZombie
                     call matrixwriter(haml%hjk,ndet,"data/ham_final.csv")
                     call matrixwriter(haml%ovrlp,ndet,"data/ovlp_final.csv")
                 else if(gramflg.eq."y")then
+                    write(stdout,"(a)") "energy array allocated"
+                    allocate(erg(gramnum+1,timesteps+1),stat=ierr)
+                    if(ierr/=0)then 
+                        errorflag=1
+                        write(stderr,"(a,i0)") "Error in erg allocation. ierr had value ", ierr
+                    end if
+                    call allocdvgram(dvecs,gramnum,ndet)
+                    write(stdout,"(a)") "Imaginary time propagation started"
+                    call imaginary_time(dvecs,erg,haml,ndet)
+                    write(stdout,"(a)") "Imaginary time propagation finished"
+                    write(stdout,"(a,f21.16)") "Final ground state energy: ", erg(1,timesteps+1)
+                    do k=1,gramnum
+                        write(stdout,"(a,i1,a,f21.16)") "Final excited state, ",k," energy: ", erg(k+1,timesteps+1)
+                    end do 
+                    call dvec_writer(dvecs%d,ndet,0)
+                    call energywriter(erg,"energy_final.csv",0)
+                    write(stdout,"(a)") "Imaginary time propagation finished"
                 end if
                 ! call sd_anal(zstore,nel,dvecs(1),2)
             end if

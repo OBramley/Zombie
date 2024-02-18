@@ -208,7 +208,7 @@ MODULE outputs
         character(LEN=*),intent(in)::filenm
         real::db
         integer,intent(in)::j
-        integer::ergnum,k,l
+        integer::ergnum,k
         logical :: file_exists
         integer::ierr=0
 

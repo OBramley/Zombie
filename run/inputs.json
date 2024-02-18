@@ -14,14 +14,14 @@
     },
 
     "run":{
-        "ndet":20,
+        "ndet":1024,
         "seed":2,
         "zomgen":"y",
         "hamgen":"y",
         "clean":"n",
         "imagprop":"y",
-        "beta":500,
-        "timesteps":1000,
+        "beta":20000,
+        "timesteps":5000,
         "grad":"n",
         "gram":"y"
     },
@@ -31,7 +31,7 @@
         "norb":0,
         "nel":0,
         "spin":0,
-        "zomtyp":"bb",
+        "zomtyp":"ran",
         "rhf_1":"y",
         "imagflg":"n"
     },

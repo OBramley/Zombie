@@ -10,6 +10,7 @@ MODULE imgtp
    
     contains
 
+
     subroutine imaginary_time_erg(values,size)
 
         implicit none
@@ -137,8 +138,7 @@ MODULE imgtp
         end do
         call gs_dvector(dvecs,haml%ovrlp)
         db=beta/timesteps
-        print*,dvecs%d_gs
-        stop
+    
         do k=1,timesteps+1
         
             call DGEMV("N",size,size,1.d0,haml%ovrlp,size,dvecs%d_1,1,0.d0,temp,1)
@@ -151,6 +151,8 @@ MODULE imgtp
                 norm=dot_product(temp,dvecs%d_gs(g,:))
                 dvecs%d_gs(g,:)=dvecs%d_gs(g,:)/sqrt(abs(norm))
             end do
+            
+
             call DGEMV("N",size,size,1.d0,haml%hjk,size,dvecs%d,1,0.d0,temp,1)
             erg(1,k)=dot_product(temp,dvecs%d)
             do g=1, gramnum
@@ -182,15 +184,19 @@ MODULE imgtp
         implicit none
         type(dvector),intent(inout)::dvecs
         real(wp),dimension(:,:),intent(in)::ovrlp
+        real(wp)::numer,denom
         integer::j,k
 
+        
         do j=1,gramnum
-            dvecs%d_gs(j,:) = dvecs%d_gs(j,:)-((dot_product(dvecs%d_1,matmul(ovrlp,dvecs%d_gs(j,:)))/&
-                                                dot_product(dvecs%d_1,matmul(ovrlp,dvecs%d_1)))*dvecs%d_1)
+            numer=dot_product(dvecs%d_gs(j,:),matmul(ovrlp,dvecs%d_1))
+            denom=dot_product(dvecs%d_1,matmul(ovrlp,dvecs%d_1))
+            dvecs%d_gs(j,:) = dvecs%d_gs(j,:)-dvecs%d*numer/denom
             if(j>1)then
                 do k=1,j-1
-                    dvecs%d_gs(j,:) = dvecs%d_gs(j,:)-((dot_product(dvecs%d_gs(k,:),matmul(ovrlp,dvecs%d_gs(j,:)))/&
-                                                        dot_product(dvecs%d_gs(k,:),matmul(ovrlp,dvecs%d_gs(k,:))))*dvecs%d_gs(k,:))
+                    numer=dot_product(dvecs%d_gs(k,:),matmul(ovrlp,dvecs%d_gs(j,:)))
+                    denom=dot_product(dvecs%d_gs(k,:),matmul(ovrlp,dvecs%d_gs(k,:)))
+                    dvecs%d_gs(j,:) = dvecs%d_gs(j,:)-dvecs%d_gs(k,:)*numer/denom
                 end do
             end if
         end do
