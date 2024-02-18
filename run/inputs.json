@@ -1,10 +1,10 @@
 { 
-    "pyscf_file":"Be_atom_ccpvdz",
+    "pyscf_file":"Li_631g_star_star_trunc",
     "setup":{
-        "runfolder":"Be_test_new_run",
+        "runfolder":"Be_gs_tests",
         "runtime": "48:00:00",
         "nodes":1,
-        "cores":10,
+        "cores":15,
         "submissions":25,
         "multiple":1,
         "subnode":1,
@@ -22,8 +22,8 @@
         "imagprop":"y",
         "beta":500,
         "timesteps":1000,
-        "grad":"y",
-        "gram":"n"
+        "grad":"n",
+        "gram":"y"
     },
 
 
@@ -42,13 +42,14 @@
         "learning_rate_decay":0.2,
         "decay_steps":6,
         "clone":"y",
-        "clone_max":60,
-        "clone_steps":450,
+        "clone_max":100,
+        "clone_steps":350,
         "clone_num":1
     }, 
 
     "gram":{
-        "gramnum":4
+        "gramnum":4,
+        "gramwave":1
     },
 
     "files":{

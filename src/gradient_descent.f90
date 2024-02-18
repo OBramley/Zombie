@@ -250,7 +250,7 @@ MODULE gradient_descent
                     call val_set(temp%zom,pickorb)
                    
                     call he_full_row(temp,zstore,elect,ndet,pickorb)
-                    call imaginary_time_erg(temp,ndet)
+                    call imaginary_time(temp,ndet)
         
                     if(grad_fin%prev_erg-temp%erg.ge.1.0d-14)then
                         acpt_cnt=acpt_cnt+1
@@ -351,7 +351,7 @@ MODULE gradient_descent
                     call allocdv(dvecs,ndet)
                     call alloc_grad_do(thread,ndet)
                     call haml_to_grad_do(haml,dvecs,temp)
-                    call imaginary_time_erg(temp,ndet)
+                    call imaginary_time(temp,ndet)
                     call deallocgrad(grad_fin)
                     call allocgrad(grad_fin,ndet,norb)
                     grad_fin%prev_erg=temp%erg 
@@ -476,7 +476,7 @@ MODULE gradient_descent
                 call val_set(temp%zom)
            
                 call he_full_row(temp,zstore,elect,ndet,0)
-                call imaginary_time_erg(temp,ndet)
+                call imaginary_time(temp,ndet)
 
                 if(grad_fin%prev_erg-temp%erg.ge.1.0d-11)then
                     acpt_cnt=acpt_cnt+1

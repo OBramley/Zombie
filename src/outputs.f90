@@ -39,8 +39,6 @@ MODULE outputs
 
     end subroutine matrixwriter_real
 
-
-
     subroutine matrixwriter(out,size,filenm)
 
         implicit none
@@ -123,8 +121,6 @@ MODULE outputs
         
             if(imagflg=='n') then
                 write(zomnum,'(*(e25.17e3 :", "))') ((zom%phi(j)),j=1,norb)
-                ! write(zomnum,'(*(e25.17e3 :", "))') ((zom%val(j)),j=2,2*norb,2)
-                ! write(zomnum,'(*(e25.17e3 :", "))') ((zom%val(j)),j=1,2*norb,2)
                 write(zomnum,'(*(e25.17e3 :", "))') ((zom%val(j)),j=1+norb,2*norb)
                 write(zomnum,'(*(e25.17e3 :", "))') ((zom%val(j)),j=1,norb)
             else if(imagflg=='y') then
@@ -132,8 +128,6 @@ MODULE outputs
                 ! write(zomnum,'(*(e25.17e3 :", ": ))') ((zom%img(j)),j=1,norb)
                 write(zomnum,'(*(e25.17e3 :", "))') ((zom%val(j)),j=1+norb,2*norb)
                 write(zomnum,'(*(e25.17e3 :", "))') ((zom%val(j)),j=1,norb)
-                ! write(zomnum,'(*(e25.17e3 :", "))') ((zom%val(j)),j=2,2*norb,2)
-                ! write(zomnum,'(*(e25.17e3 :", "))') ((zom%val(j)),j=1,2*norb,2)
             end if
             close(zomnum)
         else if(file_exists.eqv..true.) then
@@ -148,8 +142,6 @@ MODULE outputs
             write(zomnum,*)' '
             if(imagflg=='n') then
                 write(zomnum,'(*(e25.17e3 :", "))') ((zom%phi(j)),j=1,norb)
-                ! write(zomnum,'(*(e25.17e3 :", "))') ((zom%val(j)),j=2,2*norb,2)
-                ! write(zomnum,'(*(e25.17e3 :", "))') ((zom%val(j)),j=1,2*norb,2)
                 write(zomnum,'(*(e25.17e3 :", "))') ((zom%val(j)),j=1+norb,2*norb)
                 write(zomnum,'(*(e25.17e3 :", "))') ((zom%val(j)),j=1,norb)
             else if(imagflg=='y') then
@@ -196,8 +188,7 @@ MODULE outputs
         if(imagflg=='n') then
             write(zomnum,'(*(e25.17e3 :", "))') ((zom%val(j)),j=1+norb,2*norb)
             write(zomnum,'(*(e25.17e3 :", "))') ((zom%val(j)),j=1,norb)
-            ! write(zomnum,'(*(e25.17e3 :", "))') (REAL(zom%dead(j)),j=1,norb)
-            ! write(zomnum,'(*(e25.17e3 :", "))') (REAL(zom%alive(j)),j=1,norb)
+        
         else if(imagflg=='y') then
             ! write(zomnum,'(*(1x,es25.17e3 :", "))') ((zom%dead(j)),j=1,norb)
             ! write(zomnum,'(*(1x,es25.17e3 :", "))') ((zom%alive(j)),j=1,norb)
@@ -213,11 +204,11 @@ MODULE outputs
 
         implicit none
 
-        real(wp), dimension(:),intent(in)::erg 
+        real(wp), dimension(:,:),intent(in)::erg 
         character(LEN=*),intent(in)::filenm
         real::db
         integer,intent(in)::j
-        integer::ergnum,k
+        integer::ergnum,k,l
         logical :: file_exists
         integer::ierr=0
 
@@ -236,25 +227,15 @@ MODULE outputs
                 close(ergnum)
                 return
             end if
-            write(ergnum,'(*(e25.17e3 :", "))') (db*(k-1),k=1,timesteps+1)
+            do k=1,timesteps+1
+                write(ergnum,'(*(e25.17e3 :", "))') db*(k-1),erg(:,k)
+            end do
+            close(ergnum)
         else 
-            open(unit=ergnum,file=trim(filenm),status="old",access='append',iostat=ierr)
-            if(ierr/=0)then
-                write(stderr,"(a,i0)") "Error in opening energy file. ierr had value ", ierr
-                errorflag=1
-                close(ergnum)
-                return
-            end if
-            write(ergnum,*)' '
+            write(stdout,"(a)") "File alread exists so not rewriting"
+     
         end if
         
-        write(ergnum,'(*(e25.17e3 :", "))') ((erg(k)),k=1,timesteps+1)
-        if(imagflg=='y')then
-            ! write(ergnum,'(*(e25.17e3 :", "))') (CMPLX(erg(k)),k=1,timesteps+1)
-        end if
-
-        close(ergnum)
-
         return
 
     end subroutine energywriter

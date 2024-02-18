@@ -42,7 +42,7 @@ MODULE readpars
         read(140,*,iostat=ierr)LINE1, LINE2, LINE3, LINE4, LINE5, LINE6, LINE7, LINE8,LINE9, LINE10
         read(140,*,iostat=ierr)LINE11, LINE12, LINE13,LINE14, LINE15, LINE16
         if (ierr.ne.0) then
-            write(stderr,"(a,i0)") "Error reading rundata.csv of input file",ierr
+            write(stderr,"(a,i0)") "Error reading rundata.csv ",ierr
             errorflag = 1
             close(140)
             return
@@ -224,7 +224,7 @@ MODULE readpars
        
         read(140,*,iostat=ierr)LINE1, LINE2, LINE3, LINE4, LINE5, LINE6, LINE7, LINE8
         if (ierr.ne.0) then
-            write(stderr,"(a,i0)") "Error reading rundata.csv of input file",ierr
+            write(stderr,"(a,i0)") "Error reading Gradient values in rundata.csv ",ierr
             errorflag = 1
             close(140)
             return
@@ -324,11 +324,13 @@ MODULE readpars
         end if
         read(140,*,iostat=ierr)
         read(140,*,iostat=ierr)
-        read(140,*,iostat=ierr)
-
+        if(GDflg.eq.'y')then
+            read(140,*,iostat=ierr)
+        end if
+      
         read(140,*,iostat=ierr)LINE1, LINE2
         if (ierr.ne.0) then
-            write(stderr,"(a,i0)") "Error reading rundata.csv of input file",ierr
+            write(stderr,"(a,i0)") "Error reading GS rundata.csv ",ierr
             errorflag = 1
             close(140)
             return
@@ -343,7 +345,7 @@ MODULE readpars
             return
         end if
         n=n+1
-        read(LINE1,*,iostat=ierr)gramwave
+        read(LINE2,*,iostat=ierr)gramwave
         if(ierr/=0) then
             write(stderr,"(a,a)") "Error reading number of wavefunctions states. Read ", trim(LINE2)
             errorflag=1

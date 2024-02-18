@@ -119,6 +119,7 @@ MODULE globvars
     character(LEN=1)::gramflg    ! Flag to determine if gram schmidt orthogolnalisation should be carried out
     character(LEN=1)::GPUflg     ! GPU flag
     integer::gramnum             ! Number of additional states to be generated for GS orthogonalisation
+    integer::gramwave            ! Number of wave functions to be generated for GS orthogonalisation
     character(LEN=1)::rhf_1      ! Flag to decide if the first zombie state should be st as the RHF determinant
     character(LEN=1)::imagflg    ! Flag to decide if zombie states are imaginary or real
     integer(wp):: randseed       ! Random seed
@@ -153,7 +154,7 @@ MODULE globvars
         class(zombiest),intent(inout)::this
         this%val(0)=0.0d0
         
-        ! this%phi(:)=modulo(this%phi(:),0.5*pirl)
+      
         this%val(1:norb)=sin(this%phi)
         this%val(1+norb:2*norb)=cos(this%phi)
     
@@ -166,7 +167,6 @@ MODULE globvars
         class(zombiest),intent(inout)::this
         integer,intent(in)::n
 
-        this%phi(n)=modulo(this%phi(n),0.5*pirl)
         this%val(n)=sin(this%phi(n))
         this%val(n+norb)=cos(this%phi(n))
        
@@ -202,6 +202,7 @@ MODULE globvars
         beta=0
         timesteps=0
         gramnum=0
+        gramwave=0
         lr=0  
         lr_alpha=0 
         epoc_max=0 
