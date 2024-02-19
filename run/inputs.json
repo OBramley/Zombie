@@ -1,0 +1,66 @@
+{ 
+    "pyscf_file":"Li_631g_star_star_trunc",
+    "setup":{
+        "runfolder":"Be_gs_tests",
+        "runtime": "48:00:00",
+        "nodes":1,
+        "cores":15,
+        "submissions":25,
+        "multiple":1,
+        "subnode":1,
+        "datafolder":"data copy",
+        "GPU":"n",
+        "elecs":"pyscf"
+    },
+
+    "run":{
+        "ndet":1024,
+        "seed":2,
+        "zomgen":"y",
+        "hamgen":"y",
+        "clean":"n",
+        "imagprop":"y",
+        "beta":20000,
+        "timesteps":5000,
+        "grad":"n",
+        "gram":"y"
+    },
+
+
+    "zombs":{
+        "norb":0,
+        "nel":0,
+        "spin":0,
+        "zomtyp":"ran",
+        "rhf_1":"y",
+        "imagflg":"n"
+    },
+
+    "grad":{
+        "epoc_max":1000000,
+        "initial_learning_rate":2500,
+        "learning_rate_decay":0.2,
+        "decay_steps":6,
+        "clone":"y",
+        "clone_max":100,
+        "clone_steps":350,
+        "clone_num":1
+    }, 
+
+    "gram":{
+        "gramnum":4,
+        "gramwave":1
+    },
+
+    "files":{
+        "hamfile":"ham.csv",
+        "ovrlfile":"ovlp.csv",
+        "elecfile":"integrals.pkl",
+        "cleanham":"clean_ham.csv",
+        "cleanzom":"exmple"
+    }
+}
+
+
+
+

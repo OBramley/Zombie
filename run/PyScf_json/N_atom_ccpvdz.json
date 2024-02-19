@@ -1,0 +1,11 @@
+{
+    "units":"atom",
+    "atoms": "N 0 0 0",
+    "bs" : "cc-pVDZ",
+    "verbosity" : 2,
+    "symmetry" :true,
+    "spin":1,
+    "charge":0,
+    "norb": 14,
+    "nel":7
+}
