@@ -206,7 +206,7 @@ MODULE gradient_descent
         extra_flag=0
         p=70-norb
 
-        if(epoc_cnt.gt.2)then
+        if((epoc_cnt.gt.2).and.(blind_clone_num.gt.100))then
             chng_chng=blind_clone_num-100
         else
             chng_chng=blind_clone_num
@@ -365,7 +365,11 @@ MODULE gradient_descent
                         call zombiewriter(zstore(j),j,0)
                     end do
                     lralt_zs=0
-                    chng_chng=blind_clone_num-100
+                    if(blind_clone_num.gt.100)then
+                        chng_chng=blind_clone_num-100
+                    else
+                        chng_chng=blind_clone_num
+                    end if 
                 else if(lr_loop_max.lt.10)then
                     if((tracker.ge.1))then
                         lr_loop_max=lr_loop_max+1

@@ -269,19 +269,19 @@ if(multflg>1):
     for i in range(multflg):
         shutil.copy2("ZOMBIE",EXDIR1+'/node_'+str(i+1))
 os.chdir(EXDIR1)
-HPCFLG=0
+# HPCFLG=0
 if(HPCFLG==1):
-    if(inputs['run']['cores']!=1):
-        os.environ["OMP_NUM_THREADS"]=str(inputs['run']['cores'])
+    if(inputs['setup']['cores']!=1):
+        os.environ["OMP_NUM_THREADS"]=str(inputs['setup']['cores'])
     file1="zombie_"+inputs['setup']['runfolder']+".sh"
     f=open(file1,"w")
     f.write("#$ -cwd -V \n")
-    if(inputs['run']['cores']!=1):
-        f.write("#$ -pe smp "+str(inputs['run']['cores'])+" \n") #Use shared memory parallel environemnt 
-    if(inputs['run']['GPU']=='y'):
+    if(inputs['setup']['cores']!=1):
+        f.write("#$ -pe smp "+str(inputs['setup']['cores'])+" \n") #Use shared memory parallel environemnt 
+    if(inputs['setup']['GPU']=='y'):
         f.write("#$ -l coproc_v100=1 \n")
         f.write("#$ -P feps-gpu \n")
-    f.write("#$ -l h_rt="+inputs['run']['runtime']+"\n")
+    f.write("#$ -l h_rt="+inputs['setup']['runtime']+"\n")
     f.write("#$ -l h_vmem=1G \n")
     f.write("module add mkl \n")
     f.write('time ./ZOMBIE')

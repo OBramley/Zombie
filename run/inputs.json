@@ -1,11 +1,11 @@
 { 
-    "pyscf_file":"BH_631g_star_star",
+    "pyscf_file":"NH_ccpvdz",
     "setup":{
-        "runfolder":"BH_test_new_run",
+        "runfolder":"NH_growing_faster",
         "runtime": "48:00:00",
         "nodes":1,
         "cores":15,
-        "submissions":25,
+        "submissions":1,
         "multiple":1,
         "subnode":1,
         "datafolder":"data copy",
@@ -42,8 +42,8 @@
         "learning_rate_decay":0.2,
         "decay_steps":6,
         "clone":"y",
-        "clone_max":100,
-        "clone_steps":350,
+        "clone_max":200,
+        "clone_steps":7,
         "clone_num":1
     }, 
 

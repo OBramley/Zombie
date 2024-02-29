@@ -1,0 +1,11 @@
+{
+   "units":"Angstrom",
+   "atoms": "O 0 0 0; H 0 0 1.032",
+   "bs" : "6-31g**",
+   "verbosity" : 4,
+   "symmetry" :true,
+   "spin":0,
+   "charge":1,
+   "norb": 19,
+   "nel":8
+}
