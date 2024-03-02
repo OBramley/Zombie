@@ -136,20 +136,40 @@ def pyscf_do(pyscf_ins,norbs,EXDIR1):
         charge=pyscf_ins['charge'],
         # symmetry_subgroup = pyscf_ins['symmetry_subgroup'], #0 is code for A1 point group
         )
-        myhf=scf.RHF(mol)
-        myhf.kernel()
-        """Obtaining one and two electron integrals from pyscf calculation
-        Code adapted from George Booth"""
-        # Extract AO->MO transformation matrix
-        c = myhf.mo_coeff
-        # Get 1-electron integrals and convert to MO basis
-        h1e = reduce(numpy.dot, (c.T, myhf.get_hcore(), c))
-        # Get 2-electron integrals and transform them
-        eri = ao2mo.kernel(mol, c)
-        # Ignore all permutational symmetry, and write as four-index tensor, in chemical notation
-        eri_full = ao2mo.restore(1, eri, c.shape[1])
-        # Scalar nuclear repulsion energy
-        Hnuc = myhf.energy_nuc()
+        if(pyscf_ins['spin']==0):
+            myhf=scf.RHF(mol)
+            myhf.kernel()
+            """Obtaining one and two electron integrals from pyscf calculation
+            Code adapted from George Booth"""
+            # Extract AO->MO transformation matrix
+            c = myhf.mo_coeff
+            # Get 1-electron integrals and convert to MO basis
+            h1e = reduce(numpy.dot, (c.T, myhf.get_hcore(), c))
+            # Get 2-electron integrals and transform them
+            eri = ao2mo.kernel(mol, c)
+            # Ignore all permutational symmetry, and write as four-index tensor, in chemical notation
+            eri_full = ao2mo.restore(1, eri, c.shape[1])
+            # Scalar nuclear repulsion energy
+            Hnuc = myhf.energy_nuc()
+        else:
+            myhf=scf.HF(mol)
+            myhf.kernel()
+            # """Obtaining one and two electron integrals from pyscf calculation
+            # Code adapted from George Booth"""
+
+            # hcore_mo = numpy.einsum('pi,pq,qj->ij', myhf.mo_coeff, hcore_ao, rhf_h2o.mo_coeff)
+            # eri_4fold_mo = ao2mo.incore.full(eri_4fold_ao, rhf_h2o.mo_coeff)
+            # # Extract AO->MO transformation matrix
+            # c = myhf.mo_coeff
+            # # Get 1-electron integrals and convert to MO basis
+            # h1e = reduce(numpy.dot, (c, myhf.get_hcore(), c))
+            # # Get 2-electron integrals and transform them
+            # eri = myhf.intor('int2e')
+            # # Ignore all permutational symmetry, and write as four-index tensor, in chemical notation
+            # eri_full = ao2mo.restore(1, eri, c.shape[1])
+            # # Scalar nuclear repulsion energy
+            # Hnuc = myhf.energy_nuc()
+       
 
     elec_writer(h1e,eri_full,norbs,EXDIR1)
 

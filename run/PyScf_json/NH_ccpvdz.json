@@ -2,7 +2,7 @@
    "units":"Angstrom",
    "atoms": "N 0 0 0; H 0 0 1.056",
    "bs" : "cc-pVDZ",
-   "verbosity" : 4,
+   "verbosity" : 2,
    "symmetry" :true,
    "spin":0,
    "charge":0,

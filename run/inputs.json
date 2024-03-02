@@ -1,7 +1,7 @@
 { 
-    "pyscf_file":"NH_ccpvdz",
+    "pyscf_file":"O2_ccpvdz",
     "setup":{
-        "runfolder":"NH_growing_faster",
+        "runfolder":"O2_growing_faster",
         "runtime": "48:00:00",
         "nodes":1,
         "cores":15,
