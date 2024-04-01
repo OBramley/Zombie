@@ -13,6 +13,7 @@ program MainZombie
     use zom
     use gradient_descent
     use operators
+    use gram_schmidt
     ! use neural_network
     use omp_lib
 
@@ -27,10 +28,11 @@ program MainZombie
     real(wp), dimension(:,:),allocatable::erg
     type(hamiltonian)::clean_haml
     type(dvector)::dvec_clean
-    real(wp)::clean_norm, clean_erg,num1,num2
+    real(wp)::clean_norm, clean_erg
     character(LEN=100) :: CWD
     real(wp):: starttime, stoptime, runtime
     integer::k,ierr=0, istat=0
+    logical :: file_exists
     ! type(neural_network_layer),dimension(:),allocatable::neural_net
 
     call CPU_TIME(starttime) !used to calculate the runtime, which is output at the end
@@ -68,11 +70,20 @@ program MainZombie
    
     ! generate 1 and 2 electron integrals
     if((cleanflg=="y").or.(cleanflg=="f").or.((hamgflg=='y')).or.(GDflg=='y'))then
-       
-        write(stdout,"(a)") "Setting electron"
-        call electronintegrals(elect)
-        write(stdout,"(a)") "Electrons allocated"
-
+        
+        inquire(file='integrals/elec_integrals.csv',exist=file_exists)
+        if(file_exists.eqv..false.)then
+            write(stdout,"(a)") "Allocating and processing electron integrals"
+            call electronintegrals(elect)
+            write(stdout,"(a)") "Electrons prcossed"
+            call elec_inegrals_write(elect)
+            write(stdout,"(a)") "Electron integrals written to file"
+        else if(file_exists.eqv..true.)then
+            write(stdout,"(a)") "Reading in electron integrals"
+            call elec_inegrals_read(elect)
+            write(stdout,"(a)") "Electron integrals read in"
+        end if
+        
         if((gramflg.eq."n").or.(gramwave.lt.2))then 
             ! generate zombie states
             call alloczs(zstore,ndet)
@@ -80,7 +91,7 @@ program MainZombie
             if(zomgflg=='y')then
                 call genzf(zstore,ndet) 
                 do j=1,ndet
-                    call zombiewriter(zstore(j),j,0)
+                    call zombiewriter(zstore(j),j,zstore(j)%gram_num)
                 end do
                 write(stdout,"(a)") "Zombie states generated"
             else if (zomgflg=='n') then
@@ -92,9 +103,9 @@ program MainZombie
             call flush(0)
         end if 
     end if
-
+    print*,gramflg,gramwave
     if((gramflg.eq."y").and.(gramwave.gt.1))then
-        ! call gram_schmidt_control(elect)
+        call gram_schmidt_control(elect)
     else
         if(propflg=="y")then
             ! generate Hamiltonian and overlap
@@ -112,7 +123,7 @@ program MainZombie
                 call matrixwriter(haml%ovrlp,ndet,"data/ovlp.csv")
                 write(stdout,"(a)") "Hamiltonian successfully generated"
             else if (hamgflg=='n')then
-                call read_ham(haml,ndet)
+                call read_ham(haml,ndet,"ham.csv","ovlp.csv")
                 write(stdout,"(a)") "Hamiltonian successfully read in"
             end if
             ! Imaginary time propagation
@@ -162,15 +173,9 @@ program MainZombie
                 end if
                 call zombie_alter(zstore,haml,elect,dvecs)!,neural_net)
                 GDflg='n'
-                num1=0.0d0;num2=0.0d0
                 do j=1,ndet
-                    call zombiewriter(zstore(j),j,0)
-                    num1=num1+zstore(j)%num_strt
-                    zstore(j)%num=numf(zstore(j),zstore(j))
-                    print*,zstore(j)%num_strt, zstore(j)%num
-                    num2=num2+zstore(j)%num
+                    call zombiewriter(zstore(j),j,zstore(j)%gram_num)
                 end do
-                print*,num1/ndet,num2/ndet
                 dvecs%d=0.0d0
                 if(gramflg.eq."n")then
                     allocate(erg(1,timesteps+1),stat=ierr)

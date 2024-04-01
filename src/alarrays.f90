@@ -108,7 +108,7 @@ MODULE alarrays
             errorflag=1
             return
         end if
-       
+        zs%gram_num=0
         zs%val=0.0d0
         zs%phi=0.0d0
         return
@@ -372,7 +372,8 @@ MODULE alarrays
         if (errorflag .ne. 0) return
         gram_unit%state_num=num
         call alloczs(gram_unit%zstore,size)
-        call allocdv(gram_unit%dvec,size)
+        gram_unit%zstore(1:size)%gram_num=num
+        call allocdv(gram_unit%dvecs,size)
         call allocham(gram_unit%haml,size)
         if(GDflg=='y')then
             call allocgrad(gram_unit%grads,size,length)
@@ -399,7 +400,7 @@ MODULE alarrays
         if (errorflag .ne. 0) return
 
         call dealloczs(gram_unit%zstore)
-        call deallocdv(gram_unit%dvec)
+        call deallocdv(gram_unit%dvecs)
         call deallocham(gram_unit%haml)
         if(GDflg=='y')then
             call deallocgrad(gram_unit%grads)

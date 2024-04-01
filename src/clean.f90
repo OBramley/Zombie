@@ -1,7 +1,6 @@
 MODULE clean
 
     use mod_types
-
     use globvars
     use alarrays
     use zom

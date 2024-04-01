@@ -1,10 +1,10 @@
 { 
-    "pyscf_file":"Li_631g_star_star_trunc",
+    "pyscf_file":"BH_631g_star_star_stretch",
     "setup":{
-        "runfolder":"Be_gs_tests",
+        "runfolder":"BH_stretch1",
         "runtime": "48:00:00",
         "nodes":1,
-        "cores":15,
+        "cores":8,
         "submissions":25,
         "multiple":1,
         "subnode":1,
@@ -14,16 +14,16 @@
     },
 
     "run":{
-        "ndet":1024,
-        "seed":2,
+        "ndet":5,
+        "seed":1,
         "zomgen":"y",
         "hamgen":"y",
         "clean":"n",
         "imagprop":"y",
-        "beta":20000,
-        "timesteps":5000,
-        "grad":"n",
-        "gram":"y"
+        "beta":500,
+        "timesteps":1000,
+        "grad":"y",
+        "gram":"n"
     },
 
 
@@ -31,7 +31,7 @@
         "norb":0,
         "nel":0,
         "spin":0,
-        "zomtyp":"ran",
+        "zomtyp":"bb",
         "rhf_1":"y",
         "imagflg":"n"
     },
@@ -43,13 +43,13 @@
         "decay_steps":6,
         "clone":"y",
         "clone_max":100,
-        "clone_steps":350,
-        "clone_num":1
+        "clone_steps":12,
+        "clone_num":5
     }, 
 
     "gram":{
-        "gramnum":4,
-        "gramwave":1
+        "gramnum":2,
+        "gramwave":2
     },
 
     "files":{

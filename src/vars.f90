@@ -13,8 +13,8 @@ MODULE globvars
         real(wp),dimension(:),allocatable::phi
         ! real(wp),dimension(:),allocatable::img
         real(wp),dimension(:),allocatable::val
-        real(wp)::num
-        real(wp)::num_strt
+        integer::gram_num
+        ! real(wp)::num_strt
     end type zombiest
 
     interface val_set
@@ -63,6 +63,9 @@ MODULE globvars
         type(zombiest)::zom
         type(dvector)::dvec
         real(dp)::erg
+        real(dp),dimension(:),allocatable::gs_denom
+        real(dp),dimension(:,:),allocatable::gs_numer
+        real(dp),dimension(:,:),allocatable::gs_dvectors
     end type grad_do
 
     type grad 
@@ -77,7 +80,7 @@ MODULE globvars
     type gram
         integer::state_num
         type(zombiest),dimension(:),allocatable::zstore
-        type(dvector)::dvec
+        type(dvector)::dvecs
         type(hamiltonian)::haml
         type(grad)::grads
         real(wp),dimension(:,:,:),allocatable::wf_ovrlp

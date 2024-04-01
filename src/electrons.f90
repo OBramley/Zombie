@@ -239,7 +239,8 @@ MODULE electrons
         end if
         
         write(stdout,"(a)") "1 & 2 electron integrals successfully generated"
-       
+        
+        
         return
     
     end subroutine electronintegrals

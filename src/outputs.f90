@@ -4,7 +4,8 @@ MODULE outputs
 
     interface epoc_writer
 
-        module procedure epoc_writer_int, epoc_writer_array,epoc_writer_array_orbital
+        module procedure epoc_writer_int,epoc_writer_array,epoc_writer_array_orbital,&
+                epoc_writer_int_gram,epoc_writer_array_gram,epoc_writer_array_orbital_gram
 
     end interface epoc_writer
 
@@ -101,7 +102,7 @@ MODULE outputs
             write(nums,"(i4.4)")num
         end if
 
-        if(gramflg=='n')then
+        if(gst==0)then
             filenm="data/zombie_"//trim(nums)//".csv"
         else
             write(gst_num,"(i2.1)")gst
@@ -125,7 +126,6 @@ MODULE outputs
                 write(zomnum,'(*(e25.17e3 :", "))') ((zom%val(j)),j=1,norb)
             else if(imagflg=='y') then
                 write(zomnum,'(*(e25.17e3 :", ": ))') ((zom%phi(j)),j=1,norb)
-                ! write(zomnum,'(*(e25.17e3 :", ": ))') ((zom%img(j)),j=1,norb)
                 write(zomnum,'(*(e25.17e3 :", "))') ((zom%val(j)),j=1+norb,2*norb)
                 write(zomnum,'(*(e25.17e3 :", "))') ((zom%val(j)),j=1,norb)
             end if
@@ -355,6 +355,129 @@ MODULE outputs
         
     end subroutine epoc_writer_array
 
+    subroutine epoc_writer_int_gram(erg,step,chng_trk,learningr,pass,gst)
+
+        implicit none
+        real(wp),intent(in)::erg,learningr 
+        integer,intent(in)::step,pass
+        integer,intent(in)::chng_trk
+        integer,intent(in)::gst
+        character(len=2)::gst_num
+        logical :: file_exists
+        integer::ierr=0,epoc=450
+
+        if (errorflag .ne. 0) return
+
+        write(gst_num,"(i2.1)")gst
+        inquire(file="epoc_"//trim(gst_num)//".csv",exist=file_exists)
+       
+        if(file_exists.eqv..false.) then
+            open(unit=epoc,file="epoc_"//trim(gst_num)//".csv",status="new",iostat=ierr)
+            if(ierr/=0)then
+                write(stderr,"(a,i0)") "Error in opening epoc output file. ierr had value ", ierr
+                errorflag=1
+                return
+            end if
+            write(epoc,'(a,",",a,",",a,","a)') "EPOC", "Energy", "Learning rate", "Zombie state altered"
+            write(epoc,'(i0,",",e25.17e3,",",e25.17e3,",",i0)') 0,erg,0.0,0
+            close(epoc)
+        else if(file_exists.eqv..true.) then
+            open(unit=epoc,file="epoc_"//trim(gst_num)//".csv",status="old",access='append',iostat=ierr)
+            if(ierr/=0)then
+                write(stderr,"(a,i0)") "Error in opening epoc output file. ierr had value ", ierr
+                errorflag=1
+                return
+            end if
+            if(pass.eq.1)then
+                write(epoc,'(i0,",",e25.17e3,",",e25.17e3,",",i0)') step,erg,learningr,chng_trk
+            else
+                write(epoc,'(i0,",",e25.17e3,",",e25.17e3,",",i0)') step,erg,learningr,chng_trk
+            end if
+            close(epoc)
+        end if
+        return
+        
+    end subroutine epoc_writer_int_gram
+
+    subroutine epoc_writer_array_orbital_gram(erg,step,learningr,chng_trk,pass,gst)
+
+        implicit none
+        real(wp),intent(in)::erg
+        integer,intent(in)::step,pass
+        real(wp),intent(in)::learningr
+        integer,intent(in)::gst
+        character(len=2)::gst_num
+        integer,dimension(:),intent(in)::chng_trk
+        integer::k
+        integer::ierr=0, epoc=450
+        if (errorflag .ne. 0) return
+
+        write(gst_num,"(i2.1)")gst
+       
+        open(unit=epoc,file="epoc_"//trim(gst_num)//".csv",status="old",access='append',iostat=ierr)
+        if(ierr/=0)then
+            write(stderr,"(a,i0)") "Error in opening epoc output file. ierr had value ", ierr
+            errorflag=1
+            return
+        end if
+        if(pass.eq.1)then
+            write(epoc,'(i0,",",e25.17e3,",",e25.17e3,",",*(i0:", "))') step,erg,learningr,(chng_trk(k),k=1,ndet-1)
+         
+        else
+            write(epoc,'(i0,",",e25.17e3,",",e25.17e3,",",*(i0:", "))') step,erg,learningr,(chng_trk(k),k=1,ndet-1)
+        
+        end if
+        close(epoc)
+       
+        return
+        
+    end subroutine epoc_writer_array_orbital_gram
+
+    subroutine epoc_writer_array_gram(erg,step,chng_trk,erg_dim,learningr,pass,gst)
+
+        implicit none
+        real(wp),intent(in)::erg
+        real(wp),dimension(:),intent(in)::learningr,erg_dim 
+        integer,intent(in)::step,pass
+        integer,dimension(:),intent(in)::chng_trk
+        integer,intent(in)::gst
+        character(len=2)::gst_num
+        integer::k
+        integer::ierr=0, epoc=450
+
+        if (errorflag .ne. 0) return
+        write(gst_num,"(i2.1)")gst
+       
+        open(unit=epoc,file="epoc_"//trim(gst_num)//".csv",status="old",access='append',iostat=ierr)
+        if(ierr/=0)then
+            write(stderr,"(a,i0)") "Error in opening epoc output file. ierr had value ", ierr
+            errorflag=1
+            return
+        end if
+        if(pass.eq.1)then
+            do k=1,ndet-1
+                if(chng_trk(k).eq.0)then
+                    EXIT 
+                end if 
+                write(epoc,'(a,",",e25.17e3,",",e25.17e3,",",i0)') "   ",erg_dim(k),learningr(k),chng_trk(k)
+            end do
+            write(epoc,'(i0,",",e25.17e3,",",a,",",*(i0:", "))') step,erg,"   ",(chng_trk(k),k=1,ndet-1)
+        else
+           
+            do k=1,ndet-1
+                if(chng_trk(k).eq.0)then
+                    EXIT 
+                end if 
+                write(epoc,'(a,",",e25.17e3,",",e25.17e3,",",i0)') "   ",erg_dim(k),learningr(k),chng_trk(k)
+            end do
+            write(epoc,'(i0,",",e25.17e3,",",a,",",*(i0:", "))') step,erg,"   ",(chng_trk(k),k=1,ndet-1)
+        end if
+        close(epoc)
+       
+        return
+        
+    end subroutine epoc_writer_array_gram
+
 
     subroutine dvec_writer(d,size,p)
 
@@ -461,9 +584,36 @@ MODULE outputs
         return
 
     end subroutine clean_erg_write
-        
-    
 
+    subroutine elec_inegrals_write(elecs)
 
+        implicit none
+        type(elecintrgl), intent(in)::elecs
+        integer::j,k,choice2_dim,ierr=0
+
+        if (errorflag .ne. 0) return
+
+        choice2_dim=size(elecs%orbital_choice2,dim=2)
+        open(unit=500,file='integrals/elec_integrals.csv',status="new",iostat=ierr)
+        if(ierr/=0)then
+            write(stderr,"(a,i0)") "Error in opening elec_integrals.csv file. ierr had value ", ierr
+            errorflag=1
+            return
+        end if
+
+        write(500,'(i0)') elecs%num
+        do k=1,elecs%num
+            write(500, '(e25.17e3,",",*(i0 : ", "))') elecs%integrals(k),(elecs%orbital_choice(j,k),j=1,norb)
+        end do
+        write(500, '(i0)') choice2_dim
+        write(500, '(*(i0 : ", "))') (elecs%orbital_choice2(0,j),j=1,norb)
+        do k=1,norb
+            write(500, '(*(i0: ", "))') (elecs%orbital_choice2(k,j),j=1,2*elecs%orbital_choice2(0,k))
+        end do
+        write(500, '(*(i0 : ", "))') (elecs%orbital_choice3(j),j=1,norb)
+        write(500, '(e25.17e3)') elecs%hnuc
+        close(500)
+
+    end subroutine elec_inegrals_write
 
 END MODULE outputs

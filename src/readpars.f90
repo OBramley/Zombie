@@ -2,7 +2,8 @@ MODULE readpars
 
     use mod_types
     use globvars
-   
+
+    
     contains
 
     subroutine readrunconds()
@@ -417,7 +418,7 @@ MODULE readpars
                 else
                     write(num,"(i4.4)")j
                 end if
-                if(gramflg=='n')then
+                if(gst==0)then
                     filenm="data/zombie_"//trim(num)//".csv"
                 else
                     write(gst_num,"(i2.1)")gst
@@ -574,15 +575,15 @@ MODULE readpars
         
     end subroutine read_zombie_c
 
-    subroutine read_ham(ham,size)
+    subroutine read_ham(ham,size,ovrlpnm,hamnm)
 
         implicit none
         type(hamiltonian),intent(inout)::ham
         integer,intent(in)::size
         integer::j,k
+        character(LEN=*),intent(in)::ovrlpnm,hamnm
         REAL(wp),dimension(size)::line
         REAL(wp),dimension(size*2)::cline
-        character(LEN=100)::hamnm,ovrlpnm
         integer, allocatable,dimension(:)::IPIV1
         real(wp),allocatable,dimension(:)::WORK1
         ! complex(wp),allocatable,dimension(:)::WORK1
@@ -590,27 +591,9 @@ MODULE readpars
 
         if (errorflag .ne. 0) return
        
-        open(unit=140,file='rundata.csv',status='old',iostat=ierr)
-
-        if (ierr.ne.0) then
-          write(stderr,"(a)") 'Error in opening rundata.csv file'
-          errorflag = 1
-          return
-        end if
-
-        read(140,*)
-        read(140,*)
-        read(140,*,iostat=ierr)hamnm, ovrlpnm
-        if (ierr.ne.0) then
-            write(stderr,"(a)") "Error reading rundata.csv of input file"
-            errorflag = 1
-            return
-        end if
-        close(140)
-      
-
+    
         if(imagflg=='n') then
-            open(unit=200,file='data/'//trim(hamnm),status="old",iostat=ierr)
+            open(unit=200,file="data/"//trim(hamnm),status="old",iostat=ierr)
             if(ierr/=0)then
                 write(stderr,"(a,i0)") "Error in opening hamiltonian file. ierr had value ", ierr
                 errorflag=1
@@ -710,7 +693,6 @@ MODULE readpars
         end if
         
         ham%kinvh=matmul(ham%inv,ham%hjk)
-
 
     end subroutine read_ham
 
@@ -842,6 +824,53 @@ MODULE readpars
         return
 
     end subroutine
+
+    subroutine elec_inegrals_read(elecs)
+        implicit none
+        type(elecintrgl),intent(inout)::elecs
+        integer::k,choice2_dim,ierr=0
+ 
+
+        if (errorflag .ne. 0) return
+        open(unit=500,file='integrals/elec_integrals.csv',status="old",iostat=ierr)
+        if(ierr/=0)then
+            write(stderr,"(a,i0)") "Error in opening electronic integrals file to read in. ierr had value ", ierr
+            errorflag=1
+            return
+        end if
+        read(500,*) elecs%num
+        allocate(elecs%integrals(elecs%num),stat=ierr)
+        allocate(elecs%orbital_choice(norb,elecs%num),stat=ierr)
+        if(ierr/=0)then
+            write(stderr,"(a,i0)") "Error in allocating electronic integrals array. ierr had value ", ierr
+            errorflag=1
+            return
+        end if
+        do k=1,elecs%num
+            read(500,*) elecs%integrals(k), elecs%orbital_choice(1:norb,k)
+        end do
+        read(500,*) choice2_dim
+        allocate(elecs%orbital_choice2(0:norb,choice2_dim),stat=ierr)
+        if(ierr/=0)then
+            write(stderr,"(a,i0)") "Error in allocating electronic orbital_choice2 array. ierr had value ", ierr
+            errorflag=1
+            return
+        end if
+        read(500,*) elecs%orbital_choice2(0,1:norb)
+        do k=1,norb
+            read(500,*) elecs%orbital_choice2(k,1:2*elecs%orbital_choice2(0,k))
+        end do 
+        allocate(elecs%orbital_choice3(norb),stat=ierr)
+        if(ierr/=0)then
+            write(stderr,"(a,i0)") "Error in allocating electronic orbital_choice3 array. ierr had value ", ierr
+            errorflag=1
+            return
+        end if
+        read(500,*) elecs%orbital_choice3
+        read(500,*)elecs%hnuc
+        close(500)
+        return 
+    end subroutine elec_inegrals_read
 
 
 END MODULE readpars
