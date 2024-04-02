@@ -487,4 +487,31 @@ MODULE ham
 
     end subroutine haml_vals_2_orb_2
 
+    subroutine gram_ovrlp_fill(gramstore,state)
+        
+        implicit none
+        type(gram),dimension(:)::gramstore
+        integer::state
+        integer::j,k,l
+    
+        if(errorflag.ne.0) return
+    
+        do j=1,state-1
+            do k=1,ndet
+                do l=k,ndet
+                    gramstore(state)%wf_ovrlp(j,k,l)=product(gramstore(state)%zstore(k)%val(1:norb)*&
+                                                            gramstore(j)%zstore(l)%val(1:norb)+&
+                                                            gramstore(state)%zstore(k)%val(1+norb:2*norb)*&
+                                                            gramstore(j)%zstore(l)%val(1+norb:2*norb))
+                    gramstore(state)%wf_ovrlp(j,l,k)=gramstore(state)%wf_ovrlp(j,k,l)
+                end do 
+                
+            end do
+            
+        end do
+       
+        return
+    
+    end subroutine gram_ovrlp_fill
+
 END MODULE ham

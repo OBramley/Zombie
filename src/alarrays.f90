@@ -480,7 +480,7 @@ MODULE alarrays
         end if
 
         call alloczf(grads%zom)
-        call allocdv(grads%dvec,size)
+        call allocdv(grads%dvecs,size)
 
     end subroutine alloc_grad_do
 
@@ -493,7 +493,7 @@ MODULE alarrays
         if (errorflag .ne. 0) return
 
         call dealloczf(grads%zom)
-        call deallocdv(grads%dvec)
+        call deallocdv(grads%dvecs)
 
         deallocate(grads%hjk, stat=ierr)
         if(ierr==0) deallocate(grads%ovrlp, stat=ierr)

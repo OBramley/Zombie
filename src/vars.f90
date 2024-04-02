@@ -60,12 +60,11 @@ MODULE globvars
         real(dp), dimension(:,:), allocatable::ovrlp
         real(dp), dimension(:,:), allocatable::inv
         real(dp), dimension(:,:), allocatable::kinvh
+        real(wp),dimension(:,:,:),allocatable::wf_ovrlp
+        
         type(zombiest)::zom
-        type(dvector)::dvec
+        type(dvector)::dvecs
         real(dp)::erg
-        real(dp),dimension(:),allocatable::gs_denom
-        real(dp),dimension(:,:),allocatable::gs_numer
-        real(dp),dimension(:,:),allocatable::gs_dvectors
     end type grad_do
 
     type grad 
@@ -84,27 +83,28 @@ MODULE globvars
         type(hamiltonian)::haml
         type(grad)::grads
         real(wp),dimension(:,:,:),allocatable::wf_ovrlp
+        real(wp)::d_ovrlp_d
     end type gram 
 
-    type trial_data
-        real(wp)::dead
-        real(wp)::alive
-        real(wp)::new_ham
-        real(wp)::old_ham
-        integer::orbital
-        integer::diag
-        integer::rhf
-        integer::z1
-        integer::z2
-        real(wp),dimension(:),allocatable::input_features
-    end type trial_data
+    ! type trial_data
+    !     real(wp)::dead
+    !     real(wp)::alive
+    !     real(wp)::new_ham
+    !     real(wp)::old_ham
+    !     integer::orbital
+    !     integer::diag
+    !     integer::rhf
+    !     integer::z1
+    !     integer::z2
+    !     real(wp),dimension(:),allocatable::input_features
+    ! end type trial_data
 
-    type neural_network_layer
-        real(wp),dimension(:,:),allocatable::weights
-        real(wp),dimension(:),allocatable::biases
-        real(wp),dimension(:),allocatable::hidden_layer
-        real(wp)::output
-    end type neural_network_layer
+    ! type neural_network_layer
+    !     real(wp),dimension(:,:),allocatable::weights
+    !     real(wp),dimension(:),allocatable::biases
+    !     real(wp),dimension(:),allocatable::hidden_layer
+    !     real(wp)::output
+    ! end type neural_network_layer
 
     
     integer::ndet       ! Number of Zombie states
