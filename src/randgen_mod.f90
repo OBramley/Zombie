@@ -23,13 +23,13 @@ MODULE randgen
 use iso_fortran_env, only:  int8, int16, int32, int64, real32, real64, input_unit, output_unit, error_unit
 
 implicit none
-real(real64),private::B,C
-real(real64),private,dimension(43)::ZBQLIX
-integer,private::CURPOS,ID22,ID43
+real(real64),private,save::B,C
+real(real64),private,save,dimension(43)::ZBQLIX
+integer,private,save::CURPOS,ID22,ID43
 
-integer,private::INIT
-integer,private::STATUS
-real(real64)::SPARE
+integer,private,save::INIT
+integer,private,save::STATUS
+real(real64),save::SPARE
 real(real64),parameter::PI = 4.0D0*DATAN(1.0D0)
 real(real64),parameter::RLN2P = 0.5D0*DLOG(2.0D0*PI)
 real(real64),private,parameter,dimension(0:6)::zbqllg_c=[1.000000000190015D0,76.18009172947146D0,-86.50532032941677D0,&

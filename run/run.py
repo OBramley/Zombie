@@ -269,7 +269,7 @@ if(multflg>1):
     for i in range(multflg):
         shutil.copy2("ZOMBIE",EXDIR1+'/node_'+str(i+1))
 os.chdir(EXDIR1)
-# HPCFLG=0
+HPCFLG=0
 
 if(HPCFLG==1):
     if(inputs['setup']['cores']!=1):

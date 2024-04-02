@@ -3,6 +3,9 @@ module mod_types
     implicit none
     integer, parameter :: sp        = real32
     integer, parameter :: dp        = real64
+    integer, parameter :: int8_t    = int8
+    integer, parameter :: int16_t   = int16
+    integer, parameter :: int32_t   = int32
     integer, parameter :: stdin     = input_unit
     integer, parameter :: stdout    = output_unit
     integer, parameter :: stderr    = error_unit

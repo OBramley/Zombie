@@ -176,10 +176,10 @@ MODULE gradient_descent
         integer,intent(in)::maxloop
         type(grad_do)::temp,thread
         type(zombiest),dimension(:),allocatable::zstore_temp
-        integer::rjct_cnt,acpt_cnt,pickorb,loops,lralt_zs,acpt_cnt_2
+        integer::rjct_cnt,acpt_cnt,pickorb,loops,lralt_zs,acpt_cnt_2,pow,pow_1
         integer::j,n,p,chng_chng,tracker,lralt_extra,extra_flag
         integer,dimension(:),allocatable::chng_trk2,pickerorb
-        real(wp)::t,erg_str
+        real(wp)::t,erg_str,num_av,num_av_temp
         integer::ierr=0
         ! type(neural_network_layer),dimension(:)::neural_net
 
@@ -205,7 +205,7 @@ MODULE gradient_descent
         tracker=0
         extra_flag=0
         p=70-norb
-
+        ! pow_1=2
         if((epoc_cnt.gt.2).and.(blind_clone_num.gt.100))then
             chng_chng=blind_clone_num-100
         else
@@ -214,9 +214,14 @@ MODULE gradient_descent
        
         call haml_to_grad_do(haml,dvecs,temp)
         thread=temp
+        num_av=0
+        do j=1,ndet
+            num_av=num_av+numf(zstore(j),zstore(j))
+        end do 
+        num_av=num_av/ndet
         
         ! Main GD Loop
-        do while(rjct_cnt.lt.(norb*100))
+        do while((rjct_cnt.lt.(norb*100)).and.(epoc_cnt.lt.epoc_max))
             loops=loops+1
             do p=1, ((norb-8)/2)
                 write(stdout,'(1a)',advance='no') ' '
@@ -230,7 +235,7 @@ MODULE gradient_descent
             chng_trk=0
             acpt_cnt_2=0  
             t=lr*(lr_alpha**lralt_zs)
-            
+            pow=(int(lralt_zs/2)+pow_1)
             do j=1,ndet-1
                 write(stdout,'(i3)',advance='no') j
                 erg_str=grad_fin%prev_erg
@@ -248,11 +253,29 @@ MODULE gradient_descent
 
                     temp%zom%phi(pickorb) = thread%zom%phi(pickorb)-(t*grad_fin%vars(pick,pickorb))
                     call val_set(temp%zom,pickorb)
-                   
+                    ! if(lr_loop_max.ge.10)then
+                    if((abs(temp%zom%val(n)-zstore(pick)%val(n)).lt.1.0d-11).and.&
+                    (abs(temp%zom%val(n+norb)-zstore(pick)%val(n+norb)).lt.1.0d-11))then
+                        write(stdout,'(1a)',advance='no') '!'
+                        cycle
+                    end if
+                    !     num_av_temp=num_av
+                    !     num_av_temp=((num_av_temp*ndet)-numf(zstore(pick),zstore(pick))+numf(temp%zom,temp%zom))/ndet
+                    !     if((abs(num_av_temp-nel).gt.abs(num_av-nel)+5.0d-3*(0.25)**(lralt_zs)))then
+                    !         write(stdout,'(1a)',advance='no') '!'
+                    !         cycle
+                    !     end if
+                    ! end if 
+                    ! if((lralt_zs.gt.6).and.(abs(num_av_temp-nel).gt.abs(num_av-nel)+5.0d0**(-lralt_zs+2)))then
+                    !     write(stdout,'(1a)',advance='no') '!'
+                    !     cycle
+                    ! end if
+
                     call he_full_row(temp,zstore,elect,ndet,pickorb)
                     call imaginary_time_erg(temp,ndet)
         
                     if(grad_fin%prev_erg-temp%erg.ge.1.0d-14)then
+                        ! num_av=num_av_temp
                         acpt_cnt=acpt_cnt+1
                         chng_trk2(acpt_cnt)=pickorb
                         rjct_cnt=0
@@ -283,9 +306,9 @@ MODULE gradient_descent
                     rjct_cnt_global=rjct_cnt_global+1   
                 end if
             end do
-           
+            
         write(stdout,"(a,i0,a,f21.16,a,f10.5)") "Energy after epoch no. ",epoc_cnt,": ",grad_fin%prev_erg, "    Learning rate:",t
-        
+            write(stdout,"(a,i0,a,f21.16)") "Average number of electrons afer epoch no, ",epoc_cnt,": ",num_av
             if(acpt_cnt_2.gt.0)then
                 do j=1,acpt_cnt_2
                     call zombiewriter(zstore(chng_trk(j)),chng_trk(j),0)
@@ -295,7 +318,7 @@ MODULE gradient_descent
             else
                 loops=loops-1
             end if 
-
+           
             if((acpt_cnt_2.lt.(0.15*ndet)).and.(extra_flag.eq.0).and.(lralt_zs.eq.lralt_extra).and.(tracker.gt.-1))then 
                 lralt_extra=lralt_extra+1
                 extra_flag=1
@@ -313,9 +336,14 @@ MODULE gradient_descent
             end if
 
             picker=scramble(ndet-1)
-
+            ! if(modulo(epoc_cnt,100).eq.0)then
+            !     do j=2,ndet
+            !         call zombiewriter(zstore(j),j,0)
+            !     end do 
+            ! end if
             if(((tracker.ge.1).or.(chng_chng.le.0)))then
                 if(ndet.lt.ndet_max)then
+                    ! num_av=num_av*ndet
                     tracker=-1
                     extra_flag=1
                     lralt_extra=0
@@ -327,6 +355,12 @@ MODULE gradient_descent
                     end do
                     ndet=ndet+ndet_increase
                     call alloczs(zstore_temp,ndet)
+                    ! zstore_temp(ndet)%phi(:)=0
+                    ! do j=1,ndet-1
+                    !     zstore_temp(ndet)%phi(:)=zstore_temp(ndet)%phi(:)+zstore(j)%phi(:)
+                    ! end do
+                    ! zstore_temp(ndet)%phi(:)=(zstore_temp(ndet)%phi(:)/(ndet-1))
+                    ! call val_set(zstore_temp(ndet))
                     call gen_biased_zs(zstore_temp)
                     zstore_temp(1:(ndet-ndet_increase))=zstore
                     call dealloczs(zstore)
@@ -363,27 +397,71 @@ MODULE gradient_descent
                     allocate(chng_trk(ndet-1),stat=ierr)
                     do j=(ndet-ndet_increase+1),ndet
                         call zombiewriter(zstore(j),j,0)
+                        ! num_av=num_av+numf(zstore(j),zstore(j))
                     end do
+                    ! num_av=num_av/ndet
                     lralt_zs=0
                     if(blind_clone_num.gt.100)then
                         chng_chng=blind_clone_num-100
                     else
                         chng_chng=blind_clone_num
                     end if 
+                    if(ndet==ndet_max)then
+                        ! lr_loop_max=12
+                        ! chng_chng=150
+                    end if 
+                    ! if(ndet.gt.ndet_max/2)then
+                    !     pow_1=pow_1+1
+                    ! end if
                 else if(lr_loop_max.lt.10)then
-                    if((tracker.ge.1))then
+                    ! if((tracker.ge.1))then
                         lr_loop_max=lr_loop_max+1
-                    end if
+                        blind_clone_num=blind_clone_num+2
+                    ! end if
                     tracker=0
                     lralt_extra=0
                     lralt_zs=0
-                    chng_chng=200
+                    ! chng_chng=100
                     extra_flag=1
-                else 
+                    if(blind_clone_num.gt.100)then
+                        chng_chng=blind_clone_num-100
+                    else
+                        chng_chng=blind_clone_num
+                    end if 
+                    ! num_av=0
+                    do j=1,ndet
+                        num_av=num_av+numf(zstore(j),zstore(j))
+                    end do 
+                    num_av=num_av/ndet
+                else
+                    ! pick=picker(1)
+                    ! zstore(pick)%phi(:)=0
+                    ! do j=1,ndet
+                    !     if(j.ne.pick)then
+                    !         zstore(pick)%phi(:)=zstore(pick)%phi(:)+zstore(j)%phi(:)
+                    !     end if 
+                    ! end do
+                    ! zstore(pick)%phi(:)=(zstore(pick)%phi(:)/(ndet-1))
+                    ! call val_set(zstore(pick))
+                    ! temp%zom=zstore(pick)
+                    ! call haml_ovrlp_column(temp,zstore,ndet,elect,pick)
+                    ! haml%ovrlp=temp%ovrlp
+                    ! haml%hjk=temp%hjk
+                    ! call  hamgen_inv(haml,ndet)
+                    ! call haml_to_grad_do(haml,dvecs,temp)
+                    ! call imaginary_time_erg(temp,ndet)
+                    ! grad_fin%prev_erg=temp%erg 
+                    ! grad_fin%grad_avlb=0
+                    ! grad_fin%ovrlp_grad_avlb=0
+                    ! dvecs=temp%dvec
+
+                    pow_1=pow_1+1
+                    thread=temp
                     tracker=0
                     lralt_extra=0
                     lralt_zs=0
-                    chng_chng=300
+                    ! chng_chng=300
+                    chng_chng=50
                     extra_flag=1
                 end if  
             end if 

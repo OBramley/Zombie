@@ -287,7 +287,7 @@ MODULE readpars
             n=n+1
             ndet_max=ndet
             n=n+1
-            blind_clone_num=350
+            blind_clone_num=100 !350
             n=n+1
             ndet_increase=0
             n=n+1

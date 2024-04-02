@@ -279,7 +279,7 @@ MODULE outputs
                 errorflag=1
                 return
             end if
-            write(epoc,'(a,",",a,",",a,","a)') "EPOC", "Energy", "Learning rate", "Zombie state altered"
+            ! write(epoc,'(a,",",a,",",a,","a)') "EPOC", "Energy", "Learning rate", "Zombie state altered"
             write(epoc,'(i0,",",e25.17e3,",",e25.17e3,",",i0)') 0,erg,0.0,0
             close(epoc)
         else if(file_exists.eqv..true.) then

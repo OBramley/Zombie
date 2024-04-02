@@ -1,11 +1,11 @@
 { 
-    "pyscf_file":"O2_ccpvdz",
+    "pyscf_file":"BH_631g_star_star",
     "setup":{
-        "runfolder":"O2_growing_faster",
+        "runfolder":"BH_setup_better2",
         "runtime": "48:00:00",
         "nodes":1,
         "cores":15,
-        "submissions":1,
+        "submissions":5,
         "multiple":1,
         "subnode":1,
         "datafolder":"data copy",
@@ -14,8 +14,8 @@
     },
 
     "run":{
-        "ndet":10,
-        "seed":2,
+        "ndet":50,
+        "seed":1,
         "zomgen":"y",
         "hamgen":"y",
         "clean":"n",
@@ -40,11 +40,11 @@
         "epoc_max":1000000,
         "initial_learning_rate":2500,
         "learning_rate_decay":0.2,
-        "decay_steps":6,
+        "decay_steps":4,
         "clone":"y",
-        "clone_max":200,
-        "clone_steps":7,
-        "clone_num":1
+        "clone_max":300,
+        "clone_steps":10,
+        "clone_num":50
     }, 
 
     "gram":{
