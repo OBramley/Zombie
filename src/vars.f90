@@ -13,8 +13,8 @@ MODULE globvars
         real(wp),dimension(:),allocatable::phi
         ! real(wp),dimension(:),allocatable::img
         real(wp),dimension(:),allocatable::val
-        real(wp)::num
-        real(wp)::num_strt
+        integer::gram_num
+        ! real(wp)::num_strt
     end type zombiest
 
     interface val_set
@@ -29,11 +29,6 @@ MODULE globvars
         real(wp), dimension(:,:), allocatable::ovrlp
         real(wp), dimension(:,:), allocatable::inv
         real(wp), dimension(:,:), allocatable::kinvh
-    
-        real(wp), dimension(:,:,:), allocatable::gs_ovrlp
-        real(wp), dimension(:,:,:), allocatable::gs_kinvh
-        real(wp), dimension(:,:,:), allocatable::gs_ovrlp_self
-        integer::gram_num
     end type hamiltonian
 
     type dvector
@@ -65,9 +60,10 @@ MODULE globvars
         real(dp), dimension(:,:), allocatable::ovrlp
         real(dp), dimension(:,:), allocatable::inv
         real(dp), dimension(:,:), allocatable::kinvh
-       
+        real(wp),dimension(:,:,:),allocatable::wf_ovrlp
+        
         type(zombiest)::zom
-        type(dvector)::dvec
+        type(dvector)::dvecs
         real(dp)::erg
     end type grad_do
 
@@ -80,25 +76,35 @@ MODULE globvars
         integer,dimension(:,:,:),allocatable::ovrlp_grad_avlb
     end type grad
 
-    type trial_data
-        real(wp)::dead
-        real(wp)::alive
-        real(wp)::new_ham
-        real(wp)::old_ham
-        integer::orbital
-        integer::diag
-        integer::rhf
-        integer::z1
-        integer::z2
-        real(wp),dimension(:),allocatable::input_features
-    end type trial_data
+    type gram
+        integer::state_num
+        type(zombiest),dimension(:),allocatable::zstore
+        type(dvector)::dvecs
+        type(hamiltonian)::haml
+        type(grad)::grads
+        real(wp),dimension(:,:,:),allocatable::wf_ovrlp
+        real(wp)::d_ovrlp_d
+    end type gram 
 
-    type neural_network_layer
-        real(wp),dimension(:,:),allocatable::weights
-        real(wp),dimension(:),allocatable::biases
-        real(wp),dimension(:),allocatable::hidden_layer
-        real(wp)::output
-    end type neural_network_layer
+    ! type trial_data
+    !     real(wp)::dead
+    !     real(wp)::alive
+    !     real(wp)::new_ham
+    !     real(wp)::old_ham
+    !     integer::orbital
+    !     integer::diag
+    !     integer::rhf
+    !     integer::z1
+    !     integer::z2
+    !     real(wp),dimension(:),allocatable::input_features
+    ! end type trial_data
+
+    ! type neural_network_layer
+    !     real(wp),dimension(:,:),allocatable::weights
+    !     real(wp),dimension(:),allocatable::biases
+    !     real(wp),dimension(:),allocatable::hidden_layer
+    !     real(wp)::output
+    ! end type neural_network_layer
 
     
     integer::ndet       ! Number of Zombie states
@@ -119,6 +125,7 @@ MODULE globvars
     character(LEN=1)::gramflg    ! Flag to determine if gram schmidt orthogolnalisation should be carried out
     character(LEN=1)::GPUflg     ! GPU flag
     integer::gramnum             ! Number of additional states to be generated for GS orthogonalisation
+    integer::gramwave            ! Number of wave functions to be generated for GS orthogonalisation
     character(LEN=1)::rhf_1      ! Flag to decide if the first zombie state should be st as the RHF determinant
     character(LEN=1)::imagflg    ! Flag to decide if zombie states are imaginary or real
     integer(wp):: randseed       ! Random seed
@@ -201,6 +208,7 @@ MODULE globvars
         beta=0
         timesteps=0
         gramnum=0
+        gramwave=0
         lr=0  
         lr_alpha=0 
         epoc_max=0 

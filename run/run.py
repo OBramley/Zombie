@@ -101,8 +101,12 @@ print("...",end="")
 if(inputs['run']['gram']=='y'):
     if(isinstance(inputs['gram']['gramnum'],int)==False):
         sys.exit("Number of states for Gram Schmidt must be an integer")
-    elif(inputs['run']['gramnum']<2):
+    elif(inputs['gram']['gramnum']<1):
         sys.exit("If using Gram Schmidt more than one state must investigated")
+    if(isinstance(inputs['gram']['gramwave'],int)==False):
+        sys.exit("Number of wavefunctions for Gram Schmidt must be an integer")
+    elif((inputs['gram']['gramwave']>1)and(inputs['gram']['gramwave']!=inputs['gram']['gramnum'])):
+        sys.exit("Gramnum and Gramwave must be the same if more than one wavefunction is being investigated")
 print("...",end="")
 if(inputs['run']['grad']=='y'):
     if(inputs['run']['hamgen']=='n'):

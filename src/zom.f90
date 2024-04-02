@@ -249,6 +249,66 @@ MODULE zom
 
     end subroutine zomhf
 
+    subroutine biased_func(z1)
+        implicit none
+        type(zombiest),intent(inout)::z1
+        integer::k
+        z1%phi=0.0001
+        if(nel.gt.4)then
+            z1%phi(1:4)=0.5*pirl
+            if(modulo(nel,2)==0) then
+                do k=5,nel+4
+                    z1%phi(k)=0.5*pirl*ZBQLU01(1)
+                end do
+                ! do k=nel+5,norb
+                !     z1%phi(k)=z1%phi(k)*ZBQLU01(1)
+                ! end do
+            else
+                do k=5,nel+5
+                    z1%phi(k)=0.5*pirl*ZBQLU01(1)
+                end do
+                ! do k=nel+6,norb
+                !     z1%phi(k)=z1%phi(k)*ZBQLU01(1)
+                ! end do
+            end if
+        else if(nel.eq.4)then
+            z1%phi(1:2)=0.5*pirl
+            if(modulo(nel,2)==0) then
+                do k=3,nel+4
+                    z1%phi(k)=0.5*pirl*ZBQLU01(1)
+                end do
+                ! do k=nel+5,norb
+                !     z1%phi(k)=z1%phi(k)*ZBQLU01(1)
+                ! end do
+            else
+                do k=3,nel+5
+                    z1%phi(k)=0.5*pirl*ZBQLU01(1)
+                end do
+                ! do k=nel+6,norb
+                !     z1%phi(k)=z1%phi(k)*ZBQLU01(1)
+                ! end do
+            end if
+        else 
+            if(modulo(nel,2)==0) then
+                do k=1,nel+4
+                    z1%phi(k)=0.5*pirl*ZBQLU01(1)
+                end do
+                ! do k=nel+5,norb
+                !     z1%phi(k)=z1%phi(k)*ZBQLU01(1)
+                ! end do
+            else
+                do k=1,nel+5
+                    z1%phi(k)=0.5*pirl*ZBQLU01(1)
+                end do
+                ! do k=nel+6,norb
+                !     z1%phi(k)=z1%phi(k)*ZBQLU01(1)
+                ! end do
+            end if
+        end if 
+        return 
+
+    end subroutine biased_func
+
     subroutine gen_biased_zs(zstore)
 
         implicit none
@@ -264,61 +324,7 @@ MODULE zom
         print*,"In Zombie"
         if(imagflg=='n') then
             do j=1, ndet
-                zstore(j)%phi=0.0001
-                if(nel.gt.4)then
-                    zstore(j)%phi(1:4)=0.5*pirl
-                    if(modulo(nel,2)==0) then
-                        do k=5,nel+4
-                            zstore(j)%phi(k)=0.5*pirl*ZBQLU01(1)
-                        end do
-                        ! do k=nel+5,norb
-                        !     zstore(j)%phi(k)=zstore(j)%phi(k)*ZBQLU01(1)
-                        ! end do
-                    else
-                        do k=5,nel+5
-                            zstore(j)%phi(k)=0.5*pirl*ZBQLU01(1)
-                        end do
-                        ! do k=nel+6,norb
-                        !     zstore(j)%phi(k)=zstore(j)%phi(k)*ZBQLU01(1)
-                        ! end do
-                    end if
-                else if(nel.eq.4)then
-                    zstore(j)%phi(1:2)=0.5*pirl
-                    if(modulo(nel,2)==0) then
-                        do k=3,nel+4
-                            zstore(j)%phi(k)=0.5*pirl*ZBQLU01(1)
-                        end do
-                        ! do k=nel+5,norb
-                        !     zstore(j)%phi(k)=zstore(j)%phi(k)*ZBQLU01(1)
-                        ! end do
-                    else
-                        do k=3,nel+5
-                            zstore(j)%phi(k)=0.5*pirl*ZBQLU01(1)
-                        end do
-                        ! do k=nel+6,norb
-                        !     zstore(j)%phi(k)=zstore(j)%phi(k)*ZBQLU01(1)
-                        ! end do
-                    end if
-                else 
-                    if(modulo(nel,2)==0) then
-                        do k=1,nel+4
-                            zstore(j)%phi(k)=0.5*pirl*ZBQLU01(1)
-                        end do
-                        ! do k=nel+5,norb
-                        !     zstore(j)%phi(k)=zstore(j)%phi(k)*ZBQLU01(1)
-                        ! end do
-                    else
-                        do k=1,nel+5
-                            zstore(j)%phi(k)=0.5*pirl*ZBQLU01(1)
-                        end do
-                        ! do k=nel+6,norb
-                        !     zstore(j)%phi(k)=zstore(j)%phi(k)*ZBQLU01(1)
-                        ! end do
-                    end if
-
-                end if 
-
-
+                call biased_func(zstore(j))
 
                 ! !$omp critical
                 ! do k=1,norb/2
