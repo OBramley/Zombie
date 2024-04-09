@@ -15,7 +15,7 @@ VPATH=../src
 
 all: ZOMBIE
 
-ZOMBIE:randgen_mod.o mod_types.o vars.o infnan_constants.o inf.o infnan.o alarrays.o operators.o readpars.o outputs.o electrons.o zom.o ham.o imgtp.o clean.o gram_funcs.o gradient_descent.o gram_schmidt.o MainZombie.o #neural_network.o #gram_schmidt.o
+ZOMBIE:randgen_mod.o mod_types.o vars.o infnan_constants.o inf.o infnan.o alarrays.o operators.o readpars.o outputs.o electrons.o zom.o ham.o imgtp.o clean.o gradient_descent.o gram_schmidt.o MainZombie.o #neural_network.o #gram_schmidt.o
 		 $(F90) $(FFLAGS) -o $@ $^ $(FLINKS)
 
 

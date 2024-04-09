@@ -321,7 +321,6 @@ MODULE zom
         if (errorflag .ne. 0) return
  
         ! call musig(mu,sig)
-        print*,"In Zombie"
         if(imagflg=='n') then
             do j=1, ndet
                 call biased_func(zstore(j))

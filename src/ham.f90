@@ -369,123 +369,123 @@ MODULE ham
     end subroutine haml_vals_2_orb
 
 
-    subroutine haml_vals_2_orb_2(zstore,temp,elecs,pick,orb)
-        implicit none 
-        type(zombiest),dimension(:),intent(in)::zstore
-        type(elecintrgl),intent(in)::elecs
-        type(grad_do),intent(inout)::temp
-        integer,intent(in) :: orb,pick 
-        real(wp),allocatable,dimension(:,:,:)::pert_val
-        real(wp),dimension(2)::nochg,an,cr,bth,neg,nochg_1,an_1,cr_1,bth_1,neg_1,vec,vec_1
-        real(wp)::a_diff,d_diff,values,div
-        integer::j,k,col
-        integer::ierr=0
+    ! subroutine haml_vals_2_orb_2(zstore,temp,elecs,pick,orb)
+    !     implicit none 
+    !     type(zombiest),dimension(:),intent(in)::zstore
+    !     type(elecintrgl),intent(in)::elecs
+    !     type(grad_do),intent(inout)::temp
+    !     integer,intent(in) :: orb,pick 
+    !     real(wp),allocatable,dimension(:,:,:)::pert_val
+    !     real(wp),dimension(2)::nochg,an,cr,bth,neg,nochg_1,an_1,cr_1,bth_1,neg_1,vec,vec_1
+    !     real(wp)::a_diff,d_diff,values,div
+    !     integer::j,k,col
+    !     integer::ierr=0
 
-        if (errorflag .ne. 0) return
+    !     if (errorflag .ne. 0) return
 
-        allocate(pert_val(elecs%num,2,2),stat=ierr)
-        if(ierr/=0)then
-            write(stderr,"(a,i0)")"Error in per_val allocation ",ierr
-        end if
+    !     allocate(pert_val(elecs%num,2,2),stat=ierr)
+    !     if(ierr/=0)then
+    !         write(stderr,"(a,i0)")"Error in per_val allocation ",ierr
+    !     end if
 
-        a_diff=temp%zom%val(orb)-zstore(pick)%val(orb)
-        d_diff=temp%zom%val(orb+norb)-zstore(pick)%val(orb+norb)
-        nochg(1)=a_diff
-        nochg(2)=d_diff
-        print*,temp%zom%val(orb),temp%zom%val(orb+norb)
-        print*,zstore(pick)%val(orb),zstore(pick)%val(orb+norb)
-        print*,a_diff,d_diff
-        stop
-        nochg_1(1)=zstore(pick)%val(orb)
-        nochg_1(2)=zstore(pick)%val(orb+norb)
-        an(1)=0
-        an(2)=nochg(1)
-        an_1(1)=0
-        an_1(2)=nochg_1(1)
-        cr(1)=nochg(2)
-        cr(2)=0
-        cr_1(1)=nochg_1(2)
-        cr_1(2)=0
-        bth(1)=nochg(1)
-        bth(2)=0
-        bth_1(1)=nochg_1(1)
-        bth_1(2)=0
-        neg(1)=-nochg(1)
-        neg(2)=nochg(2)
-        neg_1(1)=-nochg_1(1)
-        neg_1(2)=nochg_1(2)
-        ! print*,zstore(pick)%val(orb),zstore(pick)%val(orb+norb)
-        ! print*,nochg,a_diff,d_diff
-        !an,cr,bth,neg
-        col=findloc(elecs%orbital_choice3,orb,dim=1)
-        temp%hjk(pick,:)=temp%hjk(pick,:)-elecs%hnuc*temp%ovrlp(pick,:)
+    !     a_diff=temp%zom%val(orb)-zstore(pick)%val(orb)
+    !     d_diff=temp%zom%val(orb+norb)-zstore(pick)%val(orb+norb)
+    !     nochg(1)=a_diff
+    !     nochg(2)=d_diff
+    !     print*,temp%zom%val(orb),temp%zom%val(orb+norb)
+    !     print*,zstore(pick)%val(orb),zstore(pick)%val(orb+norb)
+    !     print*,a_diff,d_diff
+    !     stop
+    !     nochg_1(1)=zstore(pick)%val(orb)
+    !     nochg_1(2)=zstore(pick)%val(orb+norb)
+    !     an(1)=0
+    !     an(2)=nochg(1)
+    !     an_1(1)=0
+    !     an_1(2)=nochg_1(1)
+    !     cr(1)=nochg(2)
+    !     cr(2)=0
+    !     cr_1(1)=nochg_1(2)
+    !     cr_1(2)=0
+    !     bth(1)=nochg(1)
+    !     bth(2)=0
+    !     bth_1(1)=nochg_1(1)
+    !     bth_1(2)=0
+    !     neg(1)=-nochg(1)
+    !     neg(2)=nochg(2)
+    !     neg_1(1)=-nochg_1(1)
+    !     neg_1(2)=nochg_1(2)
+    !     ! print*,zstore(pick)%val(orb),zstore(pick)%val(orb+norb)
+    !     ! print*,nochg,a_diff,d_diff
+    !     !an,cr,bth,neg
+    !     col=findloc(elecs%orbital_choice3,orb,dim=1)
+    !     temp%hjk(pick,:)=temp%hjk(pick,:)-elecs%hnuc*temp%ovrlp(pick,:)
        
-        !!$omp parallel shared(pert_val,nochg,an,cr,bth,neg,temp,zstore,elecs),private(values,vec,j,k)
-        !!$omp do
-        do j=1,elecs%num
-            if(elecs%orbital_choice(j,col).eq.0)then
-                pert_val(j,1,:)=nochg
-                pert_val(j,2,:)=nochg_1
-            else if (elecs%orbital_choice(j,col).eq.1)then
-                pert_val(j,1,:)=an
-                pert_val(j,2,:)=an_1
-            else if (elecs%orbital_choice(j,col).eq.2)then
-                pert_val(j,1,:)=cr
-                pert_val(j,2,:)=cr_1
-            else if (elecs%orbital_choice(j,col).eq.3)then
-                pert_val(j,1,:)=bth
-                pert_val(j,2,:)=bth_1
-            else if (elecs%orbital_choice(j,col).eq.4)then
-                pert_val(j,1,:)=neg
-                pert_val(j,2,:)=neg_1
-            end if  
-        end do
-        !!$omp end do 
-        !!$omp do 
-        do j=1,ndet
-            values=0
-            div=0
-            vec=[zstore(j)%val(orb),zstore(j)%val(orb+norb)]
-            if(j/=pick)then
-                do k=1,elecs%num 
-                    ! if(dot_product(pert_val(k,1,:),vec).ne.0)then
-                        values=values+dot_product(pert_val(k,1,:),vec)*elecs%integrals(k)
-                        div=div+dot_product(pert_val(k,2,:),vec)*elecs%integrals(k)
-                        !/dot_product(pert_val(k,2,:),vec)
-                    ! end if 
-                end do
-                ! temp%ovrlp(pick,j)=temp%ovrlp(pick,j)+temp%ovrlp(pick,j)*(dot_product(nochg,vec)/dot_product(nochg_1,vec))
-            else 
-                do k=1,elecs%num 
-                    ! if(dot_product(pert_val(k,1,:),vec).ne.0)then
-                        values=values+(2*pert_val(k,1,1)*vec(1)+2*pert_val(k,1,2)*vec(2)+&
-                                dot_product(pert_val(k,1,:),pert_val(k,1,:)))*elecs%integrals(k)!/dot_product(pert_val(k,2,:),vec)
-                        div=div+dot_product(pert_val(k,2,:),vec)*elecs%integrals(k)
-                    ! end if 
-                end do
-                ! temp%ovrlp(pick,j)=temp%ovrlp(pick,j)+temp%ovrlp(pick,j)*(2*nochg(1)*vec(1)+2*nochg(2)*vec(2)+&
-                ! dot_product(nochg,nochg))/dot_product(nochg_1,vec)
-            end if
-            ! print*,values,temp%hjk(pick,j)
-            print*,values,div
+    !     !!$omp parallel shared(pert_val,nochg,an,cr,bth,neg,temp,zstore,elecs),private(values,vec,j,k)
+    !     !!$omp do
+    !     do j=1,elecs%num
+    !         if(elecs%orbital_choice(j,col).eq.0)then
+    !             pert_val(j,1,:)=nochg
+    !             pert_val(j,2,:)=nochg_1
+    !         else if (elecs%orbital_choice(j,col).eq.1)then
+    !             pert_val(j,1,:)=an
+    !             pert_val(j,2,:)=an_1
+    !         else if (elecs%orbital_choice(j,col).eq.2)then
+    !             pert_val(j,1,:)=cr
+    !             pert_val(j,2,:)=cr_1
+    !         else if (elecs%orbital_choice(j,col).eq.3)then
+    !             pert_val(j,1,:)=bth
+    !             pert_val(j,2,:)=bth_1
+    !         else if (elecs%orbital_choice(j,col).eq.4)then
+    !             pert_val(j,1,:)=neg
+    !             pert_val(j,2,:)=neg_1
+    !         end if  
+    !     end do
+    !     !!$omp end do 
+    !     !!$omp do 
+    !     do j=1,ndet
+    !         values=0
+    !         div=0
+    !         vec=[zstore(j)%val(orb),zstore(j)%val(orb+norb)]
+    !         if(j/=pick)then
+    !             do k=1,elecs%num 
+    !                 ! if(dot_product(pert_val(k,1,:),vec).ne.0)then
+    !                     values=values+dot_product(pert_val(k,1,:),vec)*elecs%integrals(k)
+    !                     div=div+dot_product(pert_val(k,2,:),vec)*elecs%integrals(k)
+    !                     !/dot_product(pert_val(k,2,:),vec)
+    !                 ! end if 
+    !             end do
+    !             ! temp%ovrlp(pick,j)=temp%ovrlp(pick,j)+temp%ovrlp(pick,j)*(dot_product(nochg,vec)/dot_product(nochg_1,vec))
+    !         else 
+    !             do k=1,elecs%num 
+    !                 ! if(dot_product(pert_val(k,1,:),vec).ne.0)then
+    !                     values=values+(2*pert_val(k,1,1)*vec(1)+2*pert_val(k,1,2)*vec(2)+&
+    !                             dot_product(pert_val(k,1,:),pert_val(k,1,:)))*elecs%integrals(k)!/dot_product(pert_val(k,2,:),vec)
+    !                     div=div+dot_product(pert_val(k,2,:),vec)*elecs%integrals(k)
+    !                 ! end if 
+    !             end do
+    !             ! temp%ovrlp(pick,j)=temp%ovrlp(pick,j)+temp%ovrlp(pick,j)*(2*nochg(1)*vec(1)+2*nochg(2)*vec(2)+&
+    !             ! dot_product(nochg,nochg))/dot_product(nochg_1,vec)
+    !         end if
+    !         ! print*,values,temp%hjk(pick,j)
+    !         print*,values,div
 
-            ! temp%hjk(pick,j)=temp%hjk(pick,j)+temp%hjk(pick,j)+values !+ elecs%hnuc*temp%ovrlp(pick,j)
+    !         ! temp%hjk(pick,j)=temp%hjk(pick,j)+temp%hjk(pick,j)+values !+ elecs%hnuc*temp%ovrlp(pick,j)
           
-        end do
+    !     end do
         
-        !!$omp end do 
-        !!$omp end parallel 
-        temp%ovrlp(:,pick)=temp%ovrlp(pick,:)
-        temp%hjk(:,pick)=temp%hjk(pick,:)
+    !     !!$omp end do 
+    !     !!$omp end parallel 
+    !     temp%ovrlp(:,pick)=temp%ovrlp(pick,:)
+    !     temp%hjk(:,pick)=temp%hjk(pick,:)
 
-        deallocate(pert_val,stat=ierr)
-        if(ierr/=0)then
-            write(stderr,"(a,i0)")"Error in per_val deallocation ",ierr
-        end if
+    !     deallocate(pert_val,stat=ierr)
+    !     if(ierr/=0)then
+    !         write(stderr,"(a,i0)")"Error in per_val deallocation ",ierr
+    !     end if
 
-        return
+    !     return
 
-    end subroutine haml_vals_2_orb_2
+    ! end subroutine haml_vals_2_orb_2
 
     subroutine gram_ovrlp_fill(gramstore,state)
         

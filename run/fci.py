@@ -12,7 +12,7 @@ if(pyscf_ins['units']=='atom'):
         mol = gto.M(
         atom = pyscf_ins['atoms'],
         basis = pyscf_ins['bs'],
-        verbose = pyscf_ins['verbosity'],
+        verbose = 4,#pyscf_ins['verbosity'],
         spin=pyscf_ins['spin'],
         charge=pyscf_ins['charge'],
         # symmetry_subgroup = pyscf_ins['symmetry_subgroup'], #0 is code for A1 point group
@@ -37,7 +37,7 @@ else:
     unit = pyscf_ins['units'],
     atom = pyscf_ins['atoms'],
     basis = pyscf_ins['bs'],
-    verbose = pyscf_ins['verbosity'],
+    verbose = 4,#pyscf_ins['verbosity'],
     symmetry = pyscf_ins['symmetry'],
     spin=pyscf_ins['spin'],
     charge=pyscf_ins['charge'],

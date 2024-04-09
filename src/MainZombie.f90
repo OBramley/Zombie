@@ -103,7 +103,6 @@ program MainZombie
             call flush(0)
         end if 
     end if
-    print*,gramflg,gramwave
     if((gramflg.eq."y").and.(gramwave.gt.1))then
         call gram_schmidt_control(elect)
     else
