@@ -3,9 +3,12 @@
 # made with the aid of the fmkmf utility (Copyright (c) The University of Edinburgh)
 # subsequent streamlining alterations have been made 
 
-F90=gfortran
-FFLAGS= -Wall -Wextra -ffast-math -ftree-vectorize -march=native -Ofast -O3 -fopenmp 
-FLINKS= -llapack -lblas
+
+F90= gfortran
+FFLAGS= -Wall -Wextra -ffast-math -ftree-vectorize -funroll-loops -march=native -Ofast -O3 -fopenmp
+# F90= ifort
+# FFLAGS=  -fp-model fast=2 -qopt-report=2 -qopt-report-phase=vec -unroll -xHost -fast -O3 -qopenmp -qopenacc#-O3 -Ofast
+FLINKS= $(ARC_LINALG_FFLAGS)
 VPATH=../src
 
 # Link step
@@ -66,7 +69,7 @@ clean.o:clean.f90 vars.o alarrays.o zom.o ham.o outputs.o readpars.o mod_types.o
 # neural_network.o:neural_network.f90 vars.o alarrays.o mod_types.o 
 #	 $(F90) $(FFLAGS) -c $<
 
-gradient_descent.o:gradient_descent.f90 vars.o alarrays.o ham.o imgtp.o outputs.o infnan.o zom.o  operators.o randgen_mod.o #neural_network.o
+gradient_descent.o:gradient_descent.f90 vars.o alarrays.o ham.o imgtp.o outputs.o infnan.o zom.o  operators.o randgen_mod.o  #neural_network.o
 	 $(F90) $(FFLAGS) -c $<
 
 gram_schmidt.o:gram_schmidt.f90 mod_types.o vars.o alarrays.o zom.o ham.o outputs.o readpars.o gradient_descent.o imgtp.o
