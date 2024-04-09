@@ -1,6 +1,0 @@
-basis=cc-pVDZ
-Angstrom
-r1=0.741
-geometry={H;H,H,r1}
-hf
-{fci}
