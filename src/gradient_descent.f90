@@ -378,6 +378,9 @@ MODULE gradient_descent
                     else
                         chng_chng=blind_clone_num
                     end if 
+                    if(modulo(ndet,10).eq.0)then
+                        chng_chng=50
+                    end if
                     ! if(ndet==ndet_max)then
                         ! lr_loop_max=12
                         ! chng_chng=150

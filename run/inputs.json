@@ -1,7 +1,7 @@
 { 
     "pyscf_file":"BH_631g_star_star_stretch",
     "setup":{
-        "runfolder":"BH_setup_better2",
+        "runfolder":"BH_stretch1",
         "runtime": "48:00:00",
         "nodes":1,
         "cores":8,
