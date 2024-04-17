@@ -127,6 +127,7 @@ MODULE readpars
             GDflg="y"
         else if((LINE9(1:1)=='n').or.(LINE9(1:1).eq.'N')) then
             GDflg="n"
+            ndet_max=ndet
         else
             write(stderr,"(a,a)") "Error. GDflg flag must be YES/NO. Read ", trim(LINE9)
             errorflag=1
@@ -405,24 +406,31 @@ MODULE readpars
         character(len=4)::num
         character(len=2)::gst_num
         integer::j,k,zomnum !,gram_st
-        character(LEN=20)::filenm
+        character(LEN=22)::filenm
         integer::ierr=0,lines=0
 
         if (errorflag .ne. 0) return
      
         if(imagflg=='n') then
             do j=1, ndet
-                if(GDflg.eq.'y')then
-                    write(num,"(i4.4)")(j+1000)
-                    ! write(num,"(i4.4)")j
-                else
-                    write(num,"(i4.4)")j
-                end if
+            
                 if(gst==0)then
+                    if(GDflg.eq.'y')then
+                        write(num,"(i4.4)")(j+1000)
+                        ! write(num,"(i4.4)")j
+                    else
+                        write(num,"(i4.4)")j
+                    end if
                     filenm="data/zombie_"//trim(num)//".csv"
                 else
-                    write(gst_num,"(i2.1)")gst
-                    filenm="data/zom_"//trim(gst_num)//"_"//trim(num)//".csv"
+                    if(GDflg.eq.'y')then
+                        write(num,"(i4.4)")(j+1000)
+                        ! write(num,"(i4.4)")j
+                    else
+                        write(num,"(i4.4)")j
+                    end if
+                    write(gst_num,"(i1.1)")gst
+                    filenm="data/zombie_"//trim(gst_num)//"_"//trim(num)//".csv"
                 end if
                 ! filenm="data/zombie_"//trim(num)//".csv"
                 zomnum=500+j

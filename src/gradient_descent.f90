@@ -19,7 +19,7 @@ MODULE gradient_descent
     integer::pick !Chosen zombie state
     integer,dimension(:),allocatable::picker
     integer,dimension(:),allocatable::chng_trk
-   
+    real(wp)::erg2
     contains
 
     ! Subroutine to calcualte Hamiltonian elements combines 1st and 2nd electron integral calcualations so remove double 
@@ -176,11 +176,10 @@ MODULE gradient_descent
         type(grad),intent(inout)::grad_fin
         integer,intent(in)::maxloop
         type(grad_do)::temp,thread
-        type(zombiest),dimension(:),allocatable::zstore_temp
         integer::rjct_cnt,acpt_cnt,pickorb,loops,lralt_zs,acpt_cnt_2,pow,pow_1
         integer::j,n,p,chng_chng,tracker,lralt_extra,extra_flag
         integer,dimension(:),allocatable::chng_trk2,pickerorb
-        real(wp)::t,erg_str,num_av,num_av_temp
+        real(wp)::t,erg_str,num_av
         integer::ierr=0
         ! type(neural_network_layer),dimension(:)::neural_net
 
@@ -214,10 +213,16 @@ MODULE gradient_descent
         end if
         if(ndet.eq.ndet_max)then
             chng_chng=150
-            lr_loop_max=10
+            lr_loop_max=16
         end if
        
         call haml_to_grad_do(haml,dvecs,temp)
+        if(gramflg.eq.'y')then
+            call imaginary_time(temp,ndet)
+            grad_fin%prev_erg=temp%erg
+            erg2=temp%erg2
+            dvecs=temp%dvecs
+        end if
         thread=temp
         num_av=0
         do j=1,ndet
@@ -255,31 +260,12 @@ MODULE gradient_descent
                     call grad_calculate(haml,dvecs,zstore,grad_fin,pickorb)
                     thread%zom=zstore(pick)
                     temp=thread
-
                     temp%zom%phi(pickorb) = thread%zom%phi(pickorb)-(t*grad_fin%vars(pick,pickorb))
                     call val_set(temp%zom,pickorb)
-                    ! if(lr_loop_max.ge.10)then
-                    ! if((abs(temp%zom%val(n)-zstore(pick)%val(n)).lt.1.0d-11).and.&
-                    ! (abs(temp%zom%val(n+norb)-zstore(pick)%val(n+norb)).lt.1.0d-11))then
-                    !     write(stdout,'(1a)',advance='no') '!'
-                    !     cycle
-                    ! end if
-                    !     num_av_temp=num_av
-                    !     num_av_temp=((num_av_temp*ndet)-numf(zstore(pick),zstore(pick))+numf(temp%zom,temp%zom))/ndet
-                    !     if((abs(num_av_temp-nel).gt.abs(num_av-nel)+5.0d-3*(0.25)**(lralt_zs)))then
-                    !         write(stdout,'(1a)',advance='no') '!'
-                    !         cycle
-                    !     end if
-                    ! end if 
-                    ! if((lralt_zs.gt.6).and.(abs(num_av_temp-nel).gt.abs(num_av-nel)+5.0d0**(-lralt_zs+2)))then
-                    !     write(stdout,'(1a)',advance='no') '!'
-                    !     cycle
-                    ! end if
-
                     call he_full_row(temp,zstore,elect,ndet,pickorb)
                     call imaginary_time(temp,ndet)
-                   
-                    if(grad_fin%prev_erg-temp%erg.ge.1.0d-14)then
+                    
+                    if((grad_fin%prev_erg-temp%erg.ge.1.0d-14))then!.and.(temp%erg.gt.erg2))then
                         acpt_cnt=acpt_cnt+1
                         chng_trk2(acpt_cnt)=pickorb
                         rjct_cnt=0
@@ -290,8 +276,12 @@ MODULE gradient_descent
                         grad_fin%ovrlp_grad_avlb(:,:,pick)=0
                         grad_fin%ovrlp_grad_avlb(:,pick,:)=0
                         grad_fin%prev_erg=temp%erg
+                        if(gramflg.eq.'y')then
+                            erg2=temp%erg2
+                            ! erg2=-14.85806
+                            ! erg2=erg2 !-0.1
+                        end if
                     end if
-                
                     write(stdout,'(1a)',advance='no') '|'
                     flush(6)
                 end do
@@ -312,7 +302,6 @@ MODULE gradient_descent
             end do
             
         write(stdout,"(a,i0,a,f21.16,a,f10.5)") "Energy after epoch no. ",epoc_cnt,": ",grad_fin%prev_erg, "    Learning rate:",t
-       
             if(acpt_cnt_2.gt.0)then
                 do j=1,acpt_cnt_2
                     call zombiewriter(zstore(chng_trk(j)),chng_trk(j),zstore(chng_trk(j))%gram_num)
@@ -321,11 +310,20 @@ MODULE gradient_descent
                 epoc_cnt=epoc_cnt+1
             else
                 loops=loops-1
+                ! if((gramflg.eq.'y').and.(t.gt.1))then
+                !     erg2=erg2-1
+                    ! beta=beta+10000
+                    ! timesteps=timesteps+1000
+                    ! print*,beta
+                ! end if 
             end if 
             
             if((acpt_cnt_2.lt.(0.15*ndet)).and.(extra_flag.eq.0).and.(lralt_zs.eq.lralt_extra).and.(tracker.gt.-1))then 
                 lralt_extra=lralt_extra+1
-                extra_flag=1
+                if(gramflg.eq.'n')then
+                    extra_flag=1
+                end if
+                
             end if 
            
             lralt_zs=lralt_zs+1
@@ -373,7 +371,7 @@ MODULE gradient_descent
                         chng_chng=blind_clone_num
                     end if 
                     if(modulo(ndet,10).eq.0)then
-                        chng_chng=60
+                        chng_chng=100 !60
                     end if
                   
                 else if(lr_loop_max.lt.9)then
@@ -396,7 +394,9 @@ MODULE gradient_descent
                     lralt_extra=0
                     lralt_zs=0
                     chng_chng=150
-                    extra_flag=1
+                    if(gramflg.eq.'n')then
+                        extra_flag=1
+                    end if
                 end if  
             end if 
 
@@ -427,289 +427,6 @@ MODULE gradient_descent
 
     end subroutine orbital_gd
 
-    subroutine orbital_gd_gram(gramstore,zstore,grad_fin,elect,dvecs,haml,chng_trk2,temp,thread,acpt_cnt_2,lralt_zs,state)
-
-        implicit none 
-        type(gram),dimension(:)::gramstore
-        type(zombiest),dimension(:),allocatable,intent(inout)::zstore
-        type(elecintrgl),intent(in)::elect
-        type(dvector),intent(inout)::dvecs
-        type(hamiltonian),intent(inout)::haml
-        type(grad),intent(inout)::grad_fin
-        integer,dimension(:),intent(inout)::chng_trk2
-        type(grad_do),intent(inout)::temp,thread
-        integer,intent(inout)::acpt_cnt_2,lralt_zs
-        integer,intent(in)::state
-        type(zombiest),dimension(:),allocatable::zstore_temp
-        integer::rjct_cnt,acpt_cnt,pickorb
-        integer::j,n,p
-   
-        real(wp)::t,erg_str
-        integer::ierr=0
-        
-        if (errorflag .ne. 0) return
-
-        chng_trk2=0 !stores which orbitals in the ZS have changed
-        acpt_cnt_2=0 !counts how many orbitals have been changed
-        chng_trk=0
-        t=lr*(lr_alpha**lralt_zs)
-        p=70-norb
-
-        call haml_to_grad_do(haml,dvecs,temp)
-        thread=temp
-        
-        do p=1, ((norb-8)/2)
-            write(stdout,'(1a)',advance='no') ' '
-        end do 
-        write(stdout,"(a)",advance='no') 'Progress'
-        do p=1, ((norb-8)/2)
-            write(stdout,'(1a)',advance='no') ' '
-        end do 
-        write(stdout,"(a)")'   | Zombie state | Previous Energy     | Energy after Gradient Descent steps   | Orbitals altered '
-    
-        do j=1,ndet
-            pick=picker(j)
-            if((state.eq.1).and.(pick.eq.1))then 
-                cycle
-            end if 
-            write(stdout,'(i3)',advance='no') j
-            erg_str=grad_fin%prev_erg
-            pick=picker(j)
-            chng_trk2=0
-            acpt_cnt=0
-            call haml_to_grad_do(haml,dvecs,thread)
-            if(state.gt.1)then
-                thread%wf_ovrlp(1:state-1,1:ndet,1:ndet)=gramstore(state)%grads%ovrlp_grad(1:state-1,1:ndet,1:ndet)
-            end if 
-           
-            do n=1, norb
-                pickorb=n
-                call grad_calculate(haml,dvecs,zstore,grad_fin,pickorb)
-                thread%zom=zstore(pick)
-                temp=thread
-          
-                temp%zom%phi(pickorb) = thread%zom%phi(pickorb)-(t*grad_fin%vars(pick,pickorb))
-                call val_set(temp%zom,pickorb)
-                call he_full_row(temp,zstore,elect,ndet,pickorb)
-
-                if(state.eq.1)then
-                    call imaginary_time(temp,ndet)
-                else
-                    call gram_ovrlp_var_temp(gramstore,temp%wf_ovrlp,temp%zom,state,pick)
-                    call imaginary_time(temp,gramstore,ndet,state)
-                end if
-                if(((grad_fin%prev_erg-temp%erg.ge.1.0d-14).and.state.eq.1).or.&
-                ((state.ne.1).and.(abs(grad_fin%prev_erg-temp%erg).le.1.0d-3)))then
-                    acpt_cnt=acpt_cnt+1
-                    chng_trk2(acpt_cnt)=pickorb
-                    rjct_cnt=0
-                    rjct_cnt_global=0
-                    call grad_do_haml_transfer(temp,haml,zstore(pick),dvecs)
-                    gramstore(state)%d_ovrlp_d=dot_product(gramstore(state)%dvecs%d,&
-                        matmul(gramstore(state)%haml%ovrlp,gramstore(state)%dvecs%d))
-                    thread=temp
-                    if(state.gt.1)then
-                        gramstore(state)%wf_ovrlp(1:state-1,1:ndet,1:ndet)=thread%wf_ovrlp(1:state-1,1:ndet,1:ndet)
-                    end if
-                    grad_fin%grad_avlb=0
-                    grad_fin%ovrlp_grad_avlb(:,:,pick)=0
-                    grad_fin%ovrlp_grad_avlb(:,pick,:)=0
-                    grad_fin%prev_erg=temp%erg
-                end if
-            
-                write(stdout,'(1a)',advance='no') '|'
-                flush(6)
-            end do
-            
-            if(acpt_cnt.gt.0)then
-                write(stdout,"(a,i3,a,f21.16,a,f21.16,a,*(i0:','))")'  ', pick,'          ', &
-                erg_str,'             ',grad_fin%prev_erg,'          ',chng_trk2(1:acpt_cnt) 
-                
-                acpt_cnt_2=acpt_cnt_2+1
-                chng_trk(acpt_cnt_2)=pick
-            else 
-                write(stdout,"(a,i3,a,f21.16,a,f21.16,a,i0)")'  ',pick,'          ', &
-                erg_str,'             ',grad_fin%prev_erg,'          ',0
-                
-                rjct_cnt=rjct_cnt+1
-                rjct_cnt_global=rjct_cnt_global+1   
-            end if
-        end do
-        write(stdout,"(a,i0)") "State no. ",state
-        write(stdout,"(a,i0,a,f21.16,a,f10.5)") "Energy after epoch no. ",epoc_cnt,": ",grad_fin%prev_erg, "    Learning rate:",t
-    
-        return
-
-    end subroutine orbital_gd_gram
-
-    subroutine orbital_gd_gram_control(gramstore,elect,epoc_cnts)
-        
-        implicit none
-        type(gram),dimension(:)::gramstore
-        type(elecintrgl),intent(in)::elect
-        integer,dimension(:),intent(inout)::epoc_cnts
-        type(grad_do)::temp,thread
-        integer,dimension(:),allocatable::chng_trk2,chng_chng,tracker,lralt_extra,extra_flag,lralt_zs
-        integer::acpt_cnt_2,k,j,l
-        integer::ierr=0
-
-
-        if (errorflag .ne. 0) return
-        call alloc_grad_do(temp,ndet)
-        call alloc_grad_do(thread,ndet)
-        allocate(temp%wf_ovrlp(gramnum,ndet,ndet),stat=ierr)
-        allocate(thread%wf_ovrlp(gramnum,ndet,ndet),stat=ierr)
-        allocate(picker(ndet),stat=ierr)
-        if(ierr==0) allocate(chng_trk(ndet),stat=ierr)
-        if(ierr==0) allocate(chng_trk2(norb),stat=ierr)
-        if(ierr==0) allocate(tracker(gramnum+1),stat=ierr)
-        if(ierr==0) allocate(chng_chng(gramnum+1),stat=ierr)
-        if(ierr==0) allocate(lralt_extra(gramnum+1),stat=ierr)
-        if(ierr==0) allocate(extra_flag(gramnum+1),stat=ierr)
-        if(ierr==0) allocate(lralt_zs(gramnum+1),stat=ierr)
-        if (ierr/=0) then
-            write(stderr,"(a,i0)") "Gradient descent allocations . ierr had value ", ierr
-            errorflag=1
-            return
-        end if
-        do j=1, gramnum+1
-            tracker(j)=0
-            lralt_extra(j)=0
-            extra_flag(j)=0
-            ! if(epoc_cnts(j).gt.2)then
-            !     chng_chng(j)=blind_clone_num-100
-            ! else
-            !     chng_chng(j)=blind_clone_num
-            ! end if
-        end do
-        lralt_zs=0
-        acpt_cnt_2=0
-        picker=scramble_norb(ndet)
-
-        rjct_cnt_global=0
-        do while(rjct_cnt_global.lt.(norb*100))
-            do j=1,gramnum+1
-                do l=1, lr_loop_max
-                epoc_cnt=epoc_cnts(j)
-                call orbital_gd_gram(gramstore,gramstore(j)%zstore,gramstore(j)%grads,elect,gramstore(j)%dvecs,gramstore(j)%haml,&
-                chng_trk2,temp,thread,acpt_cnt_2,lralt_zs(j),j)
-                if(acpt_cnt_2.gt.0)then
-                    do k=1,acpt_cnt_2
-                        call zombiewriter(gramstore(j)%zstore(chng_trk(k)),chng_trk(k),j)
-                    end do
-                    call epoc_writer(gramstore(j)%grads%prev_erg,epoc_cnts(j),lr*(lr_alpha**lralt_zs(j)),chng_trk,0,j)
-                    
-                    epoc_cnts(j)=epoc_cnts(j)+1
-                end if
-
-                if((acpt_cnt_2.lt.(0.15*ndet)).and.(extra_flag(j).eq.0).and.&
-                    (lralt_zs(j).eq.lralt_extra(j)).and.(tracker(j).gt.-1))then 
-                    lralt_extra(j)=lralt_extra(j)+1
-                    extra_flag(j)=1
-                end if
-
-                lralt_zs(j)=lralt_zs(j)+1
-                chng_chng(j)=chng_chng(j)-1
-                if(lralt_zs(j).gt.lr_loop_max)then
-                    lralt_zs(j)=lralt_extra(j)
-                    extra_flag(j)=0
-                    if((acpt_cnt_2.lt.((ndet)/3)).or.((ndet.gt.5).and.(acpt_cnt_2.lt.3)).or.(tracker(j).lt.0))then
-                        tracker(j)=tracker(j)+1
-                    end if
-                end if
-            end do
-            end do
-           
-            if((any(chng_chng.le.0)).or.(any(tracker.ge.1)))then
-                if(ndet.lt.ndet_max)then
-                    deallocate(picker,stat=ierr)
-                    allocate(picker(ndet+ndet_increase),stat=ierr)
-                    picker(ndet_increase+1:)=scramble_norb(ndet)
-                    do j=1,ndet_increase
-                        picker(j)=ndet+j
-                    end do
-                    ndet=ndet+ndet_increase
-                    deallocate(temp%wf_ovrlp,stat=ierr)
-                    deallocate(thread%wf_ovrlp,stat=ierr)
-                    call dealloc_grad_do(temp)
-                    call alloc_grad_do(temp,ndet)
-                    call dealloc_grad_do(thread)
-                    call alloc_grad_do(thread,ndet)
-                    allocate(temp%wf_ovrlp(gramnum,ndet,ndet),stat=ierr)
-                    allocate(thread%wf_ovrlp(gramnum,ndet,ndet),stat=ierr)
-                    do j=1,gramnum+1
-                        if(tracker(j).ge.1)then 
-                            chng_chng(j)=blind_clone_num-100
-                        else 
-                            chng_chng(j)=chng_chng(j)+100
-                        end if
-                        call zstore_increase(gramstore(j)%zstore,elect,gramstore(j)%dvecs,gramstore(j)%haml,gramstore(j)%grads,&
-                                temp,thread,lralt_zs(j),extra_flag(j),lralt_extra(j),tracker(j))
-                        do k=(ndet-ndet_increase+1),ndet
-                            gramstore(j)%zstore(k)%gram_num=j
-                            call zombiewriter(gramstore(j)%zstore(k),k,j)
-                        end do
-
-                        if(j.eq.1)then
-                            call imaginary_time(temp,ndet)
-                            gramstore(1)%d_ovrlp_d=dot_product(gramstore(1)%dvecs%d,&
-                                        matmul(gramstore(1)%haml%ovrlp,gramstore(1)%dvecs%d))
-                        else 
-                            call gram_ovrlp_fill(gramstore,j)
-                            temp%wf_ovrlp(1:j-1,1:ndet,1:ndet)=gramstore(j)%grads%ovrlp_grad(1:j-1,1:ndet,1:ndet)
-                            call imaginary_time(temp,gramstore,ndet,j)
-                            gramstore(j)%d_ovrlp_d=dot_product(gramstore(j)%dvecs%d,&
-                                        matmul(gramstore(j)%haml%ovrlp,gramstore(j)%dvecs%d))
-                        end if 
-                        gramstore(j)%grads%prev_erg=temp%erg
-                       
-                    end do 
-                    deallocate(chng_trk,stat=ierr)
-                    allocate(chng_trk(ndet),stat=ierr)
-                else if(lr_loop_max.lt.10)then
-                    if(any(tracker.ge.1))then
-                        lr_loop_max=lr_loop_max+1
-                    end if
-                    tracker=0
-                    lralt_extra=0
-                    lralt_zs=0
-                    chng_chng=200
-                    extra_flag=1
-                else 
-                    tracker=0
-                    lralt_extra=0
-                    lralt_zs=0
-                    chng_chng=300
-                    extra_flag=1
-                end if  
-            end if 
-        
-        end do
-        
-        deallocate(temp%wf_ovrlp,stat=ierr)
-        deallocate(thread%wf_ovrlp,stat=ierr)
-        call dealloc_grad_do(temp)
-        call dealloc_grad_do(thread)
-        call dealloc_grad_do(temp)
-        call dealloc_grad_do(thread)
-        if(ierr==0) deallocate(picker,stat=ierr)
-        if(ierr==0) deallocate(chng_trk,stat=ierr)
-        if(ierr==0) deallocate(chng_trk2,stat=ierr)
-        if(ierr==0) deallocate(tracker,stat=ierr)
-        if(ierr==0) deallocate(chng_chng,stat=ierr)
-        if(ierr==0) deallocate(lralt_extra,stat=ierr)
-        if(ierr==0) deallocate(extra_flag,stat=ierr)
-        if (ierr/=0) then
-            write(stderr,"(a,i0)") "Gradient descent deallocations . ierr had value ", ierr
-            errorflag=1
-            return
-        end if 
-        
-
-
-
-    end subroutine orbital_gd_gram_control
-
     subroutine zstore_increase(zstore,elect,dvecs,haml,grad_fin,temp,thread,lralt_zs,extra_flag,lralt_extra,tracker)
         implicit none
         type(zombiest),dimension(:),allocatable,intent(inout)::zstore
@@ -735,6 +452,7 @@ MODULE gradient_descent
         do j=(ndet-ndet_increase)+1,ndet
             call biased_func(zstore(j))
             call val_set(zstore(j))
+            zstore(j)%gram_num=zstore(1)%gram_num
         end do
         do j=(ndet-ndet_increase)+1,ndet
             temp%zom=zstore(j)
@@ -921,9 +639,13 @@ MODULE gradient_descent
         integer::ierr=0
        
         if (errorflag .ne. 0) return
-
+       
         call allocgrad(grad_fin,ndet,norb)
-        grad_fin%prev_erg=ergcalc(haml%hjk,dvecs%d)
+
+        if(gramflg.eq.'n')then
+            grad_fin%prev_erg=ergcalc(haml%hjk,dvecs%d)
+            erg2=-10000
+        end if
         grad_fin%grad_avlb=0
         grad_fin%ovrlp_grad_avlb=0
         epoc_cnt=1 !epoc counter

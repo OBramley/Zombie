@@ -67,7 +67,7 @@ program MainZombie
     end if
     call ZBQLINI(randseed,0)   ! Generates the seed value using the UCL random library
     write(stdout,"(a)") "Random seed set"
-   
+  
     ! generate 1 and 2 electron integrals
     if((cleanflg=="y").or.(cleanflg=="f").or.((hamgflg=='y')).or.(GDflg=='y'))then
         
@@ -161,6 +161,8 @@ program MainZombie
                 end do 
                 call energywriter(erg,"energy.csv",0)
                 write(stdout,"(a)") "Imaginary time propagation finished"
+                dvecs%d(1)=erg(gramnum,timesteps+1)
+                dvecs%d(2)=erg(gramnum+1,timesteps+1)
             end if 
            
             

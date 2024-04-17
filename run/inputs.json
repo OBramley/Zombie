@@ -1,10 +1,10 @@
 { 
-    "pyscf_file":"C_atom_ccpvdz",
+    "pyscf_file":"Li_631g_star_star_trunc",
     "setup":{
-        "runfolder":"C_maybe_50",
+        "runfolder":"Li2_gs_gs2",
         "runtime": "48:00:00",
         "nodes":1,
-        "cores":15,
+        "cores":8,
         "submissions":2,
         "multiple":1,
         "subnode":1,
@@ -14,16 +14,16 @@
     },
 
     "run":{
-        "ndet":5,
+        "ndet":30,
         "seed":1,
         "zomgen":"y",
         "hamgen":"y",
         "clean":"n",
         "imagprop":"y",
-        "beta":10000,
-        "timesteps":5000,
+        "beta":100000,
+        "timesteps":50000,
         "grad":"y",
-        "gram":"n"
+        "gram":"y"
     },
 
 
@@ -31,25 +31,25 @@
         "norb":0,
         "nel":0,
         "spin":0,
-        "zomtyp":"bb",
+        "zomtyp":"ran",
         "rhf_1":"y",
         "imagflg":"n"
     },
 
     "grad":{
-        "epoc_max":1000000,
-        "initial_learning_rate":500,
+        "epoc_max":100000,
+        "initial_learning_rate":12500,
         "learning_rate_decay":0.2,
-        "decay_steps":6,
-        "clone":"y",
-        "clone_max":50,
-        "clone_steps":14,
+        "decay_steps":5,
+        "clone":"n",
+        "clone_max":60,
+        "clone_steps":12,
         "clone_num":5
     }, 
 
     "gram":{
         "gramnum":2,
-        "gramwave":2
+        "gramwave":1
     },
 
     "files":{

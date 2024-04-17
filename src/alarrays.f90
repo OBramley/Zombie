@@ -375,9 +375,9 @@ MODULE alarrays
         gram_unit%zstore(1:size)%gram_num=num
         call allocdv(gram_unit%dvecs,size)
         call allocham(gram_unit%haml,size)
-        if(GDflg=='y')then
-            call allocgrad(gram_unit%grads,size,length)
-        end if
+        ! if(GDflg=='y')then
+        !     call allocgrad(gram_unit%grads,size,length)
+        ! end if
         if(gram_unit%state_num>1)then
             allocate(gram_unit%wf_ovrlp(num-1,size,size),stat=ierr)
             if(ierr/=0)then 
@@ -402,9 +402,9 @@ MODULE alarrays
         call dealloczs(gram_unit%zstore)
         call deallocdv(gram_unit%dvecs)
         call deallocham(gram_unit%haml)
-        if(GDflg=='y')then
-            call deallocgrad(gram_unit%grads)
-        end if
+        ! if(GDflg=='y')then
+        !     call deallocgrad(gram_unit%grads)
+        ! end if
         if(gram_unit%state_num>1)then
             deallocate(gram_unit%wf_ovrlp,stat=ierr)
             if(ierr/=0)then 
@@ -481,6 +481,9 @@ MODULE alarrays
 
         call alloczf(grads%zom)
         call allocdv(grads%dvecs,size)
+        if(gramflg.eq.'y')then
+            allocate(grads%dvecs%d_gs(gramnum,size))
+        end if
 
     end subroutine alloc_grad_do
 
@@ -491,7 +494,9 @@ MODULE alarrays
         integer::ierr=0
 
         if (errorflag .ne. 0) return
-
+        if(gramflg.eq.'y')then
+            deallocate(grads%dvecs%d_gs)
+        end if
         call dealloczf(grads%zom)
         call deallocdv(grads%dvecs)
 

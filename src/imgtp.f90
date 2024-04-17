@@ -6,7 +6,7 @@ MODULE imgtp
     
     interface imaginary_time
         module procedure imaginary_time_erg, imaginary_time_prop2, &
-            imaginary_time_prop2_gs,imaginary_time_wavefunction_gs,imaginary_time_wavefunction_erg_gs
+            imaginary_time_prop2_gs,imaginary_time_wavefunction_gs!,imaginary_time_wavefunction_erg_gs
     end interface imaginary_time
    
     contains
@@ -16,12 +16,13 @@ MODULE imgtp
         implicit none
         type(grad_do),intent(inout)::values
         integer,intent(in)::size
-        integer::k
+        integer::k,g
         real(wp)::norm,db
         real(wp),dimension(size)::ddot,temp
         
         if (errorflag .ne. 0) return
-    
+      
+       
         values%dvecs%d_1=0.0d0
         values%dvecs%d_1(1)=1.0d0
     
@@ -46,6 +47,47 @@ MODULE imgtp
         values%dvecs%d=values%dvecs%d_1/values%dvecs%norm
         call DGEMV("N",size,size,1.d0,values%hjk,size,values%dvecs%d,1,0.d0,temp,1)
         values%erg=dot_product(temp,values%dvecs%d)
+        values%erg2=10
+        if(gramflg.eq.'y')then
+            values%erg2=values%erg
+            values%dvecs%d_gs=0.0d0
+            do k=1, gramnum
+                values%dvecs%d_gs(k,k+1)=1.0d0
+            end do
+            db=beta/timesteps
+            do k=1,timesteps+1
+                call gs_dvector(values%dvecs,values%ovrlp)
+                do g=1, gramnum
+                    call DGEMV("N",size,size,1.d0,values%ovrlp,size,values%dvecs%d_gs(g,:),1,0.d0,temp,1)
+                    norm=dot_product(temp,values%dvecs%d_gs(g,:))
+                    values%dvecs%d_gs(g,:)=values%dvecs%d_gs(g,:)/sqrt(abs(norm))
+                end do
+                
+                do g=1, gramnum
+                    call DGEMV("N",size,size,db,values%kinvh,size,values%dvecs%d_gs(g,:),1,0.d0,ddot,1)
+                    values%dvecs%d_gs(g,:)=values%dvecs%d_gs(g,:)-ddot
+                end do
+            
+            
+            end do
+            do g=1, gramnum
+                if((gramnum.gt.1).and.(g.eq.gramnum))then 
+                    call DGEMV("N",size,size,1.d0,values%hjk,size,values%dvecs%d,1,0.d0,temp,1)
+                    values%erg2=dot_product(temp,values%dvecs%d)
+                end if
+                call DGEMV("N",size,size,1.d0,values%ovrlp,size,values%dvecs%d_gs(g,:),1,0.d0,temp,1)
+                norm=dot_product(temp,values%dvecs%d_gs(g,:))
+                values%dvecs%d_o_d=sign_d_o_d(norm)
+                values%dvecs%norm = sqrt(abs(norm))
+                values%dvecs%d_1=values%dvecs%d_gs(g,:)
+                values%dvecs%d=values%dvecs%d_gs(g,:)/values%dvecs%norm
+            end do
+
+            call DGEMV("N",size,size,1.d0,values%hjk,size,values%dvecs%d,1,0.d0,temp,1)
+            values%erg=dot_product(temp,values%dvecs%d)
+        end if 
+        return
+        
 
     end subroutine  imaginary_time_erg
 
@@ -239,8 +281,8 @@ MODULE imgtp
         if(errorflag.ne.0) return
 
         do j=1,state-1 
-            gs_numer1(j,:)=matmul(gramstore(j)%dvecs%d,gramstore(state)%wf_ovrlp(j,:,:))
-            gs_numer2(j,:)=matmul(gramstore(state)%haml%inv,gs_numer1(j,:))/gramstore(j)%d_ovrlp_d
+            gs_numer1(j,:)=matmul(gramstore(j)%dvecs%d,gramstore(state)%wf_ovrlp(j,:,:))/gramstore(j)%d_ovrlp_d
+            gs_numer2(j,:)=gramstore(j)%dvecs%d
         end do 
 
         gramstore(state)%dvecs%d_1=0.0d0
@@ -265,69 +307,69 @@ MODULE imgtp
            
         end do
       
-            call DGEMV("N",size,size,1.d0,gramstore(state)%haml%ovrlp,size,gramstore(state)%dvecs%d_1,1,0.d0,temp,1)
-            norm=dot_product(temp,gramstore(state)%dvecs%d_1)
+        call DGEMV("N",size,size,1.d0,gramstore(state)%haml%ovrlp,size,gramstore(state)%dvecs%d_1,1,0.d0,temp,1)
+        norm=dot_product(temp,gramstore(state)%dvecs%d_1)
 
-            gramstore(state)%dvecs%d_o_d=sign_d_o_d(norm)
-            gramstore(state)%dvecs%norm = sqrt(abs(norm))
-            gramstore(state)%dvecs%d=gramstore(state)%dvecs%d_1/gramstore(state)%dvecs%norm
+        gramstore(state)%dvecs%d_o_d=sign_d_o_d(norm)
+        gramstore(state)%dvecs%norm = sqrt(abs(norm))
+        gramstore(state)%dvecs%d=gramstore(state)%dvecs%d_1/gramstore(state)%dvecs%norm
        
 
         return
 
     end subroutine imaginary_time_wavefunction_gs
 
-    subroutine imaginary_time_wavefunction_erg_gs(values,gramstore,size,state)
+    ! subroutine imaginary_time_wavefunction_erg_gs(values,gramstore,size,state)
 
-        implicit none
-        type(grad_do),intent(inout)::values
-        type(gram),dimension(:)::gramstore
-        integer,intent(in)::size,state
-        integer::k,j
-        real(wp)::norm
-        real(wp)::db
-        real(wp),dimension(size)::ddot,temp
-        real(wp),dimension(state-1,size)::gs_numer1,gs_numer2
+    !     implicit none
+    !     type(grad_do),intent(inout)::values
+    !     type(gram),dimension(:)::gramstore
+    !     integer,intent(in)::size,state
+    !     integer::k,j
+    !     real(wp)::norm
+    !     real(wp)::db
+    !     real(wp),dimension(size)::ddot,temp
+    !     real(wp),dimension(state-1,size)::gs_numer1,gs_numer2
         
-        if(errorflag.ne.0) return
+    !     if(errorflag.ne.0) return
 
-        do j=1,state-1 
-            gs_numer1(j,:)=matmul(gramstore(j)%dvecs%d,values%wf_ovrlp(j,:,:))
-            gs_numer2(j,:)=matmul(values%inv,gs_numer1(j,:))/gramstore(j)%d_ovrlp_d
-        end do 
+    !     do j=1,state-1 
+    !         gs_numer1(j,:)=matmul(gramstore(j)%dvecs%d,values%wf_ovrlp(j,:,:))
+    !         gs_numer2(j,:)=matmul(values%inv,gs_numer1(j,:))/gramstore(j)%d_ovrlp_d
+    !     end do 
 
-        values%dvecs%d_1=0.0d0
-        values%dvecs%d_1(1)=1.0d0
+    !     values%dvecs%d_1=0.0d0
+    !     values%dvecs%d_1(1)=1.0d0
     
-        db=beta/timesteps
+    !     db=beta/timesteps
     
-        do k=1,timesteps+1
-            call  gs_wavefunction_vector(values%dvecs,gs_numer1,gs_numer2,size,state)
+    !     do k=1,timesteps+1
+    !         call  gs_wavefunction_vector(values%dvecs,gs_numer1,gs_numer2,size,state)
 
-            call DGEMV("N",size,size,1.d0,values%ovrlp,size,values%dvecs%d_1,1,0.d0,temp,1)
-            norm=dot_product(temp,values%dvecs%d_1)
-            values%dvecs%norm = sqrt(abs(norm))
-            values%dvecs%d=values%dvecs%d_1/values%dvecs%norm
+    !         call DGEMV("N",size,size,1.d0,values%ovrlp,size,values%dvecs%d_1,1,0.d0,temp,1)
+    !         norm=dot_product(temp,values%dvecs%d_1)
+    !         values%dvecs%norm = sqrt(abs(norm))
+    !         values%dvecs%d=values%dvecs%d_1/values%dvecs%norm
 
-            call DGEMV("N",size,size,db,values%kinvh,ndet,values%dvecs%d,1,0.d0,ddot,1)
-            values%dvecs%d_1=values%dvecs%d-ddot
+    !         call DGEMV("N",size,size,db,values%kinvh,ndet,values%dvecs%d,1,0.d0,ddot,1)
+    !         values%dvecs%d_1=values%dvecs%d-ddot
            
-        end do
+    !     end do
       
-        call DGEMV("N",size,size,1.d0,values%ovrlp,size,values%dvecs%d_1,1,0.d0,temp,1)
-        norm=dot_product(temp,values%dvecs%d_1)
+    !     call DGEMV("N",size,size,1.d0,values%ovrlp,size,values%dvecs%d_1,1,0.d0,temp,1)
+    !     norm=dot_product(temp,values%dvecs%d_1)
 
-        values%dvecs%d_o_d=sign_d_o_d(norm)
-        values%dvecs%norm = sqrt(abs(norm))
+    !     values%dvecs%d_o_d=sign_d_o_d(norm)
+    !     values%dvecs%norm = sqrt(abs(norm))
     
-        values%dvecs%d=values%dvecs%d_1/values%dvecs%norm
-        call DGEMV("N",size,size,1.d0,values%hjk,size,values%dvecs%d,1,0.d0,temp,1)
-        values%erg=dot_product(temp,values%dvecs%d)
+    !     values%dvecs%d=values%dvecs%d_1/values%dvecs%norm
+    !     call DGEMV("N",size,size,1.d0,values%hjk,size,values%dvecs%d,1,0.d0,temp,1)
+    !     values%erg=dot_product(temp,values%dvecs%d)
        
 
-        return
+    !     return
 
-    end subroutine imaginary_time_wavefunction_erg_gs
+    ! end subroutine imaginary_time_wavefunction_erg_gs
 
 
 

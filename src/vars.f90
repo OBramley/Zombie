@@ -60,11 +60,11 @@ MODULE globvars
         real(dp), dimension(:,:), allocatable::ovrlp
         real(dp), dimension(:,:), allocatable::inv
         real(dp), dimension(:,:), allocatable::kinvh
-        real(wp),dimension(:,:,:),allocatable::wf_ovrlp
+        ! real(wp),dimension(:,:,:),allocatable::wf_ovrlp
         
         type(zombiest)::zom
         type(dvector)::dvecs
-        real(dp)::erg
+        real(dp)::erg,erg2
     end type grad_do
 
     type grad 
@@ -81,7 +81,7 @@ MODULE globvars
         type(zombiest),dimension(:),allocatable::zstore
         type(dvector)::dvecs
         type(hamiltonian)::haml
-        type(grad)::grads
+        ! type(grad)::grads
         real(wp),dimension(:,:,:),allocatable::wf_ovrlp
         real(wp)::d_ovrlp_d
     end type gram 
