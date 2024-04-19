@@ -362,62 +362,62 @@ MODULE alarrays
 
     end subroutine dealloc_oprts
 
-    subroutine allocgram(gram_unit,num,size,length)
+    ! subroutine allocgram(gram_unit,num,size,length)
 
-        implicit none 
-        type(gram),intent(inout)::gram_unit 
-        integer,intent(in)::num,size,length
-        integer::ierr=0
+    !     implicit none 
+    !     type(gram),intent(inout)::gram_unit 
+    !     integer,intent(in)::num,size,length
+    !     integer::ierr=0
 
-        if (errorflag .ne. 0) return
-        gram_unit%state_num=num
-        call alloczs(gram_unit%zstore,size)
-        gram_unit%zstore(1:size)%gram_num=num
-        call allocdv(gram_unit%dvecs,size)
-        call allocham(gram_unit%haml,size)
-        ! if(GDflg=='y')then
-        !     call allocgrad(gram_unit%grads,size,length)
-        ! end if
-        if(gram_unit%state_num>1)then
-            allocate(gram_unit%wf_ovrlp(num-1,size,size),stat=ierr)
-            if(ierr/=0)then 
-                write(stderr,"(a,i0)") "Error in Wave function overlap array allocation. ierr had value ", ierr
-                errorflag=1
-                return
-            end if
-        end if
+    !     if (errorflag .ne. 0) return
+    !     gram_unit%state_num=num
+    !     call alloczs(gram_unit%zstore,size)
+    !     gram_unit%zstore(1:size)%gram_num=num
+    !     call allocdv(gram_unit%dvecs,size)
+    !     call allocham(gram_unit%haml,size)
+    !     ! if(GDflg=='y')then
+    !     !     call allocgrad(gram_unit%grads,size,length)
+    !     ! end if
+    !     if(gram_unit%state_num>1)then
+    !         allocate(gram_unit%wf_ovrlp(num-1,size,size),stat=ierr)
+    !         if(ierr/=0)then 
+    !             write(stderr,"(a,i0)") "Error in Wave function overlap array allocation. ierr had value ", ierr
+    !             errorflag=1
+    !             return
+    !         end if
+    !     end if
        
-        return
+    !     return
 
-    end subroutine allocgram
+    ! end subroutine allocgram
 
-    subroutine deallocgram(gram_unit)
+    ! subroutine deallocgram(gram_unit)
 
-        implicit none 
-        type(gram),intent(inout)::gram_unit 
-        integer::ierr=0
+    !     implicit none 
+    !     type(gram),intent(inout)::gram_unit 
+    !     integer::ierr=0
 
-        if (errorflag .ne. 0) return
+    !     if (errorflag .ne. 0) return
 
-        call dealloczs(gram_unit%zstore)
-        call deallocdv(gram_unit%dvecs)
-        call deallocham(gram_unit%haml)
-        ! if(GDflg=='y')then
-        !     call deallocgrad(gram_unit%grads)
-        ! end if
-        if(gram_unit%state_num>1)then
-            deallocate(gram_unit%wf_ovrlp,stat=ierr)
-            if(ierr/=0)then 
-                write(stderr,"(a,i0)") "Error in Wave function overlap array deallocation. ierr had value ", ierr
-                errorflag=1
-                return
-            end if
-        end if
+    !     call dealloczs(gram_unit%zstore)
+    !     call deallocdv(gram_unit%dvecs)
+    !     call deallocham(gram_unit%haml)
+    !     ! if(GDflg=='y')then
+    !     !     call deallocgrad(gram_unit%grads)
+    !     ! end if
+    !     if(gram_unit%state_num>1)then
+    !         deallocate(gram_unit%wf_ovrlp,stat=ierr)
+    !         if(ierr/=0)then 
+    !             write(stderr,"(a,i0)") "Error in Wave function overlap array deallocation. ierr had value ", ierr
+    !             errorflag=1
+    !             return
+    !         end if
+    !     end if
         
 
-        return
+    !     return
 
-    end subroutine deallocgram
+    ! end subroutine deallocgram
 
     subroutine allocdvgram(dvec,num,size)
 

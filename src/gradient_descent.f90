@@ -19,7 +19,6 @@ MODULE gradient_descent
     integer::pick !Chosen zombie state
     integer,dimension(:),allocatable::picker
     integer,dimension(:),allocatable::chng_trk
-    real(wp)::erg2
     contains
 
     ! Subroutine to calcualte Hamiltonian elements combines 1st and 2nd electron integral calcualations so remove double 
@@ -213,14 +212,13 @@ MODULE gradient_descent
         end if
         if(ndet.eq.ndet_max)then
             chng_chng=150
-            lr_loop_max=16
+            lr_loop_max=10
         end if
        
         call haml_to_grad_do(haml,dvecs,temp)
         if(gramflg.eq.'y')then
             call imaginary_time(temp,ndet)
             grad_fin%prev_erg=temp%erg
-            erg2=temp%erg2
             dvecs=temp%dvecs
         end if
         thread=temp
@@ -265,7 +263,7 @@ MODULE gradient_descent
                     call he_full_row(temp,zstore,elect,ndet,pickorb)
                     call imaginary_time(temp,ndet)
                     
-                    if((grad_fin%prev_erg-temp%erg.ge.1.0d-14))then!.and.(temp%erg.gt.erg2))then
+                    if((grad_fin%prev_erg-temp%erg.ge.1.0d-14))then
                         acpt_cnt=acpt_cnt+1
                         chng_trk2(acpt_cnt)=pickorb
                         rjct_cnt=0
@@ -276,11 +274,6 @@ MODULE gradient_descent
                         grad_fin%ovrlp_grad_avlb(:,:,pick)=0
                         grad_fin%ovrlp_grad_avlb(:,pick,:)=0
                         grad_fin%prev_erg=temp%erg
-                        if(gramflg.eq.'y')then
-                            erg2=temp%erg2
-                            ! erg2=-14.85806
-                            ! erg2=erg2 !-0.1
-                        end if
                     end if
                     write(stdout,'(1a)',advance='no') '|'
                     flush(6)
@@ -310,20 +303,19 @@ MODULE gradient_descent
                 epoc_cnt=epoc_cnt+1
             else
                 loops=loops-1
-                ! if((gramflg.eq.'y').and.(t.gt.1))then
-                !     erg2=erg2-1
-                    ! beta=beta+10000
-                    ! timesteps=timesteps+1000
-                    ! print*,beta
-                ! end if 
+                
             end if 
             
             if((acpt_cnt_2.lt.(0.15*ndet)).and.(extra_flag.eq.0).and.(lralt_zs.eq.lralt_extra).and.(tracker.gt.-1))then 
                 lralt_extra=lralt_extra+1
-                if(gramflg.eq.'n')then
-                    extra_flag=1
-                end if
-                
+                extra_flag=1
+                ! if((gramflg.eq.'y').and.(t.lt.100))then
+                !     timesteps=timesteps+4000
+                !     if((t.lt.1).and.(timesteps.lt.60000))then
+                !         lralt_extra=lralt_extra-1
+                !         extra_flag=0
+                !     end if 
+                ! end if 
             end if 
            
             lralt_zs=lralt_zs+1
@@ -389,14 +381,23 @@ MODULE gradient_descent
                         chng_chng=blind_clone_num
                     end if 
                 else
+                    ! if((gramflg.eq.'y').and.(chng_chng.gt.0))then
+                    !     if((timesteps.lt.60000))then
+                    !         timesteps=timesteps+10000
+                    !     end if 
+                    !     ! if((t.lt.1).and.(timesteps.lt.60000))then
+                    !     !     lralt_extra=lralt_extra-1
+                    !     !     extra_flag=0
+                    !     ! end if 
+                    ! end if 
                     thread=temp
                     tracker=0
                     lralt_extra=0
                     lralt_zs=0
                     chng_chng=150
-                    if(gramflg.eq.'n')then
-                        extra_flag=1
-                    end if
+                    ! if(gramflg.eq.'n')then
+                    extra_flag=1
+                    ! end if
                 end if  
             end if 
 
@@ -644,7 +645,6 @@ MODULE gradient_descent
 
         if(gramflg.eq.'n')then
             grad_fin%prev_erg=ergcalc(haml%hjk,dvecs%d)
-            erg2=-10000
         end if
         grad_fin%grad_avlb=0
         grad_fin%ovrlp_grad_avlb=0
@@ -831,24 +831,24 @@ MODULE gradient_descent
 
     end subroutine 
 
-    subroutine gram_ovrlp_var_temp(gramstore,wf_ovrlp,z1d,state,var)
-        implicit none
-        type(gram),dimension(:),intent(in)::gramstore
-        real(wp),dimension(:,:,:),intent(inout)::wf_ovrlp
-        type(zombiest),intent(in)::z1d
-        integer,intent(in)::state,var
-        integer::j,k
+    ! subroutine gram_ovrlp_var_temp(gramstore,wf_ovrlp,z1d,state,var)
+    !     implicit none
+    !     type(gram),dimension(:),intent(in)::gramstore
+    !     real(wp),dimension(:,:,:),intent(inout)::wf_ovrlp
+    !     type(zombiest),intent(in)::z1d
+    !     integer,intent(in)::state,var
+    !     integer::j,k
 
-        if(errorflag.ne.0) return
-        do j=1,state-1
-            do k=1,ndet
-                wf_ovrlp(j,k,var)=product(gramstore(state)%zstore(k)%val(1:norb)*&
-                z1d%val(1:norb)+gramstore(state)%zstore(k)%val(1+norb:2*norb)*z1d%val(1+norb:2*norb))
-              wf_ovrlp(j,var,k)=wf_ovrlp(j,k,var)
-            end do
-        end do
+    !     if(errorflag.ne.0) return
+    !     do j=1,state-1
+    !         do k=1,ndet
+    !             wf_ovrlp(j,k,var)=product(gramstore(state)%zstore(k)%val(1:norb)*&
+    !             z1d%val(1:norb)+gramstore(state)%zstore(k)%val(1+norb:2*norb)*z1d%val(1+norb:2*norb))
+    !           wf_ovrlp(j,var,k)=wf_ovrlp(j,k,var)
+    !         end do
+    !     end do
 
-    end subroutine gram_ovrlp_var_temp
+    ! end subroutine gram_ovrlp_var_temp
 
     ! subroutine nn_haml(zstore,neural_net,temp,pickorb,hnuc)
     !     implicit none

@@ -13,8 +13,8 @@ beta=inputs['run']['beta']
 timesteps=inputs['run']['timesteps']
 
 if(inputs['run']['gram'] == 'y'):
-    color_num=1+inputs['run']['gramnum']
-    gram_num=inputs['run']['gramnum']
+    color_num=1+inputs['gram']['gramnum']
+    gram_num=inputs['gram']['gramnum']
     if(inputs['run']['grad']=='y'):
         color_num=color_num*2
     
@@ -28,13 +28,13 @@ elif(inputs['run']['gram'] == 'n'):
 colors =mpl.colormaps['Set1']
 
 def plot_energy(eb, filename,c1):
-    x=eb[0,:]
+    x=eb[:,0]
     mpl.rcParams['font.family']='DejaVu Sans'
     plt.rcParams['font.size']=18
     plt.rcParams['axes.linewidth']=2
     fig=plt.figure(figsize=(3.37,5.055))
     ax=fig.add_axes([0,0,2,1])
-    ax.plot(x,eb[1,:], linewidth=2, color=colors(c1),label='Converged energy: '+"{:.6f}".format(eb[1,timesteps-1]))
+    ax.plot(x,eb[:,1], linewidth=2, color=colors(c1),label='Converged energy: '+"{:.6f}".format(eb[1,timesteps-1]))
     ax.set_xlim(0,beta)
     ax.legend()
     ax.set_ylabel('Energy [au]',labelpad=10)
@@ -45,14 +45,14 @@ def plot_energy(eb, filename,c1):
     return
 
 def plot_energy_gradient_descent(eb, ebf, filename, c1, c2):
-    x=eb[0,:]
+    x=eb[:,0]
     mpl.rcParams['font.family']='DejaVu Sans'
     plt.rcParams['font.size']=18
     plt.rcParams['axes.linewidth']=2
     fig=plt.figure(figsize=(3.37,5.055))
     ax=fig.add_axes([0,0,2,1])
-    ax.plot(x,eb[1,:], linewidth=2, color=colors(c1),label='Initial Energy: '+"{:.6f}".format(eb[1,timesteps-1]))
-    ax.plot(x,ebf[1,:], linewidth=2, color=colors(c2),label='Final Energy: '+"{:.6f}".format(ebf[1,timesteps-1]))
+    ax.plot(x,eb[:,1], linewidth=2, color=colors(c1),label='Initial Energy: '+"{:.6f}".format(eb[1,timesteps-1]))
+    ax.plot(x,ebf[:,1], linewidth=2, color=colors(c2),label='Final Energy: '+"{:.6f}".format(ebf[1,timesteps-1]))
     ax.set_xlim(0,beta)
     ax.legend()
     ax.set_ylabel('Energy [au]',labelpad=10)
@@ -63,13 +63,13 @@ def plot_energy_gradient_descent(eb, ebf, filename, c1, c2):
     return
 
 def plot_energy_cleaned(eb, clean, filename, c1, c2):
-    x=eb[0,:]
+    x=eb[:,0]
     mpl.rcParams['font.family']='DejaVu Sans'
     plt.rcParams['font.size']=18
     plt.rcParams['axes.linewidth']=2
     fig=plt.figure(figsize=(3.37,5.055))
     ax=fig.add_axes([0,0,2,1])
-    ax.plot(x,eb[1,:], linewidth=2, color=colors(c1), label='Converged energy: '+"{:.6f}".format(eb[1,timesteps-1]))
+    ax.plot(x,eb[:,1], linewidth=2, color=colors(c1), label='Converged energy: '+"{:.6f}".format(eb[1,timesteps-1]))
     ax.axhline(y=clean, color=colors(c2), linewidth=2,label='Cleaned energy: '+"{:.6f}".format(clean))
     ax.legend()
     ax.set_xlim(0,beta)
@@ -98,14 +98,14 @@ def plot_epoch(epoch,filename,c1):
     return
 
 def plot_energy_gram(eb, filename,cols):
-    x=eb[0,:]
+    x=eb[:,0]
     mpl.rcParams['font.family']='DejaVu Sans'
     plt.rcParams['font.size']=18
     plt.rcParams['axes.linewidth']=2
     fig=plt.figure(figsize=(3.37,5.055))
     ax=fig.add_axes([0,0,2,1])
-    for i in range(gram_num):
-        ax.plot(x,eb[i+1,:], linewidth=2, color=colors(cols[i]),label='State '+str(i+1))
+    for i in range(gram_num+1):
+        ax.plot(x,eb[:,i+1], linewidth=2, color=colors(cols[i]),label='State '+str(i+1))
     ax.set_xlim(0,beta)
     ax.legend()
     ax.set_ylabel('Energy [au]',labelpad=10)
@@ -116,15 +116,15 @@ def plot_energy_gram(eb, filename,cols):
     return
 
 def plot_energy_gradient_descent_gram(eb, ebf, filename, cols1, cols2):
-    x=eb[0,:]
+    x=eb[:,0]
     mpl.rcParams['font.family']='DejaVu Sans'
     plt.rcParams['font.size']=18
     plt.rcParams['axes.linewidth']=2
     fig=plt.figure(figsize=(3.37,5.055))
     ax=fig.add_axes([0,0,2,1])
     for i in range(gram_num):
-        ax.plot(x,eb[i+1,:], linewidth=2, color=colors(cols1[i]),label='Initial State '+str(i+1))
-        ax.plot(x,ebf[i+1,:], linewidth=2, color=colors(cols2[i]),label='Final State '+str(i+1))
+        ax.plot(x,eb[:,i+1], linewidth=2, color=colors(cols1[i]),label='Initial State '+str(i+1))
+        ax.plot(x,ebf[:,i+1], linewidth=2, color=colors(cols2[i]),label='Final State '+str(i+1))
     ax.set_xlim(0,beta)
     ax.legend()
     ax.set_ylabel('Energy [au]',labelpad=10)
@@ -138,9 +138,9 @@ def plot_energy_gradient_descent_gram(eb, ebf, filename, cols1, cols2):
 if(inputs['run']['gram'] == 'y'):
     with open('energy.csv','rb') as file:
         energy=numpy.loadtxt(file,delimiter=',')
-    for i in range(gram_num):
-        plot_energy(energy[i+1,:], 'energy_state_'+str(i+1)+'.png', i)
-    plot_energy_gram(energy, 'energy.png', range(gram_num))
+    # for i in range(gram_num):
+        # plot_energy(energy[i+1,:], 'energy_state_'+str(i+1)+'.png', i)
+    plot_energy_gram(energy, 'energy.png', range(gram_num+1))
 
     if(inputs['run']['grad']=='y'):
         if not os.path.isfile('energy_final.csv'):

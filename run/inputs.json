@@ -1,7 +1,7 @@
 { 
     "pyscf_file":"Li_631g_star_star_trunc",
     "setup":{
-        "runfolder":"Li2_gs_gs2",
+        "runfolder":"Li2_gs_gs3",
         "runtime": "48:00:00",
         "nodes":1,
         "cores":8,
@@ -20,8 +20,8 @@
         "hamgen":"y",
         "clean":"n",
         "imagprop":"y",
-        "beta":100000,
-        "timesteps":50000,
+        "beta":2500,
+        "timesteps":5000,
         "grad":"y",
         "gram":"y"
     },
@@ -37,8 +37,8 @@
     },
 
     "grad":{
-        "epoc_max":100000,
-        "initial_learning_rate":12500,
+        "epoc_max":10000000,
+        "initial_learning_rate":2500,
         "learning_rate_decay":0.2,
         "decay_steps":5,
         "clone":"n",
@@ -48,7 +48,7 @@
     }, 
 
     "gram":{
-        "gramnum":2,
+        "gramnum":3,
         "gramwave":1
     },
 

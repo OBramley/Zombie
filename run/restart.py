@@ -58,7 +58,7 @@ elif(inputs['run']['clean'] not in {'y','n','f'}):
 if(inputs['run']['gram']=='y'):
     if(isinstance(inputs['gram']['gramnum'],int)==False):
         sys.exit("Number of states for Gram Schmidt must be an integer")
-    elif(inputs['gram']['gramnum']<2):
+    elif(inputs['gram']['gramnum']<1):
         sys.exit("If using Gram Schmidt more than one state must investigated")
 
 if(inputs['run']['grad']=='y'):

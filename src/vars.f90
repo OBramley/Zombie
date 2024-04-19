@@ -64,7 +64,7 @@ MODULE globvars
         
         type(zombiest)::zom
         type(dvector)::dvecs
-        real(dp)::erg,erg2
+        real(dp)::erg
     end type grad_do
 
     type grad 
@@ -76,15 +76,15 @@ MODULE globvars
         integer,dimension(:,:,:),allocatable::ovrlp_grad_avlb
     end type grad
 
-    type gram
-        integer::state_num
-        type(zombiest),dimension(:),allocatable::zstore
-        type(dvector)::dvecs
-        type(hamiltonian)::haml
-        ! type(grad)::grads
-        real(wp),dimension(:,:,:),allocatable::wf_ovrlp
-        real(wp)::d_ovrlp_d
-    end type gram 
+    ! type gram
+    !     integer::state_num
+    !     type(zombiest),dimension(:),allocatable::zstore
+    !     type(dvector)::dvecs
+    !     type(hamiltonian)::haml
+    !     ! type(grad)::grads
+    !     real(wp),dimension(:,:,:),allocatable::wf_ovrlp
+    !     real(wp)::d_ovrlp_d
+    ! end type gram 
 
     ! type trial_data
     !     real(wp)::dead
