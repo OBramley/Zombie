@@ -163,7 +163,6 @@ MODULE electrons
    
         cnt2=0
         orbital_choice2=0
-      
         do k=1,norb
             call sorts(elecs%orbital_choice,elecs%integrals,norb,elecs%num,k)
         end do 
@@ -498,4 +497,4 @@ MODULE electrons
     
     end subroutine one_electrons
     
-    END MODULE electrons
+    END MODULE electrons    

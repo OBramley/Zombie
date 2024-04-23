@@ -58,7 +58,7 @@ elif(inputs['run']['clean'] not in {'y','n','f'}):
 if(inputs['run']['gram']=='y'):
     if(isinstance(inputs['gram']['gramnum'],int)==False):
         sys.exit("Number of states for Gram Schmidt must be an integer")
-    elif(inputs['run']['gramnum']<2):
+    elif(inputs['gram']['gramnum']<1):
         sys.exit("If using Gram Schmidt more than one state must investigated")
 
 if(inputs['run']['grad']=='y'):
@@ -76,8 +76,8 @@ if(inputs['run']['grad']=='y'):
         sys.exit("Decay rate must be between 0 and 1")
     elif(isinstance(inputs['grad']['epoc_max'],int)==False):
         sys.exit("Number of epocs must be an integer")
-    elif(inputs['grad']['epoc_max']<2):
-        sys.exit("Number of epocs must be 2 or greater")
+    elif(inputs['grad']['epoc_max']<1):
+        sys.exit("Number of epocs must be 1 or greater")
     elif(inputs['grad']['clone'] not in {'y','n'}):
         sys.exit("Clone parameter must be 'y' or 'n'")
     elif(isinstance(inputs['grad']['clone_max'],int)==False):

@@ -204,7 +204,7 @@ print("Complete")
 print("Setting up electron integral files",end="")
 if((inputs['setup']['elecs']=='no')):
     os.mkdir(EXDIR1+"/integrals")
-    shutil.copy2(inputs['setup']['datafolder']+'/'+inputs['files']['elecfile'],EXDIR1+"/integrals/elec_sorted.csv")
+    shutil.copy2(inputs['setup']['datafolder']+'/'+inputs['files']['elecfile'],EXDIR1+"/integrals/elec_integrals.csv")
     print("...",end="")
 elif((inputs['setup']['elecs']=='integrals')):
     shutil.copytree(inputs['setup']['datafolder']+'/integrals',EXDIR1+"/integrals")

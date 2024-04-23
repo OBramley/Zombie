@@ -21,24 +21,10 @@ MODULE ham
         real(wp),allocatable,dimension(:)::WORK1
         integer::ierr=0
 
-        real(wp):: starttime, stoptime, runtime
-
         if (errorflag .ne. 0) return
 
-        call CPU_TIME(starttime) 
         call haml_ovrlp_comb(haml,zstore,elecs,size,verb)
-        call CPU_TIME(stoptime)
-        runtime = stoptime-starttime
-        if (runtime/3600.0d0 .gt. 1.0d0)then
-            runtime = runtime/3600.0d0
-            write(stdout,"(a,es12.5,a)") 'Time taken : ', runtime, ' hours'
-        else if (runtime/60.0d0 .gt. 1.0d0)then
-            runtime = runtime/60.0d0
-            write(stdout,"(a,es12.5,a)") 'Time taken : ', runtime , ' mins'
-        else
-            write(stdout,"(a,es12.5,a)") 'Time taken : ', runtime, ' seconds'
-        end if
-
+        
         haml%inv=haml%ovrlp
         allocate(WORK1(size),IPIV1(size),stat=ierr)
         if (ierr/=0) then
@@ -114,11 +100,16 @@ MODULE ham
         type(elecintrgl),intent(in)::elecs
         integer,intent(in)::verb,size
         integer::j,k
-         
+        INTEGER :: c1, c2, cr, cm
+        REAL :: rate
+
         if (errorflag .ne. 0) return 
       
         ! call omp_set_nested(.TRUE.)
-
+        CALL SYSTEM_CLOCK(count_rate=cr)
+        CALL SYSTEM_CLOCK(count_max=cm)
+        rate = REAL(cr)
+        CALL SYSTEM_CLOCK(c1)
         do j=1,size
             !$omp  parallel do & 
             !$omp & private(k) &
@@ -131,7 +122,8 @@ MODULE ham
                 write(stdout,"(a,i0,a)") "hamliltonian column ",j, " completed"
             end if 
         end do
-    
+        CALL SYSTEM_CLOCK(c2)
+        PRINT *, "Elapsed time (system_clock): ", (c2 - c1) / rate
         !$omp  parallel do
         do j=1,size
             do k=j,size
@@ -144,7 +136,9 @@ MODULE ham
      
     end subroutine haml_ovrlp_comb
 
-    
+  
+
+
 
     !##############################################################################################################################
 
@@ -487,31 +481,30 @@ MODULE ham
 
     ! end subroutine haml_vals_2_orb_2
 
-    subroutine gram_ovrlp_fill(gramstore,state)
+    ! subroutine gram_ovrlp_fill(gramstore,state)
         
-        implicit none
-        type(gram),dimension(:)::gramstore
-        integer::state
-        integer::j,k,l
+    !     implicit none
+    !     type(gram),dimension(:)::gramstore
+    !     integer::state
+    !     integer::j,k,l
     
-        if(errorflag.ne.0) return
+    !     if(errorflag.ne.0) return
     
-        do j=1,state-1
-            do k=1,ndet
-                do l=k,ndet
-                    gramstore(state)%wf_ovrlp(j,k,l)=product(gramstore(state)%zstore(k)%val(1:norb)*&
-                                                            gramstore(j)%zstore(l)%val(1:norb)+&
-                                                            gramstore(state)%zstore(k)%val(1+norb:2*norb)*&
-                                                            gramstore(j)%zstore(l)%val(1+norb:2*norb))
-                    gramstore(state)%wf_ovrlp(j,l,k)=gramstore(state)%wf_ovrlp(j,k,l)
-                end do 
+    !     do j=1,state-1
+    !         do k=1,ndet
+    !             do l=k,ndet
+    !                 gramstore(state)%wf_ovrlp(j,k,l)=product(gramstore(state)%zstore(k)%val(1:norb)*&
+    !                                                         gramstore(j)%zstore(l)%val(1:norb)+&
+    !                                                         gramstore(state)%zstore(k)%val(1+norb:2*norb)*&
+    !                                                         gramstore(j)%zstore(l)%val(1+norb:2*norb))
+    !                 gramstore(state)%wf_ovrlp(j,l,k)=gramstore(state)%wf_ovrlp(j,k,l)
+    !             end do 
                 
-            end do
-            
-        end do
+    !         end do
+    !     end do
        
-        return
+    !     return
     
-    end subroutine gram_ovrlp_fill
+    ! end subroutine gram_ovrlp_fill
 
 END MODULE ham

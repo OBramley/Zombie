@@ -86,7 +86,7 @@ MODULE outputs
 
         type(zombiest),intent(in)::zom 
         integer,intent(in)::num,gst
-        character(LEN=20)::filenm
+        character(LEN=22)::filenm
         integer::zomnum,j
         character(LEN=4)::nums
         character(len=2)::gst_num
@@ -95,20 +95,29 @@ MODULE outputs
 
         if (errorflag .ne. 0) return
 
-        
         if(GDflg.eq.'y')then
             write(nums,"(i4.4)")(num+1000)
         else
             write(nums,"(i4.4)")num
         end if
-
+        
         if(gst==0)then
+            if(GDflg.eq.'y')then
+                write(nums,"(i4.4)")(num+1000)
+            else
+                write(nums,"(i4.4)")num
+            end if
             filenm="data/zombie_"//trim(nums)//".csv"
         else
-            write(gst_num,"(i2.1)")gst
-            filenm="data/zom_"//trim(gst_num)//"_"//trim(nums)//".csv"
+            if(GDflg.eq.'y')then
+                write(nums,"(i4.4)")(num+1000)
+            else
+                write(nums,"(i4.4)")num
+            end if
+            write(gst_num,"(i1.1)")gst
+            filenm="data/zombie_"//trim(gst_num)//"_"//trim(nums)//".csv"
         end if
-
+       
         inquire(file=filenm,exist=file_exists)
         zomnum=300+num
         if(file_exists.eqv..false.) then

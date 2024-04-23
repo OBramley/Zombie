@@ -14,13 +14,13 @@
     },
 
     "run":{
-        "ndet":5,
+        "ndet":6,
         "seed":1,
         "zomgen":"y",
         "hamgen":"y",
         "clean":"n",
         "imagprop":"y",
-        "beta":10000,
+        "beta":2500,
         "timesteps":5000,
         "grad":"y",
         "gram":"n"
@@ -37,19 +37,19 @@
     },
 
     "grad":{
-        "epoc_max":1000000,
-        "initial_learning_rate":500,
+        "epoc_max":10000000,
+        "initial_learning_rate":12500,
         "learning_rate_decay":0.2,
         "decay_steps":6,
         "clone":"y",
-        "clone_max":180,
+        "clone_max":30,
         "clone_steps":14,
-        "clone_num":5
+        "clone_num":2
     }, 
 
     "gram":{
-        "gramnum":2,
-        "gramwave":2
+        "gramnum":3,
+        "gramwave":1
     },
 
     "files":{
