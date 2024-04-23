@@ -373,7 +373,7 @@ MODULE gradient_descent
                         chng_chng=blind_clone_num
                     end if 
                     if(modulo(ndet,10).eq.0)then
-                        chng_chng=60
+                        chng_chng=blind_clone_num*4
                     end if
                   
                 else if(lr_loop_max.lt.9)then
@@ -597,7 +597,7 @@ MODULE gradient_descent
                     do k=1,acpt_cnt_2
                         call zombiewriter(gramstore(j)%zstore(chng_trk(k)),chng_trk(k),j)
                     end do
-                    call epoc_writer(gramstore(j)%grads%prev_erg,epoc_cnts(j),lr*(lr_alpha**lralt_zs(j)),chng_trk,0,j)
+                    ! call epoc_writer(gramstore(j)%grads%prev_erg,epoc_cnts(j),lr*(lr_alpha**lralt_zs(j)),chng_trk,0,j)
                     
                     epoc_cnts(j)=epoc_cnts(j)+1
                 end if
@@ -961,7 +961,7 @@ MODULE gradient_descent
             end do 
             read(450,*,iostat=ierr)epoc_cnt
     
-            close(450) 
+            ! close(450) 
 
             write(stderr,"(a,i0)") "Epoc read in as ", epoc_cnt
         
@@ -980,7 +980,10 @@ MODULE gradient_descent
             ! call orbital_gd(zstore,grad_fin,elect,dvecs,haml,1000)
             ! call full_zs_gd(zstore,elect,dvecs,haml,grad_fin) 
             call orbital_gd(zstore,grad_fin,elect,dvecs,haml,epoc_max-epoc_cnt)!,neural_net)
-            
+            ! close(450)
+            ! do j=2,ndet
+            !     close(300+j)
+            ! end do
         end if 
 
         !Brings phi values back within the normal 0-2pi range

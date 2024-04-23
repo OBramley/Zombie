@@ -1,11 +1,11 @@
 { 
-    "pyscf_file":"C_atom_ccpvdz",
+    "pyscf_file":"O_atom_ccpvdz",
     "setup":{
-        "runfolder":"C_maybe_50",
+        "runfolder":"O_atom_jjj",
         "runtime": "48:00:00",
         "nodes":1,
         "cores":15,
-        "submissions":2,
+        "submissions":1,
         "multiple":1,
         "subnode":1,
         "datafolder":"data copy",
@@ -42,7 +42,7 @@
         "learning_rate_decay":0.2,
         "decay_steps":6,
         "clone":"y",
-        "clone_max":50,
+        "clone_max":180,
         "clone_steps":14,
         "clone_num":5
     }, 

@@ -206,12 +206,12 @@ MODULE gram_schmidt
 
                 write(stderr,"(a,i0)") "Epoc read in as ",  epoc_cnts(j)
         
-                call epoc_writer(gramstore(j)%grads%prev_erg,epoc_cnt,0,0.0d0,1,j)
+                ! call epoc_writer(gramstore(j)%grads%prev_erg,epoc_cnt,0,0.0d0,1,j)
                 epoc_cnts(j)= epoc_cnts(j)+1
             end do 
         else
             do j=1,gramnum+1
-                call epoc_writer(gramstore(j)%grads%prev_erg,0,0,0.0d0,0,j)
+                ! call epoc_writer(gramstore(j)%grads%prev_erg,0,0,0.0d0,0,j)
             end do 
         end if
 
