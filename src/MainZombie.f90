@@ -93,6 +93,7 @@ program MainZombie
             do j=1,ndet
                 call zombiewriter(zstore(j),j,zstore(j)%gram_num)
             end do
+            ! close(300)
             write(stdout,"(a)") "Zombie states generated"
         else if (zomgflg=='n') then
             call read_zombie(zstore,0)
@@ -173,8 +174,12 @@ program MainZombie
             end if
             call zombie_alter(zstore,haml,elect,dvecs)
             GDflg='n'
+            ! do j=2, ndet
+            !     close(300+j)
+            ! end do
             do j=1,ndet
                 call zombiewriter(zstore(j),j,zstore(j)%gram_num)
+                ! close(300+j)
             end do
             dvecs%d=0.0d0
             if(gramflg.eq."n")then

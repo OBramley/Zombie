@@ -1,7 +1,7 @@
 { 
-    "pyscf_file":"Li_631g_star_star_trunc",
+    "pyscf_file":"Li_atom_ccpvdz",
     "setup":{
-        "runfolder":"Li2_gs_gs3",
+        "runfolder":"li_atom",
         "runtime": "48:00:00",
         "nodes":1,
         "cores":8,
@@ -14,7 +14,7 @@
     },
 
     "run":{
-        "ndet":30,
+        "ndet":6,
         "seed":1,
         "zomgen":"y",
         "hamgen":"y",
@@ -23,7 +23,7 @@
         "beta":2500,
         "timesteps":5000,
         "grad":"y",
-        "gram":"y"
+        "gram":"n"
     },
 
 
@@ -31,20 +31,20 @@
         "norb":0,
         "nel":0,
         "spin":0,
-        "zomtyp":"ran",
+        "zomtyp":"bb",
         "rhf_1":"y",
         "imagflg":"n"
     },
 
     "grad":{
         "epoc_max":10000000,
-        "initial_learning_rate":2500,
+        "initial_learning_rate":12500,
         "learning_rate_decay":0.2,
-        "decay_steps":5,
-        "clone":"n",
-        "clone_max":60,
-        "clone_steps":12,
-        "clone_num":5
+        "decay_steps":6,
+        "clone":"y",
+        "clone_max":20,
+        "clone_steps":14,
+        "clone_num":2
     }, 
 
     "gram":{

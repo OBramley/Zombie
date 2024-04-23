@@ -34,9 +34,9 @@ MODULE zom
                 zstore(1)%val(1:nel)=1
                 zstore(1)%val(norb+1:norb+nel)=0
                 ! if((gramflg.eq.'y').and.(GDflg.eq.'y'))then
-                !     zstore(1)%phi(nel)=0
-                !     zstore(1)%val(nel)=0
-                !     zstore(1)%val(nel+norb)=1
+                    ! zstore(1)%phi(nel)=0
+                    ! zstore(1)%val(nel)=0
+                    ! zstore(1)%val(nel+norb)=1
                 !     zstore(1)%phi(nel+1)=0.5*pirl
                 !     zstore(1)%val(nel+1)=1
                 !     zstore(1)%val(nel+1+norb)=0

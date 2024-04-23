@@ -19,6 +19,7 @@ MODULE gradient_descent
     integer::pick !Chosen zombie state
     integer,dimension(:),allocatable::picker
     integer,dimension(:),allocatable::chng_trk
+    integer::gram_Store=0
     contains
 
     ! Subroutine to calcualte Hamiltonian elements combines 1st and 2nd electron integral calcualations so remove double 
@@ -217,6 +218,10 @@ MODULE gradient_descent
        
         call haml_to_grad_do(haml,dvecs,temp)
         if(gramflg.eq.'y')then
+            if(epoc_cnt.eq.1)then
+                gram_Store=gramnum 
+                gramflg='n'
+            end if 
             call imaginary_time(temp,ndet)
             grad_fin%prev_erg=temp%erg
             dvecs=temp%dvecs
@@ -321,6 +326,7 @@ MODULE gradient_descent
             lralt_zs=lralt_zs+1
             chng_chng=chng_chng-1
             if(lralt_zs.gt.lr_loop_max)then
+                picker=scramble(ndet-1)
                 lralt_zs=lralt_extra
                 extra_flag=0
                 if((acpt_cnt_2.lt.((ndet)/3)).or.((ndet.gt.5).and.(acpt_cnt_2.lt.3)).or.(tracker.lt.0))then
@@ -328,7 +334,19 @@ MODULE gradient_descent
                 end if
             end if
 
-            picker=scramble(ndet-1)
+            ! picker=scramble(ndet-1)
+            ! if((epoc_cnt.eq.20).and.(gram_Store.ne.0))then
+            !     gramflg='y'
+            !     call imaginary_time(temp,ndet)
+            !     grad_fin%prev_erg=temp%erg
+            !     dvecs=temp%dvecs
+            !     lralt_extra=0
+            !     lralt_zs=0
+            !     grad_fin%grad_avlb=0
+            !     grad_fin%ovrlp_grad_avlb(:,:,pick)=0
+            !     grad_fin%ovrlp_grad_avlb(:,pick,:)=0
+            !     chng_chng=blind_clone_num
+            ! end if 
            
             if(((tracker.ge.1).or.(chng_chng.le.0)))then
                 if(ndet.lt.ndet_max)then
@@ -363,10 +381,10 @@ MODULE gradient_descent
                         chng_chng=blind_clone_num
                     end if 
                     if(modulo(ndet,10).eq.0)then
-                        chng_chng=100 !60
+                        chng_chng=blind_clone_num*4 !100 !60
                     end if
                   
-                else if(lr_loop_max.lt.9)then
+                else if(lr_loop_max.lt.10)then
                     ! if((tracker.ge.1))then
                         lr_loop_max=lr_loop_max+1
                         blind_clone_num=blind_clone_num+2
@@ -378,7 +396,7 @@ MODULE gradient_descent
                     if(blind_clone_num.gt.100)then
                         chng_chng=blind_clone_num-100
                     else
-                        chng_chng=blind_clone_num
+                        chng_chng=blind_clone_num*2
                     end if 
                 else
                     ! if((gramflg.eq.'y').and.(chng_chng.gt.0))then
@@ -394,7 +412,7 @@ MODULE gradient_descent
                     tracker=0
                     lralt_extra=0
                     lralt_zs=0
-                    chng_chng=150
+                    chng_chng=blind_clone_num*8!150
                     ! if(gramflg.eq.'n')then
                     extra_flag=1
                     ! end if
@@ -438,7 +456,7 @@ MODULE gradient_descent
         type(grad_do),intent(inout)::temp,thread
         type(zombiest),dimension(:),allocatable::zstore_temp
         integer::lralt_zs,extra_flag,lralt_extra,tracker
-        integer:: j
+        integer:: j,k
 
         tracker=-1
         extra_flag=1
@@ -451,7 +469,13 @@ MODULE gradient_descent
         zstore(1:(ndet-ndet_increase))=zstore_temp
         call dealloczs(zstore_temp)
         do j=(ndet-ndet_increase)+1,ndet
-            call biased_func(zstore(j))
+            if(zst.eq.'BB')then
+                call biased_func(zstore(j))
+            else
+                do k=1,norb
+                    zstore(j)%phi(k)=2*pirl*(ZBQLU01(1)) 
+                end do
+            end if 
             call val_set(zstore(j))
             zstore(j)%gram_num=zstore(1)%gram_num
         end do
@@ -696,6 +720,7 @@ MODULE gradient_descent
         allocate(picker(ndet-1),stat=ierr)
         if(ierr==0) allocate(chng_trk(ndet-1),stat=ierr)
         ! call omp_set_nested(.true.)
+       
         if(epoc_cnt.lt.epoc_max)then
             picker=scramble(ndet-1)
             ! call full_zs_gd(zstore,elect,dvecs,haml,grad_fin) 
