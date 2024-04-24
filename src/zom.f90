@@ -265,14 +265,14 @@ MODULE zom
         if(nel.gt.4)then
             z1%phi(1:4)=0.5*pirl
             if(modulo(nel,2)==0) then
-                do k=5,nel+4
+                do k=5,(nel+4)
                     z1%phi(k)=0.5*pirl*ZBQLU01(1)
                 end do
                 ! do k=nel+5,norb
                 !     z1%phi(k)=z1%phi(k)*ZBQLU01(1)
                 ! end do
             else
-                do k=5,nel+5
+                do k=5,(nel+5)
                     z1%phi(k)=0.5*pirl*ZBQLU01(1)
                 end do
                 ! do k=nel+6,norb
@@ -282,14 +282,14 @@ MODULE zom
         else if(nel.eq.4)then
             z1%phi(1:2)=0.5*pirl
             if(modulo(nel,2)==0) then
-                do k=3,nel+4
+                do k=3,(nel+4)
                     z1%phi(k)=0.5*pirl*ZBQLU01(1)
                 end do
                 ! do k=nel+5,norb
                 !     z1%phi(k)=z1%phi(k)*ZBQLU01(1)
                 ! end do
             else
-                do k=3,nel+5
+                do k=3,(nel+5)
                     z1%phi(k)=0.5*pirl*ZBQLU01(1)
                 end do
                 ! do k=nel+6,norb
@@ -298,14 +298,14 @@ MODULE zom
             end if
         else 
             if(modulo(nel,2)==0) then
-                do k=1,nel+4
+                do k=1,(nel+4)
                     z1%phi(k)=0.5*pirl*ZBQLU01(1)
                 end do
                 ! do k=nel+5,norb
                 !     z1%phi(k)=z1%phi(k)*ZBQLU01(1)
                 ! end do
             else
-                do k=1,nel+5
+                do k=1,(nel+5)
                     z1%phi(k)=0.5*pirl*ZBQLU01(1)
                 end do
                 ! do k=nel+6,norb
