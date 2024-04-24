@@ -1,7 +1,7 @@
 { 
-    "pyscf_file":"O_atom_ccpvdz",
+    "pyscf_file":"BH_631g_star_star",
     "setup":{
-        "runfolder":"O_atom_jjj",
+        "runfolder":"BH_jjj",
         "runtime": "48:00:00",
         "nodes":1,
         "cores":15,
@@ -38,12 +38,12 @@
 
     "grad":{
         "epoc_max":10000000,
-        "initial_learning_rate":12500,
+        "initial_learning_rate":500,
         "learning_rate_decay":0.2,
         "decay_steps":6,
         "clone":"y",
-        "clone_max":30,
-        "clone_steps":14,
+        "clone_max":40,
+        "clone_steps":28,
         "clone_num":2
     }, 
 
