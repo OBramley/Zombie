@@ -209,7 +209,7 @@ MODULE readpars
 
     subroutine readrunconds_grad
         implicit none
-        character(LEN=100)::LINE1, LINE2, LINE3, LINE4, LINE5, LINE6, LINE7, LINE8
+        character(LEN=100)::LINE1, LINE2, LINE3, LINE4, LINE5, LINE6, LINE7, LINE8, LINE9
         integer::n
         integer::ierr=0
 
@@ -224,7 +224,7 @@ MODULE readpars
         read(140,*,iostat=ierr)
         read(140,*,iostat=ierr)
        
-        read(140,*,iostat=ierr)LINE1, LINE2, LINE3, LINE4, LINE5, LINE6, LINE7, LINE8
+        read(140,*,iostat=ierr)LINE1, LINE2, LINE3, LINE4, LINE5, LINE6, LINE7, LINE8, LINE9
         if (ierr.ne.0) then
             write(stderr,"(a,i0)") "Error reading Gradient values in rundata.csv ",ierr
             errorflag = 1
@@ -285,6 +285,13 @@ MODULE readpars
                 return
             end if
             n=n+1
+            read(LINE9,*,iostat=ierr)min_clone_lr
+            if(ierr/=0) then
+                write(stderr,"(a,a)") "Error reading maximum learning rates after cloning complete. Read ", trim(LINE9)
+                errorflag=1
+                return
+            end if
+            n=n+1
         else if((LINE5(1:1)=='n').or.(LINE5(1:1).eq.'N')) then
             n=n+1
             ndet_max=ndet
@@ -293,13 +300,20 @@ MODULE readpars
             n=n+1
             ndet_increase=0
             n=n+1
+            read(LINE9,*,iostat=ierr)min_clone_lr
+            if(ierr/=0) then
+                write(stderr,"(a,a)") "Error reading maximum learning rates after cloning complete. Read ", trim(LINE9)
+                errorflag=1
+                return
+            end if
+            n=n+1
         else
             write(stderr,"(a,a)") "Error. Clone flag must be YES/NO. Read ", trim(LINE5)
             errorflag=1
             return
         end if
             
-        if(n.ne.8) then
+        if(n.ne.9) then
             write(stderr,"(a)") "Not all required variables needed for Gradient Descent read in."
             write(stderr,"(a,i0,a)") "Read a total of ", n, "of an expected 8 parameters"
             errorflag = 1

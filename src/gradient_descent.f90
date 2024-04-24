@@ -184,7 +184,7 @@ MODULE gradient_descent
         ! type(neural_network_layer),dimension(:)::neural_net
 
         if (errorflag .ne. 0) return
-     
+      
         call alloc_grad_do(temp,ndet)
         call alloc_grad_do(thread,ndet)
         allocate(pickerorb(norb),stat=ierr)
@@ -213,7 +213,7 @@ MODULE gradient_descent
         end if
         if(ndet.eq.ndet_max)then
             chng_chng=150
-            lr_loop_max=10
+            lr_loop_max=min_clone_lr
         end if
        
         call haml_to_grad_do(haml,dvecs,temp)
@@ -314,13 +314,6 @@ MODULE gradient_descent
             if((acpt_cnt_2.lt.(0.15*ndet)).and.(extra_flag.eq.0).and.(lralt_zs.eq.lralt_extra).and.(tracker.gt.-1))then 
                 lralt_extra=lralt_extra+1
                 extra_flag=1
-                ! if((gramflg.eq.'y').and.(t.lt.100))then
-                !     timesteps=timesteps+4000
-                !     if((t.lt.1).and.(timesteps.lt.60000))then
-                !         lralt_extra=lralt_extra-1
-                !         extra_flag=0
-                !     end if 
-                ! end if 
             end if 
            
             lralt_zs=lralt_zs+1
@@ -334,23 +327,8 @@ MODULE gradient_descent
                 end if
             end if
 
-            ! picker=scramble(ndet-1)
-            ! if((epoc_cnt.eq.20).and.(gram_Store.ne.0))then
-            !     gramflg='y'
-            !     call imaginary_time(temp,ndet)
-            !     grad_fin%prev_erg=temp%erg
-            !     dvecs=temp%dvecs
-            !     lralt_extra=0
-            !     lralt_zs=0
-            !     grad_fin%grad_avlb=0
-            !     grad_fin%ovrlp_grad_avlb(:,:,pick)=0
-            !     grad_fin%ovrlp_grad_avlb(:,pick,:)=0
-            !     chng_chng=blind_clone_num
-            ! end if 
-           
             if(((tracker.ge.1).or.(chng_chng.le.0)))then
                 if(ndet.lt.ndet_max)then
-                    ! num_av=num_av*ndet
                     deallocate(picker,stat=ierr)
                     allocate(picker(ndet+ndet_increase-1),stat=ierr)
                     picker(ndet_increase+1:)=scramble(ndet-1)
@@ -384,7 +362,7 @@ MODULE gradient_descent
                         chng_chng=blind_clone_num*4 !100 !60
                     end if
                   
-                else if(lr_loop_max.lt.10)then
+                else if(lr_loop_max.lt.min_clone_lr)then
                     ! if((tracker.ge.1))then
                         lr_loop_max=lr_loop_max+1
                         blind_clone_num=blind_clone_num+2
@@ -399,23 +377,12 @@ MODULE gradient_descent
                         chng_chng=blind_clone_num*2
                     end if 
                 else
-                    ! if((gramflg.eq.'y').and.(chng_chng.gt.0))then
-                    !     if((timesteps.lt.60000))then
-                    !         timesteps=timesteps+10000
-                    !     end if 
-                    !     ! if((t.lt.1).and.(timesteps.lt.60000))then
-                    !     !     lralt_extra=lralt_extra-1
-                    !     !     extra_flag=0
-                    !     ! end if 
-                    ! end if 
                     thread=temp
                     tracker=0
                     lralt_extra=0
                     lralt_zs=0
                     chng_chng=blind_clone_num*8!150
-                    ! if(gramflg.eq.'n')then
                     extra_flag=1
-                    ! end if
                 end if  
             end if 
 

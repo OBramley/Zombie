@@ -144,6 +144,7 @@ MODULE globvars
     integer::ndet_increase ! number of determinants to increase by
     integer::blind_clone_num !number of steps before blind cloning
     integer::ndet_max ! maximum number of determinants
+    integer::min_clone_lr ! maximum number of learnign rates after cloning
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
     integer::num_devices     !number of devices 
