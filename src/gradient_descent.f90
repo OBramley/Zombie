@@ -327,7 +327,7 @@ MODULE gradient_descent
                 end if
             end if
 
-            if(((tracker.ge.1).or.(chng_chng.le.0)))then
+            if((((tracker.ge.1).and.(lralt_extra.gt.lr_loop_max-2)).or.(chng_chng.le.0)))then
                 if(ndet.lt.ndet_max)then
                     deallocate(picker,stat=ierr)
                     allocate(picker(ndet+ndet_increase-1),stat=ierr)
