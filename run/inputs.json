@@ -1,10 +1,10 @@
 { 
-    "pyscf_file":"f_atom_ccpvdz",
+    "pyscf_file":"C_atom_ccpvdz",
     "setup":{
-        "runfolder":"f_atom",
+        "runfolder":"C_small",
         "runtime": "48:00:00",
         "nodes":1,
-        "cores":4,
+        "cores":8,
         "submissions":2,
         "multiple":1,
         "subnode":1,
@@ -14,7 +14,7 @@
     },
 
     "run":{
-        "ndet":6,
+        "ndet":2,
         "seed":1,
         "zomgen":"y",
         "hamgen":"y",
@@ -42,14 +42,14 @@
         "learning_rate_decay":0.2,
         "decay_steps":6,
         "clone":"y",
-        "clone_max":34,
-        "clone_steps":14,
-        "clone_num":2,
-        "max_loop_clone":10
+        "clone_max":30,
+        "clone_steps":280,
+        "clone_num":1,
+        "max_loop_clone":11
     }, 
 
     "gram":{
-        "gramnum":3,
+        "gramnum":2,
         "gramwave":1
     },
 

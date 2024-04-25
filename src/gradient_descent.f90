@@ -218,10 +218,10 @@ MODULE gradient_descent
        
         call haml_to_grad_do(haml,dvecs,temp)
         if(gramflg.eq.'y')then
-            if(epoc_cnt.eq.1)then
-                gram_Store=gramnum 
-                gramflg='n'
-            end if 
+            ! if(epoc_cnt.eq.1)then
+            !     gram_Store=gramnum 
+            !     gramflg='n'
+            ! end if 
             call imaginary_time(temp,ndet)
             grad_fin%prev_erg=temp%erg
             dvecs=temp%dvecs

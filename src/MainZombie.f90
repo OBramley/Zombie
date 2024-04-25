@@ -201,6 +201,7 @@ program MainZombie
                     errorflag=1
                     write(stderr,"(a,i0)") "Error in erg allocation. ierr had value ", ierr
                 end if
+                call deallocdvgram(dvecs)
                 call allocdvgram(dvecs,gramnum,ndet)
                 write(stdout,"(a)") "Imaginary time propagation started"
                 call imaginary_time(dvecs,erg,haml,ndet)

@@ -163,16 +163,10 @@ MODULE imgtp
         real(wp)::db
         real(wp),dimension(size)::ddot,temp
 
-
+        db=beta/timesteps
         dvecs%d_1=0.0d0
         dvecs%d_1(1)=1.0d0
-        dvecs%d_gs=0.0d0
-        do k=1, gramnum
-            dvecs%d_gs(k,k+1)=1.0d0
-        end do
-        call gs_dvector(dvecs,haml%ovrlp)
-        db=beta/timesteps
-    
+
         do k=1,timesteps+1
         
             call DGEMV("N",size,size,1.d0,haml%ovrlp,size,dvecs%d_1,1,0.d0,temp,1)
@@ -180,35 +174,38 @@ MODULE imgtp
             
             dvecs%norm = sqrt(abs(norm))
             dvecs%d=dvecs%d_1/dvecs%norm
-            do g=1, gramnum
-                call DGEMV("N",size,size,1.d0,haml%ovrlp,size,dvecs%d_gs(g,:),1,0.d0,temp,1)
-                norm=dot_product(temp,dvecs%d_gs(g,:))
-                dvecs%d_gs(g,:)=dvecs%d_gs(g,:)/sqrt(abs(norm))
-            end do
-            
 
             call DGEMV("N",size,size,1.d0,haml%hjk,size,dvecs%d,1,0.d0,temp,1)
+        
             erg(1,k)=dot_product(temp,dvecs%d)
-            do g=1, gramnum
-                call DGEMV("N",size,size,1.d0,haml%hjk,size,dvecs%d_gs(g,:),1,0.d0,temp,1)
-                erg(g+1,k)=dot_product(temp,dvecs%d_gs(g,:))
-            end do
             
             call DGEMV("N",size,size,db,haml%kinvh,size,dvecs%d,1,0.d0,ddot,1)
             dvecs%d_1=dvecs%d-ddot
-            do g=1, gramnum
-                call DGEMV("N",size,size,db,haml%kinvh,size,dvecs%d_gs(g,:),1,0.d0,ddot,1)
-                dvecs%d_gs(g,:)=dvecs%d_gs(g,:)-ddot
-            end do
-            call gs_dvector(dvecs,haml%ovrlp)
         
         end do
         call DGEMV("N",size,size,1.d0,haml%ovrlp,size,dvecs%d_1,1,0.d0,temp,1)
         norm=dot_product(temp,dvecs%d_1)
-
         dvecs%d_o_d=sign_d_o_d(norm)
         dvecs%norm = sqrt(abs(norm))
         dvecs%d=dvecs%d_1/dvecs%norm
+
+        dvecs%d_gs=0.0d0
+        do k=1, gramnum
+            dvecs%d_gs(k,k+1)=1.0d0
+        end do
+        do g=1, gramnum
+            call gs_dvector_2(dvecs,haml%ovrlp,g)
+            do k=1,timesteps+1
+                    call DGEMV("N",size,size,1.d0,haml%ovrlp,size,dvecs%d_gs(g,:),1,0.d0,temp,1)
+                    norm=dot_product(temp,dvecs%d_gs(g,:))
+                    dvecs%d_gs(g,:)=dvecs%d_gs(g,:)/sqrt(abs(norm))
+                    call DGEMV("N",size,size,1.d0,haml%hjk,size,dvecs%d_gs(g,:),1,0.d0,temp,1)
+                    erg(g+1,k)=dot_product(temp,dvecs%d_gs(g,:))
+                    call DGEMV("N",size,size,db,haml%kinvh,size,dvecs%d_gs(g,:),1,0.d0,ddot,1)
+                    dvecs%d_gs(g,:)=dvecs%d_gs(g,:)-ddot
+                    call gs_dvector_2(dvecs,haml%ovrlp,g)
+            end do 
+        end do
 
         return
 
