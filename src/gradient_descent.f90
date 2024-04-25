@@ -19,7 +19,7 @@ MODULE gradient_descent
     integer::pick !Chosen zombie state
     integer,dimension(:),allocatable::picker
     integer,dimension(:),allocatable::chng_trk
-    integer::gram_Store=0
+    real(wp),dimension(:),allocatable::orb_store
     contains
 
     ! Subroutine to calcualte Hamiltonian elements combines 1st and 2nd electron integral calcualations so remove double 
@@ -267,7 +267,7 @@ MODULE gradient_descent
                     call val_set(temp%zom,pickorb)
                     call he_full_row(temp,zstore,elect,ndet,pickorb)
                     call imaginary_time(temp,ndet)
-                    
+                   
                     if((grad_fin%prev_erg-temp%erg.ge.1.0d-14))then
                         acpt_cnt=acpt_cnt+1
                         chng_trk2(acpt_cnt)=pickorb
@@ -315,7 +315,9 @@ MODULE gradient_descent
                 lralt_extra=lralt_extra+1
                 extra_flag=1
             end if 
-           
+            ! if(modulo(chng_chng,2).eq.0)then 
+            !     lralt_zs=lralt_zs+1
+            ! end if
             lralt_zs=lralt_zs+1
             chng_chng=chng_chng-1
             if(lralt_zs.gt.lr_loop_max)then
@@ -329,6 +331,7 @@ MODULE gradient_descent
 
             if(((tracker.ge.1).or.(chng_chng.le.0)))then
                 if(ndet.lt.ndet_max)then
+                    
                     deallocate(picker,stat=ierr)
                     allocate(picker(ndet+ndet_increase-1),stat=ierr)
                     picker(ndet_increase+1:)=scramble(ndet-1)
@@ -424,11 +427,20 @@ MODULE gradient_descent
         type(zombiest),dimension(:),allocatable::zstore_temp
         integer::lralt_zs,extra_flag,lralt_extra,tracker
         integer:: j,k
-
+        integer::ierr=0
+      
         tracker=-1
         extra_flag=1
         lralt_extra=0
-      
+        ! if((ndet-ndet_increase.eq.2).and.(ndet_increase.eq.1))then 
+        !     allocate(orb_store(norb),stat=ierr)
+        !     if(ierr/=0)then
+        !         write(stderr,"(a,i0)") "Error in orb_store allocation . ierr had value ", ierr
+        !         errorflag=1
+        !         return
+        !     end if
+        !     orb_store(:)=zstore(2)%phi
+        ! end if
         call alloczs(zstore_temp,ndet-ndet_increase)
         zstore_temp=zstore
         call dealloczs(zstore)
@@ -436,11 +448,14 @@ MODULE gradient_descent
         zstore(1:(ndet-ndet_increase))=zstore_temp
         call dealloczs(zstore_temp)
         do j=(ndet-ndet_increase)+1,ndet
+            ! if((ndet_increase.eq.1).and.(ndet.gt.3))then 
+            !     zstore(j)%phi=orb_store
+            ! else 
             if(zst.eq.'BB')then
                 call biased_func(zstore(j))
             else
                 do k=1,norb
-                    zstore(j)%phi(k)=2*pirl*(ZBQLU01(1)) 
+                    zstore(j)%phi(k)=0.5*pirl*(ZBQLU01(1)) 
                 end do
             end if 
             call val_set(zstore(j))
@@ -537,7 +552,7 @@ MODULE gradient_descent
            
                 call he_full_row(temp,zstore,elect,ndet,0)
                 call imaginary_time(temp,ndet)
-
+               
                 if(grad_fin%prev_erg-temp%erg.ge.1.0d-11)then
                     acpt_cnt=acpt_cnt+1
                     chng_trk(acpt_cnt)=pick
@@ -699,8 +714,16 @@ MODULE gradient_descent
             !     close(300+j)
             ! end do
         end if 
-
-        !Brings phi values back within the normal 0-2pi range
+        ! if(allocated(orb_store))then
+        !     deallocate(orb_store,stat=ierr)
+        !     if(ierr/=0)then
+        !         write(stderr,"(a,i0)") "Error in orb_store deallocation . ierr had value ", ierr
+        !         errorflag=1
+        !         return
+        !     end if
+        ! end if
+        
+       
         
 
         deallocate(picker,stat=ierr)

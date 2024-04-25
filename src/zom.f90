@@ -21,7 +21,7 @@ MODULE zom
         if(imagflg=='n') then
             do j=1,num
                 do k=1,norb
-                    zstore(j)%phi(k)=2*pirl*(ZBQLU01(1)) 
+                    zstore(j)%phi(k)=0.5*pirl*(ZBQLU01(1)) 
                 end do
                 call val_set(zstore(j))
             end do
