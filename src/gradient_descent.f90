@@ -329,7 +329,7 @@ MODULE gradient_descent
                 end if
             end if
 
-            if(((tracker.ge.1).or.(chng_chng.le.0)))then
+            if((((tracker.ge.1).and.(lralt_extra.gt.lr_loop_max-2)).or.(chng_chng.le.0)))then
                 if(ndet.lt.ndet_max)then
                     
                     deallocate(picker,stat=ierr)
@@ -362,7 +362,7 @@ MODULE gradient_descent
                         chng_chng=blind_clone_num
                     end if 
                     if(modulo(ndet,10).eq.0)then
-                        chng_chng=blind_clone_num*4 !100 !60
+                        chng_chng=blind_clone_num*2!4 !100 !60
                     end if
                   
                 else if(lr_loop_max.lt.min_clone_lr)then
@@ -384,7 +384,7 @@ MODULE gradient_descent
                     tracker=0
                     lralt_extra=0
                     lralt_zs=0
-                    chng_chng=blind_clone_num*8!150
+                    chng_chng=blind_clone_num*2!150
                     extra_flag=1
                 end if  
             end if 
