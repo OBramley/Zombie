@@ -234,7 +234,7 @@ MODULE gradient_descent
         num_av=num_av/ndet
         
         ! Main GD Loop
-        do while((rjct_cnt.lt.(norb*100)).and.(epoc_cnt.lt.epoc_max))
+        do while((rjct_cnt.lt.(ndet*50)).and.(epoc_cnt.lt.epoc_max))
             loops=loops+1
             do p=1, ((norb-8)/2)
                 write(stdout,'(1a)',advance='no') ' '
@@ -255,7 +255,7 @@ MODULE gradient_descent
                 pick=picker(j)
                 chng_trk2=0
                 acpt_cnt=0
-                pickerorb=scramble_norb(norb)
+                ! pickerorb=scramble_norb(norb)
                 call haml_to_grad_do(haml,dvecs,thread)
 
                 do n=1, norb
@@ -294,8 +294,7 @@ MODULE gradient_descent
                     write(stdout,"(a,i3,a,f21.16,a,f21.16,a,i0)")'  ',pick,'          ', &
                     erg_str,'             ',grad_fin%prev_erg,'          ',0
                    
-                    rjct_cnt=rjct_cnt+1
-                    rjct_cnt_global=rjct_cnt_global+1   
+                      
                 end if
             end do
             
@@ -306,6 +305,8 @@ MODULE gradient_descent
                 end do
                 call epoc_writer(grad_fin%prev_erg,epoc_cnt,t,chng_trk,0)
                 epoc_cnt=epoc_cnt+1
+                rjct_cnt=rjct_cnt+1
+                rjct_cnt_global=rjct_cnt_global+1 
             else
                 loops=loops-1
                 
