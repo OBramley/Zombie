@@ -1,7 +1,7 @@
 { 
-    "pyscf_file":"Ne_atom_ccpvdz",
+    "pyscf_file":"C_atom_ccpvdz",
     "setup":{
-        "runfolder":"Ne_atom",
+        "runfolder":"C_atom_no",
         "runtime": "48:00:00",
         "nodes":1,
         "cores":8,
@@ -14,9 +14,9 @@
     },
 
     "run":{
-        "ndet":80,
+        "ndet":20,
         "seed":0,
-        "zomgen":"n",
+        "zomgen":"y",
         "hamgen":"y",
         "clean":"n",
         "imagprop":"y",
@@ -42,10 +42,10 @@
         "learning_rate_decay":0.2,
         "decay_steps":14,
         "clone":"y",
-        "clone_max":80,
-        "clone_steps":15,
-        "clone_num":5,
-        "max_loop_clone":14
+        "clone_max":30,
+        "clone_steps":300,
+        "clone_num":1,
+        "max_loop_clone":16
     }, 
 
     "gram":{
