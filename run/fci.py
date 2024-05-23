@@ -1,6 +1,6 @@
 import json
 import sys
-from pyscf import gto, scf, ao2mo, fci, mcscf,lib 
+from pyscf import gto, scf, ao2mo, cc, fci, mcscf,lib 
 from functools import reduce
 import numpy
 
@@ -58,6 +58,10 @@ else:
     # Scalar nuclear repulsion energy
     Hnuc = myhf.energy_nuc()
 
+mycc = cc.CCSD(myhf).run()
+print('CCSD total energy', mycc.e_tot)
+et = mycc.ccsd_t()
+print('CCSD(T) total energy', mycc.e_tot + et)
 
 fci_solver = fci.FCI(mol, myhf.mo_coeff)
 e_fci, myci = fci_solver.kernel(h1e=h1e, eri=eri)

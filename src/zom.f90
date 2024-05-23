@@ -4,6 +4,7 @@ MODULE zom
     use randgen
     use globvars
     use infnan_mod
+    
     contains
 
 
@@ -256,96 +257,155 @@ MODULE zom
         return
 
     end subroutine zomhf
-    subroutine biased_func(z1)
-        implicit none
-        type(zombiest),intent(inout)::z1
-        integer::k
-        real(wp)::mu((norb/2)),sig(norb/2)
-        real(wp)::val
-
-        call musig(mu,sig)
-        do k=1,norb/2
-            val=2*pirl*random_normal(mu(k),sig(k)) 
-            if((is_nan(val).eqv..true.))then
-                val=2*pirl*(ZBQLU01(1))
-            end if 
-            z1%phi(2*k-1)=val
-            val=2*pirl*random_normal(mu(k),sig(k))
-            if((is_nan(val).eqv..true.))then
-                val=2*pirl*(ZBQLU01(1)) 
-            end if 
-            z1%phi(2*k)=val
-        end do
-        
-        call val_set(z1)
-        return
-    end subroutine 
-
     ! subroutine biased_func(z1)
     !     implicit none
     !     type(zombiest),intent(inout)::z1
     !     integer::k
-    !     z1%phi=0.0001
-    !     if(nel.gt.4)then
-    !         z1%phi(1:4)=0.5*pirl
-    !         if(modulo(nel,2)==0) then
-    !             do k=5,(nel+4)
-    !                 z1%phi(k)=0.5*pirl*ZBQLU01(1)
-    !             end do
-    !             ! do k=nel+5,norb
-    !             !     z1%phi(k)=z1%phi(k)*ZBQLU01(1)
-    !             ! end do
-    !         else
-    !             do k=5,(nel+5)
-    !                 z1%phi(k)=0.5*pirl*ZBQLU01(1)
-    !             end do
-    !             ! do k=nel+6,norb
-    !             !     z1%phi(k)=z1%phi(k)*ZBQLU01(1)
-    !             ! end do
-    !         end if
-    !     else if(nel.eq.4)then
-    !         z1%phi(1:2)=0.5*pirl
-    !         if(modulo(nel,2)==0) then
-    !             do k=3,(nel+4)
-    !                 z1%phi(k)=0.5*pirl*ZBQLU01(1)
-    !             end do
-    !             ! do k=nel+5,norb
-    !             !     z1%phi(k)=z1%phi(k)*ZBQLU01(1)
-    !             ! end do
-    !         else
-    !             do k=3,(nel+5)
-    !                 z1%phi(k)=0.5*pirl*ZBQLU01(1)
-    !             end do
-    !             ! do k=nel+6,norb
-    !             !     z1%phi(k)=z1%phi(k)*ZBQLU01(1)
-    !             ! end do
-    !         end if
-    !     else 
-    !         if(modulo(nel,2)==0) then
-    !             do k=1,(nel+4)
-    !                 z1%phi(k)=0.5*pirl*ZBQLU01(1)
-    !             end do
-    !             ! do k=nel+5,norb
-    !             !     z1%phi(k)=z1%phi(k)*ZBQLU01(1)
-    !             ! end do
-    !         else
-    !             do k=1,(nel+5)
-    !                 z1%phi(k)=0.5*pirl*ZBQLU01(1)
-    !             end do
-    !             ! do k=nel+6,norb
-    !             !     z1%phi(k)=z1%phi(k)*ZBQLU01(1)
-    !             ! end do
-    !         end if
-    !     end if 
-    !     return 
+    !     real(wp)::mu((norb/2)),sig(norb/2)
+    !     real(wp)::val
 
-    ! end subroutine biased_func
+    !     call musig(mu,sig)
+    !     do k=1,norb/2
+    !         val=2*pirl*random_normal(mu(k),sig(k)) 
+    !         if((is_nan(val).eqv..true.))then
+    !             val=2*pirl*(ZBQLU01(1))
+    !         end if 
+    !         z1%phi(2*k-1)=val
+    !         val=2*pirl*random_normal(mu(k),sig(k))
+    !         if((is_nan(val).eqv..true.))then
+    !             val=2*pirl*(ZBQLU01(1)) 
+    !         end if 
+    !         z1%phi(2*k)=val
+    !     end do
+        
+    !     call val_set(z1)
+    !     return
+    ! end subroutine 
+
+    subroutine biased_func(z1)
+        implicit none
+        type(zombiest),intent(inout)::z1
+        integer::k,dead,mult
+        real(wp)::step
+        z1%phi=0.001
+        ! z1%phi(1:nel)=0.5*pirl
+        dead=norb-nel
+        step=(0.1-0.0001)/dead
+        mult=0
+        if(nel.gt.4)then
+            z1%phi(1:4)=0.5*pirl
+            if(modulo(nel,2)==0) then
+                do k=5,(nel+4)
+                    z1%phi(k)=0.5*pirl*ZBQLU01(1)
+                    ! if(ZBQLU01(1).gt.0.5)then
+                    !     z1%phi(k)=0.5*pirl+(ZBQLU01(1)*0.5)
+                    ! else
+                    !     z1%phi(k)=0.5*pirl-(ZBQLU01(1)*0.5)
+                    ! end if
+                end do
+                do k=nel+5,norb
+                    z1%phi(k)=0.01-mult*step
+                    mult=mult+1
+                    ! if(ZBQLU01(1).gt.0.7)then
+                    !     z1%phi(k)=0.5*pirl*ZBQLU01(1)
+                    ! end if 
+                end do
+            else
+                do k=5,(nel+5)
+                    z1%phi(k)=0.5*pirl*ZBQLU01(1)
+                    ! if(ZBQLU01(1).gt.0.5)then
+                    !     z1%phi(k)=0.5*pirl+(ZBQLU01(1)*0.25)
+                    ! else
+                    !     z1%phi(k)=0.5*pirl-(ZBQLU01(1)*0.25)
+                    ! end if
+                end do
+                do k=nel+6,norb
+                    z1%phi(k)=0.01-mult*step
+                    mult=mult+1
+                    ! if(ZBQLU01(1).gt.0.7)then
+                    !     z1%phi(k)=0.5*pirl*ZBQLU01(1)
+                    ! end if 
+                end do
+            end if
+        else if(nel.eq.4)then
+            z1%phi(1:2)=0.5*pirl
+            if(modulo(nel,2)==0) then
+                do k=3,(nel+4)
+                    z1%phi(k)=0.5*pirl*ZBQLU01(1)
+                    ! if(ZBQLU01(1).gt.0.5)then
+                    !     z1%phi(k)=0.5*pirl+(ZBQLU01(1)*0.5)
+                    ! else
+                    !     z1%phi(k)=0.5*pirl-(ZBQLU01(1)*0.5)
+                    ! end if
+                end do
+                do k=nel+5,norb
+                    z1%phi(k)=0.01-mult*step
+                    mult=mult+1
+                    ! if(ZBQLU01(1).gt.0.7)then
+                    !     z1%phi(k)=0.5*pirl*ZBQLU01(1)
+                    ! end if 
+                end do
+            else
+                do k=3,(nel+5)
+                    z1%phi(k)=0.5*pirl*ZBQLU01(1)
+                    ! if(ZBQLU01(1).gt.0.5)then
+                    !     z1%phi(k)=0.5*pirl+(ZBQLU01(1)*0.5)
+                    ! else
+                    !     z1%phi(k)=0.5*pirl-(ZBQLU01(1)*0.5)
+                    ! end if
+                end do
+                do k=nel+6,norb
+                    z1%phi(k)=0.01-mult*step
+                    mult=mult+1
+                    ! if(ZBQLU01(1).gt.0.7)then
+                    !     z1%phi(k)=0.5*pirl*ZBQLU01(1)
+                    ! end if 
+                end do
+            end if
+        else 
+            if(modulo(nel,2)==0) then
+                do k=1,(nel+4)
+                    z1%phi(k)=0.5*pirl*ZBQLU01(1)
+                    ! if(ZBQLU01(1).gt.0.5)then
+                    !     z1%phi(k)=0.5*pirl+(ZBQLU01(1)*0.5)
+                    ! else
+                    !     z1%phi(k)=0.5*pirl-(ZBQLU01(1)*0.5)
+                    ! end if
+                end do
+                do k=nel+5,norb
+                    z1%phi(k)=0.01-mult*step
+                    mult=mult+1
+                    ! if(ZBQLU01(1).gt.0.7)then
+                    !     z1%phi(k)=0.5*pirl*ZBQLU01(1)
+                    ! end if 
+                end do
+            else
+                do k=1,(nel+5)
+                    z1%phi(k)=0.5*pirl*ZBQLU01(1)
+                    ! if(ZBQLU01(1).gt.0.5)then
+                    !     z1%phi(k)=0.5*pirl+(ZBQLU01(1)*0.5)
+                    ! else
+                    !     z1%phi(k)=0.5*pirl-(ZBQLU01(1)*0.5)
+                    ! end if
+                end do
+                do k=nel+6,norb
+                    z1%phi(k)=0.01-mult*step
+                    mult=mult+1
+                    ! if(ZBQLU01(1).gt.0.7)then
+                    !     z1%phi(k)=0.5*pirl*ZBQLU01(1)
+                    ! end if 
+                end do
+            end if
+        end if 
+        return 
+
+    end subroutine biased_func
 
     subroutine gen_biased_zs(zstore)
 
         implicit none
         type(zombiest),dimension(:),intent(inout)::zstore
-        real(wp)::mu((norb/2)),sig(norb/2)
+        real(wp)::mu((norb/2)),sig((norb/2))
         real(wp)::val
         integer::j,k
        
@@ -353,27 +413,33 @@ MODULE zom
         if (errorflag .ne. 0) return
  
         call musig(mu,sig)
+     
         if(imagflg=='n') then
             do j=1, ndet
-                ! call biased_func(zstore(j))
-                do k=1,norb/2
-                    ! val=-1
-                    ! do while(val.lt.0)
-                        val=2*pirl*random_normal(mu(k),sig(k)) 
-                    ! end do
-                    if((is_nan(val).eqv..true.))then
-                        val=2*pirl*(ZBQLU01(1))
-                    end if 
-                    zstore(j)%phi(2*k-1)=val
-                    ! val=-1
-                    ! do while(val.lt.0)
-                        val=2*pirl*random_normal(mu(k),sig(k))
-                    ! end do
-                    if((is_nan(val).eqv..true.))then
-                        val=2*pirl*(ZBQLU01(1)) 
-                    end if 
-                    zstore(j)%phi(2*k)=val
-                end do
+                call biased_func(zstore(j))
+                ! do k=1,norb/2
+                !     ! val=-1
+                !     ! do while(val.lt.0)
+                !     val=2*pirl*random_normal(mu(k),sig(k)) 
+                !     ! end do
+                    
+                    
+                !     if((is_nan(val).eqv..true.))then
+                !         val=2*pirl*(ZBQLU01(1))
+                !         print*, 'here'
+                !     end if 
+               
+                !     zstore(j)%phi(2*k-1)=val
+                !     ! val=-1
+                !     ! do while(val.lt.0)
+                !         val=2*pirl*random_normal(mu(k),sig(k))
+                !     ! end do
+                        
+                !     if((is_nan(val).eqv..true.))then
+                !         val=2*pirl*(ZBQLU01(1)) 
+                !     end if 
+                !     zstore(j)%phi(2*k)=val
+                ! end do
                 
                 call val_set(zstore(j))
                 
@@ -411,9 +477,11 @@ MODULE zom
         val=(norb/10)
 
         asrt=0.0001/ceiling(val)
-        aend=0.17/ceiling(val)   
-        dsrt=0.35/ceiling(val)  
-        dend= 0.15/ceiling(val)
+        aend=0.17/ceiling(val)  
+        dsrt=0.2/ceiling(val)  
+        dend= 0.001/ceiling(val)   
+        ! dsrt=0.35/ceiling(val)  
+        ! dend= 0.15/ceiling(val)
 
        
         
@@ -425,7 +493,8 @@ MODULE zom
             ! mu(j+1+alive)=((dend-dsrt)/(((norb/2)-alive)-1)*j)+dsrt
             sig(j+1+alive)=((dend-dsrt)/(((norb/2)-alive)-1)*j)+dsrt
         end do
- 
+        ! sig(1)=0.1
+        
         return
 
     end subroutine

@@ -111,7 +111,7 @@ with open('rundata.csv','w',newline='')as file:
         writer.writerow(inputs['grad'].values())
     if(inputs['run']['gram']=='y'):
         writer.writerow(inputs['gram'].values())
-
+# HPCFLG=0
 if(HPCFLG==1):
     if(inputs['setup']['cores']!=1):
         os.environ["OMP_NUM_THREADS"]=str(inputs['setup']['cores'])

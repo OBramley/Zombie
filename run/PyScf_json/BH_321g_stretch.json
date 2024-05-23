@@ -1,6 +1,6 @@
 {
     "units":"Angstrom",
-    "atoms": "B 0 0 0; H 0 0 1.2324",
+    "atoms": "B 0 0 0; H 0 0 4.0",
     "bs" : "3-21G", 
     "verbosity" : 2,
     "symmetry" :true,
