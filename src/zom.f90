@@ -285,61 +285,116 @@ MODULE zom
     subroutine biased_func(z1)
         implicit none
         type(zombiest),intent(inout)::z1
-        integer::k
+        integer::k,dead,mult
+        real(wp)::step
         z1%phi=0.001
         ! z1%phi(1:nel)=0.5*pirl
-        ! do  k=1,nel
-        !     z1%phi(k)=z1%phi(k)+0.001*ZBQLU01(1)
-        ! end do 
+        dead=norb-nel
+        step=(0.1-0.0001)/dead
+        mult=0
         if(nel.gt.4)then
             z1%phi(1:4)=0.5*pirl
             if(modulo(nel,2)==0) then
                 do k=5,(nel+4)
                     z1%phi(k)=0.5*pirl*ZBQLU01(1)
+                    ! if(ZBQLU01(1).gt.0.5)then
+                    !     z1%phi(k)=0.5*pirl+(ZBQLU01(1)*0.5)
+                    ! else
+                    !     z1%phi(k)=0.5*pirl-(ZBQLU01(1)*0.5)
+                    ! end if
                 end do
-                ! do k=nel+5,norb
-                !     z1%phi(k)=z1%phi(k)*ZBQLU01(1)
-                ! end do
+                do k=nel+5,norb
+                    z1%phi(k)=0.01-mult*step
+                    mult=mult+1
+                    ! if(ZBQLU01(1).gt.0.7)then
+                    !     z1%phi(k)=0.5*pirl*ZBQLU01(1)
+                    ! end if 
+                end do
             else
                 do k=5,(nel+5)
                     z1%phi(k)=0.5*pirl*ZBQLU01(1)
+                    ! if(ZBQLU01(1).gt.0.5)then
+                    !     z1%phi(k)=0.5*pirl+(ZBQLU01(1)*0.25)
+                    ! else
+                    !     z1%phi(k)=0.5*pirl-(ZBQLU01(1)*0.25)
+                    ! end if
                 end do
-                ! do k=nel+6,norb
-                !     z1%phi(k)=z1%phi(k)*ZBQLU01(1)
-                ! end do
+                do k=nel+6,norb
+                    z1%phi(k)=0.01-mult*step
+                    mult=mult+1
+                    ! if(ZBQLU01(1).gt.0.7)then
+                    !     z1%phi(k)=0.5*pirl*ZBQLU01(1)
+                    ! end if 
+                end do
             end if
         else if(nel.eq.4)then
             z1%phi(1:2)=0.5*pirl
             if(modulo(nel,2)==0) then
                 do k=3,(nel+4)
                     z1%phi(k)=0.5*pirl*ZBQLU01(1)
+                    ! if(ZBQLU01(1).gt.0.5)then
+                    !     z1%phi(k)=0.5*pirl+(ZBQLU01(1)*0.5)
+                    ! else
+                    !     z1%phi(k)=0.5*pirl-(ZBQLU01(1)*0.5)
+                    ! end if
                 end do
-                ! do k=nel+5,norb
-                !     z1%phi(k)=z1%phi(k)*ZBQLU01(1)
-                ! end do
+                do k=nel+5,norb
+                    z1%phi(k)=0.01-mult*step
+                    mult=mult+1
+                    ! if(ZBQLU01(1).gt.0.7)then
+                    !     z1%phi(k)=0.5*pirl*ZBQLU01(1)
+                    ! end if 
+                end do
             else
                 do k=3,(nel+5)
                     z1%phi(k)=0.5*pirl*ZBQLU01(1)
+                    ! if(ZBQLU01(1).gt.0.5)then
+                    !     z1%phi(k)=0.5*pirl+(ZBQLU01(1)*0.5)
+                    ! else
+                    !     z1%phi(k)=0.5*pirl-(ZBQLU01(1)*0.5)
+                    ! end if
                 end do
-                ! do k=nel+6,norb
-                !     z1%phi(k)=z1%phi(k)*ZBQLU01(1)
-                ! end do
+                do k=nel+6,norb
+                    z1%phi(k)=0.01-mult*step
+                    mult=mult+1
+                    ! if(ZBQLU01(1).gt.0.7)then
+                    !     z1%phi(k)=0.5*pirl*ZBQLU01(1)
+                    ! end if 
+                end do
             end if
         else 
             if(modulo(nel,2)==0) then
                 do k=1,(nel+4)
                     z1%phi(k)=0.5*pirl*ZBQLU01(1)
+                    ! if(ZBQLU01(1).gt.0.5)then
+                    !     z1%phi(k)=0.5*pirl+(ZBQLU01(1)*0.5)
+                    ! else
+                    !     z1%phi(k)=0.5*pirl-(ZBQLU01(1)*0.5)
+                    ! end if
                 end do
-                ! do k=nel+5,norb
-                !     z1%phi(k)=z1%phi(k)*ZBQLU01(1)
-                ! end do
+                do k=nel+5,norb
+                    z1%phi(k)=0.01-mult*step
+                    mult=mult+1
+                    ! if(ZBQLU01(1).gt.0.7)then
+                    !     z1%phi(k)=0.5*pirl*ZBQLU01(1)
+                    ! end if 
+                end do
             else
                 do k=1,(nel+5)
                     z1%phi(k)=0.5*pirl*ZBQLU01(1)
+                    ! if(ZBQLU01(1).gt.0.5)then
+                    !     z1%phi(k)=0.5*pirl+(ZBQLU01(1)*0.5)
+                    ! else
+                    !     z1%phi(k)=0.5*pirl-(ZBQLU01(1)*0.5)
+                    ! end if
                 end do
-                ! do k=nel+6,norb
-                !     z1%phi(k)=z1%phi(k)*ZBQLU01(1)
-                ! end do
+                do k=nel+6,norb
+                    z1%phi(k)=0.01-mult*step
+                    mult=mult+1
+                    ! if(ZBQLU01(1).gt.0.7)then
+                    !     z1%phi(k)=0.5*pirl*ZBQLU01(1)
+                    ! end if 
+                end do
             end if
         end if 
         return 
