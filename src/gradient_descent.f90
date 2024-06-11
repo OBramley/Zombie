@@ -212,7 +212,7 @@ MODULE gradient_descent
             chng_chng=blind_clone_num
         end if
         if(ndet.eq.ndet_max)then
-            chng_chng=150
+            ! chng_chng=150
             lr_loop_max=min_clone_lr
         end if
        
@@ -234,7 +234,7 @@ MODULE gradient_descent
         num_av=num_av/ndet
         
         ! Main GD Loop
-        do while((rjct_cnt.lt.(ndet*50)).and.(epoc_cnt.lt.epoc_max))
+        do while((rjct_cnt.lt.(norb*100)).and.(epoc_cnt.lt.epoc_max))
             loops=loops+1
             do p=1, ((norb-8)/2)
                 write(stdout,'(1a)',advance='no') ' '
@@ -255,7 +255,7 @@ MODULE gradient_descent
                 pick=picker(j)
                 chng_trk2=0
                 acpt_cnt=0
-                ! pickerorb=scramble_norb(norb)
+                pickerorb=scramble_norb(norb)
                 call haml_to_grad_do(haml,dvecs,thread)
 
                 do n=1, norb
@@ -294,7 +294,8 @@ MODULE gradient_descent
                     write(stdout,"(a,i3,a,f21.16,a,f21.16,a,i0)")'  ',pick,'          ', &
                     erg_str,'             ',grad_fin%prev_erg,'          ',0
                    
-                      
+                    rjct_cnt=rjct_cnt+1
+                    rjct_cnt_global=rjct_cnt_global+1   
                 end if
             end do
             
@@ -305,8 +306,6 @@ MODULE gradient_descent
                 end do
                 call epoc_writer(grad_fin%prev_erg,epoc_cnt,t,chng_trk,0)
                 epoc_cnt=epoc_cnt+1
-                rjct_cnt=rjct_cnt+1
-                rjct_cnt_global=rjct_cnt_global+1 
             else
                 loops=loops-1
                 
@@ -331,7 +330,7 @@ MODULE gradient_descent
             end if
 
             if((((tracker.ge.1).and.(lralt_extra.gt.lr_loop_max-2)).or.(chng_chng.le.0)))then
-                if(ndet.lt.ndet_max)then
+                if((ndet.lt.ndet_max))then !.and.((rjct_cnt.gt.(lr_loop_max*4)).or.(modulo(epoc_cnt,400).eq.0)))then
                     
                     deallocate(picker,stat=ierr)
                     allocate(picker(ndet+ndet_increase-1),stat=ierr)
@@ -362,8 +361,8 @@ MODULE gradient_descent
                     else
                         chng_chng=blind_clone_num
                     end if 
-                    if(modulo(ndet,10).eq.0)then
-                        chng_chng=blind_clone_num*2!4 !100 !60
+                    if(modulo(ndet,5).eq.0)then
+                        chng_chng=blind_clone_num*2 !100 !60
                     end if
                   
                 else if(lr_loop_max.lt.min_clone_lr)then
@@ -375,6 +374,7 @@ MODULE gradient_descent
                     extra_flag=1
                     lralt_extra=0
                     lralt_zs=0
+                   
                     if(blind_clone_num.gt.100)then
                         chng_chng=blind_clone_num-100
                     else
