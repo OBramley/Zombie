@@ -205,7 +205,7 @@ MODULE gradient_descent
         tracker=0
         extra_flag=0
         p=70-norb
-        chng_chng=blind_clone_num/2
+        chng_chng=blind_clone_num/4
         chng_chng2=blind_clone_num
         if(ndet.eq.ndet_max)then
             lr_loop_max=min_clone_lr
@@ -318,7 +318,7 @@ MODULE gradient_descent
                 if((chng_chng.le.0).or.(lralt_extra.eq.lr_loop_max-2))then
                     lralt_zs=0
                     lralt_extra=0
-                    chng_chng=blind_clone_num/2
+                    chng_chng=blind_clone_num/4
                 end if
                 lralt_zs=lralt_extra
                 extra_flag=0
@@ -354,7 +354,7 @@ MODULE gradient_descent
                 tracker=0
                 lralt_extra=0
                 lralt_zs=0
-                chng_chng=blind_clone_num/2
+                chng_chng=blind_clone_num/4
                 chng_chng2=blind_clone_num
             end if 
 
