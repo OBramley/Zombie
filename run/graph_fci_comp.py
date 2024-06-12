@@ -7,7 +7,7 @@ import json
 import csv
 import os
 
-fci_erg=-14.871913783299298
+fci_erg=-54.480115
 fci_erg_gram=[-14.871914,-14.858062,-14.858062,-14.841836]
 with open('inputs.json') as f:
     inputs=json.load(f)
@@ -38,7 +38,7 @@ def plot_energy(eb, filename,c1,c2,comp):
     plt.rcParams['axes.linewidth']=2
     fig=plt.figure(figsize=(3.37,5.055))
     ax=fig.add_axes([0,0,2,1])
-    ax.plot(x,eb[:,1], linewidth=2, color=colors(c1),label='Converged energy: '+"{:.6f}".format(eb[1,timesteps-1]))
+    ax.plot(x,eb[:,1], linewidth=2, color=colors(c1),label='Converged energy: '+"{:.6f}".format(eb[timesteps-1,1]))
     ax.axhline(y=comp, color=colors(c2), linewidth=2,label='FCI energy: '+"{:.6f}".format(comp))
     ax.set_xlim(0,beta)
     ax.legend()
@@ -56,8 +56,8 @@ def plot_energy_gradient_descent(eb, ebf, filename, c1, c2,c3,comp):
     plt.rcParams['axes.linewidth']=2
     fig=plt.figure(figsize=(3.37,5.055))
     ax=fig.add_axes([0,0,2,1])
-    ax.plot(x,eb[:,1], linewidth=2, color=colors(c1),label='Initial Energy: '+"{:.6f}".format(eb[1,timesteps-1]))
-    ax.plot(x,ebf[:,1], linewidth=2, color=colors(c2),label='Energy after Gradient Descent: '+"{:.6f}".format(ebf[1,timesteps-1]))
+    ax.plot(x,eb[:,1], linewidth=2, color=colors(c1),label='Initial Energy: '+"{:.6f}".format(eb[timesteps-1,1]))
+    ax.plot(x,ebf[:,1], linewidth=2, color=colors(c2),label='Energy after Gradient Descent: '+"{:.6f}".format(ebf[timesteps-1,1]))
     ax.axhline(y=comp, color=colors(c3), linewidth=2,label='FCI energy: '+"{:.6f}".format(comp))
     ax.set_xlim(0,beta)
     ax.legend()
@@ -92,34 +92,34 @@ def plot_epoch(epoch,filename,c1,c2,comp):
     plt.rcParams['axes.linewidth']=2
     fig=plt.figure(figsize=(3.37,5.055))
 
-    fig, (ax1, ax2) = plt.subplots(2, 1, sharex=True)
-    fig.subplots_adjust(hspace=0.05)
-    ax1.plot(x[0:1000],epoc[0:1000,1], linewidth=2, color=colors(c1))
-    ax1.yaxis.set_major_formatter(FormatStrFormatter('% 1.6f')) 
-    ax1.yaxis.set_minor_formatter(FormatStrFormatter('% 1.6f'))
-    ax2.plot(x[1000:],epoc[1000:,1], linewidth=2, color=colors(c1))
-    ax2.axhline(y=comp, color=colors(c2), linewidth=2, label='FCI energy: '+"{:.6f}".format(comp))
-    ax2.set_xlim(0,end)
-    ax2.yaxis.set_major_formatter(FormatStrFormatter('% 1.6f')) 
-    ax2.yaxis.set_minor_formatter(FormatStrFormatter('% 1.6f'))
-    ax1.spines.bottom.set_visible(False)
-    ax2.spines.top.set_visible(False)
-    ax1.tick_params(bottom=False,labelbottom=False,labeltop=False) 
-    ax2.tick_params(labeltop=False) # don't put tick labels at the top
-    ax2.xaxis.tick_bottom()
-    d = .1  # proportion of vertical to horizontal extent of the slanted line
-    kwargs = dict(marker=[(-1, -d), (1, d)], markersize=12,
-              linestyle="none", color='k', mec='k', mew=1, clip_on=False)
-    ax1.plot([0, 1], [0, 0], transform=ax1.transAxes, **kwargs)
-    ax2.plot([0, 1], [1, 1], transform=ax2.transAxes, **kwargs)
-    plt.grid(False)
-    ax1.set_ylabel('[au]                            ',labelpad=10)
-    ax2.set_ylabel('                          Energy ',labelpad=10)
-    fig.supxlabel('Epoch',ha='center', va='center')
+    # fig, (ax1, ax2) = plt.subplots(2, 1, sharex=True)
+    # fig.subplots_adjust(hspace=0.05)
+    # ax1.plot(x[0:1000],epoc[0:1000,1], linewidth=2, color=colors(c1))
+    # ax1.yaxis.set_major_formatter(FormatStrFormatter('% 1.6f')) 
+    # ax1.yaxis.set_minor_formatter(FormatStrFormatter('% 1.6f'))
+    # ax2.plot(x[1000:],epoc[1000:,1], linewidth=2, color=colors(c1))
+    # ax2.axhline(y=comp, color=colors(c2), linewidth=2, label='FCI energy: '+"{:.6f}".format(comp))
+    # ax2.set_xlim(0,end)
+    # ax2.yaxis.set_major_formatter(FormatStrFormatter('% 1.6f')) 
+    # ax2.yaxis.set_minor_formatter(FormatStrFormatter('% 1.6f'))
+    # ax1.spines.bottom.set_visible(False)
+    # ax2.spines.top.set_visible(False)
+    # ax1.tick_params(bottom=False,labelbottom=False,labeltop=False) 
+    # ax2.tick_params(labeltop=False) # don't put tick labels at the top
+    # ax2.xaxis.tick_bottom()
+    # d = .1  # proportion of vertical to horizontal extent of the slanted line
+    # kwargs = dict(marker=[(-1, -d), (1, d)], markersize=12,
+    #           linestyle="none", color='k', mec='k', mew=1, clip_on=False)
+    # ax1.plot([0, 1], [0, 0], transform=ax1.transAxes, **kwargs)
+    # ax2.plot([0, 1], [1, 1], transform=ax2.transAxes, **kwargs)
+    # plt.grid(False)
+    # ax1.set_ylabel('[au]                            ',labelpad=10)
+    # ax2.set_ylabel('                          Energy ',labelpad=10)
+    # fig.supxlabel('Epoch',ha='center', va='center')
 
     ax=fig.add_axes([0,0,2,1])
     ax.plot(x,epoc[:,1], linewidth=2, color=colors(c1))
-    ax.axhline(y=comp, color=colors(c2), linewidth=2,label='FCI energy: '+"{:.6f}".format(comp))
+    # ax.axhline(y=comp, color=colors(c2), linewidth=2,label='FCI energy: '+"{:.6f}".format(comp))
     ax.set_xlim(0,end)
     ax.set_ylabel('Energy [au]',labelpad=10)
     ax.set_xlabel('Epoch',labelpad=10)
@@ -230,7 +230,7 @@ elif(inputs['run']['gram'] == 'n'):
         
         with open('epoc.csv','rb') as file:
             epoc=numpy.loadtxt(file,delimiter=',',usecols=(0,1))
-
+        plot_epoch(epoc,'epoc_comp.png',2,3,fci_erg)
     # elif(inputs['run']['clean'] in {'y','f'}):
     #     with open('clean_energy.csv','rb') as file:
     #         clean=numpy.loadtxt(file,delimiter=',')

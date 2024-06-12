@@ -67,7 +67,7 @@ program MainZombie
     end if
     call ZBQLINI(randseed,0)   ! Generates the seed value using the UCL random library
     write(stdout,"(a)") "Random seed set"
-  
+    
     ! generate 1 and 2 electron integrals
     if((cleanflg=="y").or.(cleanflg=="f").or.((hamgflg=='y')).or.(GDflg=='y'))then
         

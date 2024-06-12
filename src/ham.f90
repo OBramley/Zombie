@@ -100,16 +100,16 @@ MODULE ham
         type(elecintrgl),intent(in)::elecs
         integer,intent(in)::verb,size
         integer::j,k
-        INTEGER :: c1, c2, cr, cm
-        REAL :: rate
+        ! INTEGER(int64) :: c1, c2, cr, cm
+        ! REAL(real64) :: rate
 
         if (errorflag .ne. 0) return 
       
         ! call omp_set_nested(.TRUE.)
-        CALL SYSTEM_CLOCK(count_rate=cr)
-        CALL SYSTEM_CLOCK(count_max=cm)
-        rate = REAL(cr)
-        CALL SYSTEM_CLOCK(c1)
+        ! CALL SYSTEM_CLOCK(count_rate=cr)
+        ! CALL SYSTEM_CLOCK(count_max=cm)
+        ! rate = REAL(cr)
+        ! CALL SYSTEM_CLOCK(c1)
         do j=1,size
             !$omp  parallel do & 
             !$omp & private(k) &
@@ -122,8 +122,7 @@ MODULE ham
                 write(stdout,"(a,i0,a)") "hamliltonian column ",j, " completed"
             end if 
         end do
-        CALL SYSTEM_CLOCK(c2)
-        PRINT *, "Elapsed time (system_clock): ", (c2 - c1) / rate
+       
         !$omp  parallel do
         do j=1,size
             do k=j,size
@@ -132,7 +131,8 @@ MODULE ham
             end do
         end do 
         !$omp end parallel do
-      
+        ! CALL SYSTEM_CLOCK(c2)
+        ! PRINT *, "Elapsed time (system_clock): ", real((c2 - c1),real64) / rate
      
     end subroutine haml_ovrlp_comb
 

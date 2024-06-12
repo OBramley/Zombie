@@ -306,9 +306,9 @@ MODULE zom
                 do k=nel+5,norb
                     z1%phi(k)=0.01-mult*step
                     mult=mult+1
-                    ! if(ZBQLU01(1).gt.0.7)then
-                    !     z1%phi(k)=0.5*pirl*ZBQLU01(1)
-                    ! end if 
+                    if(ZBQLU01(1).gt.0.9)then
+                        z1%phi(k)=0.5*pirl*ZBQLU01(1)
+                    end if 
                 end do
             else
                 do k=5,(nel+5)
@@ -322,9 +322,9 @@ MODULE zom
                 do k=nel+6,norb
                     z1%phi(k)=0.01-mult*step
                     mult=mult+1
-                    ! if(ZBQLU01(1).gt.0.7)then
-                    !     z1%phi(k)=0.5*pirl*ZBQLU01(1)
-                    ! end if 
+                    if(ZBQLU01(1).gt.0.9)then
+                        z1%phi(k)=0.5*pirl*ZBQLU01(1)
+                    end if 
                 end do
             end if
         else if(nel.eq.4)then
@@ -341,9 +341,9 @@ MODULE zom
                 do k=nel+5,norb
                     z1%phi(k)=0.01-mult*step
                     mult=mult+1
-                    ! if(ZBQLU01(1).gt.0.7)then
-                    !     z1%phi(k)=0.5*pirl*ZBQLU01(1)
-                    ! end if 
+                    if(ZBQLU01(1).gt.0.9)then
+                        z1%phi(k)=0.5*pirl*ZBQLU01(1)
+                    end if 
                 end do
             else
                 do k=3,(nel+5)
@@ -357,9 +357,9 @@ MODULE zom
                 do k=nel+6,norb
                     z1%phi(k)=0.01-mult*step
                     mult=mult+1
-                    ! if(ZBQLU01(1).gt.0.7)then
-                    !     z1%phi(k)=0.5*pirl*ZBQLU01(1)
-                    ! end if 
+                    if(ZBQLU01(1).gt.0.9)then
+                        z1%phi(k)=0.5*pirl*ZBQLU01(1)
+                    end if 
                 end do
             end if
         else 
@@ -375,9 +375,9 @@ MODULE zom
                 do k=nel+5,norb
                     z1%phi(k)=0.01-mult*step
                     mult=mult+1
-                    ! if(ZBQLU01(1).gt.0.7)then
-                    !     z1%phi(k)=0.5*pirl*ZBQLU01(1)
-                    ! end if 
+                    if(ZBQLU01(1).gt.0.9)then
+                        z1%phi(k)=0.5*pirl*ZBQLU01(1)
+                    end if  
                 end do
             else
                 do k=1,(nel+5)
@@ -391,9 +391,9 @@ MODULE zom
                 do k=nel+6,norb
                     z1%phi(k)=0.01-mult*step
                     mult=mult+1
-                    ! if(ZBQLU01(1).gt.0.7)then
-                    !     z1%phi(k)=0.5*pirl*ZBQLU01(1)
-                    ! end if 
+                    if(ZBQLU01(1).gt.0.9)then
+                        z1%phi(k)=0.5*pirl*ZBQLU01(1)
+                    end if 
                 end do
             end if
         end if 

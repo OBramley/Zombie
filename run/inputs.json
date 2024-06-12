@@ -1,6 +1,6 @@
-{  "pyscf_file":"Li_atom_ccpvdz",
+{  "pyscf_file":"Be_atom_ccpvdz",
     "setup":{
-        "runfolder":"Li_atom_25_45",
+        "runfolder":"Be_new_bias_2",
         "runtime": "48:00:00",
         "nodes":1,
         "cores":8,
@@ -13,7 +13,7 @@
     },
 
     "run":{
-        "ndet":25,
+        "ndet":20,
         "seed":1,
         "zomgen":"y",
         "hamgen":"y",
@@ -36,14 +36,14 @@
     },
 
     "grad":{
-        "epoc_max":1000000,
+        "epoc_max":10000000,
         "initial_learning_rate":62500,
         "learning_rate_decay":0.2,
         "decay_steps":10,
         "clone":"y",
-        "clone_max":45,
-        "clone_steps":250,
-        "clone_num":1,
+        "clone_max":50,
+        "clone_steps":152,
+        "clone_num":5,
         "max_loop_clone":12
     }, 
 
