@@ -1,6 +1,6 @@
-{  "pyscf_file":"Be_atom_ccpvdz",
+{  "pyscf_file":"C_atom_ccpvdz",
     "setup":{
-        "runfolder":"Be_new_bias_2",
+        "runfolder":"C_new_bias",
         "runtime": "48:00:00",
         "nodes":1,
         "cores":8,
@@ -13,7 +13,7 @@
     },
 
     "run":{
-        "ndet":20,
+        "ndet":15,
         "seed":1,
         "zomgen":"y",
         "hamgen":"y",
