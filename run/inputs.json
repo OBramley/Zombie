@@ -1,6 +1,6 @@
 {  "pyscf_file":"Li_atom_ccpvdz",
     "setup":{
-        "runfolder":"Li_new_bias_5",
+        "runfolder":"Li_new_bias_6",
         "runtime": "48:00:00",
         "nodes":1,
         "cores":8,
