@@ -22,7 +22,7 @@ MODULE zom
         if(imagflg=='n') then
             do j=1,num
                 do k=1,norb
-                    zstore(j)%phi(k)=0.5*pirl*(ZBQLU01(1)) 
+                    zstore(j)%phi(k)=0.5*pirl*(ZBQLU01()) 
                 end do
                 call val_set(zstore(j))
             end do
@@ -48,9 +48,9 @@ MODULE zom
             ! do j=1,num
             !     do k=1,norb
             !         call random_number(r)
-            !         zstore(j)%phi(k)=2*pirl*r   !ZBQLU01(1)
+            !         zstore(j)%phi(k)=2*pirl*r   !ZBQLU01()
             !         call random_number(r)
-            !         zstore(j)%img=2*pirl*r  !ZBQLU01(1)
+            !         zstore(j)%img=2*pirl*r  !ZBQLU01()
             !     end do
             !     zstore(j)%sin=sin(zstore(j)%phi*exp(i*zstore(j)%img))
             !     zstore(j)%cos=cos(cmplx(zstore(j)%phi,0.0d0,kind=8))
@@ -268,12 +268,12 @@ MODULE zom
     !     do k=1,norb/2
     !         val=2*pirl*random_normal(mu(k),sig(k)) 
     !         if((is_nan(val).eqv..true.))then
-    !             val=2*pirl*(ZBQLU01(1))
+    !             val=2*pirl*(ZBQLU01())
     !         end if 
     !         z1%phi(2*k-1)=val
     !         val=2*pirl*random_normal(mu(k),sig(k))
     !         if((is_nan(val).eqv..true.))then
-    !             val=2*pirl*(ZBQLU01(1)) 
+    !             val=2*pirl*(ZBQLU01()) 
     !         end if 
     !         z1%phi(2*k)=val
     !     end do
@@ -308,18 +308,18 @@ MODULE zom
             a2=nel+5
         end if
         do k=a1,a2
-            z1%phi(k)=0.5*pirl*ZBQLU01(1)
+            z1%phi(k)=0.5*pirl*ZBQLU01()
         end do 
         do k=a2+1,norb
             z1%phi(k)=0.01-mult*step
             mult=mult+1
-            if(ZBQLU01(1).gt.0.8)then
-                if(ZBQLU01(1).gt.0.5)then
-                    z1%phi(k)=z1%phi(k)+(ZBQLU01(1)*0.1)
-                else
-                    z1%phi(k)= z1%phi(k)-(ZBQLU01(1)*0.1)
-                end if
-            end if 
+            ! if(ZBQLU01().gt.0.8)then
+            !     if(ZBQLU01().gt.0.5)then
+            !         z1%phi(k)=z1%phi(k)+(ZBQLU01()*0.1)
+            !     else
+            !         z1%phi(k)= z1%phi(k)-(ZBQLU01()*0.1)
+            !     end if
+            ! end if 
         end do 
         return 
 
@@ -330,8 +330,8 @@ MODULE zom
         implicit none
         type(zombiest),dimension(:),intent(inout)::zstore
         real(wp)::mu((norb/2)),sig((norb/2))
-        real(wp)::val
-        integer::j,k
+        ! real(wp)::val
+        integer::j
        
 
         if (errorflag .ne. 0) return
@@ -349,7 +349,7 @@ MODULE zom
                     
                     
                 !     if((is_nan(val).eqv..true.))then
-                !         val=2*pirl*(ZBQLU01(1))
+                !         val=2*pirl*(ZBQLU01())
                 !         print*, 'here'
                 !     end if 
                
@@ -360,7 +360,7 @@ MODULE zom
                 !     ! end do
                         
                 !     if((is_nan(val).eqv..true.))then
-                !         val=2*pirl*(ZBQLU01(1)) 
+                !         val=2*pirl*(ZBQLU01()) 
                 !     end if 
                 !     zstore(j)%phi(2*k)=val
                 ! end do

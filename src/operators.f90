@@ -48,9 +48,17 @@ MODULE operators
 
         type(zombiest),intent(in)::z1,z2
         real(wp)::temp
-        real(wp),dimension(norb)::cc, dd, mult, multb
+        real(wp),dimension(:),allocatable::cc, dd, mult, multb
         integer:: j
+        integer::ierr=0
 
+        allocate(cc(norb),dd(norb),mult(norb),multb(norb),stat=ierr)
+        if(ierr.ne.0)then
+            write(0) "Error allocating memory in numf"
+            errorflag=1
+            return
+        end if
+        cc=0.0d0; dd=0.0d0; mult=0.0d0; multb=0.0d0
         do j=1, norb
             mult(j)=(z1%val(j))*z2%val(j)
             multb(j)=mult(j) + (z1%val(j+norb))*z2%val(j+norb)
@@ -64,18 +72,21 @@ MODULE operators
         do j=(norb-1),1,-(1)
             dd(j)=dd(j+1)*multb(j)
         end do
-        ! print*, "cc", cc
-        ! print*, "dd", dd
-        ! print*, "mult", mult
-        ! print*, "multb", multb
+       
 
         temp=mult(1)*dd(2)
         do j=2, (norb-2)
             temp = temp+(cc(j-1)*mult(j)*dd(j+1))
         end do
         temp=temp+cc(norb-1)*mult(norb)
-
         numf=temp
+        deallocate(cc,dd,mult,multb,stat=ierr)
+        if(ierr.ne.0)then
+            write(0) "Error deallocating memory in numf"
+            errorflag=1
+            return
+        end if
+
         return
 
     end function numf
@@ -253,8 +264,16 @@ MODULE operators
 
         type(zombiest),intent(in)::z1,z2
         real(wp)::temp
-        real(wp),dimension(norb)::cc, dd, mult, multb
+        real(wp),dimension(:),allocatable::cc, dd, mult, multb
         integer:: j
+        integer::ierr=0
+
+        allocate(cc(norb),dd(norb),mult(norb),multb(norb),stat=ierr)
+        if(ierr.ne.0)then
+            write(0) "Error allocating memory in szf"
+            errorflag=1
+            return
+        end if
 
         do j=1, norb
             mult(j)=(z1%val(j))*z2%val(j)
@@ -274,9 +293,14 @@ MODULE operators
             temp = temp+((cc(j-1)*mult(j)*dd(j+1))*(-1**j))
         end do
         temp=temp-(cc(norb-1)*mult(norb))
-        temp=temp*0.5
-        szf=temp
-
+        szf=temp*0.5
+        
+        deallocate(cc,dd,mult,multb,stat=ierr)
+        if(ierr.ne.0)then
+            write(0) "Error deallocating memory in szf"
+            errorflag=1
+            return
+        end if
         return
 
     end function szf
@@ -289,7 +313,7 @@ MODULE operators
         type(zombiest),intent(in)::z1,z2
         real(wp)::temp
         type(zombiest),dimension(:),allocatable::zt
-        integer:: j,orb 
+        integer:: j 
 
      
         temp=0.0d0
@@ -300,7 +324,7 @@ MODULE operators
         end do
         temp=0.0d0
 
-        do j=1, orb
+        do j=1, norb
             call num(zt(j),j)
             temp = temp +(szf(z1,zt(j))*(-1**j))
         end do

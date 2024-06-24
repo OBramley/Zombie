@@ -245,7 +245,7 @@ MODULE imgtp
         integer,intent(in)::num
         real(wp)::numer,denom
         real(wp),dimension(ndet)::temp
-        integer::j,k
+        integer::k
 
         
         

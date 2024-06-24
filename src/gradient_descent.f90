@@ -176,7 +176,7 @@ MODULE gradient_descent
         type(grad),intent(inout)::grad_fin
         integer,intent(in)::maxloop
         type(grad_do)::temp,thread
-        integer::rjct_cnt,acpt_cnt,pickorb,loops,lralt_zs,acpt_cnt_2
+        integer::rjct_cnt,acpt_cnt,pickorb,loops,lralt_zs,acpt_cnt_2,lralt_extra2
         integer::j,n,p,chng_chng,tracker,lralt_extra,extra_flag,chng_chng2
         integer,dimension(:),allocatable::chng_trk2,pickerorb
         real(wp)::t,erg_str,num_av
@@ -202,6 +202,7 @@ MODULE gradient_descent
         loops=0 !counts the number of loops through 
         lralt_zs=0 !For the learning rate
         lralt_extra=0 !remove higher learning rates
+        lralt_extra2=lr_loop_max !remove lower learning rates
         tracker=0
         extra_flag=0
         p=70-norb
@@ -237,7 +238,7 @@ MODULE gradient_descent
             write(stdout,"(a)",advance='no') 'Progress'
             do p=1, ((norb-8)/2)
                 write(stdout,'(1a)',advance='no') ' '
-            end do 
+            end do
             write(stdout,"(a)")'   | Zombie state | Previous Energy     | Energy after Gradient Descent steps   | Orbitals altered '
        
             chng_trk=0
@@ -290,11 +291,12 @@ MODULE gradient_descent
                     erg_str,'             ',grad_fin%prev_erg,'          ',0
                    
                     rjct_cnt=rjct_cnt+1
-                    rjct_cnt_global=rjct_cnt_global+1   
+                    
                 end if
             end do
             
         write(stdout,"(a,i0,a,f21.16,a,f10.5)") "Energy after epoch no. ",epoc_cnt,": ",grad_fin%prev_erg, "    Learning rate:",t
+       
             if(acpt_cnt_2.gt.0)then
                 do j=1,acpt_cnt_2
                     call zombiewriter(zstore(chng_trk(j)),chng_trk(j),zstore(chng_trk(j))%gram_num)
@@ -304,21 +306,32 @@ MODULE gradient_descent
                 chng_chng2=chng_chng2-1
             else
                 loops=loops-1
-                
+                rjct_cnt_global=rjct_cnt_global+1  
             end if 
-            
-            if((acpt_cnt_2.lt.(0.25*ndet)).and.(lralt_zs.eq.lralt_extra).and.(tracker.gt.-1))then 
-                lralt_extra=lralt_extra+1
+            write(stdout,"(a,i0)") "Number of epochs until additional Zombie state, ",  chng_chng2
+            if((acpt_cnt_2.lt.(0.25*ndet)).and.(tracker.gt.-1))then
+                if(lralt_zs.eq.lralt_extra)then
+                    lralt_extra=lralt_extra+1
+                else if(lralt_zs.eq.lralt_extra2)then
+                    lralt_extra2=lralt_extra2-1
+                end if 
             end if 
-        
+
+            ! if((acpt_cnt_2.lt.(0.25*ndet)).and.(lralt_zs.eq.lralt_extra).and.(tracker.gt.-1))then 
+            !     lralt_extra=lralt_extra+1
+            ! end if
+            ! if((acpt_cnt_2.eq.0).and.(lralt_zs.eq.lralt_extra2))then 
+            !     lralt_extra2=lralt_extra2-1
+            ! end if 
             lralt_zs=lralt_zs+1
             chng_chng=chng_chng-1
-            if(lralt_zs.gt.lr_loop_max)then
+            if((lralt_zs.gt.lralt_extra2))then! .or.(t.lt.lr*(lr_alpha**lr_loop_max)))then
                 picker=scramble(ndet-1)
-                if((chng_chng.le.0).or.(lralt_extra.eq.lr_loop_max-2))then
+                if((chng_chng.le.0).or.(lralt_extra.ge.lralt_extra2-3))then !.or.(t.lt.lr*(lr_alpha**lr_loop_max)))then
                     lralt_zs=0
                     lralt_extra=0
                     chng_chng=blind_clone_num/4
+                    lralt_extra2=lr_loop_max
                 end if
                 lralt_zs=lralt_extra
                 extra_flag=0
@@ -327,8 +340,9 @@ MODULE gradient_descent
                 end if
                
             end if
-            
-            if((tracker.ge.1).and.(lralt_extra.gt.lr_loop_max-2).or.(chng_chng2.lt.0))then
+            if((chng_chng2.lt.0).or.(rjct_cnt_global.gt.3*(lr_loop_max)))then
+            ! if(((tracker.ge.1).and.(lralt_extra.gt.lr_loop_max-2)).or.(chng_chng2.lt.0).or.&
+            ! (rjct_cnt_global.gt.2*(lralt_extra2)))then
                 if((ndet.lt.ndet_max))then
                     deallocate(picker,stat=ierr)
                     allocate(picker(ndet+ndet_increase-1),stat=ierr)
@@ -356,6 +370,7 @@ MODULE gradient_descent
                 lralt_zs=0
                 chng_chng=blind_clone_num/4
                 chng_chng2=blind_clone_num
+                lralt_extra2=lr_loop_max
             end if 
 
             if(loops.ge.maxloop)then
@@ -396,7 +411,6 @@ MODULE gradient_descent
         type(zombiest),dimension(:),allocatable::zstore_temp
         integer::lralt_zs,extra_flag,lralt_extra,tracker
         integer:: j,k
-        integer::ierr=0
       
         tracker=-1
         extra_flag=1
@@ -424,7 +438,7 @@ MODULE gradient_descent
                 call biased_func(zstore(j))
             else
                 do k=1,norb
-                    zstore(j)%phi(k)=0.5*pirl*(ZBQLU01(1)) 
+                    zstore(j)%phi(k)=0.5*pirl*(ZBQLU01()) 
                 end do
             end if 
             call val_set(zstore(j))
@@ -710,14 +724,13 @@ MODULE gradient_descent
         integer::out(number_of_values),array(number_of_values+1)
         integer::n,m,k,j,l,jtemp
         !real::r
-        ! DOUBLE PRECISION, external::ZBQLU01
 
         out=[(j,j=1,number_of_values)]
         array=[(j,j=1,number_of_values+1)]
         n=1; m=number_of_values
         do k=1,2
             do j=1,m+1
-                l = n + FLOOR((m+1-n)*ZBQLU01(1))
+                l = n + FLOOR((m+1-n)*ZBQLU01())
                 jtemp=array(l)
                 array(l)=array(j)
                 array(j)=jtemp
@@ -742,14 +755,13 @@ MODULE gradient_descent
         integer,intent(in)::number_of_values
         integer::out(number_of_values)
         integer::n,m,k,j,l,jtemp
-        ! DOUBLE PRECISION, external::ZBQLU01
         !real::r
         out=[(j,j=1,number_of_values)]
         
         n=1; m=number_of_values
         do k=1,2
             do j=1,m
-                l = n + FLOOR((m-n)*ZBQLU01(1))
+                l = n + FLOOR((m-n)*ZBQLU01())
                 jtemp=out(l)
                 out(l)=out(j)
                 out(j)=jtemp
