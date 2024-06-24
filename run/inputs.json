@@ -1,6 +1,6 @@
-{  "pyscf_file":"Be_atom_ccpvdz",
+{  "pyscf_file":"C_atom_ccpvdz",
     "setup":{
-        "runfolder":"Be_new_bias_5",
+        "runfolder":"C_new_bias_6",
         "runtime": "48:00:00",
         "nodes":1,
         "cores":8,
@@ -13,14 +13,14 @@
     },
 
     "run":{
-        "ndet":30,
+        "ndet":3,
         "seed":1,
         "zomgen":"y",
         "hamgen":"y",
         "clean":"n",
         "imagprop":"y",
-        "beta":1000,
-        "timesteps":500,
+        "beta":5000,
+        "timesteps":1000,
         "grad":"y",
         "gram":"n"
     },
@@ -41,7 +41,7 @@
         "learning_rate_decay":0.2,
         "decay_steps":12,
         "clone":"y",
-        "clone_max":50,
+        "clone_max":60,
         "clone_steps":600,
         "clone_num":2,
         "max_loop_clone":14
