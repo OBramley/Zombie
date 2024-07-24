@@ -442,7 +442,7 @@ MODULE clean
             ! call hamgen(cleanham,cstore,elecs,clean_ndet,1)
             call matrixwriter(cleanham%hjk,clean_ndet,"data/clean_ham.csv")
         else
-            clean_ndet = lines_clean(clean_ndet)        
+            clean_ndet = lines_clean()        
             call alloczs(cstore,clean_ndet)
             call read_zombie_c(cstore,clean_ndet)
             call allocham(cleanham,clean_ndet)
@@ -454,13 +454,11 @@ MODULE clean
 
     end subroutine clean_read
 
-    integer function lines_clean(nlines)
+    function lines_clean() result(nlines)
         implicit none
-
-        integer, intent(INOUT):: nlines
+        integer:: nlines
         integer:: ierr=0
         
-       
         nlines=0
         open(unit=204, file='data/clean_ham.csv',status='old',iostat=ierr)
         if (ierr.ne.0) then
@@ -472,7 +470,6 @@ MODULE clean
                 read(204,*, iostat=ierr)
                 if(ierr<0)then
                     ! write(stderr,"(a,i0)") "nlines has value ", nlines
-                    lines_clean=nlines
                     close(204)
                     return
                 else if (ierr/=0) then
@@ -483,11 +480,9 @@ MODULE clean
                 end if
                 nlines=nlines+1
             end do
-        else
-            return
         end if 
     
-
+        return
     end function lines_clean
 
 

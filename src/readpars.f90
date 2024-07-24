@@ -387,9 +387,6 @@ MODULE readpars
         character(LEN=20)::filenm
         logical::file_exist
 
-
-        if (errorflag .ne. 0) return
-
         file_exist=.true.
         j=1
         do while(file_exist.eqv..true.)

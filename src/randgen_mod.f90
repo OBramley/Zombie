@@ -216,10 +216,10 @@ contains
     ! the output was identical up to the 16th decimal place
     ! after 10^10 calls, so we're probably OK ...
     !*****************************************************************
-    FUNCTION ZBQLU01(dummy)
+    FUNCTION ZBQLU01()
         implicit none
         real(real64):: ZBQLU01,X,B2,BINV
-        integer::dummy
+        ! integer::dummy
 
         !$omp critical
         B2 = B
@@ -290,7 +290,7 @@ contains
               
         ! Even if X1 > X2, this will work as X2-X1 will then be -ve
         if (abs(X1-X2).lt.1.0d-15) THEN
-            ZBQLUAB = X1 + ( (B-X1)*ZBQLU01(1) )
+            ZBQLUAB = X1 + ( (B-X1)*ZBQLU01() )
         ELSE
             ZBQLUAB = X1
             WRITE(output_unit,"(a)") "****WARNING**** (function ZBQLUAB) Upper and lower limits on uniform &
@@ -312,7 +312,7 @@ contains
             RETURN
         ENDIF
     
-        ZBQLEXP = -DLOG(ZBQLU01(1))*MU
+        ZBQLEXP = -DLOG(ZBQLU01())*MU
     
     END function ZBQLEXP
     !*****************************************************************
@@ -325,8 +325,8 @@ contains
         
         !$omp critical 
         IF (STATUS.LE.0) THEN
-            THETA = 2.0D0*PI*ZBQLU01(1)
-            R = DSQRT( -2.0D0*DLOG(ZBQLU01(1)) )
+            THETA = 2.0D0*PI*ZBQLU01()
+            R = DSQRT( -2.0D0*DLOG(ZBQLU01()) )
             ZBQLNOR = (R*DCOS(THETA))
             SPARE = (R*DSIN(THETA))
             STATUS = 1
@@ -435,13 +435,13 @@ contains
 
         IF (P.GT.0.9D0) THEN
             ZBQLGEO = ZBQLGEO + 1 
-            U = ZBQLU01(1)
+            U = ZBQLU01()
             do while(U.GT.P)
                 ZBQLGEO = ZBQLGEO + 1
-                U = ZBQLU01(1)
+                U = ZBQLU01()
             end do
         ELSE
-            U = ZBQLU01(1)
+            U = ZBQLU01()
             ! For tiny P, 1-p will be stored inaccurately and log(1-p) may
             ! be zero. In this case approximate log(1-p) by -p
             IF (P.GT.TINY) THEN
@@ -492,11 +492,11 @@ contains
             end do 
             Y = DEXP(-MU1)
             X = 1.0D0
-            X = X*ZBQLU01(1)
+            X = X*ZBQLU01()
 
             do while (X.GT.Y)
                 ZBQLPOI = ZBQLPOI + 1
-                X = X*ZBQLU01(1)
+                X = X*ZBQLU01()
             end do 
             ! For really huge values of MU, use rejection sampling as in 
             ! Press et al (1992) - large numbers mean some accuracy may be
@@ -510,14 +510,14 @@ contains
             do
                 IF (DABS(T).LT.1.0D2) THEN
                     T = 0.9D0*(1.0D0+(Y*Y))*DEXP(T)
-                    IF (ZBQLU01(1).GT.T) then 
+                    IF (ZBQLU01().GT.T) then 
                         call ZBQLPOI_x_y_T_value(X,Y,MU,TMP1,TMP2,ZBQLPOI)
                     else 
                         exit
                     end if
                 else 
                     T = DLOG(0.9D0*(1.0D0+(Y*Y))) + T
-                    IF (DLOG(ZBQLU01(1)).GT.T) then 
+                    IF (DLOG(ZBQLU01()).GT.T) then 
                         call ZBQLPOI_x_y_T_value(X,Y,MU,TMP1,TMP2,ZBQLPOI)
                     else 
                         exit
@@ -532,10 +532,10 @@ contains
         implicit none
         real(real64)::Y,MU,TMP1
         INTEGER ZBQLPOI_val
-        Y = DTAN(PI*ZBQLU01(1))
+        Y = DTAN(PI*ZBQLU01())
         ZBQLPOI_val = INT(MU + (TMP1*Y))
         do while(ZBQLPOI_val.LT.0)
-            Y = DTAN(PI*ZBQLU01(1))
+            Y = DTAN(PI*ZBQLU01())
             ZBQLPOI_val = INT(MU + (TMP1*Y))
         end do
     end subroutine ZBQLPOI_y_value
@@ -570,8 +570,8 @@ contains
         !$omp critical 
         IF (G.LT.1.0D0) THEN
             do 
-                u=ZBQLU01(1)
-                v=ZBQLU01(1)
+                u=ZBQLU01()
+                v=ZBQLU01()
                 if (u.gt.exp(1.0d0)/(g+exp(1.0d0)))then 
                     ZBQLGAM=-log((g+exp(1.0d0))*(1.0d0-u)/(g*exp(1.0d0)))
                     if (v.gt.ZBQLGAM**(g-1.0))then 
@@ -598,8 +598,8 @@ contains
             c4=c3+2.0d0
             c5=1.0d0/sqrt(g)
             do 
-                u=ZBQLU01(1)
-                v=ZBQLU01(1)
+                u=ZBQLU01()
+                v=ZBQLU01()
                 if (g.gt.2.50d0) then
                     u=v+c5*(1.0d0-1.860d0*u)
                 end if 
@@ -632,8 +632,8 @@ contains
             B1=(z1*(z1-M)**(R*(G-1.0D0)/(R+1.0D0)))*DEXP(-R*(z1-M)/(R+1.0D0))
             B2=(z2*(z2-M)**(R*(G-1.0D0)/(R+1.0D0)))*DEXP(-R*(z2-M)/(R+1.0D0))
             do 
-                U1=ZBQLU01(1)
-                U2=ZBQLU01(1)
+                U1=ZBQLU01()
+                U2=ZBQLU01()
                 U=A*U1
                 V=B1+(B2-B1)*U2
                 X=V/(U**R)
@@ -669,8 +669,8 @@ contains
               
         IF ( (NU1.LT.0.9D0).AND.(NU2.LT.0.9D0) ) THEN
             do
-                X1 = ZBQLU01(1)
-                X2 = ZBQLU01(1)
+                X1 = ZBQLU01()
+                X2 = ZBQLU01()
                 IF ( (X1**(1.0D0/NU1))+(X2**(1.0D0/NU2)).GT.1.0D0) cycle    
                 X1 = (DLOG(X2)/NU2) - (DLOG(X1)/NU1)
                 ZBQLBET1 = (1.0D0 + DEXP(X1))**(-1)
@@ -706,7 +706,7 @@ contains
             RETURN
         ENDIF
     
-        U = ZBQLU01(1)
+        U = ZBQLU01()
         ZBQLWEI = G * ( (-DLOG(U))**(1.0D0/H) )
 
     END function ZBQLWEI
@@ -752,7 +752,7 @@ contains
             RETURN
         ENDIF
          
-        U = ZBQLU01(1)
+        U = ZBQLU01()
         ZBQLPAR = G * (U**(-1.0D0/H)-1.0D0)
         
        
