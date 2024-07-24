@@ -264,7 +264,10 @@ MODULE gradient_descent
                     call he_full_row(temp,zstore,elect,ndet,pickorb)
                     call imaginary_time(temp,ndet)
                    
-                    if((grad_fin%prev_erg-temp%erg.ge.1.0d-14))then
+                    ! if((grad_fin%prev_erg-temp%erg.ge.1.0d-14))then
+                    ! if((temp%erg.lt.grad_fin%prev_erg))then
+                    if((temp%erg.lt.grad_fin%prev_erg).or.&
+                ((ndet.lt.ndet_max).and.(lralt_zs.lt.10).and.(temp%erg.lt.grad_fin%prev_erg+1.0d-10)))then
                         acpt_cnt=acpt_cnt+1
                         chng_trk2(acpt_cnt)=pickorb
                         rjct_cnt=0
@@ -340,6 +343,11 @@ MODULE gradient_descent
                 end if
                
             end if
+            ! if(modulo(epoc_cnt,250).eq.0)then
+            !     do j=1,ndet
+            !         call zombiewriter(zstore(j),j,zstore(j)%gram_num)
+            !     end do
+            ! end if 
             if((chng_chng2.lt.0).or.(rjct_cnt_global.gt.3*(lr_loop_max)))then
             ! if(((tracker.ge.1).and.(lralt_extra.gt.lr_loop_max-2)).or.(chng_chng2.lt.0).or.&
             ! (rjct_cnt_global.gt.2*(lralt_extra2)))then

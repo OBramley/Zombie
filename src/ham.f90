@@ -193,10 +193,10 @@ MODULE ham
 
         if (errorflag .ne. 0) return
       
-        !!$omp parallel do  default(none) &
-        !!$omp & private(j) &
-        !!$omp & shared(elecs,zstore,temp,row,norb,orb,size)
-        !$omp target teams distribute parallel do
+        !$omp parallel do  default(none) &
+        !$omp & private(j) &
+        !$omp & shared(elecs,zstore,temp,row,norb,orb,size)
+        !!$omp target teams distribute parallel do
         do j=1,size
             if (j.ne.row) then
                 temp%ovrlp(j,row)=temp%ovrlp(j,row)/(&
@@ -206,7 +206,7 @@ MODULE ham
                 call haml_vals_2_orb(temp%zom%val,temp%zom%val,temp%ovrlp(row,row),temp%hjk(row,row),elecs,abs(j-row),orb)
             end if 
         end do
-        !!$omp end parallel do 
+        !$omp end parallel do 
         temp%hjk(row,:)=temp%hjk(:,row) 
         temp%ovrlp(row,:)=temp%ovrlp(:,row)
         
