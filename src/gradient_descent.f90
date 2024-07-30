@@ -177,7 +177,7 @@ MODULE gradient_descent
         integer,intent(in)::maxloop
         type(grad_do)::temp,thread
         integer::rjct_cnt,acpt_cnt,pickorb,loops,lralt_zs,acpt_cnt_2,lralt_extra2
-        integer::j,n,p,chng_chng,tracker,lralt_extra,extra_flag,chng_chng2
+        integer::j,n,p,chng_chng,tracker,lralt_extra,extra_flag,chng_chng2,allow
         integer,dimension(:),allocatable::chng_trk2,pickerorb
         real(wp)::t,erg_str,num_av
         integer::ierr=0
@@ -206,6 +206,7 @@ MODULE gradient_descent
         tracker=0
         extra_flag=0
         p=70-norb
+        allow=0
         chng_chng=blind_clone_num/4
         chng_chng2=blind_clone_num
         if(ndet.eq.ndet_max)then
@@ -266,8 +267,9 @@ MODULE gradient_descent
      
                     !if((grad_fin%prev_erg-temp%erg.ge.1.0d-14))then
                     if((temp%erg.lt.grad_fin%prev_erg).or.& 
-                ((ndet.lt.ndet_max.or.epoc_cnt.lt.(((ndet_max/ndet_increase)-1)*blind_clone_num+1000))&
-                .and.(lralt_zs.lt.10).and.(temp%erg.lt.grad_fin%prev_erg+1.0d-10)))then
+                ((ndet.lt.ndet_max).and.(lralt_zs.lt.10).and.(temp%erg.lt.grad_fin%prev_erg+1.0d-10)))then
+                !.or.(allow.eq.1)
+                !epoc_cnt.lt.(((ndet_max/ndet_increase)-1)*blind_clone_num+500))&
                 !((lralt_zs.lt.10).and.(temp%erg.lt.grad_fin%prev_erg+1.0d-10)))then
                         acpt_cnt=acpt_cnt+1
                         chng_trk2(acpt_cnt)=pickorb
@@ -320,7 +322,9 @@ MODULE gradient_descent
                     lralt_extra2=lralt_extra2-1
                 end if 
             end if 
-
+            if(modulo(epoc_cnt,150).eq.0)then
+                allow=1
+            end if
             ! if((acpt_cnt_2.lt.(0.25*ndet)).and.(lralt_zs.eq.lralt_extra).and.(tracker.gt.-1))then 
             !     lralt_extra=lralt_extra+1
             ! end if
@@ -339,6 +343,7 @@ MODULE gradient_descent
                 end if
                 lralt_zs=lralt_extra
                 extra_flag=0
+                allow=0
                 if((acpt_cnt_2.lt.((ndet)/3)).or.(tracker.lt.0))then
                     tracker=tracker+1
                 end if

@@ -1,6 +1,6 @@
 {  "pyscf_file":"Li_atom_ccpvdz",
     "setup":{
-        "runfolder":"Li_atom_final8",
+        "runfolder":"Li_atom_final12",
         "runtime": "48:00:00",
         "nodes":1,
         "cores":8,
@@ -39,12 +39,12 @@
         "epoc_max":10000000,
         "initial_learning_rate":312500,
         "learning_rate_decay":0.2,
-        "decay_steps":13,
+        "decay_steps":10,
         "clone":"y",
         "clone_max":45,
         "clone_steps":125,
         "clone_num":3,
-        "max_loop_clone":15
+        "max_loop_clone":13
     }, 
 
     "gram":{
