@@ -1,6 +1,6 @@
 {  "pyscf_file":"Be_atom_ccpvdz",
     "setup":{
-        "runfolder":"Be_atom_armijo_2",
+        "runfolder":"Be_atom_final14",
         "runtime": "48:00:00",
         "nodes":1,
         "cores":8,
@@ -42,7 +42,7 @@
         "decay_steps":5,
         "clone":"y",
         "clone_max":60,
-        "clone_steps":50,
+        "clone_steps":75,
         "clone_num":1,
         "max_loop_clone":6
     }, 

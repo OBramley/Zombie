@@ -316,6 +316,7 @@ MODULE gradient_descent
                 rjct_cnt_global=rjct_cnt_global+1  
             end if 
             write(stdout,"(a,i0)") "Number of epochs until additional Zombie state, ",  chng_chng2
+            print*,reduc,comp
             if((acpt_cnt_2.lt.(0.25*ndet)).and.(tracker.gt.-1))then
                 if(lralt_zs.eq.lralt_extra)then
                     lralt_extra=lralt_extra+1
@@ -358,8 +359,6 @@ MODULE gradient_descent
                
             end if
             if((chng_chng2.lt.0).or.(rjct_cnt_global.gt.3*(lr_loop_max)))then
-            ! if(((tracker.ge.1).and.(lralt_extra.gt.lr_loop_max-2)).or.(chng_chng2.lt.0).or.&
-            ! (rjct_cnt_global.gt.2*(lralt_extra2)))then
                 if((ndet.lt.ndet_max))then
                     deallocate(picker,stat=ierr)
                     allocate(picker(ndet+ndet_increase-1),stat=ierr)
