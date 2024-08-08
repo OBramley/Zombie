@@ -43,7 +43,7 @@
         "clone":"y",
         "clone_max":60,
         "clone_steps":75,
-        "clone_num":1,
+        "clone_num":2,
         "max_loop_clone":6
     }, 
 

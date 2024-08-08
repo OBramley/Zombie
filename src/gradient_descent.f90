@@ -206,7 +206,11 @@ MODULE gradient_descent
         tracker=-1
         extra_flag=0
         p=70-norb
-        reduc=1.0d-7
+        if(ndet.lt.ndet_max)then
+            reduc=1.0d-6
+        else
+            reduc=1.0d-10
+        end if
         comp=grad_fin%prev_erg
         allow=0
         chng_chng=blind_clone_num/4
@@ -268,8 +272,9 @@ MODULE gradient_descent
                     call imaginary_time(temp,ndet)
      
                     !if((grad_fin%prev_erg-temp%erg.ge.1.0d-14))then
-                    if((temp%erg.lt.grad_fin%prev_erg).or.& 
-                ((ndet.lt.ndet_max.or.(allow.eq.1)).and.(t.gt.0.1).and.(temp%erg.lt.grad_fin%prev_erg+reduc)))then
+                    if((temp%erg.lt.grad_fin%prev_erg).or.((t.gt.0.1).and.(temp%erg.lt.grad_fin%prev_erg+reduc)))then
+                    ! & 
+                ! ((ndet.lt.ndet_max).and.(t.gt.0.1).and.(temp%erg.lt.grad_fin%prev_erg+reduc)))then
                 !epoc_cnt.lt.(((ndet_max/ndet_increase)-1)*blind_clone_num+500))&
                 !((lralt_zs.lt.10).and.(temp%erg.lt.grad_fin%prev_erg+1.0d-10)))then
                         acpt_cnt=acpt_cnt+1
@@ -324,16 +329,8 @@ MODULE gradient_descent
                     lralt_extra2=lralt_extra2-1
                 end if 
             end if 
-            if(allow==1)then 
-                allow =0 
-            end if 
-            if((ndet.ge.ndet_max).and.(modulo(epoc_cnt,150).eq.0))then
-                allow=1
-                ! lralt_zs=0
-                ! lralt_extra=0
-                ! chng_chng=blind_clone_num/4
-                ! lralt_extra2=lr_loop_max
-            end if
+        
+         
             ! if((acpt_cnt_2.lt.(0.25*ndet)).and.(lralt_zs.eq.lralt_extra).and.(tracker.gt.-1))then 
             !     lralt_extra=lralt_extra+1
             ! end if
@@ -377,14 +374,18 @@ MODULE gradient_descent
                     do j=(ndet-ndet_increase+1),ndet
                         call zombiewriter(zstore(j),j,zstore(j)%gram_num)
                     end do
-                    if(comp.lt.grad_fin%prev_erg)then
-                        reduc=reduc/10
-                    end if 
-                    comp=grad_fin%prev_erg
+                    ! if(abs(comp-grad_fin%prev_erg).lt.reduc)then
+                    !     reduc=reduc/10
+                    ! end if 
+                    ! comp=grad_fin%prev_erg
                 else if(lr_loop_max.lt.min_clone_lr)then
                     lr_loop_max=lr_loop_max+1
                     blind_clone_num=blind_clone_num+2
-                end if  
+                end if
+                if((abs(comp-grad_fin%prev_erg).lt.reduc*1000).or.(grad_fin%prev_erg.gt.comp))then
+                    reduc=reduc/10
+                end if 
+                comp=grad_fin%prev_erg  
                 tracker=-1
                 lralt_extra=0
                 lralt_zs=0
