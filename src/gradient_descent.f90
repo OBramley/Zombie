@@ -179,7 +179,7 @@ MODULE gradient_descent
         integer::rjct_cnt,acpt_cnt,pickorb,loops,lralt_zs,acpt_cnt_2,lralt_extra2
         integer::j,n,p,chng_chng,tracker,lralt_extra,extra_flag,chng_chng2,allow
         integer,dimension(:),allocatable::chng_trk2,pickerorb
-        real(wp)::t,erg_str,num_av
+        real(wp)::t,erg_str,num_av,reduc,comp
         integer::ierr=0
         ! type(neural_network_layer),dimension(:)::neural_net
 
@@ -203,9 +203,11 @@ MODULE gradient_descent
         lralt_zs=0 !For the learning rate
         lralt_extra=0 !remove higher learning rates
         lralt_extra2=lr_loop_max !remove lower learning rates
-        tracker=0
+        tracker=-1
         extra_flag=0
         p=70-norb
+        reduc=1.0d-7
+        comp=grad_fin%prev_erg
         allow=0
         chng_chng=blind_clone_num/4
         chng_chng2=blind_clone_num
@@ -267,8 +269,7 @@ MODULE gradient_descent
      
                     !if((grad_fin%prev_erg-temp%erg.ge.1.0d-14))then
                     if((temp%erg.lt.grad_fin%prev_erg).or.& 
-                ((ndet.lt.ndet_max).and.(lralt_zs.lt.10).and.(temp%erg.lt.grad_fin%prev_erg+1.0d-10)))then
-                !.or.(allow.eq.1)
+                ((ndet.lt.ndet_max.or.(allow.eq.1)).and.(t.gt.0.1).and.(temp%erg.lt.grad_fin%prev_erg+reduc)))then
                 !epoc_cnt.lt.(((ndet_max/ndet_increase)-1)*blind_clone_num+500))&
                 !((lralt_zs.lt.10).and.(temp%erg.lt.grad_fin%prev_erg+1.0d-10)))then
                         acpt_cnt=acpt_cnt+1
@@ -322,8 +323,15 @@ MODULE gradient_descent
                     lralt_extra2=lralt_extra2-1
                 end if 
             end if 
-            if(modulo(epoc_cnt,150).eq.0)then
+            if(allow==1)then 
+                allow =0 
+            end if 
+            if((ndet.ge.ndet_max).and.(modulo(epoc_cnt,150).eq.0))then
                 allow=1
+                ! lralt_zs=0
+                ! lralt_extra=0
+                ! chng_chng=blind_clone_num/4
+                ! lralt_extra2=lr_loop_max
             end if
             ! if((acpt_cnt_2.lt.(0.25*ndet)).and.(lralt_zs.eq.lralt_extra).and.(tracker.gt.-1))then 
             !     lralt_extra=lralt_extra+1
@@ -370,11 +378,15 @@ MODULE gradient_descent
                     do j=(ndet-ndet_increase+1),ndet
                         call zombiewriter(zstore(j),j,zstore(j)%gram_num)
                     end do
+                    if(comp.lt.grad_fin%prev_erg)then
+                        reduc=reduc/10
+                    end if 
+                    comp=grad_fin%prev_erg
                 else if(lr_loop_max.lt.min_clone_lr)then
                     lr_loop_max=lr_loop_max+1
                     blind_clone_num=blind_clone_num+2
                 end if  
-                tracker=0
+                tracker=-1
                 lralt_extra=0
                 lralt_zs=0
                 chng_chng=blind_clone_num/4

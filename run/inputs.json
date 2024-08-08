@@ -1,6 +1,6 @@
-{  "pyscf_file":"Li_atom_ccpvdz",
+{  "pyscf_file":"Be_atom_ccpvdz",
     "setup":{
-        "runfolder":"Li_atom_final12",
+        "runfolder":"Be_atom_armijo_2",
         "runtime": "48:00:00",
         "nodes":1,
         "cores":8,
@@ -13,7 +13,7 @@
     },
 
     "run":{
-        "ndet":3,
+        "ndet":10,
         "seed":0,
         "zomgen":"y",
         "hamgen":"y",
@@ -37,14 +37,14 @@
 
     "grad":{
         "epoc_max":10000000,
-        "initial_learning_rate":312500,
-        "learning_rate_decay":0.2,
-        "decay_steps":10,
+        "initial_learning_rate":12500,
+        "learning_rate_decay":0.04,
+        "decay_steps":5,
         "clone":"y",
-        "clone_max":45,
-        "clone_steps":125,
-        "clone_num":3,
-        "max_loop_clone":13
+        "clone_max":60,
+        "clone_steps":50,
+        "clone_num":1,
+        "max_loop_clone":6
     }, 
 
     "gram":{
