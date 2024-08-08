@@ -177,7 +177,7 @@ MODULE gradient_descent
         integer,intent(in)::maxloop
         type(grad_do)::temp,thread
         integer::rjct_cnt,acpt_cnt,pickorb,loops,lralt_zs,acpt_cnt_2,lralt_extra2
-        integer::j,n,p,chng_chng,tracker,lralt_extra,extra_flag,chng_chng2,allow
+        integer::j,n,p,chng_chng,tracker,lralt_extra,extra_flag,chng_chng2
         integer,dimension(:),allocatable::chng_trk2,pickerorb
         real(wp)::t,erg_str,num_av,reduc,comp
         integer::ierr=0
@@ -212,7 +212,6 @@ MODULE gradient_descent
             reduc=1.0d-10
         end if
         comp=grad_fin%prev_erg
-        allow=0
         chng_chng=blind_clone_num/4
         chng_chng2=blind_clone_num
         if(ndet.eq.ndet_max)then
@@ -330,18 +329,11 @@ MODULE gradient_descent
                 end if 
             end if 
         
-         
-            ! if((acpt_cnt_2.lt.(0.25*ndet)).and.(lralt_zs.eq.lralt_extra).and.(tracker.gt.-1))then 
-            !     lralt_extra=lralt_extra+1
-            ! end if
-            ! if((acpt_cnt_2.eq.0).and.(lralt_zs.eq.lralt_extra2))then 
-            !     lralt_extra2=lralt_extra2-1
-            ! end if 
             lralt_zs=lralt_zs+1
             chng_chng=chng_chng-1
-            if((lralt_zs.gt.lralt_extra2))then! .or.(t.lt.lr*(lr_alpha**lr_loop_max)))then
+            if((lralt_zs.gt.lralt_extra2))then
                 picker=scramble(ndet-1)
-                if((chng_chng.le.0).or.(lralt_extra.ge.lralt_extra2-3))then !.or.(t.lt.lr*(lr_alpha**lr_loop_max)))then
+                if((chng_chng.le.0).or.(lralt_extra.ge.lralt_extra2-3))then 
                     lralt_zs=0
                     lralt_extra=0
                     chng_chng=blind_clone_num/4
@@ -349,7 +341,6 @@ MODULE gradient_descent
                 end if
                 lralt_zs=lralt_extra
                 extra_flag=0
-                allow=0
                 if((acpt_cnt_2.lt.((ndet)/3)).or.(tracker.lt.0))then
                     tracker=tracker+1
                 end if
@@ -436,15 +427,6 @@ MODULE gradient_descent
         tracker=-1
         extra_flag=1
         lralt_extra=0
-        ! if((ndet-ndet_increase.eq.2).and.(ndet_increase.eq.1))then 
-        !     allocate(orb_store(norb),stat=ierr)
-        !     if(ierr/=0)then
-        !         write(stderr,"(a,i0)") "Error in orb_store allocation . ierr had value ", ierr
-        !         errorflag=1
-        !         return
-        !     end if
-        !     orb_store(:)=zstore(2)%phi
-        ! end if
         call alloczs(zstore_temp,ndet-ndet_increase)
         zstore_temp=zstore
         call dealloczs(zstore)
@@ -492,148 +474,6 @@ MODULE gradient_descent
         return
     end subroutine zstore_increase
 
-
-    subroutine full_zs_gd(zstore,elect,dvecs,haml,grad_fin) 
-
-        implicit none 
-
-        type(zombiest),dimension(:),allocatable,intent(inout)::zstore
-        type(elecintrgl),intent(in)::elect
-        type(dvector),intent(inout)::dvecs
-        type(hamiltonian),intent(inout)::haml
-        type(grad),intent(inout)::grad_fin
-        type(grad_do)::temp,thread
-        integer::acpt_cnt,lralt_temp,orb_cnt,j
-        real(wp)::t
-        real(wp),dimension(:),allocatable::lr_chng_trk,erg_chng_trk
-        integer::ierr=0
-
-        if (errorflag .ne. 0) return
-    
-        if(ierr==0) allocate(lr_chng_trk(ndet-1),stat=ierr)
-        if(ierr==0) allocate(erg_chng_trk(ndet-1),stat=ierr)
-       
-       
-        if (ierr/=0) then
-            write(stderr,"(a,i0)") "Gradient descent allocations . ierr had value ", ierr
-            errorflag=1
-            return
-        end if 
-       
-    
-        acpt_cnt=0  !counts how many ZS have been changed
-        lralt_temp=0
-        if(epoc_cnt.eq.1)then
-            orb_cnt=lr_loop_max+1
-        else
-            orb_cnt=lr_loop_max+1
-        end if 
-
-        call alloc_grad_do(temp,ndet)
-        call alloc_grad_do(thread,ndet)
-        call haml_to_grad_do(haml,dvecs,thread)
-        temp=thread
-       
-        do while(rjct_cnt_global.lt.(ndet-1)*30)
-
-            write(stdout,"(a)") '    Zombie state    |     Previous Energy     |    Energy after Gradient Descent step &
-            &   |       Learning rate      | Acceptance count | Rejection count'
-            chng_trk=0
-            lr_chng_trk=0
-            erg_chng_trk=0
-            call haml_to_grad_do(haml,dvecs,thread)
-            t=lr*(lr_alpha**(lralt_temp))
-            ! t=0.001d0
-            do j=1,(ndet-1)
-                
-                pick=picker(j)
-                call grad_calculate(haml,dvecs,zstore,grad_fin,0)
-                temp=thread
-                temp%zom=zstore(pick)
-                temp%zom%phi=zstore(pick)%phi
-                temp%zom%phi=zstore(pick)%phi-(t*grad_fin%vars(pick,:))
-                call val_set(temp%zom)
-           
-                call he_full_row(temp,zstore,elect,ndet,0)
-                call imaginary_time(temp,ndet)
-               
-                if(grad_fin%prev_erg-temp%erg.ge.1.0d-11)then
-                    acpt_cnt=acpt_cnt+1
-                    chng_trk(acpt_cnt)=pick
-                    lr_chng_trk(acpt_cnt)=t
-                    erg_chng_trk(acpt_cnt)=temp%erg
-                    call grad_do_haml_transfer(temp,haml,zstore(pick),dvecs)
-                    call zombiewriter(zstore(pick),pick,zstore(pick)%gram_num)
-                    rjct_cnt_global=0
-            
-                    write(stdout,"(a,i3,a,f21.16,a,f21.16,a,f21.16,a,i3,a,i3)") '       ', pick,'              ', &
-    grad_fin%prev_erg,'               ',temp%erg,'             ',t,'        ',acpt_cnt,'          ',rjct_cnt_global
-        
-                    grad_fin%grad_avlb=0
-                    grad_fin%ovrlp_grad_avlb(:,:,pick)=0
-                    grad_fin%ovrlp_grad_avlb(:,pick,:)=0
-                    grad_fin%prev_erg=temp%erg
-                    thread=temp
-                else
-                    rjct_cnt_global=rjct_cnt_global+1
-                    write(stdout,"(a,i3,a,f21.16,a,f21.16,a,f21.16,a,i3,a,i3)") '       ', pick,'              ', &
-                    grad_fin%prev_erg,'               ',0.0,'             ',0.0,'        ',acpt_cnt,'          ',rjct_cnt_global
-                end if
-
-                flush(6)
-                
-            end do
-          
-           
-            write(stdout,"(a,i0,a,f21.16,a,i0,a)") "Energy after epoc no. ",epoc_cnt,": ", &
-            grad_fin%prev_erg, ". ", acpt_cnt, " Zombie state(s) altered."
-      
-            picker=scramble(ndet-1)
-            if(acpt_cnt.gt.0)then
-                call epoc_writer(grad_fin%prev_erg,epoc_cnt,chng_trk,erg_chng_trk,lr_chng_trk,0)
-                epoc_cnt=epoc_cnt+1
-            end if
-            lralt_temp=lralt_temp+1
-        
-            orb_cnt=orb_cnt-1
-
-            ! if((orb_cnt.le.0))then
-            if((lralt_temp.gt.lr_loop_max))then
-                lralt_temp=0
-                if(acpt_cnt.eq.0)then
-                    lralt_temp=lralt_temp+1
-                
-                    ! call orbital_gd(zstore,grad_fin,elect,dvecs,haml,loop_max+1)
-                    call haml_to_grad_do(haml,dvecs,thread)
-                    orb_cnt=lr_loop_max+1
-                end if
-            end if
- 
-            acpt_cnt=0
-            if(epoc_cnt.gt.epoc_max)then 
-                exit 
-            end if
-        end do
-
-        if(ierr==0) deallocate(lr_chng_trk,stat=ierr)
-        if(ierr==0) deallocate(erg_chng_trk,stat=ierr)
-       
-        if (ierr/=0) then
-            write(stderr,"(a,i0)") "Gradient descent deallocations . ierr had value ", ierr
-            errorflag=1
-            return
-        end if 
-
-        call dealloc_grad_do(temp)
-        call dealloc_grad_do(thread)
-
-        if(epoc_cnt.lt.epoc_max)then
-            ! call orbital_gd(zstore,grad_fin,elect,dvecs,haml,(epoc_max-epoc_cnt))
-        end if
-      
-        return
-
-    end subroutine full_zs_gd
 
 
     subroutine zombie_alter(zstore,haml,elect,dvecs)!,neural_net)
@@ -709,27 +549,12 @@ MODULE gradient_descent
        
         if(epoc_cnt.lt.epoc_max)then
             picker=scramble(ndet-1)
-            ! call full_zs_gd(zstore,elect,dvecs,haml,grad_fin) 
-            ! call orbital_gd(zstore,grad_fin,elect,dvecs,haml,1000)
-            ! call full_zs_gd(zstore,elect,dvecs,haml,grad_fin) 
-            call orbital_gd(zstore,grad_fin,elect,dvecs,haml,epoc_max-epoc_cnt)!,neural_net)
-            ! close(450)
-            ! do j=2,ndet
-            !     close(300+j)
-            ! end do
+            call orbital_gd(zstore,grad_fin,elect,dvecs,haml,epoc_max-epoc_cnt)
+
         end if 
-        ! if(allocated(orb_store))then
-        !     deallocate(orb_store,stat=ierr)
-        !     if(ierr/=0)then
-        !         write(stderr,"(a,i0)") "Error in orb_store deallocation . ierr had value ", ierr
-        !         errorflag=1
-        !         return
-        !     end if
-        ! end if
+      
         
        
-        
-
         deallocate(picker,stat=ierr)
         deallocate(chng_trk,stat=ierr)
         return

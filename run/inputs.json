@@ -1,6 +1,6 @@
-{  "pyscf_file":"Be_atom_ccpvdz",
+{  "pyscf_file":"Li_atom_ccpvdz",
     "setup":{
-        "runfolder":"Be_atom_final14",
+        "runfolder":"Li_atom_full_gd",
         "runtime": "48:00:00",
         "nodes":1,
         "cores":8,
