@@ -178,7 +178,6 @@ MODULE gradient_descent
         type(grad_do)::temp,thread
         integer::rjct_cnt,acpt_cnt,pickorb,loops,lralt_zs,acpt_cnt_2,lralt_extra2
         integer::j,n,p,chng_chng,tracker,lralt_extra,extra_flag,chng_chng2,allow
-        integer::j,n,p,chng_chng,tracker,lralt_extra,extra_flag,chng_chng2,allow
         integer,dimension(:),allocatable::chng_trk2,pickerorb
         real(wp)::t,erg_str,num_av,reduc,comp
         integer::ierr=0
