@@ -207,7 +207,7 @@ MODULE gradient_descent
         extra_flag=0
         p=70-norb
         if(ndet.lt.ndet_max)then
-            reduc=1.0d-6
+            reduc=1.0d-7
         else
             reduc=1.0d-10
         end if
@@ -365,10 +365,6 @@ MODULE gradient_descent
                     do j=(ndet-ndet_increase+1),ndet
                         call zombiewriter(zstore(j),j,zstore(j)%gram_num)
                     end do
-                    ! if(abs(comp-grad_fin%prev_erg).lt.reduc)then
-                    !     reduc=reduc/10
-                    ! end if 
-                    ! comp=grad_fin%prev_erg
                 else if(lr_loop_max.lt.min_clone_lr)then
                     lr_loop_max=lr_loop_max+1
                     blind_clone_num=blind_clone_num+2
@@ -383,6 +379,10 @@ MODULE gradient_descent
                 chng_chng=blind_clone_num/4
                 chng_chng2=blind_clone_num
                 lralt_extra2=lr_loop_max
+                do j=1,ndet
+                    zstore(j)%phi=asin(zstore(j)%val(1:norb))
+                    call val_set(zstore(j))
+                end do 
             end if 
 
             if(loops.ge.maxloop)then
