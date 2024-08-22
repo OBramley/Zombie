@@ -206,10 +206,10 @@ MODULE gradient_descent
         tracker=-1
         extra_flag=0
         p=70-norb
-        if(ndet.lt.ndet_max)then
-            reduc=1.0d-7
+        if((ndet.lt.ndet_max).or.(epoc_cnt.lt.100))then
+            reduc=1.0d-8
         else
-            reduc=1.0d-10
+            reduc=1.0d-11
         end if
         comp=grad_fin%prev_erg
         chng_chng=blind_clone_num/4
@@ -272,10 +272,6 @@ MODULE gradient_descent
      
                     !if((grad_fin%prev_erg-temp%erg.ge.1.0d-14))then
                     if((temp%erg.lt.grad_fin%prev_erg).or.((t.gt.0.1).and.(temp%erg.lt.grad_fin%prev_erg+reduc)))then
-                    ! & 
-                ! ((ndet.lt.ndet_max).and.(t.gt.0.1).and.(temp%erg.lt.grad_fin%prev_erg+reduc)))then
-                !epoc_cnt.lt.(((ndet_max/ndet_increase)-1)*blind_clone_num+500))&
-                !((lralt_zs.lt.10).and.(temp%erg.lt.grad_fin%prev_erg+1.0d-10)))then
                         acpt_cnt=acpt_cnt+1
                         chng_trk2(acpt_cnt)=pickorb
                         rjct_cnt=0
@@ -324,28 +320,15 @@ MODULE gradient_descent
             if((acpt_cnt_2.lt.(0.25*ndet)).and.(tracker.gt.-1))then
                 if(lralt_zs.eq.lralt_extra)then
                     lralt_extra=lralt_extra+1
-                else if(lralt_zs.eq.lralt_extra2)then
-                    lralt_extra2=lralt_extra2-1
+                ! else if(lralt_zs.eq.lralt_extra2)then
+                !     lralt_extra2=lralt_extra2-1
                 end if 
             end if 
         
             lralt_zs=lralt_zs+1
             chng_chng=chng_chng-1
-            if((lralt_zs.gt.lralt_extra2))then
-                picker=scramble(ndet-1)
-                if((chng_chng.le.0).or.(lralt_extra.ge.lralt_extra2-3))then 
-                    lralt_zs=0
-                    lralt_extra=0
-                    chng_chng=blind_clone_num/4
-                    lralt_extra2=lr_loop_max
-                end if
-                lralt_zs=lralt_extra
-                extra_flag=0
-                if((acpt_cnt_2.lt.((ndet)/3)).or.(tracker.lt.0))then
-                    tracker=tracker+1
-                end if
-               
-            end if
+        
+           
             if((chng_chng2.lt.0).or.(rjct_cnt_global.gt.3*(lr_loop_max)))then
                 if((ndet.lt.ndet_max))then
                     deallocate(picker,stat=ierr)
@@ -365,26 +348,49 @@ MODULE gradient_descent
                     do j=(ndet-ndet_increase+1),ndet
                         call zombiewriter(zstore(j),j,zstore(j)%gram_num)
                     end do
+                    reduc=reduc*10
+                    if(reduc.gt.1.0d-8)then
+                        reduc=1.0d-8
+                    end if
                 else if(lr_loop_max.lt.min_clone_lr)then
                     lr_loop_max=lr_loop_max+1
                     blind_clone_num=blind_clone_num+2
-                end if
-                if((abs(comp-grad_fin%prev_erg).lt.reduc*1000).or.(grad_fin%prev_erg.gt.comp))then
-                    reduc=reduc/10
                 end if 
-                comp=grad_fin%prev_erg  
                 tracker=-1
                 lralt_extra=0
                 lralt_zs=0
                 chng_chng=blind_clone_num/4
                 chng_chng2=blind_clone_num
                 lralt_extra2=lr_loop_max
-                do j=1,ndet
-                    zstore(j)%phi=asin(zstore(j)%val(1:norb))
-                    call val_set(zstore(j))
-                end do 
-            end if 
+                if((ndet.ge.ndet_max))then
+                    if((abs(comp-grad_fin%prev_erg).lt.reduc*1000).or.(grad_fin%prev_erg.gt.comp))then
+                        reduc=reduc/10
+                    end if
+                end if 
+                comp=grad_fin%prev_erg
+            end if
 
+            if((lralt_zs.gt.lralt_extra2))then
+                picker=scramble(ndet-1)
+                lralt_zs=lralt_extra
+                extra_flag=0
+                if((acpt_cnt_2.lt.((ndet)/3)).or.(tracker.lt.0))then
+                    tracker=tracker+1
+                end if
+               
+            end if
+            if((chng_chng.le.0))then !.or.(lralt_extra.ge.lralt_extra2-3))then 
+                lralt_zs=0
+                lralt_extra=0
+                chng_chng=blind_clone_num/4
+                lralt_extra2=lr_loop_max
+                !if((ndet.ge.ndet_max))then
+                    if(((comp-grad_fin%prev_erg).lt.reduc*1000).or.(grad_fin%prev_erg.gt.comp))then
+                        reduc=reduc/10
+                    end if 
+                    comp=grad_fin%prev_erg
+                !end if
+            end if 
             if(loops.ge.maxloop)then
                 grad_fin%grad_avlb=0
                 exit
@@ -758,11 +764,4 @@ MODULE gradient_descent
     !         errorflag=1
     !     end if
        
-    !     call DGEMM("N","N",ndet,ndet,ndet,1.d0,temp%inv,ndet,temp%hjk,ndet,0.d0,temp%kinvh,ndet)
-
-    !     return
-
-    ! end subroutine nn_haml
-
-
-END MODULE gradient_descent
+    !     call DGEMM("N","N",ndet,ndet,ndet,1.d0,temp%inv,ndet,tem
