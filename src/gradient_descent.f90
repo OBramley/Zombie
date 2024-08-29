@@ -207,9 +207,10 @@ MODULE gradient_descent
         extra_flag=0
         p=70-norb
         if((ndet.lt.ndet_max).or.(epoc_cnt.lt.100))then
-            reduc=1.0d-8
+            reduc=1.0d-7
         else
-            reduc=1.0d-11
+            reduc=0
+            !reduc=1.0d-11
         end if
         comp=grad_fin%prev_erg
         chng_chng=blind_clone_num/4
@@ -255,6 +256,9 @@ MODULE gradient_descent
                 write(stdout,'(i3)',advance='no') j
                 erg_str=grad_fin%prev_erg
                 pick=picker(j)
+                !if(pick.lt.7)then
+                !    cycle
+                !end if 
                 chng_trk2=0
                 acpt_cnt=0
                 pickerorb=scramble_norb(norb)
@@ -265,13 +269,19 @@ MODULE gradient_descent
                     call grad_calculate(haml,dvecs,zstore,grad_fin,pickorb)
                     thread%zom=zstore(pick)
                     temp=thread
+                   
                     temp%zom%phi(pickorb) = thread%zom%phi(pickorb)-(t*grad_fin%vars(pick,pickorb))
+                    if(abs(temp%zom%phi(pickorb)-thread%zom%phi(pickorb)).lt.reduc*1000)then
+                        write(stdout,'(1a)',advance='no') '!'
+                        cycle
+                    end if
                     call val_set(temp%zom,pickorb)
                     call he_full_row(temp,zstore,elect,ndet,pickorb)
                     call imaginary_time(temp,ndet)
      
                     !if((grad_fin%prev_erg-temp%erg.ge.1.0d-14))then
-                    if((temp%erg.lt.grad_fin%prev_erg).or.((t.gt.0.1).and.(temp%erg.lt.grad_fin%prev_erg+reduc)))then
+                    if((temp%erg.lt.grad_fin%prev_erg+reduc))then
+                    ! if((temp%erg.lt.grad_fin%prev_erg).or.((t.gt.0.1).and.(temp%erg.lt.grad_fin%prev_erg+reduc)))then
                         acpt_cnt=acpt_cnt+1
                         chng_trk2(acpt_cnt)=pickorb
                         rjct_cnt=0
@@ -348,11 +358,18 @@ MODULE gradient_descent
                     do j=(ndet-ndet_increase+1),ndet
                         call zombiewriter(zstore(j),j,zstore(j)%gram_num)
                     end do
-                    reduc=1.0d-8
+                    !reduc=reduc*10
+                    !if(reduc.gt.1.0d-8)then
+                    !    reduc=1.0d-8
+                    !end if
                 else if(lr_loop_max.lt.min_clone_lr)then
                     lr_loop_max=lr_loop_max+1
                     blind_clone_num=blind_clone_num+2
                 end if 
+                reduc=reduc*10
+                if(reduc.gt.1.0d-7)then
+                    reduc=1.0d-7
+                end if
                 tracker=-1
                 lralt_extra=0
                 lralt_zs=0

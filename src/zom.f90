@@ -321,6 +321,7 @@ MODULE zom
             !     end if
             ! end if 
         end do 
+        
         return 
 
     end subroutine biased_func
@@ -369,12 +370,25 @@ MODULE zom
                 
             end do
             if(rhf_1=='y') then
-                zstore(1)%phi(1:nel)=0.5*pirl
-                zstore(1)%phi(nel+1:)=0
-                zstore(1)%val(1:norb)=0 
-                zstore(1)%val(norb+1:)=1 
-                zstore(1)%val(1:nel)=1
-                zstore(1)%val(norb+1:norb+nel)=0
+                !if(nel.eq.5)then
+                !   do j = 1, 6
+                !        zstore(j)%phi=0
+                !        zstore(j)%phi(1:4)=0.5*pirl
+                !        zstore(j)%val(1:norb)=0
+                !        zstore(j)%val(norb+1:)=1
+                !        zstore(j)%val(1:4)=1
+                !        zstore(j)%val(1+norb:4+norb)=0
+                !        zstore(j)%val(4+j)=1
+                !        zstore(j)%val(4+j+norb)=1.0d-15
+                !    end do
+                !else 
+                    zstore(1)%phi(1:nel)=0.5*pirl
+                    zstore(1)%phi(nel+1:)=0
+                    zstore(1)%val(1:norb)=0 
+                    zstore(1)%val(norb+1:)=1 
+                    zstore(1)%val(1:nel)=1
+                    zstore(1)%val(norb+1:norb+nel)=0
+                !end if
             end if 
         else if(imagflg=='y')then
             print*,"not yet written"
