@@ -289,29 +289,42 @@ MODULE zom
         real(wp)::step
 
         z1%phi=0.001
-        dead=norb-nel
-        step=(0.1-0.0001)/dead
-        mult=0
-        if(nel.gt.4)then
+     
+        if(nel.gt.10)then 
             z1%phi(1:4)=0.5*pirl
-            a1=5 
-        else if(nel.eq.4)then
+            a1=5
+            a2=18
+        else if(nel.gt.3)then
             z1%phi(1:2)=0.5*pirl
             a1=3
+            a2=10
         else
             a1=1
+            a2=10
         end if
+        ! dead=norb-nel
+        step=0.002 !(0.05-0.01)/dead
+        ! if(nel.gt.4)then
+        !     z1%phi(1:4)=0.5*pirl
+        !     a1=5 
+        ! else if(nel.eq.4)then
+        !     z1%phi(1:2)=0.5*pirl
+        !     a1=3
+        ! else
+        !     a1=1
+        ! end if
 
-        if(modulo(nel,2)==0) then 
-            a2=nel+4
-        else
-            a2=nel+5
-        end if
+        ! if(modulo(nel,2)==0) then 
+        !     a2=nel+4
+        ! else
+        !     a2=nel+5
+        ! end if
         do k=a1,a2
             z1%phi(k)=0.5*pirl*ZBQLU01()
-        end do 
+        end do
+        mult=0 
         do k=a2+1,norb
-            z1%phi(k)=0.01-mult*step
+            z1%phi(k)=0.1-mult*step
             mult=mult+1
             ! if(ZBQLU01().gt.0.8)then
             !     if(ZBQLU01().gt.0.5)then

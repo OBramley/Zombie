@@ -277,7 +277,10 @@ MODULE gradient_descent
                     thread%zom=zstore(pick)
                     temp=thread
                     temp%zom%phi(pickorb) = thread%zom%phi(pickorb)-(t*grad_fin%vars(pick,pickorb))
-
+                    if(abs(temp%zom%phi(pickorb)).gt.2*pirl)then
+                        write(stdout,'(1a)',advance='no') '!'
+                        cycle
+                    end if 
                     
                     call val_set(temp%zom,pickorb)
                     call he_full_row(temp,zstore,elect,ndet,pickorb)
@@ -344,6 +347,19 @@ MODULE gradient_descent
         
            
             if((chng_chng2.le.0).or.(rjct_cnt_global.gt.3*(lr_loop_max)))then
+                if((abs(comp-grad_fin%prev_erg).lt.reduc*1000).or.(grad_fin%prev_erg.gt.comp))then
+                    if((ndet.ge.ndet_max))then
+                        reduc=reduc/10
+                        if(reduc.lt.1.0d-13)then
+                            reduc=0
+                        end if 
+                    end if
+                else    
+                    reduc=reduc*5
+                    if(reduc.gt.1.0d-7)then
+                        reduc=1.0d-7
+                     end if
+                end if
                 if((ndet.lt.ndet_max))then
                     deallocate(picker,stat=ierr)
                     allocate(picker(ndet+ndet_increase-1),stat=ierr)
@@ -362,26 +378,8 @@ MODULE gradient_descent
                     do j=(ndet-ndet_increase+1),ndet
                         call zombiewriter(zstore(j),j,zstore(j)%gram_num)
                     end do
-                    !reduc=reduc*10
-                    !if(reduc.gt.1.0d-8)then
-                    !    reduc=1.0d-8
-                    !end if
                 else if(lr_loop_max.lt.min_clone_lr)then
                     lr_loop_max=lr_loop_max+1
-                    !blind_clone_num=blind_clone_num+2
-                end if
-                if((abs(comp-grad_fin%prev_erg).lt.reduc*1000).or.(grad_fin%prev_erg.gt.comp))then
-                    if((ndet.ge.ndet_max))then
-                        reduc=reduc/5!10
-                        if(reduc.lt.1.0d-13)then
-                            reduc=0
-                        end if 
-                    end if
-                !else    
-                    !reduc=reduc*5
-                    !if(reduc.gt.1.0d-7)then
-                    !    reduc=1.0d-7
-                    !end if
                 end if
                 comp=grad_fin%prev_erg
                 tracker=-1
@@ -396,7 +394,7 @@ MODULE gradient_descent
                 chng_chng=25  !blind_clone_num/4
                 lralt_extra2=lr_loop_max
                 if(((comp-grad_fin%prev_erg).lt.reduc*1000).or.(grad_fin%prev_erg.gt.comp))then
-                    reduc=reduc/5!10
+                    reduc=reduc/10
                 end if 
                 comp=grad_fin%prev_erg
             end if 
