@@ -208,6 +208,7 @@ MODULE gradient_descent
         p=70-norb
         if((ndet.lt.ndet_max).or.(epoc_cnt.lt.100))then
             reduc=1.0d-7
+            !reduc=0
         else
             !reduc=0
             reduc=1.0d-11
@@ -256,9 +257,7 @@ MODULE gradient_descent
                 write(stdout,'(i3)',advance='no') j
                 erg_str=grad_fin%prev_erg
                 pick=picker(j)
-                !if(pick.lt.7)then
-                !    cycle
-                !end if 
+                
                 chng_trk2=0
                 acpt_cnt=0
                 pickerorb=scramble_norb(norb)
@@ -277,10 +276,10 @@ MODULE gradient_descent
                     thread%zom=zstore(pick)
                     temp=thread
                     temp%zom%phi(pickorb) = thread%zom%phi(pickorb)-(t*grad_fin%vars(pick,pickorb))
-                    if(abs(temp%zom%phi(pickorb)).gt.2*pirl)then
-                        write(stdout,'(1a)',advance='no') '!'
-                        cycle
-                    end if 
+                    ! if(abs(temp%zom%phi(pickorb)).gt.2*pirl)then
+                    !     write(stdout,'(1a)',advance='no') '!'
+                    !     cycle
+                    ! end if 
                     
                     call val_set(temp%zom,pickorb)
                     call he_full_row(temp,zstore,elect,ndet,pickorb)
