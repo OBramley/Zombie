@@ -324,8 +324,11 @@ MODULE zom
         end do
         mult=0 
         do k=a2+1,norb
-            z1%phi(k)=(0.1-mult*step)*ZBQLU01()
-            mult=mult+1
+            z1%phi(k)=(0.25-mult*step)*ZBQLU01()
+            if(modulo(k,2)==0)then
+                mult=mult+1
+            end if
+           
             ! if(ZBQLU01().gt.0.8)then
             !     if(ZBQLU01().gt.0.5)then
             !         z1%phi(k)=z1%phi(k)+(ZBQLU01()*0.1)

@@ -207,8 +207,8 @@ MODULE gradient_descent
         extra_flag=0
         p=70-norb
         if((ndet.lt.ndet_max).or.(epoc_cnt.lt.100))then
-            reduc=1.0d-7
-            !reduc=0
+            reduc=1.0d-10
+            ! reduc=0
         else
             !reduc=0
             reduc=1.0d-11
@@ -353,7 +353,7 @@ MODULE gradient_descent
                             reduc=0
                         end if 
                     end if
-                else    
+                else if(comp-grad_fin%prev_erg.gt.reduc*10000)then    
                     reduc=reduc*5
                     if(reduc.gt.1.0d-7)then
                         reduc=1.0d-7
