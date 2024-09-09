@@ -177,7 +177,7 @@ MODULE gradient_descent
         integer,intent(in)::maxloop
         type(grad_do)::temp,thread
         integer::rjct_cnt,acpt_cnt,pickorb,loops,lralt_zs,acpt_cnt_2,lralt_extra2
-        integer::j,n,p,chng_chng,tracker,lralt_extra,extra_flag,chng_chng2
+        integer::j,n,p,chng_chng,tracker,lralt_extra,extra_flag,chng_chng2,reduc2
         integer,dimension(:),allocatable::chng_trk2,pickerorb
         real(wp)::t,erg_str,num_av,reduc,comp
         integer::ierr=0
@@ -207,7 +207,8 @@ MODULE gradient_descent
         extra_flag=0
         p=70-norb
         if((ndet.lt.ndet_max).or.(epoc_cnt.lt.100))then
-            reduc=1.0d-10
+            reduc=1.0d-7
+            reduc2=0
             ! reduc=0
         else
             !reduc=0
@@ -267,7 +268,7 @@ MODULE gradient_descent
                     pickorb=n !pickerorb(n)
                     call grad_calculate(haml,dvecs,zstore,grad_fin,pickorb)
                     if((abs(t*grad_fin%vars(pick,pickorb)).lt.reduc*10000).or.&
-                        (abs(t*grad_fin%vars(pick,pickorb)).gt.2*pirl).or.&
+                        ! (abs(t*grad_fin%vars(pick,pickorb)).gt.2*pirl).or.&
                         (abs(t*grad_fin%vars(pick,pickorb)).lt.1.0d-12))then
                         write(stdout,'(1a)',advance='no') '!'
                         cycle
@@ -286,7 +287,7 @@ MODULE gradient_descent
                     call imaginary_time(temp,ndet)
      
                     !if((grad_fin%prev_erg-temp%erg.ge.1.0d-14))then
-                    if((temp%erg.lt.grad_fin%prev_erg+reduc))then
+                    if((temp%erg.lt.grad_fin%prev_erg+reduc*(1**(-reduc2))))then
                     ! if((temp%erg.lt.grad_fin%prev_erg).or.((t.gt.0.1).and.(temp%erg.lt.grad_fin%prev_erg+reduc)))then
                         acpt_cnt=acpt_cnt+1
                         chng_trk2(acpt_cnt)=pickorb
@@ -343,8 +344,10 @@ MODULE gradient_descent
         
             lralt_zs=lralt_zs+1
             chng_chng=chng_chng-1
-        
-           
+            if(modulo(lralt_zs,2).eq.0)then
+                reduc2=reduc2+1
+            end if 
+
             if((chng_chng2.le.0).or.(rjct_cnt_global.gt.3*(lr_loop_max)))then
                 if((abs(comp-grad_fin%prev_erg).lt.reduc*1000).or.(grad_fin%prev_erg.gt.comp))then
                     if((ndet.ge.ndet_max))then
@@ -353,7 +356,7 @@ MODULE gradient_descent
                             reduc=0
                         end if 
                     end if
-                else if(comp-grad_fin%prev_erg.gt.reduc*10000)then    
+                else if(comp-grad_fin%prev_erg.gt.reduc*1000)then    
                     reduc=reduc*5
                     if(reduc.gt.1.0d-7)then
                         reduc=1.0d-7
@@ -387,8 +390,10 @@ MODULE gradient_descent
                 chng_chng=25  !blind_clone_num/4
                 chng_chng2=blind_clone_num
                 lralt_extra2=lr_loop_max
+                reduc2=0
             else if((chng_chng.le.0))then
                 lralt_zs=0
+                reduc2=0
                 lralt_extra=0
                 chng_chng=25  !blind_clone_num/4
                 lralt_extra2=lr_loop_max
@@ -402,6 +407,7 @@ MODULE gradient_descent
                 picker=scramble(ndet-1)
                 lralt_zs=lralt_extra
                 extra_flag=0
+                reduc2=0
                 if((acpt_cnt_2.lt.((ndet)/3)).or.(tracker.lt.0))then
                     tracker=tracker+1
                 end if    
