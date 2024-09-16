@@ -165,7 +165,7 @@ MODULE gradient_descent
     
     end subroutine var_check
 
-    subroutine orbital_gd(zstore,grad_fin,elect,dvecs,haml,maxloop)
+    subroutine orbital_gd(zstore,grad_fin,elect,dvecs,haml)
 
         implicit none 
 
@@ -174,7 +174,6 @@ MODULE gradient_descent
         type(dvector),intent(inout)::dvecs
         type(hamiltonian),intent(inout)::haml
         type(grad),intent(inout)::grad_fin
-        integer,intent(in)::maxloop
         type(grad_do)::temp,thread
         integer::rjct_cnt,acpt_cnt,pickorb,loops,lralt_zs,acpt_cnt_2,lralt_extra2
         integer::j,n,p,chng_chng,tracker,lralt_extra,extra_flag,chng_chng2,reduc2
@@ -212,7 +211,9 @@ MODULE gradient_descent
             ! reduc=0
         else
             !reduc=0
-            reduc=1.0d-11
+            reduc=reduc_in
+            reduc2=0
+            print*,reduc
         end if
         comp=grad_fin%prev_erg
         chng_chng=25  !blind_clone_num/4
@@ -352,11 +353,11 @@ MODULE gradient_descent
                 if((abs(comp-grad_fin%prev_erg).lt.reduc*1000).or.(grad_fin%prev_erg.gt.comp))then
                     if((ndet.ge.ndet_max))then
                         reduc=reduc/10
-                        if(reduc.lt.1.0d-13)then
-                            reduc=0
-                        end if 
+                        ! if(reduc.lt.1.0d-13)then
+                        !     reduc=0
+                        ! end if 
                     end if
-                else if(comp-grad_fin%prev_erg.gt.reduc*1000)then    
+                else if(comp-grad_fin%prev_erg.gt.reduc*5000)then    
                     reduc=reduc*5
                     if(reduc.gt.1.0d-7)then
                         reduc=1.0d-7
@@ -572,7 +573,7 @@ MODULE gradient_descent
        
         if(epoc_cnt.lt.epoc_max)then
             picker=scramble(ndet-1)
-            call orbital_gd(zstore,grad_fin,elect,dvecs,haml,epoc_max-epoc_cnt)
+            call orbital_gd(zstore,grad_fin,elect,dvecs,haml)
 
         end if 
       

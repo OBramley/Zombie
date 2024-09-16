@@ -1,6 +1,6 @@
 {  "pyscf_file":"Li_atom_ccpvdz",
     "setup":{
-        "runfolder":"Li_atom_10",
+        "runfolder":"Li_atom_14",
         "runtime": "48:00:00",
         "nodes":1,
         "cores":8,
@@ -13,7 +13,7 @@
     },
 
     "run":{
-        "ndet":45,
+        "ndet":15,
         "seed": 0,
         "zomgen":"y",
         "hamgen":"y",
@@ -37,14 +37,15 @@
 
     "grad":{
         "epoc_max":10000000,
-        "initial_learning_rate":12500,
+        "initial_learning_rate":62500,
         "learning_rate_decay":0.2,
-        "decay_steps":7,
+        "decay_steps":6,
         "clone":"y",
         "clone_max":45,
         "clone_steps":50,
-        "clone_num":1,
-        "max_loop_clone":14
+        "clone_num":5,
+        "max_loop_clone":8,
+        "back_trace":0.00000001
     }, 
 
     "gram":{

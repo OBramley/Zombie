@@ -139,6 +139,7 @@ MODULE globvars
     !!!!!! Gradient descent variables!!!!!!
     real(wp)::lr  ! learning rate
     real(wp)::lr_alpha ! learning rate reduction
+    real(wp)::reduc_in
     integer::epoc_max ! maximum number of epochs
     integer::lr_loop_max    ! maximum number of learning rates
     integer::ndet_increase ! number of determinants to increase by
@@ -216,7 +217,8 @@ MODULE globvars
         lr_loop_max=0    
         ndet_increase=0 
         blind_clone_num=0
-        ndet_max=0 
+        ndet_max=0
+        reduc_in=0
         rstrtflg='n'
         errorflag=0
 
