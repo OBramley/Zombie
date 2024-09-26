@@ -1,108 +1,121 @@
 MODULE globvars
 
+    use mod_types
 
+   
+    implicit none 
 
+    integer, parameter::wp = dp ! Sets the precision of the program to double precision
+
+   
     ! Type defining the zombie state
     type zombiest
-        ! complex(kind=8), dimension(:), allocatable::sin
-        ! complex(kind=8), dimension(:), allocatable::cos
-        real(kind=8), dimension(:), allocatable::sin
-        real(kind=8), dimension(:), allocatable::cos
-        real(kind=8),dimension(:),allocatable::phi
-        real(kind=8),dimension(:),allocatable::img
-        real(kind=8),dimension(:),allocatable::val
-        integer(kind=1),dimension(:),allocatable::dead
-        integer(kind=1),dimension(:),allocatable::alive
-        integer::update_num
+        real(wp),dimension(:),allocatable::phi
+        ! real(wp),dimension(:),allocatable::img
+        real(wp),dimension(:),allocatable::val
+        integer::gram_num
+        ! real(wp)::num_strt
     end type zombiest
+
+    interface val_set
+        module procedure val_set_single
+        module procedure val_set_whole
+    end interface val_set
 
    
     ! Type defining the Hamiltonian matrix and the overlap matrix
     type hamiltonian
-        real(kind=8), dimension(:,:), allocatable::hjk
-        real(kind=8), dimension(:,:), allocatable::ovrlp
-        real(kind=8), dimension(:,:), allocatable::inv
-        real(kind=8), dimension(:,:), allocatable::kinvh
-        ! complex(kind=8), dimension(:,:), allocatable::hjk
-        ! complex(kind=8), dimension(:,:), allocatable::ovrlp
-        ! complex(kind=8), dimension(:,:), allocatable::inv
-        ! complex(kind=8), dimension(:,:), allocatable::kinvh
-
-        real(kind=8), dimension(:,:,:), allocatable::diff_hjk !ZS to be differentiated,zs is bra or ket, orbital, bra/ket pairing
-        real(kind=8), dimension(:,:,:), allocatable::diff_ovrlp!ZS to be differntiated, orbital, bra/ket pairing
-        ! real(kind=8), dimension(:,:,:,:), allocatable::hess_hjk !ZS to be differentiated,zs is bra or ket, orbital, bra/ket pairing
-        ! real(kind=8), dimension(:,:,:,:), allocatable::hess_ovrlp!ZS to be differntiated, orbital, bra/ket pairing
-        real(kind=8), dimension(:,:,:,:), allocatable::diff_invh
-        real(kind=8), dimension(:,:,:,:),allocatable::diff_ov_dov
-        real(kind=8), dimension(:,:,:,:),allocatable::diff_in_dhjk
-        !The inverse of the overlap matrix multiplied by the hamiltonian
-        !diff_invh(j,l,k,m) j specifies the dependnce on zs_j, l,k give the 
+        real(wp), dimension(:,:), allocatable::hjk
+        real(wp), dimension(:,:), allocatable::ovrlp
+        real(wp), dimension(:,:), allocatable::inv
+        real(wp), dimension(:,:), allocatable::kinvh
     end type hamiltonian
 
     type dvector
-        !complex(kind=8), dimension(:), allocatable::d
-        real(kind=8), dimension(:), allocatable::d
-        real(kind=8), dimension(:,:,:),allocatable::d_diff
-        ! d_diff(k,j,m) strucutred k specifies the position in the vector d
-        ! j specifies the dependence on ZS j. m corresponds to the coeffcient m within 
-        ! zombie stae j
-        real(kind=8):: norm
+        integer::n
+        real(wp), dimension(:), allocatable::d
+        real(wp), dimension(:), allocatable::d_1
+        real(wp), dimension(:,:),allocatable::d_gs
+        real(wp):: norm
+        integer(int8):: d_o_d
     end type dvector
-
-    type energy
-        real(kind=8), dimension(:),allocatable::t
-        real(kind=8), dimension(:,:),allocatable::erg 
-        ! complex(kind=8), dimension(:,:),allocatable::erg 
-    end type energy
 
     ! Type defining the 1&2 electron integrals
     type elecintrgl
-        integer::h1_num
-        integer::h2_num
-        real(kind=8), dimension(:), allocatable::h1ei
-        real(kind=8), dimension(:), allocatable::h2ei
-        real(kind=8) :: hnuc
-        
+        integer::num
+        real(wp), dimension(:), allocatable::integrals
+        integer,dimension(:,:),allocatable::orbital_choice
+        integer,dimension(:,:),allocatable::orbital_choice2
+        integer,dimension(:),allocatable::orbital_choice3
+        real(wp) :: hnuc
     end type elecintrgl
 
-    type oprts_2
-        integer(kind=2),dimension(:,:), allocatable::alive,dead
-        integer(kind=1),dimension(:,:), allocatable::neg_alive,neg_dead
-    end type oprts_2
-
     type oprts
-        type(oprts_2)::ham 
-        type(oprts_2),allocatable,dimension(:)::diff
-        ! type(oprts_2),allocatable,dimension(:,:)::hess
-        integer,dimension(:,:), allocatable::dcnt
-        ! integer,dimension(:,:,:), allocatable::hcnt
+        integer(int16),dimension(:,:), allocatable::alive,dead
+        integer(int8),dimension(:,:), allocatable::neg_alive,neg_dead
     end type oprts
-
     
+    type grad_do
+        real(dp), dimension(:,:), allocatable::hjk
+        real(dp), dimension(:,:), allocatable::ovrlp
+        real(dp), dimension(:,:), allocatable::inv
+        real(dp), dimension(:,:), allocatable::kinvh
+        ! real(wp),dimension(:,:,:),allocatable::wf_ovrlp
+        
+        type(zombiest)::zom
+        type(dvector)::dvecs
+        real(dp)::erg
+    end type grad_do
 
     type grad 
-        real(kind=8),dimension(:,:), allocatable::vars
-        ! real(kind=8),dimension(:,:), allocatable::vars_hess
-        ! real(kind=8),dimension(:,:,:), allocatable::hessian
-        real(kind=8):: prev_erg
-        real(kind=8):: current_erg
+        real(wp),dimension(:,:), allocatable::vars
+        real(wp):: prev_erg
+        real(wp):: current_erg
         integer,dimension(:,:),allocatable::grad_avlb
-        ! real(kind=8),dimension(:,:),allocatable::prev_mmntm
-        ! real(kind=8),dimension(:),allocatable::hess_sum
-        real(kind=8),dimension(:,:,:),allocatable::one_elec
-        real(kind=8),dimension(:,:,:),allocatable::two_elec
-        real(kind=8),dimension(:),allocatable::ovrlp_div
+        real(wp),dimension(:,:,:),allocatable::ovrlp_grad
+        integer,dimension(:,:,:),allocatable::ovrlp_grad_avlb
     end type grad
+
+    ! type gram
+    !     integer::state_num
+    !     type(zombiest),dimension(:),allocatable::zstore
+    !     type(dvector)::dvecs
+    !     type(hamiltonian)::haml
+    !     ! type(grad)::grads
+    !     real(wp),dimension(:,:,:),allocatable::wf_ovrlp
+    !     real(wp)::d_ovrlp_d
+    ! end type gram 
+
+    ! type trial_data
+    !     real(wp)::dead
+    !     real(wp)::alive
+    !     real(wp)::new_ham
+    !     real(wp)::old_ham
+    !     integer::orbital
+    !     integer::diag
+    !     integer::rhf
+    !     integer::z1
+    !     integer::z2
+    !     real(wp),dimension(:),allocatable::input_features
+    ! end type trial_data
+
+    ! type neural_network_layer
+    !     real(wp),dimension(:,:),allocatable::weights
+    !     real(wp),dimension(:),allocatable::biases
+    !     real(wp),dimension(:),allocatable::hidden_layer
+    !     real(wp)::output
+    ! end type neural_network_layer
 
     
     integer::ndet       ! Number of Zombie states
     integer::norb       ! Number of spin orbitals
     integer::nel        ! Number of electrons in molecule
-    real(kind=8)::spin  ! Spin of the molecule
+    real(wp)::spin  ! Spin of the molecule
     real::beta       ! Distance proagated in imaginary time
     integer::timesteps  ! Number of time steps
     character(LEN=2)::zst !Type of zombie state to be generated
 
+   
     character(LEN=1)::rstrtflg   ! Flag to restart program
     character(LEN=1)::GDflg      ! Flag to decide if to use Gradient descent 
     character(LEN=1)::zomgflg    ! Flag to generate zombie states or not
@@ -112,20 +125,78 @@ MODULE globvars
     character(LEN=1)::gramflg    ! Flag to determine if gram schmidt orthogolnalisation should be carried out
     character(LEN=1)::GPUflg     ! GPU flag
     integer::gramnum             ! Number of additional states to be generated for GS orthogonalisation
+    integer::gramwave            ! Number of wave functions to be generated for GS orthogonalisation
     character(LEN=1)::rhf_1      ! Flag to decide if the first zombie state should be st as the RHF determinant
     character(LEN=1)::imagflg    ! Flag to decide if zombie states are imaginary or real
-    real(kind=8)::pirl      ! pi
-    real(kind=8) :: sqrtpi  ! square root of pi
-    complex(kind=8)::i      ! The imagianry unit
+    integer(wp):: randseed       ! Random seed
+    real(wp), parameter::pirl  = ATAN(1.0d0)*4.0d0      ! pi
+    real(wp), parameter :: sqrtpi = sqrt(pirl)  ! square root of pi
+    complex(wp)::i      ! The imagianry unit
 
     integer:: errorflag      ! Error flag
+    
+
+    !!!!!! Gradient descent variables!!!!!!
+    real(wp)::lr  ! learning rate
+    real(wp)::lr_alpha ! learning rate reduction
+    real(wp)::reduc_in
+    integer::epoc_max ! maximum number of epochs
+    integer::lr_loop_max    ! maximum number of learning rates
+    integer::ndet_increase ! number of determinants to increase by
+    integer::blind_clone_num !number of steps before blind cloning
+    integer::ndet_max ! maximum number of determinants
+    integer::min_clone_lr ! maximum number of learnign rates after cloning
+    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
     integer::num_devices     !number of devices 
     integer::max_threads
     integer::max_teams
     integer::threadpteam
 
+   
+    
     contains
+
+    subroutine val_set_whole(this)
+        implicit none
+        class(zombiest),intent(inout)::this
+        this%val(0)=0.0d0
+        
+      
+        this%val(1:norb)=sin(this%phi)
+        this%val(1+norb:2*norb)=cos(this%phi)
+    
+        return
+
+    end subroutine val_set_whole
+
+    subroutine val_set_single(this,n)
+        implicit none
+        class(zombiest),intent(inout)::this
+        integer,intent(in)::n
+
+        this%val(n)=sin(this%phi(n))
+        this%val(n+norb)=cos(this%phi(n))
+       
+    
+        return
+    end subroutine val_set_single
+
+    function sign_d_o_d(x) result(s)
+
+        implicit none 
+        real(wp),intent(in)::x
+        integer(int8)::s
+
+        if(x>0) then
+            s=-1
+        else if(x<0) then
+            s=1
+        else
+            s=0
+        end if
+
+    end function sign_d_o_d
 
     subroutine initialise
         implicit none
@@ -139,11 +210,17 @@ MODULE globvars
         beta=0
         timesteps=0
         gramnum=0
-
+        gramwave=0
+        lr=0  
+        lr_alpha=0 
+        epoc_max=0 
+        lr_loop_max=0    
+        ndet_increase=0 
+        blind_clone_num=0
+        ndet_max=0
+        reduc_in=0
+        rstrtflg='n'
         errorflag=0
-
-        sqrtpi = 1.7724538509055160272981674833411451827975494561223871d0
-        pirl = sqrtpi**2.0d0
 
         i = (0.0d0,1.0d0)
 

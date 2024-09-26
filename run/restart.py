@@ -6,59 +6,86 @@
 # 
 ###################################################################################################
 import sys
-
-import inputs
 import os
 import socket
-from glob import glob
-import getpass
-import shutil
 import subprocess
-import random
-import math 
-from pyscf import gto, scf, ao2mo
-from functools import reduce
-import numpy
 import csv
+import json 
+with open('inputs.json') as f:
+    inputs=json.load(f)
+
+if(inputs['setup']['elecs']=='pyscf'):
+    with open(inputs['pyscf_file']+'.json') as json_file:
+        pyscf_ins=json.load(json_file)
+    inputs['zombs']['norb']= pyscf_ins['norb']
+    inputs['zombs']['nel']= pyscf_ins['nel']
+    inputs['zombs']['spin']= pyscf_ins['spin']
 
 # Checking input paramaters 
-if(isinstance(inputs.run['nodes'],int)==False):
+if(isinstance(inputs['setup']['nodes'],int)==False):
     sys.exit("Number of folders must be an integer")
-elif(isinstance(inputs.run['cores'],int)==False):
+elif(isinstance(inputs['setup']['cores'],int)==False):
     sys.exit("Number of parallel cores must be an integer")
-elif(inputs.run['nodes']<1):
+elif(inputs['setup']['nodes']<1):
     sys.exit("Not enough nodes selected. Must be 1 or greater")
-elif(inputs.run['nodes']>100):
+elif(inputs['setup']['nodes']>100):
     sys.exit("Too many nodes. Maximum of 100 simultaneous submisions")
-elif(inputs.run['cores']>40):
+elif(inputs['setup']['cores']>40):
     sys.exit("Too many cores selected. Maximum of 40 available")
-elif(inputs.run['cores']<1):
+elif(inputs['setup']['cores']<1):
     sys.exit("Not enough cores selected. Must be 1 or greater")
-elif(inputs.zombs['norb']<1):
+elif(inputs['zombs']['norb']<1):
     sys.exit("Not enough orbitals. Must be 1 or greater")
-elif(inputs.zombs['zomtyp'] not in {'ran','HF','bb','hf'}):
+# elif(inputs['zombs']['ndet']<2):
+    # sys.exit("Not enough zombie states. Must be 2 or greater")
+elif(inputs['zombs']['zomtyp'] not in {'ran','HF','bb','hf'}):
     sys.exit("Type of zombie state must be ran, HF or bb")
-elif(inputs.run['elecs'] not in {'pyscf','mol','no'}):
+elif(inputs['setup']['elecs'] not in {'pyscf','mol','no'}):
     sys.exit("one and two electron integral paramter must be 'pyscf', 'mol' or 'no'")
-elif(inputs.run['zomgen'] not in {'y','n'}):
+elif(inputs['run']['zomgen'] not in {'y','n'}):
     sys.exit("Generation of a new set of zombie states must be either 'y' or 'n'")
-elif(inputs.run['imagprop'] not in {'y','n'}):
+elif(inputs['run']['imagprop'] not in {'y','n'}):
     sys.exit("The imaginary time propagation parameter has been inccorectly set must be either 'y' or 'n'")
-elif(isinstance(inputs.run['beta'],int)==False):
+elif(isinstance(inputs['run']['beta'],int)==False):
     sys.exit("Beta must be an integer")
-elif(isinstance(inputs.run['timesteps'],int)==False):
+elif(isinstance(inputs['run']['timesteps'],int)==False):
     sys.exit("Beta must be an integer")
-elif(inputs.run['gram'] not in {'y','n'}):
+elif(inputs['run']['gram'] not in {'y','n'}):
     sys.exit("The Gram Schmidt pramater must be either 'y' or 'n'")
-elif(inputs.run['zomhf'] not in {'y','n'}):
-    sys.exit("Setting the first zombie state as a RHF determinant must be either 'y' or 'n'")
-elif(isinstance(inputs.run['hfnum'],int)==False):
-    sys.exit("Number of the RHF determinant must be an integer")
-elif(isinstance(inputs.run['gramnum'],int)==False):
-    sys.exit("Number of states to be investiated must be an integer")
-elif(inputs.run['clean'] not in {'y','n','f'}):
+elif(inputs['run']['clean'] not in {'y','n','f'}):
     sys.exit("Setting cleaning on or off must be 'y' or 'n' or 'f' (to clean from a previously generated file)")
 
+if(inputs['run']['gram']=='y'):
+    if(isinstance(inputs['gram']['gramnum'],int)==False):
+        sys.exit("Number of states for Gram Schmidt must be an integer")
+    elif(inputs['gram']['gramnum']<1):
+        sys.exit("If using Gram Schmidt more than one state must investigated")
+
+if(inputs['run']['grad']=='y'):
+    if(inputs['run']['hamgen']=='n'):
+        sys.exit("If using gradient descent a new Hamiltonian must be generated")
+    elif(inputs['zombs']['rhf_1']=='n'):
+        sys.exit("If using gradient descent the first zombie state must be the RHF state")
+    elif(isinstance(inputs['grad']['decay_steps'],int)==False):
+        sys.exit("Decasy steps must be an integer")
+    elif(inputs['grad']['decay_steps']<1):
+        sys.exit("Decay steps must be 1 or greater")
+    elif(isinstance(inputs['grad']['learning_rate_decay'],float)==False):
+        sys.exit("Decay rate must be a float")
+    elif(inputs['grad']['learning_rate_decay']>1 or inputs['grad']['learning_rate_decay']<0):
+        sys.exit("Decay rate must be between 0 and 1")
+    elif(isinstance(inputs['grad']['epoc_max'],int)==False):
+        sys.exit("Number of epocs must be an integer")
+    elif(inputs['grad']['epoc_max']<1):
+        sys.exit("Number of epocs must be 1 or greater")
+    elif(inputs['grad']['clone'] not in {'y','n'}):
+        sys.exit("Clone parameter must be 'y' or 'n'")
+    elif(isinstance(inputs['grad']['clone_max'],int)==False):
+        sys.exit("Clone max must be an integer")
+    elif(isinstance(inputs['grad']['clone_steps'],int)==False):
+        sys.exit("Clone steps must be an integer")
+    elif(isinstance(inputs['grad']['clone_num'],int)==False):
+        sys.exit("Number of additional clones must be an integer")
 
 print("Arguments checked")
 # Check if on HPC
@@ -76,62 +103,43 @@ if os.path.exists("rundata.csv"):
 else:
   print("rundata.csv file does not exist")
 
-zomstat='n'
-hamstat='y'
-cleanstat='n'
-
-# if(inputs.run['zomgen']=='y'):
-#     file=glob('data/zombie_*')
-#     if os.path.exists(file):
-#         zomstat='n' 
-#     else: 
-#         zomstat='y'
-if(inputs.run['grad']=='n'):
-    if(inputs.run['hamgen']=='y'):
-        if os.path.exists('data/ham.csv'):
-            if os.path.exists('data/ovlp.csv'):
-                hamstat='n'
-            else:
-                os.remove("data/ham.csv")
-                hamstat='y'
-        else: 
-            if os.path.exists('data/ovrlp.csv'):
-                os.remove("data/ovrlp.csv")
-                hamstat='y'
-            else:
-                os.remove("data/ham.csv")
-                hamstat='y'
-
- 
-# with open("rundata.csv",'w',newline='')as file:
-#     writer = csv.writer(file)
-#     writer.writerow([zomstat,hamstat,inputs.run['imagprop'],inputs.run['beta'],inputs.run['timesteps'],inputs.run['clean'],inputs.run['gram'],inputs.run['gramnum'],inputs.run['grad'],'y'])
-#     writer.writerow(inputs.zombs.values())
-#     writer.writerow([inputs.run['hamfile'],inputs.run['ovrlfile'],inputs.run['cleanham']])
-   
-os.environ["OMP_CANCELLATION"]="TRUE" 
+with open('rundata.csv','w',newline='')as file:
+    writer = csv.writer(file)
+    writer.writerow(inputs['run'].values())
+    writer.writerow(inputs['zombs'].values())
+    if(inputs['run']['grad']=='y'):
+        writer.writerow(inputs['grad'].values())
+    if(inputs['run']['gram']=='y'):
+        writer.writerow(inputs['gram'].values())
+# HPCFLG=0
 if(HPCFLG==1):
-    if(inputs.run['cores']!=1):
-        os.environ["OMP_NUM_THREADS"]=str(inputs.run['cores'])
-    number=random.randint(99999,1000000)
-    file1="zombie"+str(number)+".sh"
+    if(inputs['setup']['cores']!=1):
+        os.environ["OMP_NUM_THREADS"]=str(inputs['setup']['cores'])
+    file1="zombie_"+inputs['setup']['runfolder']+".sh"
+    if os.path.exists(file1):
+        os.remove(file1)
     f=open(file1,"w")
     f.write("#$ -cwd -V \n")
-    if(inputs.run['cores']!=1):
-        f.write("#$ -pe smp "+str(inputs.run['cores'])+" \n") #Use shared memory parallel environemnt 
-    f.write("#$ -l h_rt="+inputs.run['runtime']+"\n")
-    f.write("#$ -l h_vmem=5G \n")
-    f.write("export OMP_CANCELLATION=true \n")
+    if(inputs['setup']['cores']!=1):
+        f.write("#$ -pe smp "+str(inputs['setup']['cores'])+" \n") #Use shared memory parallel environemnt 
+    if(inputs['setup']['GPU']=='y'):
+        f.write("#$ -l coproc_v100=1 \n")
+        f.write("#$ -P feps-gpu \n")
+    f.write("#$ -l h_rt="+inputs['setup']['runtime']+"\n")
+    f.write("#$ -l h_vmem=1G \n")
     f.write("module add mkl \n")
-    # f.write('time ./d_check.exe')
-    f.write('time ./ZOMBIE.exe')
+    f.write('time ./ZOMBIE')
     f.close()
-    subprocess.call(['qsub',file1])
+
+    command=['qsub','-N',inputs['setup']['runfolder']+"_1",file1]
+    for i in range(1,inputs['setup']['submissions']+1):
+        subprocess.call(command)
+        command=['qsub','-N',inputs['setup']['runfolder']+"_"+str(i+1),'-hold_jid',inputs['setup']['runfolder']+"_"+str(i),file1]     
 else:
     print(os.getcwd())
-    if(inputs.run['cores']!=1):
-        os.environ["OMP_NUM_THREADS"]=str(inputs.run['cores'])
-    subprocess.run(["./ZOMBIE.exe"])
+    if(inputs['setup']['cores']!=1):
+        os.environ["OMP_NUM_THREADS"]=str(inputs['setup']['cores'])
+    subprocess.run(["./ZOMBIE"])
         
         
 

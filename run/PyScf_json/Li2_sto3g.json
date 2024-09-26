@@ -1,0 +1,13 @@
+{
+    "units":"Angstrom",
+    "atoms": "Li 0 0 0; Li 0 0 2.673",
+    "bs" : "sto-3g",
+    "verbosity" : 2,
+    "symmetry" :true,
+    "spin":0,
+    "charge":0,
+    "symmetry_subgroup" : 0,
+    "norb": 10,
+    "nel"
+    :6
+}
