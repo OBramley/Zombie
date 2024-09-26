@@ -1,1019 +1,533 @@
 MODULE gradient_descent
 
+    use mod_types
+    use randgen
     use globvars
     use alarrays
     use ham
-    use grad_d
     use imgtp
     use outputs
     use infnan_mod
-    use grad_calc
-    use zom 
-    
+    use zom
+    use operators 
+    ! use neural_network
+
+    implicit none 
+   
+    integer::epoc_cnt !epoc counter
+    integer::rjct_cnt_global=0
+    integer::pick !Chosen zombie state
+    integer,dimension(:),allocatable::picker
+    integer,dimension(:),allocatable::chng_trk
+    real(wp),dimension(:),allocatable::orb_store
     contains
 
     ! Subroutine to calcualte Hamiltonian elements combines 1st and 2nd electron integral calcualations so remove double 
     ! calcualiton of certain results. This minimises the (slow) applicaiton of the creation and annihilaiton operators
 
     ! Subroutine that controls and calcualtes all of the hamiltonian variables 
-    subroutine he_full_row(haml,zstore,zs_diff,elecs,size,an_cr,an2_cr2,diff_state)
+    subroutine he_full_row(temp,zstore,elecs,size,orb)
 
         implicit none 
 
-        type(hamiltonian), intent(inout)::haml
+        type(grad_do),intent(inout)::temp
         type(zombiest),dimension(:),intent(in)::zstore
-        type(zombiest),intent(in)::zs_diff
         type(elecintrgl),intent(in)::elecs
-        type(oprts),intent(in)::an_cr,an2_cr2
-        integer,intent(in)::size,diff_state
+        integer,intent(in)::size,orb
         integer, allocatable,dimension(:)::IPIV1
-        real(kind=8),allocatable,dimension(:)::WORK1
-        
-        integer::ierr
+        real(dp),allocatable,dimension(:)::WORK1
+        integer::ierr=0
 
 
         if (errorflag .ne. 0) return
-        ierr=0
-       
-        call haml_ovrlp_column(haml,zs_diff%val,zstore,ndet,an_cr%ham,an2_cr2%ham,elecs,diff_state)
-        
-        haml%inv=haml%ovrlp
+        if(orb.eq.0)then
+             call haml_ovrlp_column(temp,zstore,ndet,elecs,pick)
+        else
+            ! call haml_vals_2_orb_2(zstore,temp,elecs,pick,orb)
+            call haml_ovrlp_column_orb(temp,zstore,ndet,elecs,pick,orb)    
+        end if
+        temp%inv=temp%ovrlp
        
         allocate(WORK1(size),IPIV1(size),stat=ierr)
         if (ierr/=0) then
-            write(0,"(a,i0)") "Error in IPIV or WORK1 vector allocation . ierr had value ", ierr
+            write(stderr,"(a,i0)") "Error in IPIV or WORK1 vector allocation . ierr had value ", ierr
             errorflag=1
         end if 
 
       
-        Call dgetrf(size, size, haml%inv, size, IPIV1, ierr)
+        Call dgetrf(size, size, temp%inv, size, IPIV1, ierr)
         if (ierr/=0) then
-            write(0,"(a,i0)")"Error in DGETRF",ierr
+            write(stderr,"(a,i0)")"Error in DGETRF",ierr
         end if
-        if (ierr==0) call dgetri(size,haml%inv,size,IPIV1,WORK1,size,ierr)
+        if (ierr==0) call dgetri(size,temp%inv,size,IPIV1,WORK1,size,ierr)
         if (ierr/=0) then
-            write(0,"(a,i0)")"Error in DGETRF",ierr
+            write(stderr,"(a,i0)")"Error in DGETRF",ierr
         end if
 
-        deallocate(WORK1,IPIV1)
-
-        call DGEMM("N","N",size,size,size,1.d0,haml%inv,size,haml%hjk,size,0.d0,haml%kinvh,size)
-
+        deallocate(WORK1,IPIV1,stat=ierr)
+        if (ierr/=0) then
+            write(stderr,"(a,i0)") "Error in IPIV or WORK1 vector deallocation . ierr had value ", ierr
+            errorflag=1
+        end if
+       
+        call DGEMM("N","N",size,size,size,1.d0,temp%inv,size,temp%hjk,size,0.d0,temp%kinvh,size)
+        
         return
 
     end subroutine he_full_row
 
-    subroutine he_full_row_new(haml,zstore,zs_diff,grad_fin,elecs,size,an_cr,an2_cr2,diff_state,orb,store_one,store_two)
-
-        implicit none 
-
-        type(hamiltonian), intent(inout)::haml
-        type(zombiest),dimension(:),intent(in)::zstore
-        type(zombiest),intent(in)::zs_diff
-        type(elecintrgl),intent(in)::elecs
-        type(grad),intent(inout)::grad_fin
-        type(oprts),intent(in)::an_cr,an2_cr2
-        integer,intent(in)::size,diff_state,orb
-        real(kind=8),dimension(:,:),intent(inout)::store_one,store_two
-        integer, allocatable,dimension(:)::IPIV1
-        real(kind=8),allocatable,dimension(:)::WORK1
-        
-        integer::ierr
-
-
-        if (errorflag .ne. 0) return
-        ierr=0
-        call grad_zom_new_vals(zstore,zs_diff,elecs,grad_fin,haml,diff_state,orb,an_cr%ham,an2_cr2%ham,store_one,store_two)
-        
-        haml%inv=haml%ovrlp
-       
-        allocate(WORK1(size),IPIV1(size),stat=ierr)
-        if (ierr/=0) then
-            write(0,"(a,i0)") "Error in IPIV or WORK1 vector allocation . ierr had value ", ierr
-            errorflag=1
-        end if 
-
-      
-        Call dgetrf(size, size, haml%inv, size, IPIV1, ierr)
-        if (ierr/=0) then
-            write(0,"(a,i0)")"Error in DGETRF",ierr
-        end if
-        if (ierr==0) call dgetri(size,haml%inv,size,IPIV1,WORK1,size,ierr)
-        if (ierr/=0) then
-            write(0,"(a,i0)")"Error in DGETRF",ierr
-        end if
-
-        deallocate(WORK1,IPIV1)
-
-        call DGEMM("N","N",size,size,size,1.d0,haml%inv,size,haml%hjk,size,0.d0,haml%kinvh,size)
-
-        return
-
-    end subroutine he_full_row_new
-
-
-    subroutine grad_calculate(haml,zstore,elect,an_cr,an2_cr2,pick,dvec,grad_fin,en,orb,epoc_cnt)
-
-        implicit none 
-
-        type(zombiest),dimension(:),intent(in)::zstore
-        type(grad),intent(inout)::grad_fin
-        type(elecintrgl),intent(in)::elect
-        type(dvector),dimension(:),intent(inout)::dvec
-        type(hamiltonian),intent(inout)::haml
-        type(oprts),intent(in)::an_cr,an2_cr2
-        integer,intent(in)::pick,orb,epoc_cnt
-        DOUBLE PRECISION, external::ZBQLU01
-        type(energy),intent(inout)::en
-        integer::j,strt
-       
-        if (errorflag .ne. 0) return
-
-        ! strt=0
-        ! if(epoc_cnt.ne.0)then
-        !     if(modulo(epoc_cnt,2).eq.0)then
-        !         strt=1
-        !     else 
-        !         strt=2
-        !     end if 
-        ! end if
-
-        ! grad_fin%vars(pick,:)=0
-
-        if((grad_fin%grad_avlb(0,pick).eq.0).or.(orb.ne.0))then
-            dvec(1)%d_diff(:,pick,:)=0
-            
-            call gradient_zs(haml,zstore,elect,grad_fin,an_cr,an2_cr2,pick,orb,grad_fin%grad_avlb(1:ndet,pick))!,strt)
-            
-            ! if(ZBQLU01(1).lt.0.9.and.(orb.ne.0))then
-            !     grad_fin%grad_avlb(0,pick)=1
-            ! end if
-        end if 
-       
-        if(grad_fin%grad_avlb(0,pick).eq.1)then
-            dvec(1)%d_diff(:,pick,:)=0
-            call sub_matrices(haml,pick)!,strt)
-            call imaginary_time_prop2(dvec,en,haml,ndet,pick,0)
-        else if(grad_fin%grad_avlb(0,pick).eq.2)then
-            dvec(1)%d_diff(:,pick,:)=0
-        end if
-        
     
-        call final_grad(dvec(1),haml,grad_fin,pick,orb)!,strt)
-        en%erg=0
-        en%t=0
-        ! grad_fin%vars(pick,:)=grad_fin%vars(pick,:)+ (8.0 * pirl)
+    subroutine grad_calculate(haml,dvecs,zstore,grad_fin,orb)
+
+        implicit none 
+
+        type(grad),intent(inout)::grad_fin
+        type(hamiltonian),intent(inout)::haml
+        type(dvector),intent(inout)::dvecs
+        type(zombiest),dimension(:),intent(in)::zstore
+        real(wp)::ham_c_d
+        real(wp),dimension(ndet)::temp
+        integer,intent(in)::orb
+        integer::j,k
        
-        grad_fin%vars(pick,:)=modulo(grad_fin%vars(pick,:), 2.0 * pirl)
-        ! if( grad_fin%grad_avlb(0,pick).eq.0)then 
-        !     grad_fin%grad_avlb(0:,pick)=1
-        ! else if( grad_fin%grad_avlb(0,pick).eq.1)then 
-        !     grad_fin%grad_avlb(0:,pick)=2
-        ! else if( grad_fin%grad_avlb(0,pick).eq.2)then 
-        !     grad_fin%grad_avlb(0:,pick)=1
-        ! end if 
+        if (errorflag .ne. 0) return
 
-        if(orb.eq.0)then
-            if( grad_fin%grad_avlb(0,pick).eq.0)then 
-                grad_fin%grad_avlb(0:,pick)=1
-            else if( grad_fin%grad_avlb(0,pick).eq.1)then 
-                grad_fin%grad_avlb(0:,pick)=2
-            else if( grad_fin%grad_avlb(0,pick).eq.2)then 
-                grad_fin%grad_avlb(0:,pick)=1
-            end if
-            do j=1,norb
-                if(is_nan(grad_fin%vars(pick,j)).eqv..true.)then
-                    ! write(0,"(a,i0,a,i0)")"nan detected in zombie state ",pick, " orbtial ",j
-                    grad_fin%grad_avlb(j,pick)=0
-                    grad_fin%vars(pick,j)=0
-                    grad_fin%grad_avlb(0,pick)=0
-                end if
-            end do
+        if(orb==0)then
+            if(grad_fin%grad_avlb(1,pick)==0)then
+                call DGEMV("N",ndet,ndet,1.d0,haml%hjk,ndet,dvecs%d,1,0.d0,temp,1)
+                ham_c_d=(dvecs%d_o_d/(dvecs%norm*dvecs%norm*dvecs%norm))*dot_product(temp,dvecs%d_1)
+                !$omp parallel private(j,k,temp) shared(zstore,pick,ndet,norb,dvecs,ham_c_d,grad_fin) 
+                !$omp do collapse(2)
+                do j=1,ndet
+                    do k=1,norb
+                        if(grad_fin%ovrlp_grad_avlb(k,j,pick).eq.0)then
+                            grad_fin%ovrlp_grad(k,j,pick)=haml%ovrlp(j,pick)*&
+                            (zstore(j)%val(k)*zstore(pick)%val(k+norb)-zstore(j)%val(k+norb)*zstore(pick)%val(k))/&
+                            (zstore(j)%val(k)*zstore(pick)%val(k)+zstore(j)%val(k+norb)*zstore(pick)%val(k+norb))
+                            grad_fin%ovrlp_grad_avlb(k,j,pick)=1
+                        end if 
+                    end do
+                end do 
+                !$omp end do
+                !$omp critical
+                !$omp end critical
+                !$omp do
+                do k=1,norb
+                    temp=grad_fin%ovrlp_grad(k,:,pick)*dvecs%d_1     
+                    temp(pick)= dot_product(grad_fin%ovrlp_grad(k,:,pick),dvecs%d_1)
+                    grad_fin%vars(pick,k)=dot_product(temp,dvecs%d_1)*ham_c_d
+                end do
+                !$omp end do
+                !$omp end parallel
+                grad_fin%grad_avlb(:,pick)=1
+            else 
+                return
+            end if 
         else
-            if(is_nan(grad_fin%vars(pick,orb)).eqv..true.)then
-                write(0,"(a,i0,a,i0)")"nan detected in zombie state ",pick, " orbtial ",orb
-                grad_fin%grad_avlb(orb,pick)=0
-                grad_fin%vars(pick,orb)=0
-                grad_fin%grad_avlb(0,pick)=0
+            if(grad_fin%grad_avlb(orb,pick)==0)then
+                call DGEMV("N",ndet,ndet,1.d0,haml%hjk,ndet,dvecs%d,1,0.d0,temp,1)
+                ham_c_d=(dvecs%d_o_d/(dvecs%norm*dvecs%norm*dvecs%norm))*dot_product(temp,dvecs%d_1)
+                !$omp parallel do private(j) shared(zstore,grad_fin,haml,pick,ndet,norb,orb)
+                do j=1,ndet
+                    if(grad_fin%ovrlp_grad_avlb(orb,j,pick).eq.0)then
+                        grad_fin%ovrlp_grad(orb,j,pick)=haml%ovrlp(j,pick)*&
+                        (zstore(j)%val(orb)*zstore(pick)%val(orb+norb)-zstore(j)%val(orb+norb)*zstore(pick)%val(orb))/&
+                        (zstore(j)%val(orb)*zstore(pick)%val(orb)+zstore(j)%val(orb+norb)*zstore(pick)%val(orb+norb))
+                        grad_fin%ovrlp_grad_avlb(orb,j,pick)=1
+                    end if
+                end do  
+                !$omp end parallel do
+                temp=grad_fin%ovrlp_grad(orb,:,pick)*dvecs%d_1
+                temp(pick)=dot_product(grad_fin%ovrlp_grad(orb,:,pick),dvecs%d_1)
+                grad_fin%vars(pick,orb)=dot_product(temp,dvecs%d_1)*ham_c_d
+                grad_fin%grad_avlb(orb,pick)=1
+            else 
+                return
             end if
-        end if 
-
-
+        end if
+    
+        call var_check(grad_fin%vars(pick,:))
+       
         return
 
     end subroutine grad_calculate
 
+    elemental subroutine var_check(var)
+    
+            implicit none 
+            real(dp),intent(inout)::var
+    
+            if(is_nan(var).eqv..true.)then
+                var=0
+            end if
+    
+            return
+    
+    end subroutine var_check
 
-    subroutine orbital_gd(zstore,grad_fin,elect,dvecs,en,haml,epoc_cnt,alpha,b,picker,maxloop,an_cr,an2_cr2,&
-        rjct_cnt_in,epoc_max) 
+    subroutine orbital_gd(zstore,grad_fin,elect,dvecs,haml)
 
         implicit none 
 
-        type(zombiest),dimension(:),intent(inout)::zstore
-        type(grad),intent(inout)::grad_fin
+        type(zombiest),dimension(:),allocatable,intent(inout)::zstore
         type(elecintrgl),intent(in)::elect
-        type(dvector),dimension(:),intent(inout)::dvecs
-        type(dvector),dimension(:),allocatable::temp_dvecs
-        type(dvector),dimension(:),allocatable::thread_d,global_dvecs
-        type(energy),intent(inout)::en
+        type(dvector),intent(inout)::dvecs
         type(hamiltonian),intent(inout)::haml
-        type(hamiltonian)::thread_ham,global_ham,temp_ham
-        type(oprts),intent(in)::an_cr,an2_cr2
-        integer,intent(inout)::epoc_cnt,rjct_cnt_in
-        integer,intent(in)::maxloop,epoc_max
-        real(kind=8),intent(in)::alpha,b
-        integer,dimension(:),intent(inout)::picker
-        type(zombiest)::temp_zom,thread_zom,global_zom
-        integer::rjct_cnt,acpt_cnt,pick,pickorb,rjct_cnt2,loops,lralt_zs,acpt_cnt_2,ierr,mc,mc_pick,posneg
-        real(kind=8)::t,fxtdk,erg_str
-        integer::j,k,l,n,p,loop_max,epoc_bck,epoc_bck2
-        integer,dimension(:),allocatable::chng_trk,chng_trk2,pickerorb,montec,montec_pick
-        real(kind=8)::global_min_fxtdk,min_fxtdk,g_grad,mc_val,erg_store
-        integer::global_min_fxtdk_idx,min_fxtdk_idx
-        real(kind=8),dimension(:,:),allocatable::thread_one_elc_store,global_one_elc_store,thread_two_elc_store,global_two_elc_store
-        real(kind=8),dimension(:,:),allocatable::try_one_elc_store,try_two_elc_store,zrange,store_temp
-        DOUBLE PRECISION, external::ZBQLU01
+        type(grad),intent(inout)::grad_fin
+        type(grad_do)::temp,thread
+        integer::rjct_cnt,acpt_cnt,pickorb,loops,lralt_zs,acpt_cnt_2,lralt_extra2
+        integer::j,n,p,chng_chng,tracker,lralt_extra,extra_flag,chng_chng2,reduc2
+        integer,dimension(:),allocatable::chng_trk2,pickerorb
+        real(wp)::t,erg_str,num_av,reduc,comp
+        integer::ierr=0
+        ! type(neural_network_layer),dimension(:)::neural_net
 
         if (errorflag .ne. 0) return
-       
-        ierr=0
-        call alloczf(temp_zom)
-        call alloczf(thread_zom)
-        call alloczf(global_zom)
-        call allocdv(thread_d,1,ndet,norb)
-        call allocdv(global_dvecs,1,ndet,norb)
-        call allocham(thread_ham,ndet,norb)
-        call allocham(temp_ham,ndet,norb)
-        call allocham(global_ham,ndet,norb)
-        call allocdv(temp_dvecs,1,ndet,norb)
-    
-        if(ierr==0) allocate(chng_trk(ndet-1),stat=ierr)
+      
+        call alloc_grad_do(temp,ndet)
+        call alloc_grad_do(thread,ndet)
+        allocate(pickerorb(norb),stat=ierr)
         if(ierr==0) allocate(chng_trk2(norb),stat=ierr)
-       
         if (ierr/=0) then
-            write(0,"(a,i0)") "Gradient descent allocations . ierr had value ", ierr
+            write(stderr,"(a,i0)") "Gradient descent allocations . ierr had value ", ierr
             errorflag=1
             return
         end if 
-
-        allocate(thread_one_elc_store(ndet,elect%h1_num),global_one_elc_store(ndet,elect%h1_num),stat=ierr)
-        if(ierr==0) allocate(thread_two_elc_store(ndet,elect%h2_num),global_two_elc_store(ndet,elect%h2_num),stat=ierr)
-        if(ierr==0) allocate(try_one_elc_store(ndet,elect%h1_num),try_two_elc_store(ndet,elect%h2_num),stat=ierr)
-        if (ierr/=0) then
-            write(0,"(a,i0)") "Gradient descent storage arrays allocations . ierr had value ", ierr
-            errorflag=1
-            return
-        end if
-
-        allocate(pickerorb(norb),stat=ierr)
-        allocate(montec(norb+1),stat=ierr)
-        allocate(montec_pick(norb),stat=ierr)
-        allocate(zrange(2,norb),stat=ierr)
-        allocate(store_temp(ndet,norb),stat=ierr)
-
-   
-        montec_pick=0
-        epoc_bck=0
-        erg_store=0
-        epoc_bck2=0
-        mc=1
-        mc_val=1d0
-        mc_pick=0
-
-        lralt_zs=0    ! power alpha is raised to 
+       
         chng_trk2=0 !stores which orbitals in the ZS have changed 
         rjct_cnt=0 !tracks how many rejections 
         acpt_cnt=0  !counts how many ZS have been changed
-        acpt_cnt_2=0
-        rjct_cnt2=0
-        loops=0
-        loop_max=13!5
+        acpt_cnt_2=0 !counts how many orbitals have been changed
+        loops=0 !counts the number of loops through 
+        lralt_zs=0 !For the learning rate
+        lralt_extra=0 !remove higher learning rates
+        lralt_extra2=lr_loop_max !remove lower learning rates
+        tracker=-1
+        extra_flag=0
         p=70-norb
-        grad_fin%grad_avlb=0
-
-        do j=1,norb
-            if(zstore(2)%phi(j)>zstore(3)%phi(j))then
-                zrange(1,j)=zstore(2)%phi(j)
-                zrange(2,j)=zstore(3)%phi(j)
-            else
-                zrange(1,j)=zstore(3)%phi(j)
-                zrange(2,j)=zstore(2)%phi(j)
-            end if
-            do l=4,ndet
-                if(zstore(l)%phi(j)>zrange(1,j))then
-                    zrange(1,j)=zstore(l)%phi(j)
-                else if(zstore(l)%phi(j)<zrange(2,j))then
-                    zrange(2,j)=zstore(l)%phi(j)
-                end if
-            end do
+        if((ndet.lt.ndet_max).or.(epoc_cnt.lt.100))then
+            reduc=1.0d-7
+            reduc2=0
+            ! reduc=0
+        else
+            !reduc=0
+            reduc=reduc_in
+            reduc2=0
+            print*,reduc
+        end if
+        comp=grad_fin%prev_erg
+        chng_chng=25  !blind_clone_num/4
+        chng_chng2=blind_clone_num
+        if(ndet.eq.ndet_max)then
+            lr_loop_max=min_clone_lr
+        end if
+       
+        call haml_to_grad_do(haml,dvecs,temp)
+        if(gramflg.eq.'y')then
+            ! if(epoc_cnt.eq.1)then
+            !     gram_Store=gramnum 
+            !     gramflg='n'
+            ! end if 
+            call imaginary_time(temp,ndet)
+            grad_fin%prev_erg=temp%erg
+            dvecs=temp%dvecs
+        end if
+        thread=temp
+        num_av=0
+        do j=1,ndet
+            num_av=num_av+numf(zstore(j),zstore(j))
         end do 
-       
-       
-        do while(rjct_cnt2.lt.(norb*100))
+        num_av=num_av/ndet
+        
+        ! Main GD Loop
+        do while((rjct_cnt.lt.(norb*100)).and.(epoc_cnt.lt.epoc_max))
             loops=loops+1
-           
             do p=1, ((norb-8)/2)
-                write(6,'(1a)',advance='no') ' '
+                write(stdout,'(1a)',advance='no') ' '
             end do 
-            write(6,"(a)",advance='no') 'Progress'
+            write(stdout,"(a)",advance='no') 'Progress'
             do p=1, ((norb-8)/2)
-                write(6,'(1a)',advance='no') ' '
-            end do 
-            write(6,"(a)") ' | Zombie state | Previous Energy     | Energy after Gradient Descent steps   | Orbitals altered '
+                write(stdout,'(1a)',advance='no') ' '
+            end do
+            write(stdout,"(a)")'   | Zombie state | Previous Energy     | Energy after Gradient Descent steps   | Orbitals altered '
        
             chng_trk=0
             acpt_cnt_2=0  
-        
-           
+            t=lr*(lr_alpha**lralt_zs)
+            
             do j=1,ndet-1
-               
+                write(stdout,'(i3)',advance='no') j
                 erg_str=grad_fin%prev_erg
                 pick=picker(j)
+                
                 chng_trk2=0
                 acpt_cnt=0
                 pickerorb=scramble_norb(norb)
-    
-                call grad_zom_setup(zstore,grad_fin,elect,an_cr%ham,an2_cr2%ham,pick)
-               
-                do n=1,norb
-                    rjct_cnt=0
-                    pickorb=pickerorb(n)
-                    ! grad_fin%grad_avlb=0
-                    haml%diff_hjk=0
-                    haml%diff_ovrlp=0
-                    call grad_zom_div(zstore,grad_fin,haml,elect,an_cr%ham,an2_cr2%ham,pick,pickorb)
-                    call grad_calculate(haml,zstore,elect,an_cr,an2_cr2,pick,dvecs,grad_fin,en,pickorb,0)
-                    global_min_fxtdk=grad_fin%prev_erg
-                    global_min_fxtdk_idx=-1
-                  
-                    !$OMP PARALLEL DEFAULT(NONE) SHARED(loop_max, b, alpha, zstore, grad_fin, haml, elect, ndet, &
-                    !$OMP & an_cr, an2_cr2, timesteps,global_min_fxtdk,global_min_fxtdk_idx,global_zom,global_ham,&
-                    !$omp & global_dvecs,pick,norb,pickorb,global_one_elc_store,global_two_elc_store) &
-                    !$OMP & PRIVATE(lralt_zs, temp_zom, temp_ham, en, fxtdk, min_fxtdk, min_fxtdk_idx, thread_zom, thread_ham, &
-                    !$OMP & thread_d,temp_dvecs,t,thread_one_elc_store,thread_two_elc_store,try_one_elc_store,try_two_elc_store)
-                   
-                    min_fxtdk = grad_fin%prev_erg !0
-                    min_fxtdk_idx = -1
-                   
-                    !$omp do !ordered schedule(static,1)
-                    do lralt_zs=1,45
-                        t=b*0.5**(lralt_zs-1)
-                        temp_zom=zstore(pick)
-                        ! Setup temporary zombie state
-                        temp_zom%phi(pickorb)=zstore(pick)%phi(pickorb)-(t*grad_fin%vars(pick,pickorb))
-                        temp_zom%sin(pickorb)=sin(temp_zom%phi(pickorb))
-                        temp_zom%cos(pickorb)=cos(temp_zom%phi(pickorb))
-                        temp_zom%val(pickorb)=temp_zom%sin(pickorb)
-                        temp_zom%val(norb+pickorb)=temp_zom%cos(pickorb)
-                        ! print*,(temp_zom%val(pickorb))
-                        
-                        temp_ham%hjk=haml%hjk
-                        temp_ham%ovrlp=haml%ovrlp
-                        call he_full_row_new(temp_ham,zstore,temp_zom,grad_fin,elect,ndet,an_cr,an2_cr2,pick,pickorb,&
-                        try_one_elc_store,try_two_elc_store)
-                        ! call he_full_row(temp_ham,zstore,temp_zom,elect,ndet,an_cr,an2_cr2,pick)
-                     
+                call haml_to_grad_do(haml,dvecs,thread)
 
-                        ! Imaginary time propagation for back tracing
-                        en%erg=0
-                        en%t=0
-                        call imaginary_time_prop2(temp_dvecs,en,temp_ham,ndet,0,0)
-                        fxtdk=en%erg(1,timesteps+1)
-                     
-                       
-                        if((fxtdk .lt. min_fxtdk))then
-                            min_fxtdk = fxtdk
-                            min_fxtdk_idx = lralt_zs
-                            thread_ham=temp_ham
-                            ! thread_ham%hjk=temp_ham%hjk
-                            ! thread_ham%ovrlp=temp_ham%ovrlp
-                            thread_zom%phi(pickorb) = temp_zom%phi(pickorb)
-                            thread_zom%sin(pickorb) = temp_zom%sin(pickorb)
-                            thread_zom%cos(pickorb) = temp_zom%cos(pickorb)
-                            thread_zom%val(pickorb) = temp_zom%sin(pickorb)
-                            thread_zom%val(pickorb+norb) = temp_zom%cos(pickorb)
-                            thread_d(1)%d = temp_dvecs(1)%d
-                            thread_one_elc_store=try_one_elc_store
-                            thread_two_elc_store=try_two_elc_store
-                            !$omp cancel do
-                        end if
-                       !$omp cancellation point do
-                    end do  
-                    !$omp end do
-                    if(min_fxtdk_idx.ne.-1)then
-                        !$OMP CRITICAL
-                        ! Check the minimum fxtdk value across all threads
-                        if ((min_fxtdk .lt. global_min_fxtdk)) then
-                            ! Update the global minimum fxtdk and corresponding temp_zom and temp_ham
-                            global_min_fxtdk = min_fxtdk
-                            global_min_fxtdk_idx = min_fxtdk_idx
-                            global_zom = thread_zom
-                            global_zom%phi(pickorb)=thread_zom%phi(pickorb) 
-                            global_zom%sin(pickorb)=thread_zom%sin(pickorb)
-                            global_zom%cos(pickorb)=thread_zom%cos(pickorb) 
-                            global_zom%val(pickorb)=global_zom%sin(pickorb) 
-                            global_zom%val(pickorb+norb)=global_zom%cos(pickorb)
-                            global_ham = thread_ham
-                            global_dvecs(1)%d = thread_d(1)%d
-                            global_one_elc_store=thread_one_elc_store
-                            global_two_elc_store=thread_two_elc_store
-                        end if
-                        !$OMP END CRITICAL
+                do n=1, norb
+                    pickorb=n !pickerorb(n)
+                    call grad_calculate(haml,dvecs,zstore,grad_fin,pickorb)
+                    if((abs(t*grad_fin%vars(pick,pickorb)).lt.reduc*10000).or.&
+                        ! (abs(t*grad_fin%vars(pick,pickorb)).gt.2*pirl).or.&
+                        (abs(t*grad_fin%vars(pick,pickorb)).lt.1.0d-12))then
+                        write(stdout,'(1a)',advance='no') '!'
+                        cycle
                     end if
-                    !$OMP END PARALLEL
+
+                    thread%zom=zstore(pick)
+                    temp=thread
+                    temp%zom%phi(pickorb) = thread%zom%phi(pickorb)-(t*grad_fin%vars(pick,pickorb))
+                    ! if(abs(temp%zom%phi(pickorb)).gt.2*pirl)then
+                    !     write(stdout,'(1a)',advance='no') '!'
+                    !     cycle
+                    ! end if 
                     
-                    if(global_min_fxtdk_idx .ne. -1)then
-                      
-                        grad_fin%one_elec(:,1,:)=global_one_elc_store
-                        grad_fin%two_elec(:,1,:)=global_two_elc_store
-                        t=b*0.5**(global_min_fxtdk_idx-1)
+                    call val_set(temp%zom,pickorb)
+                    call he_full_row(temp,zstore,elect,ndet,pickorb)
+                    call imaginary_time(temp,ndet)
+     
+                    !if((grad_fin%prev_erg-temp%erg.ge.1.0d-14))then
+                    if((temp%erg.lt.grad_fin%prev_erg+reduc*(1**(-reduc2))))then
+                    ! if((temp%erg.lt.grad_fin%prev_erg).or.((t.gt.0.1).and.(temp%erg.lt.grad_fin%prev_erg+reduc)))then
                         acpt_cnt=acpt_cnt+1
-                        zstore(pick)%phi(pickorb)=global_zom%phi(pickorb)
-                        zstore(pick)%sin(pickorb)=global_zom%sin(pickorb)
-                        zstore(pick)%cos(pickorb)=global_zom%cos(pickorb)
-                        zstore(pick)%val(pickorb)=zstore(pick)%sin(pickorb)
-                        zstore(pick)%val(norb+pickorb)=zstore(pick)%cos(pickorb)
-                        dvecs(1)%d=global_dvecs(1)%d
                         chng_trk2(acpt_cnt)=pickorb
-                        rjct_cnt2=0
-                        haml%ovrlp(:,pick)=global_ham%ovrlp(:,pick); haml%ovrlp(pick,:)=haml%ovrlp(:,pick)
-                        haml%hjk(:,pick)=global_ham%hjk(:,pick); haml%hjk(pick,:)=haml%hjk(:,pick)
-                        haml%kinvh=global_ham%kinvh
+                        rjct_cnt=0
+                        rjct_cnt_global=0
+                        call grad_do_haml_transfer(temp,haml,zstore(pick),dvecs)
+                        thread=temp
                         grad_fin%grad_avlb=0
-                        haml%diff_hjk=0
-                        haml%diff_ovrlp=0
-                        montec_pick(pickorb)=montec_pick(pickorb)+1
-                        ! grad_fin%grad_avlb(:,0)=0
-                        ! grad_fin%grad_avlb(pick,:)=0
-                        ! grad_fin%grad_avlb(:,pick)=0
-                        ! grad_fin%vars=0.0
-                        ! haml%diff_hjk(pick,:,:)=0
-                        ! haml%diff_hjk(:,:,pick)=0
-                        ! haml%diff_ovrlp(pick,:,:)=0
-                        ! haml%diff_ovrlp(:,:,pick)=0
-                        dvecs(1)%d_diff=0.0d0
-                        grad_fin%prev_erg=global_min_fxtdk
-                        rjct_cnt_in=0
-                      
-                        if(zstore(pick)%phi(pickorb)>zrange(1,pickorb))then
-                            zrange(1,pickorb)=zstore(pick)%phi(pickorb)
-                        else if(zstore(pick)%phi(pickorb)<zrange(2,pickorb))then
-                            zrange(2,pickorb)=zstore(pick)%phi(pickorb)
-                        end if
-                        
-                    end if 
-                    
-                 
-                    write(6,'(1a)',advance='no') '|'
+                        grad_fin%ovrlp_grad_avlb(:,:,pick)=0
+                        grad_fin%ovrlp_grad_avlb(:,pick,:)=0
+                        grad_fin%prev_erg=temp%erg
+                    end if
+                    write(stdout,'(1a)',advance='no') '|'
                     flush(6)
-                 
                 end do
-               
+                
                 if(acpt_cnt.gt.0)then
-                    zstore(pick)%update_num=zstore(pick)%update_num+1
-                    write(6,"(a,i3,a,f21.16,a,f21.16,a,*(i0:','))")'  ', pick,'          ', &
+                    write(stdout,"(a,i3,a,f21.16,a,f21.16,a,*(i0:','))")'  ', pick,'          ', &
                     erg_str,'             ',grad_fin%prev_erg,'          ',chng_trk2(1:acpt_cnt) 
-            
-                    call zombiewriter(zstore(pick),pick,0)
+                    
                     acpt_cnt_2=acpt_cnt_2+1
                     chng_trk(acpt_cnt_2)=pick
                 else 
-                    write(6,"(a,i3,a,f21.16,a,f21.16,a,i0)")'  ',pick,'          ', &
+                    write(stdout,"(a,i3,a,f21.16,a,f21.16,a,i0)")'  ',pick,'          ', &
                     erg_str,'             ',grad_fin%prev_erg,'          ',0
                    
-                    rjct_cnt2=rjct_cnt2+1
+                    rjct_cnt=rjct_cnt+1
+                    
                 end if
-
-                grad_fin%grad_avlb(0,pick)=modulo(grad_fin%grad_avlb(0,pick)+1,2)
-            
             end do
-           
-            write(6,"(a,i0,a,f21.16)") "Energy after epoch no. ",epoc_cnt,": ",grad_fin%prev_erg
-          
+            
+           write(stdout,"(a,i0,a,f21.16,a,f10.5)") "Energy after epoch no. ",epoc_cnt,": ",grad_fin%prev_erg, "    Learning rate:",t
+       
             if(acpt_cnt_2.gt.0)then
-                call epoc_writer(grad_fin%prev_erg,epoc_cnt,chng_trk,0)
+                do j=1,acpt_cnt_2
+                    call zombiewriter(zstore(chng_trk(j)),chng_trk(j),zstore(chng_trk(j))%gram_num)
+                end do
+                call epoc_writer(grad_fin%prev_erg,epoc_cnt,t,chng_trk,0)
                 epoc_cnt=epoc_cnt+1
-                mc_pick=0
+                chng_chng2=chng_chng2-1
             else
                 loops=loops-1
-                mc_pick=mc_pick+1
+                rjct_cnt_global=rjct_cnt_global+1  
+            end if 
+            write(stdout,"(a,i0)") "Number of epochs until additional Zombie state, ",  chng_chng2
+            print*,reduc,comp
+            if((acpt_cnt_2.lt.(0.25*ndet)).and.(tracker.gt.-1))then
+                if(lralt_zs.eq.lralt_extra)then
+                    lralt_extra=lralt_extra+1
+                ! else if(lralt_zs.eq.lralt_extra2)then
+                !     lralt_extra2=lralt_extra2-1
+                end if 
+            end if 
+        
+            lralt_zs=lralt_zs+1
+            chng_chng=chng_chng-1
+            if(modulo(lralt_zs,2).eq.0)then
+                reduc2=reduc2+1
             end if 
 
-            if(mc_pick.ge.2)then
-                if(grad_fin%prev_erg<erg_store)then
-                    epoc_bck2=0
-                    erg_store=grad_fin%prev_erg
-                    epoc_bck=epoc_cnt
-                    do j=2,ndet
-                        do k=1,norb
-                            store_temp(j,k)=zstore(j)%phi(k)
-                        end do
-                    end do
-                    mc=1
-                else
-                    epoc_bck2=epoc_bck2+1 
-                    !loops=epoc_bck !loops-int((epoc_cnt-epoc_bck)/2)
-                    epoc_cnt=epoc_bck
-                    do j=2,ndet
-                        zstore(j)%phi=0
-                        do k=1,norb
-                            zstore(j)%phi(k)=store_temp(j,k)
-                        end do
-                        zstore(j)%sin=sin(zstore(j)%phi)
-                        zstore(j)%cos=cos(zstore(j)%phi)
-                        zstore(j)%val(1:)=zstore(j)%sin
-                        zstore(j)%val(norb+1:)=zstore(j)%cos
-                    end do
-                
-                    do j=1,norb
-                        if(zstore(2)%phi(j)>zstore(3)%phi(j))then
-                            zrange(1,j)=zstore(2)%phi(j)
-                            zrange(2,j)=zstore(3)%phi(j)
-                        else
-                            zrange(1,j)=zstore(3)%phi(j)
-                            zrange(2,j)=zstore(2)%phi(j)
-                        end if
-                        do l=4,ndet
-                            if(zstore(l)%phi(j)>zrange(1,j))then
-                                zrange(1,j)=zstore(l)%phi(j)
-                            else if(zstore(l)%phi(j)<zrange(2,j))then
-                                zrange(2,j)=zstore(l)%phi(j)
-                            end if
-                        end do
-                    end do
-                    ! if(epoc_bck2.gt.10)then
-                        epoc_bck2=0
-                        
-                        montec(3:)=0
-                        if(mc.eq.1)then
-                            mc=montec(1)
-                            do while((mc.eq.montec(1)))
-                                mc=int(1+(norb-1)*ZBQLU01(1))
-                            end do 
-                            montec(2)=mc
-                        else
-                            mc=montec(1)
-                            do while((mc.eq.montec(1)).or.(mc.eq.montec(2)))
-                                mc=int(1+(norb-1)*ZBQLU01(1))
-                            end do
-                            if(ZBQLU01(1).lt.0.5)then
-                                montec(1)=mc
-                            else 
-                                montec(2)=mc
-                            end if
-                        end if
-                    ! end if 
-                    mc=0
-                end if
-              
-
-                if(mc.eq.1)then
-                    mc=1
-                    do while(montec(mc).ne.0)
-                        montec_pick(montec(mc))=0
-                        mc=mc+1
-                    end do
-              
-                    montec=0
-                    if(maxval(montec_pick).eq.0)then
-                        montec(1)=int(1+(norb-1)*ZBQLU01(1))
-                        montec(2)=int(1+(norb-1)*ZBQLU01(1))
-                    else
-                        mc=1
-                        do l=1,norb
-                            if(montec_pick(l).eq.maxval(montec_pick))then
-                                montec(mc)=l 
-                                mc=mc+1
-                            end if
-                        end do
-                        if(mc.eq.2)then 
-                            montec_pick(maxloc(montec_pick))=0
-                            if(maxval(montec_pick).eq.0)then
-                                do while((montec(2).eq.0).or.(montec(2).eq.montec(1)))
-                                    montec(2)=int(1+(norb-1)*ZBQLU01(1))
-                                end do
-                            else
-                                do l=1,norb
-                                    if(montec_pick(l).eq.maxval(montec_pick))then
-                                        montec(2)=l 
-                                    end if
-                                end do
-                            end if
-                        end if 
-                    end if 
-            
-            
-                    montec_pick=0
-                    mc_pick=0
-                    if(mc_pick.ge.(ndet-1))then
-                        montec_pick=scramble(ndet-1)
-                        mc_pick=1
+            if((chng_chng2.le.0).or.(rjct_cnt_global.gt.3*(lr_loop_max)))then
+                if((abs(comp-grad_fin%prev_erg).lt.reduc*1000).or.(grad_fin%prev_erg.gt.comp))then
+                    if((ndet.ge.ndet_max))then
+                        reduc=reduc/10
+                        ! if(reduc.lt.1.0d-13)then
+                        !     reduc=0
+                        ! end if 
                     end if
-                    if(mc.ge.norb) then 
-                        mc=montec(norb)
-                        montec=scramble_norb(norb)
-                        if(montec(1).eq.mc)then
-                            do while(montec(1).eq.mc)
-                                montec=scramble_norb(norb)
-                            end do
-                        end if 
-                        mc=1
-                    end if
+                else if(comp-grad_fin%prev_erg.gt.reduc*5000)then    
+                    reduc=reduc*5
+                    if(reduc.gt.1.0d-7)then
+                        reduc=1.0d-7
+                     end if
                 end if
-        
-                do j=2,ndet
-                    mc=1
-                    ! mc_pick=maxloc(grad_fin%vars(j,:),dim=1)
-                    do while(montec(mc).ne.0)
-                        ! if(montec(mc).eq.mc_pick)then 
-                        !     mc_pick=0
-                        ! end if
-                        posneg=1
-                        if(grad_fin%vars(j,(mc)).gt.0) then
-                            posneg=-1
-                        end if
-                    
-                        zstore(j)%phi(montec(mc))= (zrange(2,montec(mc)))+(zrange(1,montec(mc))-zrange(2,montec(mc)))*ZBQLU01(1)
-                        ! zstore(j)%phi(montec(mc))=zstore(j)%phi(montec(mc)) + posneg*(mc_val)*(ZBQLU01(1))
-                        zstore(j)%sin(montec(mc))=sin(zstore(j)%phi(montec(mc)))
-                        zstore(j)%cos(montec(mc))=cos(zstore(j)%phi(montec(mc)))
-                        zstore(j)%val(montec(mc))=zstore(j)%sin(montec(mc))
-                        zstore(j)%val(norb+montec(mc))=zstore(j)%cos(montec(mc))
-              
-                        mc=mc+1
-                    end do 
-                   
-                end do 
-                mc_pick=0
-            
-                call hamgen(haml,zstore,elect,ndet,an_cr,an2_cr2,0)
-                call imaginary_time_prop2(dvecs,en,haml,ndet,0,0)
-                grad_fin%prev_erg=en%erg(1,timesteps+1)
-                print*,"Energy after monte carlo move: ",grad_fin%prev_erg,montec
-             
-                grad_fin%grad_avlb=0
-                grad_fin%vars=0
-                dvecs(1)%d_diff=0.0d0
-            end if
-
-            picker=scramble(ndet-1)
+                if((ndet.lt.ndet_max))then
+                    deallocate(picker,stat=ierr)
+                    allocate(picker(ndet+ndet_increase-1),stat=ierr)
+                    picker(ndet_increase+1:)=scramble(ndet-1)
+                    do j=1,ndet_increase
+                        picker(j)=ndet+j
+                    end do
+                    ndet=ndet+ndet_increase
+                    call dealloc_grad_do(temp)
+                    call alloc_grad_do(temp,ndet)
+                    call dealloc_grad_do(thread)
+                    call alloc_grad_do(thread,ndet)
+                    call zstore_increase(zstore,elect,dvecs,haml,grad_fin,temp,thread,lralt_zs,extra_flag,lralt_extra,tracker)
+                    deallocate(chng_trk,stat=ierr)
+                    allocate(chng_trk(ndet-1),stat=ierr)
+                    do j=(ndet-ndet_increase+1),ndet
+                        call zombiewriter(zstore(j),j,zstore(j)%gram_num)
+                    end do
+                else if(lr_loop_max.lt.min_clone_lr)then
+                    lr_loop_max=lr_loop_max+1
+                end if
+                comp=grad_fin%prev_erg
+                tracker=-1
+                lralt_extra=0
+                lralt_zs=0
+                chng_chng=25  !blind_clone_num/4
+                chng_chng2=blind_clone_num
+                lralt_extra2=lr_loop_max
+                reduc2=0
+            else if((chng_chng.le.0))then
+                lralt_zs=0
+                reduc2=0
+                lralt_extra=0
+                chng_chng=25  !blind_clone_num/4
+                lralt_extra2=lr_loop_max
+                if(((comp-grad_fin%prev_erg).lt.reduc*1000).or.(grad_fin%prev_erg.gt.comp))then
+                    reduc=reduc/10
+                end if 
+                comp=grad_fin%prev_erg
+            end if 
            
-          
-            ! grad_fin%grad_avlb=0
-
-            if(loops.ge.maxloop)then
-                grad_fin%grad_avlb=0
-                exit
+            if((lralt_zs.gt.lralt_extra2))then
+                picker=scramble(ndet-1)
+                lralt_zs=lralt_extra
+                extra_flag=0
+                reduc2=0
+                if((acpt_cnt_2.lt.((ndet)/3)).or.(tracker.lt.0))then
+                    tracker=tracker+1
+                end if    
             end if
+
             acpt_cnt_2=0
             if(epoc_cnt.gt.epoc_max)then 
                 exit 
             end if
         end do
-       
-        ! if(grad_fin%prev_erg>erg_store)then
-        !     do j=2,ndet
-        !         do k=1,norb
-        !             zstore(j)%phi(k)=store_temp(j,k)
-        !         end do
-        !         zstore(j)%sin=sin(zstore(j)%phi)
-        !         zstore(j)%cos=cos(zstore(j)%phi)
-        !         zstore(j)%val(1:)=zstore(j)%sin
-        !         zstore(j)%val(norb+1:)=zstore(j)%cos
-        !     end do
-        !     call hamgen(haml,zstore,elect,ndet,an_cr,an2_cr2,0)
-        !     call imaginary_time_prop2(dvecs,en,haml,ndet,0,0)
-        !     grad_fin%prev_erg=en%erg(1,timesteps+1)
-        !     print*,"Final energy: ",grad_fin%prev_erg
-        ! end if
-
-  
-        grad_fin%grad_avlb=0
-        call dealloczf(temp_zom)
-        call dealloczf(thread_zom)
-        call dealloczf(global_zom)
-        call deallocham(global_ham)
-        call deallocdv(thread_d)
-        call deallocham(temp_ham)
-        call deallocdv(temp_dvecs)
-
+        
+        call dealloc_grad_do(temp)
+        call dealloc_grad_do(thread)
+      
         deallocate(pickerorb,stat=ierr)
-        if(ierr==0) deallocate(chng_trk,stat=ierr)
         if(ierr==0) deallocate(chng_trk2,stat=ierr)
-       
         if (ierr/=0) then
-            write(0,"(a,i0)") "Gradient descent deallocations . ierr had value ", ierr
+            write(stderr,"(a,i0)") "Gradient descent deallocations . ierr had value ", ierr
             errorflag=1
             return
         end if 
-        deallocate(try_one_elc_store,try_two_elc_store,stat=ierr)
-        if(ierr==0) deallocate(thread_one_elc_store,thread_two_elc_store,stat=ierr)
-        if(ierr==0) deallocate(global_one_elc_store,global_two_elc_store,stat=ierr)
-        if (ierr/=0) then
-            write(0,"(a,i0)") "Gradient descent deallocations . ierr had value ", ierr
-            errorflag=1
-            return
-        end if
+        grad_fin%grad_avlb=0
         
         return
 
     end subroutine orbital_gd
 
-
-    subroutine full_zs_gd(zstore,grad_fin,elect,dvecs,en,haml,epoc_cnt,alpha,b,an_cr,an2_cr2,epoc_max,picker) 
-
-        implicit none 
-
-        type(zombiest),dimension(:),intent(inout)::zstore
-        type(grad),intent(inout)::grad_fin
+    subroutine zstore_increase(zstore,elect,dvecs,haml,grad_fin,temp,thread,lralt_zs,extra_flag,lralt_extra,tracker)
+        implicit none
+        type(zombiest),dimension(:),allocatable,intent(inout)::zstore
         type(elecintrgl),intent(in)::elect
-        type(dvector),dimension(:),intent(inout)::dvecs
-        type(dvector), dimension(:), allocatable:: temp_dvecs,thread_d,global_dvecs
-        type(energy),intent(inout)::en
+        type(dvector),intent(inout)::dvecs
         type(hamiltonian),intent(inout)::haml
-        type(hamiltonian)::temp_ham,thread_ham,global_ham
-        type(oprts),intent(in)::an_cr,an2_cr2
-        integer,intent(inout)::epoc_cnt
-        integer,intent(in)::epoc_max
-        integer,dimension(:),intent(inout)::picker
-        real(kind=8),intent(in)::b,alpha
-        type(zombiest)::temp_zom,thread_zom,global_zom
-        integer::lralt,rjct_cnt,rjct_cnt2,acpt_cnt,pick,lralt_temp,loop_max,orb_cnt,ierr
-        real(kind=8)::newb,t,fxtdk
-        integer::j,k,l
-        integer,dimension(:),allocatable::chng_trk
-        real(kind=8),dimension(:),allocatable::lr_chng_trk,erg_chng_trk
-        DOUBLE PRECISION, external::ZBQLU01
-
-        integer(kind=8)::beginning,rate,end
-
-        real(kind=8)::global_min_fxtdk,min_fxtdk,g_grad
-        integer::global_min_fxtdk_idx,min_fxtdk_idx
-
-        if (errorflag .ne. 0) return
-        
-        ierr=0
-    
+        type(grad),intent(inout)::grad_fin
+        type(grad_do),intent(inout)::temp,thread
+        type(zombiest),dimension(:),allocatable::zstore_temp
+        integer::lralt_zs,extra_flag,lralt_extra,tracker
+        integer:: j,k
       
-        allocate(chng_trk(ndet-1),stat=ierr)
-        if(ierr==0) allocate(lr_chng_trk(ndet-1),stat=ierr)
-        if(ierr==0) allocate(erg_chng_trk(ndet-1),stat=ierr)
-       
-       
-        if (ierr/=0) then
-            write(0,"(a,i0)") "Gradient descent allocations . ierr had value ", ierr
-            errorflag=1
-            return
-        end if 
-       
-        
-
-       
-        
-        lralt=1    ! power alpha is raised to  
-        newb=b
-        rjct_cnt=0 !tracks how many rejections 
-        acpt_cnt=0  !counts how many ZS have been changed
-        loop_max=13!5
-        if(epoc_cnt.eq.1)then
-            orb_cnt=20
-        else
-            orb_cnt=5
-        end if 
-        
-        call alloczf(temp_zom)
-        call alloczf(thread_zom)
-        call alloczf(global_zom)
-        call allocdv(temp_dvecs,1,ndet,norb)
-        call allocdv(thread_d,1,ndet,norb)
-        call allocdv(global_dvecs,1,ndet,norb)
-        call allocham(temp_ham,ndet,norb)
-        call allocham(thread_ham,ndet,norb)
-        call allocham(global_ham,ndet,norb)
-       
-        ! picker=scramble(ndet-1)
-
-        temp_ham=haml
-        ! temp_dvecs=dvecs
-          
-        ! call system_clock(beginning, rate)
-      
-        do while(rjct_cnt.lt.(ndet-1)*30)
-            ! call system_clock(beginning, rate)
-            
-            write(6,"(a)") '    Zombie state    |     Previous Energy     |    Energy after Gradient Descent step &
-            &   |       Learning rate      | Acceptance count | Rejection count'
-            chng_trk=0
-            lr_chng_trk=0
-            erg_chng_trk=0
-            rjct_cnt2=0
-            ! call system_clock(beginning, rate)
-            do j=1,(ndet-1)
-                
-               
-                pick=picker(j)
-                rjct_cnt2=0
-                call grad_calculate(haml,zstore,elect,an_cr,an2_cr2,pick,dvecs,grad_fin,en,0,epoc_cnt)
-                ! print*,grad_fin%vars(pick,:)
-                global_min_fxtdk= grad_fin%prev_erg
-              
-                global_min_fxtdk_idx=-1
-                !$OMP PARALLEL DEFAULT(NONE) SHARED(loop_max, newb, alpha, zstore, grad_fin, haml, elect, ndet, &
-                !$OMP & an_cr, an2_cr2, timesteps,global_min_fxtdk,global_min_fxtdk_idx,global_zom,global_ham,&
-                !$omp & global_dvecs,pick,norb) &
-                !$OMP & PRIVATE(lralt_temp, temp_zom, temp_ham, en, fxtdk, min_fxtdk, min_fxtdk_idx, thread_zom, thread_ham, &
-                !$OMP & thread_d,temp_dvecs,t,g_grad)
-                min_fxtdk = grad_fin%prev_erg !0
-                min_fxtdk_idx = -1
-                !$omp do !ordered schedule(static,1)
-                do lralt_temp=1,45!24!loop_max
-                    !!$omp cancellation point do
-                
-                    t=newb*(0.5**(lralt_temp-1))
-                 
-                    temp_zom%phi=zstore(pick)%phi(:)-(t*grad_fin%vars(pick,:))
-                   
-                    temp_zom%sin=sin(temp_zom%phi)
-                    temp_zom%cos=cos(temp_zom%phi)
-                 
-                    temp_zom%val(1:norb)=temp_zom%sin
-                    temp_zom%val(norb+1:)=temp_zom%cos
-                  
-                    
-                    temp_ham%hjk=haml%hjk
-                    temp_ham%ovrlp=haml%ovrlp
-              
-                    call he_full_row(temp_ham,zstore,temp_zom,elect,ndet,an_cr,an2_cr2,pick)
-                   
-                    ! Imaginary time propagation for back tracing
-                    en%erg=0
-                    en%t=0
-
-                    call imaginary_time_prop2(temp_dvecs,en,temp_ham,ndet,0,0)
-
-                    fxtdk=en%erg(1,timesteps+1)
-                    ! print*,fxtdk
-                    ! print*,'erg',fxtdk,t, 'inequality', (grad_fin%prev_erg-(t*g_grad*1.0d-6))
-                    ! if((fxtdk .lt. grad_fin%prev_erg-(t*g_grad*1.0d-10)).and.(fxtdk .lt. min_fxtdk))then
-                    if((fxtdk .lt. min_fxtdk))then
-                        min_fxtdk = fxtdk
-                        min_fxtdk_idx = lralt_temp
-                        thread_ham=temp_ham
-                        ! thread_ham%hjk=temp_ham%hjk
-                        ! thread_ham%ovrlp=temp_ham%ovrlp
-                        thread_zom = temp_zom
-                        thread_d(1)%d = temp_dvecs(1)%d 
-                       ! !$omp cancel do
-                    end if
-                    ! !$omp cancellation point do
-                end do 
-                !$omp end do
-                if(min_fxtdk_idx.ne.-1)then
-                !$OMP CRITICAL
-                ! Check the minimum fxtdk value across all threads
-                if ((min_fxtdk .lt. global_min_fxtdk)) then
-                    ! Update the global minimum fxtdk and corresponding temp_zom and temp_ham
-                    global_min_fxtdk = min_fxtdk
-                    global_min_fxtdk_idx = min_fxtdk_idx
-                    global_zom = thread_zom
-                    global_ham = thread_ham
-                    global_dvecs(1)%d = thread_d(1)%d
-                end if
-                !$OMP END CRITICAL
-                end if
-                !$OMP END PARALLEL
-               
-
-                if(global_min_fxtdk_idx .eq. -1)then
-                    rjct_cnt=rjct_cnt+1
-                    
-                    write(6,"(a,i3,a,f21.16,a,f21.16,a,f21.16,a,i3,a,i3)") '       ', pick,'              ', &
-                    grad_fin%prev_erg,'               ',0.0,'             ',0.0,'        ',acpt_cnt,'          ',rjct_cnt
-                   
-                else 
-                 
-               
-                    t=newb*(0.5**(global_min_fxtdk_idx-1))
-                    acpt_cnt=acpt_cnt+1
-                    chng_trk(acpt_cnt)=pick
-                    lr_chng_trk(acpt_cnt)=t
-                    erg_chng_trk(acpt_cnt)=global_min_fxtdk
-                    zstore(pick)=global_zom
-                    zstore(pick)%update_num=zstore(pick)%update_num+1
-                    call zombiewriter(zstore(pick),pick,0)
-                    dvecs(1)%d=global_dvecs(1)%d
-                    haml%ovrlp(:,pick)=global_ham%ovrlp(:,pick); haml%ovrlp(pick,:)=haml%ovrlp(:,pick)
-                    haml%hjk(:,pick)=global_ham%hjk(:,pick); haml%hjk(pick,:)=haml%hjk(:,pick)
-                    haml%kinvh=global_ham%kinvh
-                    rjct_cnt=0
-                    grad_fin%grad_avlb(:,0)=0
-                    grad_fin%grad_avlb(pick,:)=0
-                    grad_fin%grad_avlb(:,pick)=0
-                    grad_fin%vars=0.0
-                    haml%diff_hjk(pick,:,:)=0
-                    haml%diff_hjk(:,:,pick)=0
-                    haml%diff_ovrlp(pick,:,:)=0
-                    haml%diff_ovrlp(:,:,pick)=0
-                    dvecs(1)%d_diff=0
-                    write(6,"(a,i3,a,f21.16,a,f21.16,a,f21.16,a,i3,a,i3)") '       ', pick,'              ', &
-                grad_fin%prev_erg,'               ',global_min_fxtdk,'             ',t,'        ',acpt_cnt,'          ',rjct_cnt
-                  
-                    
-                    grad_fin%prev_erg=global_min_fxtdk
-                end if 
-                flush(6)
-              
-            end do
-          
-          
-            write(6,"(a,i0,a,f21.16,a,i0,a)") "Energy after epoc no. ",epoc_cnt,": ", &
-            grad_fin%prev_erg, ". ", acpt_cnt, " Zombie state(s) altered."
-      
-
-           
-            picker=scramble(ndet-1)
-            if(acpt_cnt.gt.0)then
-                call epoc_writer(grad_fin%prev_erg,epoc_cnt,chng_trk,erg_chng_trk,lr_chng_trk,0)
-                epoc_cnt=epoc_cnt+1
+        tracker=-1
+        extra_flag=1
+        lralt_extra=0
+        call alloczs(zstore_temp,ndet-ndet_increase)
+        zstore_temp=zstore
+        call dealloczs(zstore)
+        call alloczs(zstore,ndet)
+        zstore(1:(ndet-ndet_increase))=zstore_temp
+        call dealloczs(zstore_temp)
+        do j=(ndet-ndet_increase)+1,ndet
+            ! if((ndet_increase.eq.1).and.(ndet.gt.3))then 
+            !     zstore(j)%phi=orb_store
             ! else 
-                ! grad_fin%prev_erg=grad_fin%prev_erg+1.0d-10
-            end if
-           
-            orb_cnt=orb_cnt-1
-          
-            ! if(acpt_cnt.eq.0)then
-            if(rjct_cnt.ge.(ndet*4))then
-                call orbital_gd(zstore,grad_fin,elect,dvecs,en,haml,&
-                epoc_cnt,alpha,newb,picker,1,an_cr,an2_cr2,rjct_cnt,epoc_max)
-                orb_cnt=orb_cnt+1
-            else if((orb_cnt.le.0))then
-                call orbital_gd(zstore,grad_fin,elect,dvecs,en,haml,&
-                epoc_cnt,alpha,newb,picker,100,an_cr,an2_cr2,rjct_cnt,epoc_max)
-                orb_cnt=20
-            end if
- 
-            acpt_cnt=0
-            if(epoc_cnt.gt.epoc_max)then 
-                exit 
-            end if
+            if(zst.eq.'BB')then
+                call biased_func(zstore(j))
+            else
+                do k=1,norb
+                    zstore(j)%phi(k)=0.5*pirl*(ZBQLU01()) 
+                end do
+            end if 
+            call val_set(zstore(j))
+            zstore(j)%gram_num=zstore(1)%gram_num
         end do
-
-        rjct_cnt=0
-        
-        deallocate(chng_trk,stat=ierr)
-        if(ierr==0) deallocate(lr_chng_trk,stat=ierr)
-        if(ierr==0) deallocate(erg_chng_trk,stat=ierr)
-       
-        if (ierr/=0) then
-            write(0,"(a,i0)") "Gradient descent deallocations . ierr had value ", ierr
-            errorflag=1
-            return
-        end if 
-
-        call dealloczf(temp_zom)
-        call dealloczf(thread_zom)
-        call dealloczf(global_zom)
-
-        call orbital_gd(zstore,grad_fin,elect,dvecs,en,haml,&
-        epoc_cnt,alpha,b,picker,epoc_max-epoc_cnt,an_cr,an2_cr2,rjct_cnt,epoc_max)
-      
-       
-        call deallocham(temp_ham)
-        call deallocham(global_ham)
-        call deallocdv(temp_dvecs)
-        call deallocdv(thread_d) 
-       
+        do j=(ndet-ndet_increase)+1,ndet
+            temp%zom=zstore(j)
+            call haml_ovrlp_column(temp,zstore,ndet,elect,j)
+        end do
+        temp%ovrlp(1:ndet-ndet_increase,1:ndet-ndet_increase)=haml%ovrlp(1:ndet-ndet_increase,1:ndet-ndet_increase)
+        temp%hjk(1:ndet-ndet_increase,1:ndet-ndet_increase)=haml%hjk(1:ndet-ndet_increase,1:ndet-ndet_increase)
+        call deallocham(haml)
+        call allocham(haml,ndet)
+        haml%ovrlp=temp%ovrlp
+        haml%hjk=temp%hjk
+        call  hamgen_inv(haml,ndet)
+        call deallocdv(dvecs)
+        call allocdv(dvecs,ndet)
+        call haml_to_grad_do(haml,dvecs,temp)
+        call imaginary_time(temp,ndet)
+        call deallocgrad(grad_fin)
+        call allocgrad(grad_fin,ndet,norb)
+        grad_fin%prev_erg=temp%erg 
+        grad_fin%grad_avlb=0
+        grad_fin%ovrlp_grad_avlb=0
+        dvecs=temp%dvecs
+        thread=temp
+        lralt_zs=0
+     
         return
+    end subroutine zstore_increase
 
-    end subroutine full_zs_gd
 
 
-    subroutine zombie_alter(zstore,grad_fin,haml,elect,en,dvecs,an_cr,an2_cr2)
+    subroutine zombie_alter(zstore,haml,elect,dvecs)!,neural_net)
 
         implicit none
 
-        type(zombiest),dimension(:),intent(inout)::zstore
-        type(grad),intent(inout)::grad_fin
+        type(zombiest),dimension(:),allocatable,intent(inout)::zstore
         type(elecintrgl),intent(in)::elect
-        type(oprts),intent(in)::an_cr,an2_cr2
-        type(dvector),dimension(:),intent(inout)::dvecs
-        type(energy),intent(inout)::en
+        type(dvector),intent(inout)::dvecs
         type(hamiltonian),intent(inout)::haml
-        integer,dimension(:),allocatable::picker
+        type(grad)::grad_fin
+        ! type(neural_network_layer),dimension(:)::neural_net
+        integer::cnt,j
+        integer::ierr=0
        
-        integer::epoc_cnt,epoc_max,cnt,rjct_cnt
-        real(kind=8)::alpha,b
-        integer::ierr,j,k,l
-        
         if (errorflag .ne. 0) return
+       
+        call allocgrad(grad_fin,ndet,norb)
 
-        ierr=0
+        if(gramflg.eq.'n')then
+            grad_fin%prev_erg=ergcalc(haml%hjk,dvecs%d)
+        end if
+        grad_fin%grad_avlb=0
+        grad_fin%ovrlp_grad_avlb=0
         epoc_cnt=1 !epoc counter
         if(rstrtflg.eq.'y')then 
             ierr=0
             open(unit=450,file='epoc.csv',status="old",iostat=ierr)
             if(ierr/=0)then
-                write(0,"(a,i0)") "Error in opening epoc file to read in. ierr had value ", ierr
+                write(stderr,"(a,i0)") "Error in opening epoc file to read in. ierr had value ", ierr
                 errorflag=1
                 return
             end if
@@ -1023,7 +537,7 @@ MODULE gradient_descent
                 if(ierr<0)then
                     exit
                 else if(ierr>0)then
-                    write(0,"(a,i0)") "Error in counting epocs. ierr had value ", ierr
+                    write(stderr,"(a,i0)") "Error in counting epocs. ierr had value ", ierr
                     errorflag=1
                     return
                 else 
@@ -1034,7 +548,7 @@ MODULE gradient_descent
             close(450) 
             open(unit=450,file='epoc.csv',status="old",iostat=ierr)
             if(ierr/=0)then
-                write(0,"(a,i0)") "Error in opening epoc file to read in. ierr had value ", ierr
+                write(stderr,"(a,i0)") "Error in opening epoc file to read in. ierr had value ", ierr
                 errorflag=1
                 return
             end if
@@ -1043,48 +557,33 @@ MODULE gradient_descent
             end do 
             read(450,*,iostat=ierr)epoc_cnt
     
-            close(450) 
+            ! close(450) 
 
-            write(0,"(a,i0)") "Epoc read in as ", epoc_cnt
+            write(stderr,"(a,i0)") "Epoc read in as ", epoc_cnt
         
             call epoc_writer(grad_fin%prev_erg,epoc_cnt,0,0.0d0,1)
             epoc_cnt=epoc_cnt+1
+        else
+            call epoc_writer(grad_fin%prev_erg,0,0,0.0d0,0)
         end if
 
-        alpha=0.8  ! learning rate reduction
-        b=1.D1 !starting learning rate
-       
-        epoc_max=2000
         allocate(picker(ndet-1),stat=ierr)
-        call grad_new_alloc(grad_fin,ndet,elect%h1_num,elect%h2_num)
-        if(epoc_cnt.lt.epoc_max)then
-            rjct_cnt=0
-            picker=scramble(ndet-1)
-            call orbital_gd(zstore,grad_fin,elect,dvecs,en,haml,epoc_cnt,alpha,b,picker,5,an_cr,an2_cr2,rjct_cnt,epoc_max) 
-            ! stop
-            call full_zs_gd(zstore,grad_fin,elect,dvecs,en,haml,epoc_cnt,alpha,b,an_cr,an2_cr2,epoc_max,picker)
-        end if 
-
-        !Brings phi values back within the normal 0-2pi range
-        do k=2,ndet 
-            do l=1,norb 
-                if((zstore(k)%phi(l).gt.2*pirl).or.(zstore(k)%phi(l).lt.0))then 
-                    zstore(k)%phi(l)=asin(real(zstore(k)%sin(l)))
-                    if((zstore(k)%phi(l).gt.2*pirl))then
-                        zstore(k)%phi(l)=zstore(k)%phi(l)-2*pirl
-                    else if((zstore(k)%phi(l).lt.0))then
-                        zstore(k)%phi(l)=zstore(k)%phi(l)+2*pirl
-                    end if
-                end if
-            end do
-        end do
-
-        deallocate(picker,stat=ierr)
+        if(ierr==0) allocate(chng_trk(ndet-1),stat=ierr)
+        ! call omp_set_nested(.true.)
        
+        if(epoc_cnt.lt.epoc_max)then
+            picker=scramble(ndet-1)
+            call orbital_gd(zstore,grad_fin,elect,dvecs,haml)
+
+        end if 
+      
+        
+       
+        deallocate(picker,stat=ierr)
+        deallocate(chng_trk,stat=ierr)
         return
 
     end subroutine zombie_alter
-
 
     ! Produces a random order for the ZS to be posisbly changed
     function scramble( number_of_values ) result(out)
@@ -1095,14 +594,13 @@ MODULE gradient_descent
         integer::out(number_of_values),array(number_of_values+1)
         integer::n,m,k,j,l,jtemp
         !real::r
-        DOUBLE PRECISION, external::ZBQLU01
 
         out=[(j,j=1,number_of_values)]
         array=[(j,j=1,number_of_values+1)]
         n=1; m=number_of_values
         do k=1,2
             do j=1,m+1
-                l = n + FLOOR((m+1-n)*ZBQLU01(1))
+                l = n + FLOOR((m+1-n)*ZBQLU01())
                 jtemp=array(l)
                 array(l)=array(j)
                 array(j)=jtemp
@@ -1127,14 +625,13 @@ MODULE gradient_descent
         integer,intent(in)::number_of_values
         integer::out(number_of_values)
         integer::n,m,k,j,l,jtemp
-        DOUBLE PRECISION, external::ZBQLU01
         !real::r
         out=[(j,j=1,number_of_values)]
         
         n=1; m=number_of_values
         do k=1,2
             do j=1,m
-                l = n + FLOOR((m-n)*ZBQLU01(1))
+                l = n + FLOOR((m-n)*ZBQLU01())
                 jtemp=out(l)
                 out(l)=out(j)
                 out(j)=jtemp
@@ -1145,176 +642,151 @@ MODULE gradient_descent
         return
     end function scramble_norb
 
-    ! subroutine emergency(haml,dvecs,dvecs_temp,en)
 
-    !         implicit none
-    !         type(dvector),dimension(:),intent(inout)::dvecs,dvecs_temp
-    !         type(energy),intent(inout)::en
-    !         type(hamiltonian),intent(inout)::haml
-    !         integer::j,k,l
-    !         logical::checker
-    
-    !         ! do j=2,ndet
-    !         !     do k=1,norb 
-    !         !         if(is_nan(zstore(j)%phi(k)).eqv..true.)then
-    !         !             call random_number(r)
-    !         !             zstore(j)%phi(k)=2*pirl*r 
-    !         !             zstore(j)%sin=sin(zstore(j)%phi(k))
-    !         !             zstore(j)%cos=cos(zstore(j)%phi(k))
-    !         !             zstore(j)%val(k)=zstore(j)%sin(k)
-    !         !             zstore(j)%val(norb+k)=zstore(j)%cos(k)
-    !         !             write(0,"(a,i0,i0)") "Error in ZS value number and orbital ", j,k
-    !         !         end if
-    !         !     end do 
-    !         ! end do
-            
-    !         checker=.true.
-    !         do j=1,ndet 
-    !             if(is_nan(dvecs(1)%d(j)).eqv..true.)then
-    !                 dvecs(1)%d=0.0d0
-    !                 dvecs(1)%d_diff=0.0d0
-    !                 dvecs(1)%norm=0.0d0
-    !                 dvecs_temp(1)%d=0.0d0
-    !                 dvecs_temp(1)%d_diff=0.0d0
-    !                 dvecs_temp(1)%norm=0.0d0
-    !                 checker=.false.
-    !                 exit
-    !             end if 
-    !             do k=1,norb
-    !                 do l=1,ndet 
-    !                     if(is_nan(dvecs(1)%d_diff(j,k,l)).eqv..true.)then
-    !                         dvecs(1)%d=0.0d0
-    !                         dvecs(1)%d_diff=0.0d0
-    !                         dvecs(1)%norm=0.0d0
-    !                         dvecs_temp(1)%d=0.0d0
-    !                         dvecs_temp(1)%d_diff=0.0d0
-    !                         dvecs_temp(1)%norm=0.0d0
-    !                         checker=.false.
-    !                         exit
-    !                     end if
-    !                 end do 
-    !                 if(checker.eqv..false.)then
-    !                     exit 
-    !                 end if 
-    !             end do 
-    !             if(checker.eqv..false.)then
-    !                 exit 
-    !             end if 
-    !         end do 
-    
-    !         call imgtime_prop(dvecs,en,haml,0,0)
-    
-    !         ! call  dealloc(temp_zom)
-    
-    !         ! call  deallocham(haml)
-    !         ! call  deallocham(haml_temp)
-    !         ! call  deallocgrad(grad_fin)
-    !         ! call  deallocdv(dvecs)
-    !         ! call  deallocdv(temp_dvecs)
-    !         ! call  deallocerg(en)
-    
-    !         ! call allocham(haml,ndet,norb)
-    !         ! call alloc(dvecs,1)
-    !         ! call allocdv(dvecs,1,ndet,norb)
-    !         ! call allocerg(en,1)
-    !         ! call  allocgrad(grad_fin,ndet,norb)
-    
-    !         ! call hamgen(haml,zstore,elect,ndet,an_cr,an2_cr2,1)
-    !         ! call imgtime_prop(dvecs,en,haml,diff_state,0)
-    
-    
-    !         return 
-    
-    !     end subroutine emergency
+    subroutine grad_do_haml_partial_transfer(in,haml,dvecs)
 
-    ! subroutine best_start_zom(zstore,elect,an_cr,an2_cr2)
-        
+        implicit none
+        type(grad_do),intent(inout)::in
+        type(hamiltonian),intent(in)::haml
+        type(dvector),intent(inout)::dvecs
+
+        if (errorflag .ne. 0) return
+
+        in%hjk(:,pick)= haml%hjk(:,pick); in%hjk(pick,:)=haml%hjk(pick,:)
+        in%ovrlp(:,pick)= haml%ovrlp(:,pick); in%ovrlp(pick,:)=haml%ovrlp(pick,:)
+        in%inv=haml%inv
+        in%kinvh=haml%kinvh
+        in%dvecs=dvecs
+        return 
+
+    end subroutine grad_do_haml_partial_transfer
+
+    subroutine grad_do_haml_transfer(in,haml,zstore,dvecs)
+
+        implicit none
+        type(grad_do),intent(in)::in
+        type(hamiltonian),intent(inout)::haml
+        type(zombiest),intent(inout)::zstore
+        type(dvector),intent(inout)::dvecs
+
+        if (errorflag .ne. 0) return
+
+        haml%hjk(:,pick)=in%hjk(:,pick); haml%hjk(pick,:)=in%hjk(pick,:)
+        haml%ovrlp(:,pick)=in%ovrlp(:,pick); haml%ovrlp(pick,:)=in%ovrlp(pick,:)
+        haml%inv=in%inv
+        haml%kinvh=in%kinvh
+
+        zstore=in%zom
+        dvecs=in%dvecs
+        return 
+
+    end subroutine grad_do_haml_transfer
+
+    subroutine haml_to_grad_do(haml,dvecs,out)
+
+        implicit none 
+        type(grad_do),intent(inout)::out
+        type(hamiltonian),intent(in)::haml
+        type(dvector),intent(in)::dvecs
+
+        if (errorflag .ne. 0) return
+        out%hjk=haml%hjk
+        out%ovrlp=haml%ovrlp  
+        out%inv=haml%inv
+        out%kinvh=haml%kinvh
+        out%dvecs%d=dvecs%d
+
+        return 
+
+    end subroutine 
+
+    ! subroutine gram_ovrlp_var_temp(gramstore,wf_ovrlp,z1d,state,var)
     !     implicit none
-    !     type(zombiest),dimension(:),intent(inout)::zstore
-    !     ! real(kind=8),dimension(:,:),allocatable::test_randoms
-    !     real(kind=8)::erg_min
-    !     type(zombiest),dimension(:),allocatable::zstore_try
-    !     type(hamiltonian)::haml,temp_ham
-    !     type(elecintrgl),intent(in)::elect
-    !     type(dvector),dimension(:),allocatable::dvecs,dvecs_temp
-    !     type(oprts),intent(in)::an_cr,an2_cr2
-    !     type(energy)::en
-    !     type(grad)::grad_fin
-    !     DOUBLE PRECISION, external::ZBQLU01
-    !     integer :: l, j, k,ierr,choice,ndet_store
-    !     integer::epoc_cnt,epoc_max,cnt,alive,reject_cnt
-    !     real(kind=8)::alpha,b
-    !     real(kind=8)::mu((norb/2)),sig(norb/2)
-    !     integer,dimension(:),allocatable::picker
+    !     type(gram),dimension(:),intent(in)::gramstore
+    !     real(wp),dimension(:,:,:),intent(inout)::wf_ovrlp
+    !     type(zombiest),intent(in)::z1d
+    !     integer,intent(in)::state,var
+    !     integer::j,k
+
+    !     if(errorflag.ne.0) return
+    !     do j=1,state-1
+    !         do k=1,ndet
+    !             wf_ovrlp(j,k,var)=product(gramstore(state)%zstore(k)%val(1:norb)*&
+    !             z1d%val(1:norb)+gramstore(state)%zstore(k)%val(1+norb:2*norb)*z1d%val(1+norb:2*norb))
+    !           wf_ovrlp(j,var,k)=wf_ovrlp(j,k,var)
+    !         end do
+    !     end do
+
+    ! end subroutine gram_ovrlp_var_temp
+
+    ! subroutine nn_haml(zstore,neural_net,temp,pickorb,hnuc)
+    !     implicit none
+    !     type(neural_network_layer),dimension(:),intent(inout)::neural_net
+    !     type(grad_do),intent(inout)::temp
+    !     type(zombiest),dimension(:)::zstore
+    !     real(dp),intent(in)::hnuc
+    !     integer,intent(in)::pickorb
+    !     real(wp),dimension((2*norb)+5)::input_features
+    !     ! real(wp),dimension(5)::input_features
+    !     integer::j
+    !     integer, allocatable,dimension(:)::IPIV1
+    !     real(dp),allocatable,dimension(:)::WORK1
+    !     integer::ierr=0
+
+
+    !     if (errorflag .ne. 0) return
         
-    !     ierr=0
-    !     ! allocate(test_randoms(norb, num_tries),stat=ierr)
-    !     allocate(picker(1),stat=ierr)
-    !     picker(1)=2
-    !     ndet_store=ndet
-    !     ndet=2
-    !     call alloczs(zstore_try,int(ndet,kind=16))
-
-    !     alive=int(nel/2)
-       
- 
-    !     epoc_max=5
-    !     reject_cnt=0
-    !     alpha=0.8  ! learning rate reduction
-    !     b=1.D1 !starting learning rate
-    !     call allocgrad(grad_fin,ndet,norb)
-       
-    !     call allocham(haml,ndet,norb)
-    !     call allocham(temp_ham,ndet,norb)
-    !     call allocdv(dvecs_temp,1,ndet,norb)
-    !     call allocdv(dvecs,1,ndet,norb)
-    !     call allocerg(en,1)
-    !     !!$omp parallel do private(l,haml,zstore_try,dvecs,en,grad_fin) shared(elect,ndet,an_cr,an2_cr2,alpha,b,epoc_max,zstore)
-    !     do l=2,ndet_store 
-    !         call genzf(zstore_try,ndet)
-    !         call hamgen(haml,zstore_try,elect,ndet,an_cr,an2_cr2,0)
-    !         call imaginary_time_prop2(dvecs,en,haml,ndet,0,0)
-         
-    !         grad_fin%prev_erg=en%erg(1,timesteps+1) 
-    !         ! call epoc_writer(grad_fin%prev_erg,0,0,0.0d0,0)
-    !         epoc_cnt=1
-
-    !         call orbital_gd(zstore_try,grad_fin,elect,dvecs,en,haml,&
-    !             epoc_cnt,alpha,b,picker,epoc_max,an_cr,an2_cr2,reject_cnt,epoc_max,0) 
-
-    !         zstore(l)=zstore_try(2)
-    !         write(0,"(a,i0,a)")"Zombie state ",l," generated"
+    !     input_features(1)=temp%zom%val(pickorb+norb)
+    !     input_features(2)=temp%zom%val(pickorb)
+    !     input_features(4)=pickorb
+    !     input_features(5)=0
+    !     input_features((7+norb):)=temp%zom%val(1:norb)
+    !     do j=1,ndet
+    !         input_features(3)=temp%hjk(pick,j)
+    !         if(j==pick)then
+    !             input_features(5)=1
+    !             temp%ovrlp(j,pick)=1.0d0
+    !             input_features(6:(6+norb))=temp%zom%val(1:norb)
+    !         else 
+    !             input_features(5)=0
+    !             input_features(6:(6+norb))=zstore(j)%val(1:norb)
+    !             temp%ovrlp(j,pick)=product((zstore(j)%val(1:norb)*temp%zom%val(1:norb))+&
+    !                                        (zstore(j)%val(1+norb:2*norb)*temp%zom%val(1+norb:2*norb)))
+    !         end if
+    !         temp%hjk(j,pick)=forward_result(neural_net,input_features)
     !     end do 
-    !     !!$omp end parallel do
-    !     ! do l=3,ndet_store 
-    !     !     do j=1,norb
-    !     !         if(ZBQLU01(1).lt.0.5)then 
-    !     !             zstore(l)%phi(j)=zstore(2)%phi(j)-(0.001*ZBQLU01(1))
-    !     !         else 
-    !     !             zstore(l)%phi(j)=zstore(2)%phi(j)+(0.001*ZBQLU01(1))
-    !     !         end if 
-    !     !     end do 
-    !     !     zstore(l)%sin=sin(zstore(l)%phi)
-    !     !     zstore(l)%cos=cos(zstore(l)%phi)
-    !     !     zstore(l)%val(1:)=zstore(l)%sin
-    !     !     zstore(l)%val(norb+1:)=zstore(l)%cos
-    !     ! end do 
         
-    !     zstore(1)=zstore_try(1)
-    !     ndet=ndet_store
-    !     call dealloczs(zstore_try)
-    !     call deallocham(haml) 
-    !     call deallocdv(dvecs_temp)
-    !     call deallocdv(dvecs)
-    !     call deallocerg(en)
-    !     ! deallocate(test_randoms)
+    !     temp%ovrlp(pick,:)=temp%ovrlp(:,pick)
+    !     temp%hjk(:,pick)=temp%hjk(:,pick)+temp%ovrlp(:,pick)*hnuc
+    !     temp%hjk(pick,:)= temp%hjk(:,pick)
+    !     temp%inv=temp%ovrlp
+       
+    !     allocate(WORK1(ndet),IPIV1(ndet),stat=ierr)
+    !     if (ierr/=0) then
+    !         write(stderr,"(a,i0)") "Error in IPIV or WORK1 vector allocation . ierr had value ", ierr
+    !         errorflag=1
+    !     end if 
+
+    !     Call dgetrf(ndet, ndet, temp%inv, ndet, IPIV1, ierr)
+    !     if (ierr/=0) then
+    !         write(stderr,"(a,i0)")"Error in DGETRF",ierr
+    !     end if
+    !     if (ierr==0) call dgetri(ndet,temp%inv,ndet,IPIV1,WORK1,ndet,ierr)
+    !     if (ierr/=0) then
+    !         write(stderr,"(a,i0)")"Error in DGETRF",ierr
+    !     end if
+
+    !     deallocate(WORK1,IPIV1,stat=ierr)
+    !     if (ierr/=0) then
+    !         write(stderr,"(a,i0)") "Error in IPIV or WORK1 vector deallocation . ierr had value ", ierr
+    !         errorflag=1
+    !     end if
+       
+    !     call DGEMM("N","N",ndet,ndet,ndet,1.d0,temp%inv,ndet,temp%hjk,ndet,0.d0,temp%kinvh,ndet)
 
     !     return
 
-    ! end subroutine best_start_zom
-
-   
-
+    ! end subroutine nn_haml
 
 
 END MODULE gradient_descent

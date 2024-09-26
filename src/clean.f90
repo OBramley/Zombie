@@ -1,5 +1,6 @@
 MODULE clean
 
+    use mod_types
     use globvars
     use alarrays
     use zom
@@ -19,31 +20,31 @@ MODULE clean
         type(dvector),intent(in)::dvec
         integer, intent(in)::nume,pass
         integer, allocatable, dimension(:,:)::combs2
-        integer(kind=16), allocatable, dimension(:)::position
-        real(kind=8), allocatable, dimension(:)::magovrlp,temporary
-        integer::ierr,s,kx
-        integer(kind=16)::total,total2,j,k,l,temp_t2,jx, t
-        real(kind=8)::norm,checker
+        integer, allocatable, dimension(:)::position
+        real(wp), allocatable, dimension(:)::magovrlp,temporary
+        integer::ierr=0
+        integer::total,total2,j,k,l,temp_t2,jx,t,s,kx
+        real(wp)::norm,checker
         logical,allocatable,dimension(:)::excld
-        real(kind=8)::ovrlp1, ovrlp2      
+        real(wp)::ovrlp1, ovrlp2      
         integer, dimension(:), allocatable :: combins
 
     
-    
+        if (errorflag .ne. 0) return
         total=choose(norb,nume)
         total2=0
         temp_t2=5000
         call  alloczf(zs)
         norm=0.0
-        excld=.TRUE.
-       
+    
+        allocate (combs2(total,nume),stat=ierr)
         allocate(combins(0:nume-1))
         if(pass.ne.1)then
             allocate(magovrlp(temp_t2),stat=ierr)
             magovrlp=0.0
         end if
         if(ierr/=0) then
-            write(0,"(a,i0)") "Error in combins matrix allocation. ierr had value ", ierr
+            write(stderr,"(a,i0)") "Error in combins matrix allocation. ierr had value ", ierr
             errorflag=1
             return
         end if
@@ -67,9 +68,10 @@ MODULE clean
             do k=1,nume
                 checker=checker+modulo(combins(k),2)
             end do
-            if(checker==((nume/2)-spin))then
+            if(int(checker)==int((nume/2)-spin))then
                 !$omp critical
                 total2=total2+1
+                combs2(total2,:)=combins(:)
                 if((pass.ne.1).and.(total2.gt.temp_t2))then 
                     allocate(temporary(total2-1),stat=ierr)
                     temporary=magovrlp
@@ -79,7 +81,7 @@ MODULE clean
                     if(ierr==0) deallocate(temporary,stat=ierr)
                     temp_t2=temp_t2*2
                     if(ierr/=0) then
-                        write(0,"(a,i0)") "Error in magovrlp matrix increase. ierr had value ", ierr
+                        write(stderr,"(a,i0)") "Error in magovrlp matrix increase. ierr had value ", ierr
                         errorflag=1
                     end if
                 end if 
@@ -87,12 +89,13 @@ MODULE clean
                 !$omp flush(total2,magovrlp,temp_t2)
                 call zomhfc(zs,combins)
                 do k=1,ndet
-                    ovrlp1=product((zs%sin*zstore(k)%sin)+(zs%cos*zstore(k)%cos))*dvec%d(k)
+                    ovrlp1=product((zs%val(1:norb)*zstore(k)%val(1:norb))+&
+                    (zs%val(1+norb:)*zstore(k)%val(1+norb:)))*dvec%d(k)
                     if(pass.ne.1)then
                         magovrlp(total2)=magovrlp(total2)+ovrlp1
                     end if
                     do l=1,ndet
-                        ovrlp2=product((zs%sin*zstore(l)%sin)+(zs%cos*zstore(l)%cos))
+                        ovrlp2=product((zs%val(1:norb)*zstore(l)%val(1:norb))+(zs%val(1+norb:)*zstore(l)%val(1+norb:)))
                         norm=norm + (dvec%d(l)*ovrlp1*ovrlp2)
                     end do
                 end do
@@ -101,14 +104,14 @@ MODULE clean
         !$omp end parallel do 
 
     
-        write(6,"(a,i0)") 'Total combinations with correct spin ',total2
-        write(6,"(a,e25.17e3)") 'The norm for states with correct spin and electrons is ',real(norm)
+        write(stdout,"(a,i0)") 'Total combinations with correct spin ',total2
+        write(stdout,"(a,e25.17e3)") 'The norm for states with correct spin and electrons is ',real(norm)
         
  
         if(pass.eq.1)then 
             open(unit=9,file='slt_ovrlp.csv',status="new", iostat=ierr)
             if(ierr/=0)then
-                write(0,"(a,i0)") "Error in opening slt_ovrlp.csv. ierr had value ", ierr
+                write(stderr,"(a,i0)") "Error in opening slt_ovrlp.csv. ierr had value ", ierr
                 errorflag=1
                 return
             end if
@@ -124,7 +127,7 @@ MODULE clean
                     magovrlp=temporary
                     if(ierr==0) deallocate(temporary,stat=ierr)
                     if(ierr/=0) then
-                        write(0,"(a,i0)") "Error in magovrlp matrix re-size. ierr had value ", ierr
+                        write(stderr,"(a,i0)") "Error in magovrlp matrix re-size. ierr had value ", ierr
                         errorflag=1
                         return
                     end if 
@@ -132,17 +135,18 @@ MODULE clean
             if(ierr==0) allocate(position(total2),stat=ierr)
             if(ierr==0) allocate(excld(total2),stat=ierr)
             if(ierr/=0) then
-                write(0,"(a,i0)") "Error in magovrlp allocation. ierr had value ", ierr
+                write(stderr,"(a,i0)") "Error in magovrlp allocation. ierr had value ", ierr
                 errorflag=1
                 return
             end if
+            excld=.TRUE.
             do j=1, total2
                 position(j)=minloc(magovrlp,1,excld)
                 excld(position(j))=.FALSE.
             end do
             open(unit=9,file='slt_ovrlp.csv',status="old",access='append',iostat=ierr)
             if(ierr/=0)then
-                write(0,"(a,i0)") "Error in opening slt_ovrlp.csv. ierr had value ", ierr
+                write(stderr,"(a,i0)") "Error in opening slt_ovrlp.csv. ierr had value ", ierr
                 errorflag=1
                 return
             end if
@@ -158,14 +162,14 @@ MODULE clean
             deallocate(magovrlp,stat=ierr)
         end if 
        
-       
+        deallocate (combs2,stat=ierr)
 
         return 
 
 
     end subroutine sd_anal
 
-    subroutine clean_setup(cstore,nume,cleanham,elecs,clean_ndet,zstore,an_cr,an2_cr2)
+    subroutine clean_setup(cstore,nume,cleanham,elecs,clean_ndet,zstore)
 
         implicit none
 
@@ -173,16 +177,15 @@ MODULE clean
         type(hamiltonian), intent(inout)::cleanham
         integer, intent(inout)::clean_ndet
         type(elecintrgl),intent(in)::elecs 
-        type(oprts),intent(in)::an_cr,an2_cr2
         type(zombiest),dimension(:),intent(in)::zstore
         integer, intent(in)::nume
         type(zombiest),dimension(:),allocatable::cstoretemp
         integer, allocatable, dimension(:,:)::combs,combs2,combsfix
-        integer(kind=16), allocatable, dimension(:)::magovrlp
-        integer(kind=16)::j,k,ierr,total,total2,total3,totalf
+        integer, allocatable, dimension(:)::magovrlp
+        integer::j,k,total,total2,total3,totalf
         ! complex(kind=8)::magnitude
-        real(kind=8)::magnitude,checker
-
+        real(wp)::magnitude,checker
+        integer::ierr=0
 
         if (errorflag .ne. 0) return
 
@@ -192,11 +195,11 @@ MODULE clean
         if(ierr==0)  allocate (combs2(total,nume),stat=ierr)
         if(ierr==0)  allocate (combsfix(total,nume),stat=ierr)
         if(ierr/=0) then
-            write(0,"(a,i0)") "Error in combination matrix allocation. ierr had value ", ierr
+            write(stderr,"(a,i0)") "Error in combination matrix allocation. ierr had value ", ierr
             errorflag=1
             return
         end if
-        write(6,"(a,i0)") 'Total combinations ',total
+        write(stdout,"(a,i0)") 'Total combinations ',total
 
 
         ! The occupational combiantions for the correct number of electrons are found 
@@ -227,7 +230,7 @@ MODULE clean
 
         !$OMP barrier
         !$omp master
-        write(6,"(a,i0)") 'Combinations with the first orbital fixed as occupied ',totalf
+        write(stdout,"(a,i0)") 'Combinations with the first orbital fixed as occupied ',totalf
         ! A temporary set of Zombie states is created with the HF states with the correct number of electrons and spin
         !$omp end master
 
@@ -239,7 +242,7 @@ MODULE clean
             do k=1,nume
                 checker=checker+modulo(combs(j,k),2)
             end do
-            if(checker==((nume/2)-spin))then
+            if(int(checker)==int((nume/2)-spin))then
                 !$omp critical
                 total2=total2+1
                 combs2(total2,:)=combsfix(j,:)
@@ -250,13 +253,13 @@ MODULE clean
         !$omp end parallel
 
     
-        write(6,"(a,i0)") 'Combinations with corect spin ',total2
+        write(stdout,"(a,i0)") 'Combinations with corect spin ',total2
         ! A temporary set of Zombie states is created with the HF states with the correct number of electrons and spin
         call alloczs(cstoretemp,total2)
         
         allocate(magovrlp(total2),stat=ierr)
         if(ierr/=0) then
-            write(0,"(a,i0)") "Error in magovrlp allocation. ierr had value ", ierr
+            write(stderr,"(a,i0)") "Error in magovrlp allocation. ierr had value ", ierr
             errorflag=1
             return
         end if
@@ -264,7 +267,7 @@ MODULE clean
         deallocate(combs,stat=ierr)
         if(ierr==0)deallocate(combsfix,stat=ierr)
         if(ierr/=0) then
-            write(0,"(a,i0)") "Error in combination matrix deallocation. ierr had value ", ierr
+            write(stderr,"(a,i0)") "Error in combination matrix deallocation. ierr had value ", ierr
             errorflag=1
             return
         end if
@@ -288,7 +291,8 @@ MODULE clean
                 magnitude=0.0
                 ! magnitude=(0.0,0.0)
                 do k=1, ndet
-                    magnitude=magnitude+product((cstore(j)%sin*zstore(k)%sin)+(cstore(j)%cos*zstore(k)%cos))    
+                    magnitude=magnitude+product((cstore(j)%val(1:norb)*zstore(k)%val(1:norb))+&
+                    (cstore(j)%val(1+norb:)*zstore(k)%val(1+norb:)))    
                     ! overlap(cstoretemp(j),zstore(k))
                 end do
                 ! if(abs(REAL(magnitude))>0.0005) then
@@ -302,7 +306,7 @@ MODULE clean
             !$omp end do
 
             !$omp master
-            write(6,"(a,i0)") 'Combinations with corect spin and enough contribution ',total3
+            write(stdout,"(a,i0)") 'Combinations with corect spin and enough contribution ',total3
             clean_ndet=total3
             !$omp end master
             
@@ -313,7 +317,7 @@ MODULE clean
         end if
         !$omp end parallel
         
-        call alloczs(cstore,int(clean_ndet,kind=16))
+        call alloczs(cstore,clean_ndet)
         if(total2>99)then
             !$omp parallel do
             do j=1, total3
@@ -329,7 +333,7 @@ MODULE clean
         deallocate(magovrlp,stat=ierr)
         if(ierr==0)deallocate(combs2,stat=ierr)
         if(ierr/=0) then
-            write(0,"(a,i0)") "Error in magovrlp deallocation. ierr had value ", ierr
+            write(stderr,"(a,i0)") "Error in magovrlp deallocation. ierr had value ", ierr
             errorflag=1
             return
         end if
@@ -340,8 +344,8 @@ MODULE clean
         end do
        
         
-        call allocham(cleanham,clean_ndet,1)
-        call hamgen(cleanham,cstore,elecs,ndet,an_cr,an2_cr2,1)
+        call allocham(cleanham,clean_ndet)
+        call hamgen(cleanham,cstore,elecs,ndet,1)
         ! call hamgen(cleanham,cstore,elecs,clean_ndet,1)
         call matrixwriter(cleanham%hjk,clean_ndet,"data/clean_ham.csv")
         
@@ -360,28 +364,15 @@ MODULE clean
 
         if (errorflag .ne. 0) return
 
-        ! zoms%dead(1:norb)=(1.0d0,0.0d0)
-        ! zoms%cos(1:norb)=(1.0d0,0.0d0)
-        ! zoms%sin(1:norb)=(0.0d0,0.0d0)
-        ! zoms%alive(1:norb)=(0.0d0,0.0d0)
-        ! zoms%phi(1:norb)=0.0
+     
+        zoms%val(1+norb:2*norb)=1.0d0
+        zoms%val(1:norb)=0.0d0
+        zoms%phi(1:norb)=0
 
-        zoms%dead(1:norb)=1.0d0
-        zoms%cos(1:norb)=1.0d0
-        zoms%sin(1:norb)=0.0d0
-        zoms%alive(1:norb)=0.0d0
-        zoms%phi(1:norb)=0.0
 
         do j=1, size(occ)
-            ! zoms%alive(occ(j))=(1.0d0,0.0d0)
-            ! zoms%dead(occ(j))=(0.0d0,0.0d0)
-            ! zoms%sin(occ(j))=(1.0d0,0.0d0)
-            ! zoms%cos(occ(j))=(0.0d0,0.0d0)
-            ! zoms%phi(occ(j))=0.5*pirl
-            zoms%alive(occ(j))=1.0d0
-            zoms%dead(occ(j))=0.0d0
-            zoms%sin(occ(j))=1.0d0
-            zoms%cos(occ(j))=0.0d0
+            zoms%val(occ(j))=1.0d0
+            zoms%val(norb+occ(j))=0.0d0
             zoms%phi(occ(j))=0.5*pirl
         end do
 
@@ -398,8 +389,8 @@ MODULE clean
         integer,intent(in)::cleantot
         ! complex(kind=8),intent(out)::norm
         ! complex(kind=8)::ovrlp1, ovrlp2
-        real(kind=8),intent(out)::norm
-        real(kind=8)::ovrlp1, ovrlp2
+        real(wp),intent(out)::norm
+        real(wp)::ovrlp1, ovrlp2
         integer::j,k,l
         
         if (errorflag .ne. 0) return
@@ -410,12 +401,14 @@ MODULE clean
         do j=1,cleantot
             do k=1, ndet
                 ! ovrlp1=overlap(cleanzom(j),zstore(k))
-                ovrlp1=product((cleanzom(j)%sin*zstore(k)%sin)+(cleanzom(j)%cos*zstore(k)%cos))
+                ovrlp1=product((cleanzom(j)%val(1:norb)*zstore(k)%val(1:norb))+&
+                (cleanzom(j)%val(1+norb:)*zstore(k)%val(1+norb:)))
                 dvec_clean%d(j)=dvec_clean%d(j)+(dvec%d(k)*ovrlp1)
                 
                 do l=1, ndet
                     ! ovrlp2=overlap(zstore(l),cleanzom(j))
-                    ovrlp2=product((cleanzom(j)%sin*zstore(l)%sin)+(cleanzom(j)%cos*zstore(l)%cos))
+                    ovrlp2=product((cleanzom(j)%val(1:norb)*zstore(l)%val(1:norb))+&
+                    (cleanzom(j)%val(1+norb:)*zstore(l)%val(1+norb:)))
                     ! norm = norm + (conjg(dvec%d(l))*dvec%d(k)*ovrlp2*ovrlp1)
                     norm = norm + (dvec%d(l))*dvec%d(k)*ovrlp2*ovrlp1
                 end do
@@ -428,14 +421,13 @@ MODULE clean
 
     end subroutine cleaner
 
-    subroutine clean_read(cstore,cleanham,clean_ndet,elecs,an_cr,an2_cr2)
+    subroutine clean_read(cstore,cleanham,clean_ndet,elecs)
         
         implicit none
 
         type(zombiest),dimension(:),allocatable,intent(inout)::cstore
         type(hamiltonian), intent(inout)::cleanham
         type(elecintrgl),intent(in)::elecs
-        type(oprts),intent(in)::an_cr,an2_cr2
         integer, intent(inout):: clean_ndet
         integer::pyscfc
      
@@ -445,15 +437,15 @@ MODULE clean
    
         if(pyscfc.eq.1)then
             call pyscf_clean(cstore,clean_ndet,nel)
-            call allocham(cleanham,clean_ndet,1)
-            call hamgen(cleanham,cstore,elecs,ndet,an_cr,an2_cr2,1)
+            call allocham(cleanham,clean_ndet)
+            call hamgen(cleanham,cstore,elecs,ndet,1)
             ! call hamgen(cleanham,cstore,elecs,clean_ndet,1)
             call matrixwriter(cleanham%hjk,clean_ndet,"data/clean_ham.csv")
         else
-            clean_ndet = lines_clean(clean_ndet)        
-            call alloczs(cstore,int(clean_ndet,kind=16))
+            clean_ndet = lines_clean()        
+            call alloczs(cstore,clean_ndet)
             call read_zombie_c(cstore,clean_ndet)
-            call allocham(cleanham,clean_ndet,1)
+            call allocham(cleanham,clean_ndet)
             call read_ham_c(cleanham,clean_ndet)
         end if
 
@@ -462,40 +454,35 @@ MODULE clean
 
     end subroutine clean_read
 
-    integer function lines_clean(nlines)
+    function lines_clean() result(nlines)
         implicit none
-
-        integer, intent(INOUT):: nlines
-        integer:: ierr
+        integer:: nlines
+        integer:: ierr=0
         
-        if (errorflag .ne. 0) return
-
-        ierr=0
         nlines=0
         open(unit=204, file='data/clean_ham.csv',status='old',iostat=ierr)
         if (ierr.ne.0) then
-            write(0,"(a,i0)") 'Error in opening clean_ham.csv file',ierr
+            write(stderr,"(a,i0)") 'Error in opening clean_ham.csv file',ierr
             errorflag = 1
-            return
         end if
-
-        do 
-            read(204,*, iostat=ierr)
-            if(ierr<0)then
-                ! write(0,"(a,i0)") "nlines has value ", nlines
-                lines_clean=nlines
-                close(204)
-                return
-            else if (ierr/=0) then
-                write(0,"(a,i0)") "Error in counting h1ea rows. ierr had value ", ierr
-                errorflag=1
-                return
-            end if
-            nlines=nlines+1
-        end do
-
-        return 
-
+        if(errorflag .eq. 0)then
+            do 
+                read(204,*, iostat=ierr)
+                if(ierr<0)then
+                    ! write(stderr,"(a,i0)") "nlines has value ", nlines
+                    close(204)
+                    return
+                else if (ierr/=0) then
+                    write(stderr,"(a,i0)") "Error in counting h1ea rows. ierr had value ", ierr
+                    close(204)
+                    errorflag=1
+                    exit
+                end if
+                nlines=nlines+1
+            end do
+        end if 
+    
+        return
     end function lines_clean
 
 
@@ -509,14 +496,14 @@ MODULE clean
         integer, allocatable, dimension(:,:)::combs
         integer::Line2, Line3, Line4, Line5, Line6,Line7
         real::Line1
-        integer:: ierr, nlines,j
+        integer:: nlines,j
+        integer::ierr=0
 
         if (errorflag .ne. 0) return
-        ierr=0
-
+        
         open(unit=204, file='data/FCIconfigs_equilibrium.txt',status='old',iostat=ierr)
         if (ierr.ne.0) then
-            write(0,"(a,i0)") 'Error in opening pyscf cleaning file ',ierr
+            write(stderr,"(a,i0)") 'Error in opening pyscf cleaning file ',ierr
             errorflag = 1
             return
         end if
@@ -525,12 +512,12 @@ MODULE clean
         do 
             read(204,*, iostat=ierr)
             if(ierr<0)then
-                ! write(0,"(a,i0)") "nlines has value ", nlines
+                ! write(stderr,"(a,i0)") "nlines has value ", nlines
                 clean_ndet=nlines
                 close(204)
                 exit
             else if (ierr/=0) then
-                write(0,"(a,i0)") "Error in counting pyscf cleaning file rows. ierr had value ", ierr
+                write(stderr,"(a,i0)") "Error in counting pyscf cleaning file rows. ierr had value ", ierr
                 errorflag=1
                 return
             end if
@@ -538,17 +525,17 @@ MODULE clean
         end do
         ierr=0
         print*, clean_ndet
-        call alloczs(cstore,int(clean_ndet,kind=16))
+        call alloczs(cstore,clean_ndet)
         allocate(combs(clean_ndet,nume),stat=ierr)
         if (ierr.ne.0) then
-            write(0,"(a,i0)") 'Error in combination matrix allocation',ierr
+            write(stderr,"(a,i0)") 'Error in combination matrix allocation',ierr
             errorflag = 1
             return
         end if
       
         open(unit=204, file='data/FCIconfigs_equilibrium.txt',status='old',iostat=ierr)
         if (ierr.ne.0) then
-            write(0,"(a,i0)") 'Error in opening pyscf cleaning file',ierr
+            write(stderr,"(a,i0)") 'Error in opening pyscf cleaning file',ierr
             errorflag = 1
             return
         end if

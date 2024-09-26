@@ -3,22 +3,28 @@
 # made with the aid of the fmkmf utility (Copyright (c) The University of Edinburgh)
 # subsequent streamlining alterations have been made 
 
-F90=gfortran
-FFLAGS= -g -Wall -Wextra -ffast-math -ftree-vectorize -funroll-loops -march=native -Ofast -O5 -fopenmp #-fopenacc -O3 -Ofast
+
+F90= gfortran
+FFLAGS= -Wall -Wextra -ffast-math -ftree-vectorize -funroll-loops -march=native -Ofast -O3 -fopenmp
+# F90= ifort
+# FFLAGS=  -fp-model fast=2 -qopt-report=2 -qopt-report-phase=vec -unroll -xHost -fast -O3 -qopenmp -qopenacc#-O3 -Ofast
 FLINKS= $(ARC_LINALG_FFLAGS)
 VPATH=../src
 
 # Link step
 
-all: ZOMBIE.exe
+all: ZOMBIE
 
-ZOMBIE.exe:randgen.o vars.o alarrays.o readpars.o electrons.o zom.o ham.o grad_calc.o outputs.o imgtp.o clean.o infnan_constants.o inf.o infnan.o grad_d.o gradient_descent.o MainZombie.o
+ZOMBIE:randgen_mod.o mod_types.o vars.o infnan_constants.o inf.o infnan.o alarrays.o operators.o readpars.o outputs.o electrons.o zom.o ham.o imgtp.o clean.o gradient_descent.o MainZombie.o #neural_network.o #gram_schmidt.o
 		 $(F90) $(FFLAGS) -o $@ $^ $(FLINKS)
 
 
 # Compile steps
 
-randgen.o:randgen.f
+randgen_mod.o:randgen_mod.f90
+	 $(F90) $(FFLAGS) -c $<
+
+mod_types.o:mod_types.f90
 	 $(F90) $(FFLAGS) -c $<
 
 infnan_constants.o:infnan_constants.f90
@@ -30,47 +36,50 @@ inf.o:inf.f90 infnan_constants.o
 infnan.o:infnan.f90 infnan_constants.o inf.o
 	 $(F90) $(FFLAGS) -c $<
 	 
-vars.o:vars.f90
+vars.o:vars.f90 mod_types.o  
 	 $(F90) $(FFLAGS) -c $<
 
-alarrays.o:alarrays.f90 vars.o
+alarrays.o:alarrays.f90 vars.o mod_types.o 
 	 $(F90) $(FFLAGS) -c $<
 
-readpars.o:readpars.f90 vars.o
+operators.o:operators.f90 vars.o alarrays.o mod_types.o 
+	 $(F90) $(FFLAGS) -c $<
+
+readpars.o:readpars.f90 vars.o mod_types.o 
+	 $(F90) $(FFLAGS) -c $<
+
+outputs.o:outputs.f90 vars.o mod_types.o 
 	 $(F90) $(FFLAGS) -c $<
 
 electrons.o:electrons.f90 vars.o alarrays.o
 	 $(F90) $(FFLAGS) -c $<
 
-zom.o:zom.f90 vars.o infnan.o
+zom.o:zom.f90 vars.o infnan.o mod_types.o randgen_mod.o
 	 $(F90) $(FFLAGS) -c $<
 	 
-ham.o:ham.f90 vars.o alarrays.o
+ham.o:ham.f90 mod_types.o vars.o alarrays.o  
 	 $(F90) $(FFLAGS) -c $<
 
-grad_calc.o:grad_calc.f90 vars.o alarrays.o ham.o
+imgtp.o:imgtp.f90 vars.o alarrays.o mod_types.o 
 	 $(F90) $(FFLAGS) -c $<
 
-outputs.o:outputs.f90 vars.o
+clean.o:clean.f90 vars.o alarrays.o zom.o ham.o outputs.o readpars.o mod_types.o 
 	 $(F90) $(FFLAGS) -c $<
 
-grad_d.o:grad_d.f90 vars.o infnan.o
+# neural_network.o:neural_network.f90 vars.o alarrays.o mod_types.o 
+#	 $(F90) $(FFLAGS) -c $<
+
+gradient_descent.o:gradient_descent.f90 vars.o alarrays.o ham.o imgtp.o outputs.o infnan.o zom.o  operators.o randgen_mod.o  #neural_network.o
 	 $(F90) $(FFLAGS) -c $<
 
-imgtp.o:imgtp.f90 vars.o alarrays.o grad_d.o
-	 $(F90) $(FFLAGS) -c $<
+#gram_schmidt.o:gram_schmidt.f90 mod_types.o vars.o alarrays.o zom.o ham.o outputs.o readpars.o gradient_descent.o imgtp.o
+#	 $(F90) $(FFLAGS) -c $<
 
-gradient_descent.o:gradient_descent.f90 vars.o alarrays.o ham.o grad_d.o imgtp.o outputs.o infnan.o grad_calc.o
-	 $(F90) $(FFLAGS) -c $<
-
-clean.o:clean.f90 vars.o alarrays.o zom.o ham.o outputs.o readpars.o
-	 $(F90) $(FFLAGS) -c $<
-
-MainZombie.o:MainZombie.f90 vars.o alarrays.o readpars.o electrons.o zom.o ham.o grad_calc.o outputs.o imgtp.o clean.o infnan_constants.o inf.o infnan.o grad_d.o gradient_descent.o
+MainZombie.o:MainZombie.f90 randgen_mod.o mod_types.o vars.o infnan_constants.o inf.o infnan.o operators.o alarrays.o readpars.o outputs.o electrons.o zom.o ham.o imgtp.o clean.o gradient_descent.o #neural_network.o #gram_schmidt.o
 	 $(F90) $(FFLAGS) -c $<
 
 # This entry allows you to type " make clean " to get rid of
 # all object and module files
 
 clean:
-	rm -rf f_{files,modd}* *.o *.mod *.exe *~ ../run/*.exe ../run/*~ ../src/*~
+	rm -rf ZOMBIE f_{files,modd}* *.o *.mod *.exe *~ ../run/*.exe ../run/*~ ../src/*~

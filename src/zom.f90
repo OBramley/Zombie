@@ -1,7 +1,10 @@
 MODULE zom 
 
+    use mod_types
+    use randgen
     use globvars
     use infnan_mod
+    
     contains
 
 
@@ -13,50 +16,41 @@ MODULE zom
         type(zombiest),dimension(:),intent(inout)::zstore
         integer, intent(in)::num
         integer::j,k
-        real(kind=8)::dummy
-        DOUBLE PRECISION, external::ZBQLU01
+
         if (errorflag .ne. 0) return
 
-        
         if(imagflg=='n') then
             do j=1,num
-                
                 do k=1,norb
-                    dummy=-1
-                    !$omp critical
-                    do while((dummy.lt.0))
-                       dummy=2*pirl*(ZBQLU01(1)) 
-                    end do
-                    !$omp end critical
-                    zstore(j)%phi(k)=dummy
-                end do 
-                ! zstore(j)%sin=sin(cmplx(zstore(j)%phi,0.0d0,kind=8))
-                ! zstore(j)%cos=cos(cmplx(zstore(j)%phi,0.0d0,kind=8))
-                zstore(j)%sin=sin(zstore(j)%phi)
-                zstore(j)%cos=cos(zstore(j)%phi)
-                zstore(j)%val(1:)=zstore(j)%sin
-                zstore(j)%val(norb+1:)=zstore(j)%cos
+                    zstore(j)%phi(k)=0.5*pirl*(ZBQLU01()) 
+                end do
+                call val_set(zstore(j))
             end do
             if(rhf_1=='y') then
+
                 zstore(1)%phi(1:nel)=0.5*pirl
                 zstore(1)%phi(nel+1:)=0
-                zstore(1)%sin=0
-                zstore(1)%cos=1
-                zstore(1)%sin(1:nel)=1
-                zstore(1)%cos(1:nel)=0
-                zstore(1)%val(1:norb)=zstore(1)%sin
-                zstore(1)%val(norb+1:)=zstore(1)%cos
-                ! zstore(1)%sin(1:nel)=cmplx(1,0.0d0,kind=8)
-                ! zstore(1)%cos(1:nel)=cmplx(0,0.0d0,kind=8)
+                zstore(1)%val(1:norb)=0 
+                zstore(1)%val(norb+1:)=1 
+                zstore(1)%val(1:nel)=1
+                zstore(1)%val(norb+1:norb+nel)=0
+                ! if((gramflg.eq.'y').and.(GDflg.eq.'y'))then
+                    ! zstore(1)%phi(nel)=0
+                    ! zstore(1)%val(nel)=0
+                    ! zstore(1)%val(nel+norb)=1
+                !     zstore(1)%phi(nel+1)=0.5*pirl
+                !     zstore(1)%val(nel+1)=1
+                !     zstore(1)%val(nel+1+norb)=0
+                ! end if 
             end if 
             
         else if(imagflg=='y')then
             ! do j=1,num
             !     do k=1,norb
             !         call random_number(r)
-            !         zstore(j)%phi(k)=2*pirl*r   !ZBQLU01(1)
+            !         zstore(j)%phi(k)=2*pirl*r   !ZBQLU01()
             !         call random_number(r)
-            !         zstore(j)%img=2*pirl*r  !ZBQLU01(1)
+            !         zstore(j)%img=2*pirl*r  !ZBQLU01()
             !     end do
             !     zstore(j)%sin=sin(zstore(j)%phi*exp(i*zstore(j)%img))
             !     zstore(j)%cos=cos(cmplx(zstore(j)%phi,0.0d0,kind=8))
@@ -77,17 +71,17 @@ MODULE zom
 
         implicit none
         type(zombiest),dimension(:),intent(inout)::zstore
-        integer::ierr,count,j
-        integer(kind=16)::total,k
+        integer::count,j
+        integer::total,k
         integer, allocatable, dimension(:,:)::combs
         integer, dimension(ndet,norb)::combs2
+        integer::ierr=0
 
         if (errorflag .ne. 0) return
-        ierr=0
+      
 
         combs2(1:ndet,1:norb)=0
-        
-        zstore(1)%dead(1:norb)=1.0d0
+    
         count=2
         !$omp parallel shared(count,zstore,combs2,errorflag) private(combs,j,k,total,ierr)
         !$omp do
@@ -98,7 +92,7 @@ MODULE zom
             total=choose(norb,j)
             allocate(combs(total,j),stat=ierr)
             if(ierr/=0) then
-                write(0,"(a,i0)") "Error in combination matrix allocation. ierr had value ", ierr
+                write(stderr,"(a,i0)") "Error in combination matrix allocation. ierr had value ", ierr
                 errorflag=1
                 cycle
             end if
@@ -113,7 +107,7 @@ MODULE zom
           
             deallocate(combs,stat=ierr)
             if(ierr/=0) then
-                write(0,"(a,i0)") "Error in combination matrix deallocation. ierr had value ", ierr
+                write(stderr,"(a,i0)") "Error in combination matrix deallocation. ierr had value ", ierr
                 errorflag=1
                 cycle
             end if
@@ -140,13 +134,13 @@ MODULE zom
        
         implicit none
 
-        integer(kind=16) :: choose
+        integer :: choose
         integer, intent(in) :: n, k
-        integer(kind=16):: jmax, j, jmin
+        integer:: jmax, j, jmin
      
     
         if ( (n < 0 ) .or. (k < 0 ) ) then
-           write(0, *) "negative in choose"
+           write(stderr, *) "negative in choose"
            choose = 0
         else
            if ( n < k ) then
@@ -178,11 +172,11 @@ MODULE zom
             integer, dimension(:), allocatable :: combs
         end type comb_result
 
-        integer(kind=16), intent(in)::tot
+        integer, intent(in)::tot
         integer, intent(in)::n_max,m_max
         integer,dimension(:,:),intent(inout)::final
         type(comb_result), dimension(:), pointer :: co
-        integer(kind=16)::j, k, jx, t
+        integer::j, k, jx, t
         integer :: ierr,s,kx
 
      
@@ -192,7 +186,7 @@ MODULE zom
             allocate(co(j)%combs(0:m_max-1))
          end do
         if(ierr/=0) then
-            write(0,"(a,i0)") "Error in co matrix allocation. ierr had value ", ierr
+            write(stderr,"(a,i0)") "Error in co matrix allocation. ierr had value ", ierr
             errorflag=1
             return
         end if
@@ -217,7 +211,7 @@ MODULE zom
             end do
             deallocate(co(j)%combs)
             if(ierr/=0) then
-                write(0,"(a,i0)") "Error in combs matrix deallocation. ierr had value ", ierr
+                write(stderr,"(a,i0)") "Error in combs matrix deallocation. ierr had value ", ierr
                 errorflag=1
                 return
             end if 
@@ -225,7 +219,7 @@ MODULE zom
         
         deallocate(co)
         if(ierr/=0) then
-            write(0,"(a,i0)") "Error in co matrix deallocation. ierr had value ", ierr
+            write(stderr,"(a,i0)") "Error in co matrix deallocation. ierr had value ", ierr
             errorflag=1
             return
         end if 
@@ -244,99 +238,184 @@ MODULE zom
 
         if (errorflag .ne. 0) return
 
-        ! zom%dead(1:norb)=(1.0d0,0.0d0)
-        ! zom%alive(1:norb)=(0.0d0,0.0d0)
-        ! zom%cos(1:norb)=(1.0d0,0.0d0)
-        ! zom%sin(1:norb)=(0.0d0,0.0d0)
-        zom%dead(1:norb)=1
-        zom%alive(1:norb)=0
-        zom%cos(1:norb)=1.0d0
-        zom%sin(1:norb)=0.0d0
+
+        zom%val(1+norb:2*norb)=1.0d0
+        zom%val(1:norb)=0.0d0
         zom%phi(1:norb)=0
 
         do j=1, norb
             if(occ(j)==0)then
                 return
             end if
-            ! zom%sin(occ(j))=(1.0d0,0.0d0)
-            ! zom%cos(occ(j))=(0.0d0,0.0d0)
-            ! zom%phi(occ(j))=0.5*pirl
-            ! zom%alive(occ(j))=(1.0d0,0.0d0)
-            ! zom%dead(occ(j))=(0.0d0,0.0d0)
-            zom%sin(occ(j))=1.0d0
-            zom%cos(occ(j))=0.0d0
+            
+            zom%val(occ(j))=1.0d0
+            zom%val(norb+occ(j))=0.0d0
             zom%phi(occ(j))=0.5*pirl
-            zom%alive(occ(j))=1
-            zom%dead(occ(j))=0
+  
         end do
 
         return
 
     end subroutine zomhf
+    ! subroutine biased_func(z1)
+    !     implicit none
+    !     type(zombiest),intent(inout)::z1
+    !     integer::k
+    !     real(wp)::mu((norb/2)),sig(norb/2)
+    !     real(wp)::val
+
+    !     call musig(mu,sig)
+    !     do k=1,norb/2
+    !         val=2*pirl*random_normal(mu(k),sig(k)) 
+    !         if((is_nan(val).eqv..true.))then
+    !             val=2*pirl*(ZBQLU01())
+    !         end if 
+    !         z1%phi(2*k-1)=val
+    !         val=2*pirl*random_normal(mu(k),sig(k))
+    !         if((is_nan(val).eqv..true.))then
+    !             val=2*pirl*(ZBQLU01()) 
+    !         end if 
+    !         z1%phi(2*k)=val
+    !     end do
+        
+    !     call val_set(z1)
+    !     return
+    ! end subroutine 
+
+    subroutine biased_func(z1)
+        implicit none
+        type(zombiest),intent(inout)::z1
+        integer::k,mult,a1,a2,a3,a4
+        real(wp)::step
+
+        z1%phi=0.001
+     
+        if(nel.gt.10)then 
+            z1%phi(1:4)=0.5*pirl
+            a3=5
+            a4=10
+            a1=11
+            a2=18
+        else if(nel.gt.8)then 
+            z1%phi(1:2)=0.5*pirl
+            a3=3
+            a4=10
+            a1=11
+            a2=12
+        else if(nel.gt.6)then
+            z1%phi(1:2)=0.5*pirl
+            a3=3
+            a4=4
+            a1=5
+            a2=12
+        else if(nel.gt.3)then
+            z1%phi(1:2)=0.5*pirl
+            a3=3
+            a4=4
+            a1=5
+            a2=10
+        else if(nel.gt.2)then
+            a3=1
+            a4=4
+            a1=5
+            a2=10    
+        else
+            a3=1
+            a4=2
+            a1=5
+            a2=10
+        end if
+        do k=a3,a4
+            z1%phi(k)=0.25*pirl+0.25*pirl*ZBQLU01()
+        end do
+        do k=a1,a2
+            z1%phi(k)=0.5*pirl*ZBQLU01()
+        end do
+        mult=0
+        step=0.002 
+        do k=a2+1,norb
+            z1%phi(k)=(0.25-mult*step)*ZBQLU01()
+            if(modulo(k,2)==0)then
+                mult=mult+1
+            end if
+           
+            
+        end do 
+        
+        return 
+
+    end subroutine biased_func
 
     subroutine gen_biased_zs(zstore)
 
         implicit none
         type(zombiest),dimension(:),intent(inout)::zstore
-        DOUBLE PRECISION, external::ZBQLU01
-        real(kind=8)::mu((norb/2)),sig(norb/2)
-        real(kind=8)::val
-        integer::j,k
-        ! real::r
+        real(wp)::mu((norb/2)),sig((norb/2))
+        ! real(wp)::val
+        integer::j
+       
 
         if (errorflag .ne. 0) return
  
         call musig(mu,sig)
-        
+     
         if(imagflg=='n') then
-            !$omp parallel shared(zstore) private(j,k)
-            !$omp do
             do j=1, ndet
-                !$omp critical
-                do k=1,norb/2
-                    val=-1
-                    do while(val.lt.0)
-                        val=2*pirl*random_normal(mu(k),sig(k)) 
-                    end do
-                    if((is_nan(val).eqv..true.))then
-                        val=2*pirl*(ZBQLU01(1))
-                    end if 
-                    zstore(j)%phi(2*k-1)=val
-                    val=-1
-                    do while(val.lt.0)
-                        val=2*pirl*random_normal(mu(k),sig(k))
-                    end do
-                    if((is_nan(val).eqv..true.))then
-                        val=2*pirl*(ZBQLU01(1)) 
-                    end if 
-                    zstore(j)%phi(2*k)=val
-                end do
-                !$omp end critical
-                zstore(j)%sin=sin(zstore(j)%phi)
-                zstore(j)%cos=cos(zstore(j)%phi)
-                zstore(j)%val(1:)=zstore(j)%sin
-                zstore(j)%val(norb+1:)=zstore(j)%cos
-                ! zstore(j)%sin=sin(cmplx(zstore(j)%phi,0.0d0,kind=8))
-                ! zstore(j)%cos=cos(cmplx(zstore(j)%phi,0.0d0,kind=8))
-            end do
-            !$omp end do
-            !$omp end parallel
-            if(rhf_1=='y') then
-                zstore(1)%phi(1:nel)=0.5*pirl
-                zstore(1)%phi(nel+1:)=0
-                zstore(1)%sin=0
-                zstore(1)%cos=1
-                zstore(1)%sin(1:nel)=1
-                zstore(1)%cos(1:nel)=0
-                zstore(1)%val(1:)=zstore(1)%sin
-                zstore(1)%val(norb+1:)=zstore(1)%cos
+                call biased_func(zstore(j))
+                ! do k=1,norb/2
+                !     ! val=-1
+                !     ! do while(val.lt.0)
+                !     val=2*pirl*random_normal(mu(k),sig(k)) 
+                !     ! end do
+                    
+                    
+                !     if((is_nan(val).eqv..true.))then
+                !         val=2*pirl*(ZBQLU01())
+                !         print*, 'here'
+                !     end if 
+               
+                !     zstore(j)%phi(2*k-1)=val
+                !     ! val=-1
+                !     ! do while(val.lt.0)
+                !         val=2*pirl*random_normal(mu(k),sig(k))
+                !     ! end do
+                        
+                !     if((is_nan(val).eqv..true.))then
+                !         val=2*pirl*(ZBQLU01()) 
+                !     end if 
+                !     zstore(j)%phi(2*k)=val
+                ! end do
                 
-                ! zstore(1)%sin(1:nel)=cmplx(1,0.0d0,kind=8)
-                ! zstore(1)%cos(1:nel)=cmplx(0,0.0d0,kind=8)
+                call val_set(zstore(j))
+                
+            end do
+            if(rhf_1=='y') then
+                !if(nel.eq.5)then
+                !   do j = 1, 6
+                !        zstore(j)%phi=0
+                !        zstore(j)%phi(1:4)=0.5*pirl
+                !        zstore(j)%val(1:norb)=0
+                !        zstore(j)%val(norb+1:)=1
+                !        zstore(j)%val(1:4)=1
+                !        zstore(j)%val(1+norb:4+norb)=0
+                !        zstore(j)%val(4+j)=1
+                !        zstore(j)%val(4+j+norb)=1.0d-15
+                !    end do
+                !else 
+                    zstore(1)%phi(1:nel)=0.5*pirl
+                    zstore(1)%phi(nel+1:)=0
+                    zstore(1)%val(1:norb)=0 
+                    zstore(1)%val(norb+1:)=1 
+                    zstore(1)%val(1:nel)=1
+                    zstore(1)%val(norb+1:norb+nel)=0
+                !end if
             end if 
         else if(imagflg=='y')then
             print*,"not yet written"
         end if
+
+       
+
         return
 
     end subroutine gen_biased_zs
@@ -344,9 +423,9 @@ MODULE zom
     subroutine musig(mu,sig)
 
         implicit none
-        real(kind=8),dimension(:),intent(inout)::mu,sig
+        real(wp),dimension(:),intent(inout)::mu,sig
         integer::alive,j
-        real(kind=8)::asrt,aend,dsrt,dend,val
+        real(wp)::asrt,aend,dsrt,dend,val
 
 
         alive=int(nel/2)
@@ -356,9 +435,11 @@ MODULE zom
         val=(norb/10)
 
         asrt=0.0001/ceiling(val)
-        aend=0.17/ceiling(val)   
-        dsrt=0.35/ceiling(val)  
-        dend= 0.15/ceiling(val)
+        aend=0.17/ceiling(val)  
+        dsrt=0.2/ceiling(val)  
+        dend= 0.001/ceiling(val)   
+        ! dsrt=0.35/ceiling(val)  
+        ! dend= 0.15/ceiling(val)
 
        
         
@@ -370,7 +451,8 @@ MODULE zom
             ! mu(j+1+alive)=((dend-dsrt)/(((norb/2)-alive)-1)*j)+dsrt
             sig(j+1+alive)=((dend-dsrt)/(((norb/2)-alive)-1)*j)+dsrt
         end do
- 
+        ! sig(1)=0.1
+        
         return
 
     end subroutine
@@ -382,7 +464,7 @@ MODULE zom
         integer, intent(in)::num
 
         if (errorflag .ne. 0) return
-        
+    
         select case(zst)
             case('HF')
                 call gen_hf_zs(zstore)
@@ -391,16 +473,14 @@ MODULE zom
             case('BB')
                 call gen_biased_zs(zstore)
             case default
-                write(0,"(a)") "Error! Initial zombie type method not recognised!"
-                write(0,"(a)") "This should have been caught at the read stage!"
+                write(stderr,"(a)") "Error! Initial zombie type method not recognised!"
+                write(stderr,"(a)") "This should have been caught at the read stage!"
                 errorflag = 1
                 return
         end select 
         return
     
     end subroutine genzf
-
-
 
     FUNCTION random_normal(MU,SIGMA)
         !
@@ -435,6 +515,7 @@ MODULE zom
         ZBQLNOR = MU + (SIGMA*ZBQLNOR)
         random_normal=ZBQLNOR
 
-    END
+    END FUNCTION random_normal
+    
 
 END MODULE zom
