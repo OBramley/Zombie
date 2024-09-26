@@ -205,16 +205,10 @@ MODULE gradient_descent
         tracker=-1
         extra_flag=0
         p=70-norb
-        if((ndet.lt.ndet_max).or.(epoc_cnt.lt.100))then
-            reduc=1.0d-7
-            reduc2=0
-            ! reduc=0
-        else
-            !reduc=0
-            reduc=reduc_in
-            reduc2=0
-            print*,reduc
-        end if
+       
+        reduc=reduc_in
+        reduc2=0
+       
         comp=grad_fin%prev_erg
         chng_chng=25  !blind_clone_num/4
         chng_chng2=blind_clone_num
@@ -268,8 +262,8 @@ MODULE gradient_descent
                 do n=1, norb
                     pickorb=n !pickerorb(n)
                     call grad_calculate(haml,dvecs,zstore,grad_fin,pickorb)
-                    if((abs(t*grad_fin%vars(pick,pickorb)).lt.reduc*10000).or.&
-                        ! (abs(t*grad_fin%vars(pick,pickorb)).gt.2*pirl).or.&
+                    if((abs(t*grad_fin%vars(pick,pickorb)).lt.reduc*1000).or.&
+                        (abs(t*grad_fin%vars(pick,pickorb)).gt.3*pirl).or.&
                         (abs(t*grad_fin%vars(pick,pickorb)).lt.1.0d-12))then
                         write(stdout,'(1a)',advance='no') '!'
                         cycle
@@ -278,10 +272,10 @@ MODULE gradient_descent
                     thread%zom=zstore(pick)
                     temp=thread
                     temp%zom%phi(pickorb) = thread%zom%phi(pickorb)-(t*grad_fin%vars(pick,pickorb))
-                    ! if(abs(temp%zom%phi(pickorb)).gt.2*pirl)then
-                    !     write(stdout,'(1a)',advance='no') '!'
-                    !     cycle
-                    ! end if 
+                    if(abs(temp%zom%phi(pickorb)).gt.2*pirl)then
+                        write(stdout,'(1a)',advance='no') '!'
+                        cycle
+                    end if 
                     
                     call val_set(temp%zom,pickorb)
                     call he_full_row(temp,zstore,elect,ndet,pickorb)
@@ -381,6 +375,9 @@ MODULE gradient_descent
                     do j=(ndet-ndet_increase+1),ndet
                         call zombiewriter(zstore(j),j,zstore(j)%gram_num)
                     end do
+                    ! if(ndet.ge.ndet_max)then
+                    !     blind_clone_num=blind_clone_num/2
+                    ! end if
                 else if(lr_loop_max.lt.min_clone_lr)then
                     lr_loop_max=lr_loop_max+1
                 end if
