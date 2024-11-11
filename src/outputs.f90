@@ -140,7 +140,8 @@ MODULE outputs
             end if
             close(zomnum)
         else if(file_exists.eqv..true.) then
-            open(unit=zomnum,file=trim(filenm),status="old",access='append',iostat=ierr)
+            open(unit=zomnum,file=trim(filenm),status="replace",iostat=ierr)
+            ! open(unit=zomnum,file=trim(filenm),status="old",access='append',§iostat=ierr)
             if(ierr/=0)then
                 close(zomnum)
                 write(stderr,"(a,i0)") "Error in opening zombie state file. ierr had value ", ierr

@@ -180,6 +180,8 @@ MODULE gradient_descent
         integer,dimension(:),allocatable::chng_trk2,pickerorb
         real(wp)::t,erg_str,num_av,reduc,comp
         integer::ierr=0
+        type(hamiltonian)::haml_store
+        type(zombiest),dimension(:),allocatable::zstore_store
         ! type(neural_network_layer),dimension(:)::neural_net
 
         if (errorflag .ne. 0) return
@@ -210,8 +212,9 @@ MODULE gradient_descent
         reduc2=0
        
         comp=grad_fin%prev_erg
-        chng_chng=25  !blind_clone_num/4
+        chng_chng=12!25  !blind_clone_num/4
         chng_chng2=blind_clone_num
+      
         if(ndet.eq.ndet_max)then
             lr_loop_max=min_clone_lr
         end if
@@ -232,7 +235,10 @@ MODULE gradient_descent
             num_av=num_av+numf(zstore(j),zstore(j))
         end do 
         num_av=num_av/ndet
-        
+        call allocham(haml_store,ndet)
+        call alloczs(zstore_store,ndet)
+        haml_store=haml
+        zstore_store=zstore
         ! Main GD Loop
         do while((rjct_cnt.lt.(norb*100)).and.(epoc_cnt.lt.epoc_max))
             loops=loops+1
@@ -262,20 +268,23 @@ MODULE gradient_descent
                 do n=1, norb
                     pickorb=n !pickerorb(n)
                     call grad_calculate(haml,dvecs,zstore,grad_fin,pickorb)
-                    if((abs(t*grad_fin%vars(pick,pickorb)).lt.reduc*1000).or.&
-                        (abs(t*grad_fin%vars(pick,pickorb)).gt.3*pirl).or.&
-                        (abs(t*grad_fin%vars(pick,pickorb)).lt.1.0d-12))then
-                        write(stdout,'(1a)',advance='no') '!'
-                        cycle
-                    end if
+                    ! if((abs(t*grad_fin%vars(pick,pickorb)).lt.reduc*10000).or.&
+                    !     ! (abs(t*grad_fin%vars(pick,pickorb)).gt.3*pirl).or.&
+                    !     (abs(t*grad_fin%vars(pick,pickorb)).lt.1.0d-12))then
+                    !     write(stdout,'(1a)',advance='no') '!'
+                    !     cycle
+                    ! end if
+                    ! if(abs(t*grad_fin%vars(pick,pickorb)).gt.2*pirl)then 
+                    !     grad_fin%vars(pick,pickorb)=(grad_fin%vars(pick,pickorb)/10)
+                    ! end if
 
                     thread%zom=zstore(pick)
                     temp=thread
                     temp%zom%phi(pickorb) = thread%zom%phi(pickorb)-(t*grad_fin%vars(pick,pickorb))
-                    if(abs(temp%zom%phi(pickorb)).gt.2*pirl)then
-                        write(stdout,'(1a)',advance='no') '!'
-                        cycle
-                    end if 
+                    ! if(abs(temp%zom%phi(pickorb)).gt.2*pirl)then
+                    !     write(stdout,'(1a)',advance='no') '!'
+                    !     cycle
+                    ! end if 
                     
                     call val_set(temp%zom,pickorb)
                     call he_full_row(temp,zstore,elect,ndet,pickorb)
@@ -336,28 +345,73 @@ MODULE gradient_descent
                 !     lralt_extra2=lralt_extra2-1
                 end if 
             end if 
-        
-            lralt_zs=lralt_zs+1
-            chng_chng=chng_chng-1
+            ! if(loops.eq.3)then
+                lralt_zs=lralt_zs+1
+                ! chng_chng=chng_chng-1
+                ! chng_chng2=chng_chng2-1
+                loops=0
+            ! end if
             if(modulo(lralt_zs,2).eq.0)then
                 reduc2=reduc2+1
             end if 
+            chng_chng=chng_chng-1
+            if((chng_chng.le.0).and.(chng_chng2.gt.0))then
+                lralt_zs=0
+                reduc2=0
+                lralt_extra=0
+                chng_chng=12!25  !blind_clone_num/4
+                lralt_extra2=lr_loop_max
+                if(grad_fin%prev_erg.gt.comp)then
+                ! if(((comp-grad_fin%prev_erg).lt.reduc*1d4).or.(grad_fin%prev_erg.gt.comp))then
+                    haml=haml_store
+                    zstore=zstore_store
+                    grad_fin%grad_avlb=0
+                    grad_fin%ovrlp_grad_avlb=0
+                    grad_fin%prev_erg=comp
+                    reduc=reduc/10
+                    ! if((ndet.ge.ndet_max))then 
+                    !     chng_chng2=0
+                    ! else
+                        chng_chng2=chng_chng2+12!25
+                    ! end if 
+                else 
+                    haml_store=haml
+                    zstore_store=zstore
+                    comp=grad_fin%prev_erg
+                end if 
+                ! comp=grad_fin%prev_erg
+            end if 
+
 
             if((chng_chng2.le.0).or.(rjct_cnt_global.gt.3*(lr_loop_max)))then
-                if((abs(comp-grad_fin%prev_erg).lt.reduc*1000).or.(grad_fin%prev_erg.gt.comp))then
+                ! if((abs(comp-grad_fin%prev_erg).lt.reduc*1d4).or.(grad_fin%prev_erg.gt.comp))then
+                if(grad_fin%prev_erg.gt.comp)then
+                    haml=haml_store
+                    zstore=zstore_store
+                    grad_fin%grad_avlb=0
+                    grad_fin%ovrlp_grad_avlb=0
+                    grad_fin%prev_erg=comp
                     if((ndet.ge.ndet_max))then
                         reduc=reduc/10
                         ! if(reduc.lt.1.0d-13)then
                         !     reduc=0
-                        ! end if 
+                        ! end if  
                     end if
-                else if(comp-grad_fin%prev_erg.gt.reduc*5000)then    
+                else if(comp-grad_fin%prev_erg.gt.reduc*1d2)then    
                     reduc=reduc*5
-                    if(reduc.gt.1.0d-7)then
-                        reduc=1.0d-7
+                    if(reduc.gt.1.0d-5)then
+                        reduc=1.0d-5
                      end if
+                    comp=grad_fin%prev_erg
+                    haml_store=haml
+                    zstore_store=zstore
+                else 
+                    comp=grad_fin%prev_erg
+                    haml_store=haml
+                    zstore_store=zstore
                 end if
                 if((ndet.lt.ndet_max))then
+                    ! reduc=reduc_in
                     deallocate(picker,stat=ierr)
                     allocate(picker(ndet+ndet_increase-1),stat=ierr)
                     picker(ndet_increase+1:)=scramble(ndet-1)
@@ -375,30 +429,43 @@ MODULE gradient_descent
                     do j=(ndet-ndet_increase+1),ndet
                         call zombiewriter(zstore(j),j,zstore(j)%gram_num)
                     end do
+                    call deallocham(haml_store)
+                    call dealloczs(zstore_store)
+                    call allocham(haml_store,ndet)
+                    call alloczs(zstore_store,ndet)
+                    haml_store=haml
+                    zstore_store=zstore
                     ! if(ndet.ge.ndet_max)then
                     !     blind_clone_num=blind_clone_num/2
                     ! end if
+                    if(grad_fin%prev_erg.lt.comp)then
+                        comp=grad_fin%prev_erg
+                    end if
                 else if(lr_loop_max.lt.min_clone_lr)then
                     lr_loop_max=lr_loop_max+1
                 end if
-                comp=grad_fin%prev_erg
+                ! comp=grad_fin%prev_erg
                 tracker=-1
                 lralt_extra=0
                 lralt_zs=0
-                chng_chng=25  !blind_clone_num/4
+                chng_chng=12 !25  !blind_clone_num/4
                 chng_chng2=blind_clone_num
                 lralt_extra2=lr_loop_max
                 reduc2=0
-            else if((chng_chng.le.0))then
-                lralt_zs=0
-                reduc2=0
-                lralt_extra=0
-                chng_chng=25  !blind_clone_num/4
-                lralt_extra2=lr_loop_max
-                if(((comp-grad_fin%prev_erg).lt.reduc*1000).or.(grad_fin%prev_erg.gt.comp))then
-                    reduc=reduc/10
-                end if 
-                comp=grad_fin%prev_erg
+            ! else if((chng_chng.le.0))then
+            !     lralt_zs=0
+            !     reduc2=0
+            !     lralt_extra=0
+            !     chng_chng=25  !blind_clone_num/4
+            !     lralt_extra2=lr_loop_max
+            !     if(grad_fin%prev_erg.gt.comp)then
+            !     ! if(((comp-grad_fin%prev_erg).lt.reduc*1d4).or.(grad_fin%prev_erg.gt.comp))then
+            !         reduc=reduc/10
+            !         chng_chng2=chng_chng2+25
+            !     else 
+            !         comp=grad_fin%prev_erg
+            !     end if 
+                ! comp=grad_fin%prev_erg
             end if 
            
             if((lralt_zs.gt.lralt_extra2))then
@@ -406,6 +473,7 @@ MODULE gradient_descent
                 lralt_zs=lralt_extra
                 extra_flag=0
                 reduc2=0
+                ! comp=grad_fin%prev_erg
                 if((acpt_cnt_2.lt.((ndet)/3)).or.(tracker.lt.0))then
                     tracker=tracker+1
                 end if    

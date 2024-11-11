@@ -333,14 +333,15 @@ MODULE zom
         end do
         mult=0
         step=0.002 
-        do k=a2+1,norb
+        do k=a2+1,17 !norb
             z1%phi(k)=(0.25-mult*step)*ZBQLU01()
             if(modulo(k,2)==0)then
                 mult=mult+1
             end if
-           
-            
-        end do 
+        end do
+        do k=18,norb
+            z1%phi(k)=1d-13
+        end do
         
         return 
 
