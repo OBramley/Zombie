@@ -1,6 +1,6 @@
-{  "pyscf_file":"Li_atom_ccpvdz",
+{  "pyscf_file":"BH_321g_stretch",
     "setup":{
-        "runfolder":"Li_atom_17",
+        "runfolder":"BH_stretch3",
         "runtime": "48:00:00",
         "nodes":1,
         "cores":8,
@@ -13,7 +13,7 @@
     },
 
     "run":{
-        "ndet":100,
+        "ndet":150,
         "seed": 0,
         "zomgen":"y",
         "hamgen":"y",
@@ -39,13 +39,13 @@
         "epoc_max":10000000,
         "initial_learning_rate":6250,
         "learning_rate_decay":0.2,
-        "decay_steps":3,
+        "decay_steps":8,
         "clone":"y",
         "clone_max":35,
         "clone_steps":54,
         "clone_num":5,
-        "max_loop_clone":10,
-        "back_trace":0.000001
+        "max_loop_clone":15,
+        "back_trace":0.00001
     }, 
 
     "gram":{

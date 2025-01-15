@@ -212,7 +212,7 @@ MODULE gradient_descent
         reduc2=0
         
         comp=grad_fin%prev_erg
-        chng_chng=12!25  !blind_clone_num/4
+        chng_chng=6!25  !blind_clone_num/4
         chng_chng2=blind_clone_num
         ndet_max_store=ndet_max
         ! if(ndet.ne.ndet_max)then
@@ -363,11 +363,11 @@ MODULE gradient_descent
             end if 
             chng_chng=chng_chng-1
             if((chng_chng.le.0).and.(chng_chng2.gt.0))then
-                lralt_zs=0
-                reduc2=0
-                lralt_extra=0
+                ! lralt_zs=0
+                ! reduc2=0
+                ! lralt_extra=0
                 chng_chng=6!12!25  !blind_clone_num/4
-                lralt_extra2=lr_loop_max
+                ! lralt_extra2=lr_loop_max
                 if(grad_fin%prev_erg.gt.comp)then
                 ! if(((comp-grad_fin%prev_erg).lt.reduc*1d4).or.(grad_fin%prev_erg.gt.comp))then
                     haml=haml_store
@@ -382,8 +382,12 @@ MODULE gradient_descent
                             lr_loop_max=lr_loop_max+1
                         end if
                     end if 
-                        chng_chng2=chng_chng2+6!12!25
-                        ndet_max_store_counter=ndet_max_store_counter+6!12
+                    chng_chng2=chng_chng2+6!12!25
+                    ndet_max_store_counter=ndet_max_store_counter+6!12
+                    lralt_zs=0
+                    reduc2=0
+                    lralt_extra=0
+                    lralt_extra2=lr_loop_max
                 else 
                     haml_store=haml
                     zstore_store=zstore
@@ -425,7 +429,7 @@ MODULE gradient_descent
                     grad_fin%prev_erg=comp
                     if((ndet.ge.ndet_max))then
                         reduc=reduc/10
-                        token=token+1
+                        ! token=token+1
                         ! if(lr_loop_max.lt.min_clone_lr)then
                         !     lr_loop_max=lr_loop_max+1
                         ! end if
