@@ -274,7 +274,7 @@ if(multflg>1):
         shutil.copy2("ZOMBIE",EXDIR1+'/node_'+str(i+1))
 os.chdir(EXDIR1)
 HPCFLG=0
-# -25.03915496288331
+
 if(HPCFLG==1):
     if(inputs['setup']['cores']!=1):
         os.environ["OMP_NUM_THREADS"]=str(inputs['setup']['cores'])

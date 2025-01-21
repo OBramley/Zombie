@@ -340,7 +340,7 @@ MODULE zom
             end if
         end do
         do k=18,norb
-            z1%phi(k)=1d-13
+            z1%phi(k)=1d-4*ZBQLU01()
         end do
         
         return 
