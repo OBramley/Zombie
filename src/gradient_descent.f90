@@ -216,7 +216,10 @@ MODULE gradient_descent
         chng_chng2=blind_clone_num
         ndet_max_store=ndet_max
         ! if(ndet.ne.ndet_max)then
-        !     ndet_max=ndet_max_store/2!ndet+ndet_increase!*2
+        !     if(ndet.lt.ndet_max_store/5) then 
+        !         ndet_max=ndet_max_store/5
+        !     else
+        !     ndet_max=ndet+ndet_max_store/5!ndet+ndet_increase!*2
         !     if(ndet_max.gt.ndet_max_store)then
         !         ndet_max=ndet_max_store
         !     end if
