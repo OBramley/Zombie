@@ -288,24 +288,38 @@ MODULE zom
         integer::k,mult,a1,a2,a3,a4
         real(wp)::step
 
-        z1%phi=0.001
-     
+        ! z1%phi=0.001
+        ! z1%phi(1:nel)=0.5*pirl
+        ! z1%phi(nel+1:)=1.0d-4
+        ! do k=1,nel
+        !     if (ZBQLU01().gt.0.5) then
+        !         z1%phi(k)=z1%phi(k)+0.01*ZBQLU01()
+        !     else
+        !         z1%phi(k)=z1%phi(k)-0.01*ZBQLU01()
+        !     end if
+
+        ! end do
+        ! do k=nel+1,norb
+        !     z1%phi(k)=z1%phi(k)*ZBQLU01()
+        ! end do
+        ! return 
+        z1%phi=0 !1.0d-10
         if(nel.gt.10)then 
             z1%phi(1:4)=0.5*pirl
             a3=5
-            a4=10
+            a4=nel
             a1=11
             a2=18
         else if(nel.gt.8)then 
             z1%phi(1:2)=0.5*pirl
             a3=3
-            a4=10
+            a4=nel
             a1=11
             a2=12
         else if(nel.gt.6)then
             z1%phi(1:2)=0.5*pirl
             a3=3
-            a4=4
+            a4=nel
             a1=5
             a2=12
         else if(nel.gt.3)then
@@ -315,33 +329,80 @@ MODULE zom
             a1=5
             a2=10
         else if(nel.gt.2)then
+            ! z1%phi(1:2)=0.5*pirl
             a3=1
-            a4=4
+            a4=3
             a1=5
-            a2=10    
+            a2=4 !10    
         else
             a3=1
             a4=2
             a1=5
             a2=10
         end if
-        do k=a3,a4
-            z1%phi(k)=0.25*pirl+0.25*pirl*ZBQLU01()
-        end do
-        do k=a1,a2
-            z1%phi(k)=0.5*pirl*ZBQLU01()
-        end do
-        mult=0
-        step=0.002 
-        do k=a2+1,17 !norb
-            z1%phi(k)=(0.25-mult*step)*ZBQLU01()
-            if(modulo(k,2)==0)then
-                mult=mult+1
+        do k=a3,norb
+            ! z1%phi(k)=0
+            if (ZBQLU01().gt.0.9) then
+                ! z1%phi(k)=0.5*pirl !*ZBQLU01()
+                z1%phi(k)=0.25*pirl+0.25*pirl*ZBQLU01()
+            else
+                z1%phi(k)=1d-15*ZBQLU01()
             end if
+            ! z1%phi(k)=z1%phi(k)*ZBQLU01()
         end do
-        do k=18,norb
-            z1%phi(k)=1d-8*ZBQLU01()
+        do k=a3,a4
+            ! if (ZBQLU01().gt.0.5) then
+            !     z1%phi(k)=0.5*pirl+0.01*ZBQLU01()
+            ! else
+            !     z1%phi(k)=0.5*pirl-0.01*ZBQLU01()
+            ! end if
+            ! z1%phi(k)=0.25*pirl+0.25*pirl*ZBQLU01()
+            mult =int(a3 + ( (a2-a3)*ZBQLU01() ))
+            if (ZBQLU01().gt.0.5) then
+                    z1%phi(mult)=0.5*pirl+0.01*ZBQLU01()
+            else
+                    z1%phi(mult)=0.5*pirl-0.01*ZBQLU01()
+            end if
+                ! z1%phi(k)=0.25*pirl+0.25*pirl*ZBQLU01()
+           
+            ! if (ZBQLU01().gt.0.5) then
+            !     z1%phi(mult)=0.5*pirl
+            ! else
+            !     z1%phi(k)=0.5*pirl
+            ! end if
+
         end do
+        ! do k=a1,a2
+            ! mult =int(a3 + ( (a2-a3)*ZBQLU01() ))
+            ! if (ZBQLU01().gt.0.5) then
+            !     z1%phi(mult)=z1%phi(mult)+0.01*ZBQLU01()
+            ! else
+            !     z1%phi(k)=z1%phi(k)-0.01*ZBQLU01()
+            ! end if
+            ! if (ZBQLU01().gt.0.5) then
+                !     z1%phi(k)=0.5*pirl*ZBQLU01()
+                ! else
+                    ! z1%phi(k)=1d-3*ZBQLU01()
+               
+            ! z1%phi(k)=0.25*pirl+0.25*pirl*ZBQLU01()
+            ! z1%phi(k)=0.5*pirl*ZBQLU01()
+        ! end if
+        ! end do
+     
+        ! do k=a2+1,17 !norb
+        !     z1%phi(k)=(0.25-mult*step)*ZBQLU01()
+        !     if(modulo(k,2)==0)then
+        !         mult=mult+1
+        !     end if
+        ! end do
+        ! do k=a2+1,norb
+        !     ! z1%phi(k)=0
+        !     if (ZBQLU01().gt.0.9) then
+        !     !     z1%phi(k)=0.5*pirl*ZBQLU01()
+        !     ! else
+        !         z1%phi(k)=1d-5*ZBQLU01()
+        !     end if
+        ! end do
         
         return 
 

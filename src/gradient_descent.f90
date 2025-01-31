@@ -178,7 +178,7 @@ MODULE gradient_descent
         integer::rjct_cnt,acpt_cnt,pickorb,loops,lralt_zs,acpt_cnt_2,lralt_extra2,ndet_max_store,ndet_max_store_counter
         integer::j,n,p,chng_chng,tracker,lralt_extra,extra_flag,chng_chng2,reduc2,token,ndet_max_store_counter_flg
         integer,dimension(:),allocatable::chng_trk2,pickerorb
-        real(wp)::t,erg_str,num_av,reduc,comp
+        real(wp)::t,erg_str,num_av,reduc,comp,reduc_store
         integer::ierr=0
         type(hamiltonian)::haml_store
         type(zombiest),dimension(:),allocatable::zstore_store
@@ -363,6 +363,10 @@ MODULE gradient_descent
             ! end if
             if(modulo(lralt_zs,2).eq.0)then
                 reduc2=reduc2+1
+            end if
+            if(modulo(epoc_cnt,25).eq.0)then 
+                reduc_store=reduc
+                reduc=0
             end if 
             chng_chng=chng_chng-1
             if((chng_chng.le.0).and.(chng_chng2.gt.0))then
@@ -399,6 +403,9 @@ MODULE gradient_descent
                         call zombiewriter(zstore(j),j,zstore(j)%gram_num)
                     end do
                 end if 
+                if(reduc.eq.0)then
+                    reduc=reduc_store
+                end if
             end if 
             ! if(ndet_max_store_counter_flg.eq.1)then
             !     ndet_max_store_counter=ndet_max_store_counter-1
@@ -512,6 +519,9 @@ MODULE gradient_descent
                     lr_loop_max=lr_loop_max+1
                     token=0
                 end if 
+                if(reduc.eq.0)then
+                    reduc=reduc_store
+                end if
                 ! comp=grad_fin%prev_erg
                 tracker=-1
                 lralt_extra=0
