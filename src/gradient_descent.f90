@@ -364,10 +364,7 @@ MODULE gradient_descent
             if(modulo(lralt_zs,2).eq.0)then
                 reduc2=reduc2+1
             end if
-            if(modulo(epoc_cnt,25).eq.0)then 
-                reduc_store=reduc
-                reduc=0
-            end if 
+           
             chng_chng=chng_chng-1
             if((chng_chng.le.0).and.(chng_chng2.gt.0))then
                 ! lralt_zs=0
@@ -545,7 +542,10 @@ MODULE gradient_descent
             !     end if 
                 ! comp=grad_fin%prev_erg
             end if 
-           
+            if(modulo(epoc_cnt,20).eq.0)then 
+                reduc_store=reduc
+                reduc=0
+            end if 
             if((lralt_zs.gt.lralt_extra2))then
                 picker=scramble(ndet-1)
                 lralt_zs=lralt_extra

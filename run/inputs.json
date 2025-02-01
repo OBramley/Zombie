@@ -13,7 +13,7 @@
     },
 
     "run":{
-        "ndet":5,
+        "ndet":10,
         "seed": 0,
         "zomgen":"y",
         "hamgen":"y",
@@ -41,7 +41,7 @@
         "learning_rate_decay":0.2,
         "decay_steps":4,
         "clone":"y",
-        "clone_max":70,
+        "clone_max":80,
         "clone_steps":48,
         "clone_num":5,
         "max_loop_clone":15,
