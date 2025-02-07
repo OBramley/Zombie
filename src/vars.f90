@@ -109,6 +109,7 @@ MODULE globvars
     
     integer::ndet       ! Number of Zombie states
     integer::norb       ! Number of spin orbitals
+    integer::norb_store ! Number of spin orbitals stored  
     integer::nel        ! Number of electrons in molecule
     real(wp)::spin  ! Spin of the molecule
     real::beta       ! Distance proagated in imaginary time

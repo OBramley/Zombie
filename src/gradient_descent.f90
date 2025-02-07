@@ -276,7 +276,7 @@ MODULE gradient_descent
                 call haml_to_grad_do(haml,dvecs,thread)
 
                 do n=1, norb
-                    pickorb=n !pickerorb(n)
+                    pickorb=pickerorb(n)
                     call grad_calculate(haml,dvecs,zstore,grad_fin,pickorb)
                     ! if((abs(t*grad_fin%vars(pick,pickorb)).lt.reduc*10000).or.&
                     !     ! (abs(t*grad_fin%vars(pick,pickorb)).gt.3*pirl).or.&
@@ -446,8 +446,8 @@ MODULE gradient_descent
                     end if
                 else if(comp-grad_fin%prev_erg.gt.reduc*1d2)then    
                     reduc=reduc*5
-                    if(reduc.gt.1.0d-5)then
-                        reduc=1.0d-5
+                    if(reduc.gt.1.0d-8)then
+                        reduc=1.0d-8
                     end if
                     token=token-1
                     comp=grad_fin%prev_erg
@@ -489,9 +489,7 @@ MODULE gradient_descent
                     call alloczs(zstore_store,ndet)
                     haml_store=haml
                     zstore_store=zstore
-                    ! if(ndet.ge.ndet_max)then
-                    !     blind_clone_num=blind_clone_num/2
-                    ! end if
+                    
                     if(grad_fin%prev_erg.lt.comp)then
                         comp=grad_fin%prev_erg
                     end if
@@ -527,6 +525,16 @@ MODULE gradient_descent
                 chng_chng2=blind_clone_num
                 lralt_extra2=lr_loop_max
                 reduc2=0
+                if(norb_store.ne.norb)then
+                    if((ndet.ge.ndet_max).and.(epoc_cnt.gt.600))then
+                        norb_store=norb
+                        ! call zombie_orbital_change(zstore,norb_store)
+                        ! call dealloc_grad_do(temp)
+                        ! call dealloc_grad_do(thread)
+                        ! return
+                    !     blind_clone_num=blind_clone_num/2
+                    end if
+                end if
             ! else if((chng_chng.le.0))then
             !     lralt_zs=0
             !     reduc2=0
@@ -842,6 +850,51 @@ MODULE gradient_descent
         return 
 
     end subroutine 
+
+    subroutine zombie_orbital_change(zstore,norb_new)
+
+        implicit none
+        type(zombiest),dimension(:),allocatable,intent(inout)::zstore
+        type(zombiest),dimension(:),allocatable::zstore_temp
+        integer,intent(in)::norb_new
+        integer::j,k,norb_old
+        
+        if (errorflag .ne. 0) return
+        norb_old=norb
+        call alloczs(zstore_temp,ndet)
+        zstore_temp=zstore 
+        call dealloczs(zstore)
+        norb=norb_new 
+        call alloczs(zstore,ndet)
+        if(norb_new.gt.norb_old)then 
+            ! zstore(1)%phi(1:norb_old)=zstore_temp(1)%phi(1:norb_old)
+            ! zstore(1)%phi(norb_old+1:norb_new)=0.0d0
+            ! call val_set(zstore(1))
+            ! call zombiewriter(zstore(1),1,zstore(1)%gram_num)
+            do j=1,ndet
+                zstore(j)%phi=0.0d0
+                zstore(j)%phi(1:norb_old)=zstore_temp(j)%phi(1:norb_old)
+
+                ! do k=norb_old+1,norb_new
+                !     zstore(j)%phi(k)=0 !1.0d-15*ZBQLU01()
+                ! end do
+                call val_set(zstore(j))
+                call zombiewriter(zstore(j),j,zstore(j)%gram_num)
+            end do 
+            
+        else !if (norb_new.lt.norb_old) then
+            do j=1,ndet
+                zstore(j)%phi=zstore_temp(j)%phi(1:norb)
+                call val_set(zstore(j))
+                call zombiewriter(zstore(j),j,zstore(j)%gram_num)
+            end do
+        end if
+        call dealloczs(zstore_temp)
+        norb=norb_old
+        stop
+        return
+
+    end subroutine zombie_orbital_change
 
     ! subroutine gram_ovrlp_var_temp(gramstore,wf_ovrlp,z1d,state,var)
     !     implicit none

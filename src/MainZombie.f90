@@ -70,7 +70,7 @@ program MainZombie
     
     ! generate 1 and 2 electron integrals
     if((cleanflg=="y").or.(cleanflg=="f").or.((hamgflg=='y')).or.(GDflg=='y'))then
-        
+  
         inquire(file='integrals/elec_integrals.csv',exist=file_exists)
         if(file_exists.eqv..false.)then
             write(stdout,"(a)") "Allocating and processing electron integrals"
@@ -86,6 +86,16 @@ program MainZombie
         
         ! if((gramflg.eq."n").or.(gramwave.lt.2))then 
             ! generate zombie states
+        if((GDflg=='y').and.(ndet.lt.ndet_max))then 
+            if(norb.eq.18)then 
+                norb_store=28
+            end if
+            if(norb.eq.28)then 
+                norb_store=18
+            end if
+        else 
+            norb_store=norb
+        end if 
         call alloczs(zstore,ndet)
         write(stdout,"(a)") "Zombie states allocated"
         if(zomgflg=='y')then
@@ -177,10 +187,10 @@ program MainZombie
             ! do j=2, ndet
             !     close(300+j)
             ! end do
-            do j=1,ndet
-                call zombiewriter(zstore(j),j,zstore(j)%gram_num)
-                ! close(300+j)
-            end do
+            ! do j=1,ndet
+            !     call zombiewriter(zstore(j),j,zstore(j)%gram_num)
+            !     ! close(300+j)
+            ! end do
             dvecs%d=0.0d0
             if(gramflg.eq."n")then
                 allocate(erg(1,timesteps+1),stat=ierr)
