@@ -445,10 +445,10 @@ MODULE gradient_descent
                         ! end if  
                     end if
                 else if(comp-grad_fin%prev_erg.gt.reduc*1d2)then    
-                    reduc=reduc*5
-                    if(reduc.gt.1.0d-8)then
-                        reduc=1.0d-8
-                    end if
+                    ! reduc=reduc*5
+                    ! if(reduc.gt.1.0d-11)then
+                    !     reduc=1.0d-11
+                    ! end if
                     token=token-1
                     comp=grad_fin%prev_erg
                     haml_store=haml
@@ -513,7 +513,10 @@ MODULE gradient_descent
                 if((lr_loop_max.lt.min_clone_lr).and.token.gt.6)then
                     lr_loop_max=lr_loop_max+1
                     token=0
+                else if((lr_loop_max.eq.min_clone_lr).and.token.gt.6)then
+                    lr=0.0d0
                 end if 
+                
                 if(reduc.eq.0)then
                     reduc=reduc_store
                 end if
