@@ -1,9 +1,9 @@
-{  "pyscf_file":"Li_atom_ccpvdz",
+{  "pyscf_file":"Be_atom_ccpvdz",
     "setup":{
-        "runfolder":"Li_Atom_things5",
+        "runfolder":"Be_Atom_things9",
         "runtime": "48:00:00",
         "nodes":1,
-        "cores":8,
+        "cores":4,
         "submissions":1,
         "multiple":1,
         "subnode":1,
@@ -14,7 +14,7 @@
 
     "run":{
         "ndet":90,
-        "seed": 0,
+        "seed": 1671860797352562625,
         "zomgen":"y",
         "hamgen":"y",
         "clean":"n",
@@ -37,14 +37,14 @@
 
     "grad":{
         "epoc_max":100000,
-        "initial_learning_rate":6250,
-        "learning_rate_decay":0.2,
+        "initial_learning_rate":1000000,
+        "learning_rate_decay":0.1,
         "decay_steps":8,
         "clone":"y",
         "clone_max":90,
-        "clone_steps":48,
+        "clone_steps":60,
         "clone_num":5,
-        "max_loop_clone":10,
+        "max_loop_clone":12,
         "back_trace":0.00000000001
     }, 
 

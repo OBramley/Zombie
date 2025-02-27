@@ -175,8 +175,8 @@ MODULE gradient_descent
         type(hamiltonian),intent(inout)::haml
         type(grad),intent(inout)::grad_fin
         type(grad_do)::temp,thread
-        integer::rjct_cnt,acpt_cnt,pickorb,loops,lralt_zs,acpt_cnt_2,lralt_extra2,ndet_max_store,ndet_max_store_counter
-        integer::j,n,p,chng_chng,tracker,lralt_extra,extra_flag,chng_chng2,reduc2,token,ndet_max_store_counter_flg
+        integer::rjct_cnt,acpt_cnt,pickorb,loops,lralt_zs,acpt_cnt_2,lralt_extra2,ndet_max_store
+        integer::j,n,p,chng_chng,tracker,lralt_extra,extra_flag,chng_chng2,reduc2
         integer,dimension(:),allocatable::chng_trk2,pickerorb
         real(wp)::t,erg_str,num_av,reduc,comp,reduc_store
         integer::ierr=0
@@ -207,7 +207,6 @@ MODULE gradient_descent
         tracker=-1
         extra_flag=0
         p=70-norb
-        token=0
         reduc=reduc_in
         reduc2=0
         
@@ -215,19 +214,8 @@ MODULE gradient_descent
         chng_chng=6!25  !blind_clone_num/4
         chng_chng2=blind_clone_num
         ndet_max_store=ndet_max
-        ! if(ndet.ne.ndet_max)then
-        !     if(ndet.lt.ndet_max_store/5) then 
-        !         ndet_max=ndet_max_store/5
-        !     else
-        !     ndet_max=ndet+ndet_max_store/5!ndet+ndet_increase!*2
-        !     if(ndet_max.gt.ndet_max_store)then
-        !         ndet_max=ndet_max_store
-        !     end if
-        !     ndet_max_store_counter_flg=0
-        !     ndet_max_store_counter=blind_clone_num*10
-        ! end if 
-        !     lr_loop_max=min_clone_lr
-        ! end if
+       
+      
        
         call haml_to_grad_do(haml,dvecs,temp)
         if(gramflg.eq.'y')then
@@ -264,7 +252,7 @@ MODULE gradient_descent
             chng_trk=0
             acpt_cnt_2=0  
             t=lr*(lr_alpha**lralt_zs)
-            
+            picker=scramble(ndet-1)
             do j=1,ndet-1
                 write(stdout,'(i3)',advance='no') j
                 erg_str=grad_fin%prev_erg
@@ -278,31 +266,16 @@ MODULE gradient_descent
                 do n=1, norb
                     pickorb=pickerorb(n)
                     call grad_calculate(haml,dvecs,zstore,grad_fin,pickorb)
-                    ! if((abs(t*grad_fin%vars(pick,pickorb)).lt.reduc*10000).or.&
-                    !     ! (abs(t*grad_fin%vars(pick,pickorb)).gt.3*pirl).or.&
-                    !     (abs(t*grad_fin%vars(pick,pickorb)).lt.1.0d-12))then
-                    !     write(stdout,'(1a)',advance='no') '!'
-                    !     cycle
-                    ! end if
-                    ! if(abs(t*grad_fin%vars(pick,pickorb)).gt.2*pirl)then 
-                    !     grad_fin%vars(pick,pickorb)=(grad_fin%vars(pick,pickorb)/10)
-                    ! end if
 
                     thread%zom=zstore(pick)
                     temp=thread
                     temp%zom%phi(pickorb) = thread%zom%phi(pickorb)-(t*grad_fin%vars(pick,pickorb))
-                    ! if(abs(temp%zom%phi(pickorb)).gt.2*pirl)then
-                    !     write(stdout,'(1a)',advance='no') '!'
-                    !     cycle
-                    ! end if 
                     
                     call val_set(temp%zom,pickorb)
                     call he_full_row(temp,zstore,elect,ndet,pickorb)
                     call imaginary_time(temp,ndet)
      
-                    !if((grad_fin%prev_erg-temp%erg.ge.1.0d-14))then
                     if((temp%erg.lt.grad_fin%prev_erg+reduc*(1**(-reduc2))))then
-                    ! if((temp%erg.lt.grad_fin%prev_erg).or.((t.gt.0.1).and.(temp%erg.lt.grad_fin%prev_erg+reduc)))then
                         acpt_cnt=acpt_cnt+1
                         chng_trk2(acpt_cnt)=pickorb
                         rjct_cnt=0
@@ -336,9 +309,6 @@ MODULE gradient_descent
            write(stdout,"(a,i0,a,f21.16,a,f10.5)") "Energy after epoch no. ",epoc_cnt,": ",grad_fin%prev_erg, "    Learning rate:",t
        
             if(acpt_cnt_2.gt.0)then
-                ! do j=1,acpt_cnt_2
-                !     call zombiewriter(zstore(chng_trk(j)),chng_trk(j),zstore(chng_trk(j))%gram_num)
-                ! end do
                 call epoc_writer(grad_fin%prev_erg,epoc_cnt,t,chng_trk,0)
                 epoc_cnt=epoc_cnt+1
                 chng_chng2=chng_chng2-1
@@ -351,43 +321,33 @@ MODULE gradient_descent
             if((acpt_cnt_2.lt.(0.25*ndet)).and.(tracker.gt.-1))then
                 if(lralt_zs.eq.lralt_extra)then
                     lralt_extra=lralt_extra+1
-                ! else if(lralt_zs.eq.lralt_extra2)then
-                !     lralt_extra2=lralt_extra2-1
                 end if 
             end if 
-            ! if(loops.eq.3)then
-                lralt_zs=lralt_zs+1
-                ! chng_chng=chng_chng-1
-                ! chng_chng2=chng_chng2-1
-                loops=0
-            ! end if
+            
+            lralt_zs=lralt_zs+1
+            loops=0
+        
             if(modulo(lralt_zs,2).eq.0)then
                 reduc2=reduc2+1
             end if
            
             chng_chng=chng_chng-1
+
             if((chng_chng.le.0).and.(chng_chng2.gt.0))then
-                ! lralt_zs=0
-                ! reduc2=0
-                ! lralt_extra=0
-                chng_chng=6!12!25  !blind_clone_num/4
-                ! lralt_extra2=lr_loop_max
+                chng_chng=12
                 if(grad_fin%prev_erg.gt.comp)then
-                ! if(((comp-grad_fin%prev_erg).lt.reduc*1d4).or.(grad_fin%prev_erg.gt.comp))then
                     haml=haml_store
                     zstore=zstore_store
                     grad_fin%grad_avlb=0
                     grad_fin%ovrlp_grad_avlb=0
                     grad_fin%prev_erg=comp
                     reduc=reduc/10
-                    token=token+1
                     if((ndet.ge.ndet_max))then
                         if(lr_loop_max.lt.min_clone_lr)then
                             lr_loop_max=lr_loop_max+1
                         end if
                     end if 
-                    chng_chng2=chng_chng2+6!12!25
-                    ndet_max_store_counter=ndet_max_store_counter+6!12
+                    chng_chng2=chng_chng2+12
                     lralt_zs=0
                     reduc2=0
                     lralt_extra=0
@@ -399,35 +359,17 @@ MODULE gradient_descent
                     do j=2,ndet
                         call zombiewriter(zstore(j),j,zstore(j)%gram_num)
                     end do
+                    lralt_zs=0
+                    lralt_extra=0
+                    lralt_extra2=lr_loop_max
                 end if 
+               
                 if(reduc.eq.0)then
                     reduc=reduc_store
                 end if
             end if 
-            ! if(ndet_max_store_counter_flg.eq.1)then
-            !     ndet_max_store_counter=ndet_max_store_counter-1
-            !     print*,ndet_max_store_counter
-            !     if(ndet_max_store_counter.eq.0)then
-            !             ndet_max=ndet_max_store !ndet+ndet_increase*2
-            !         if(ndet_max.gt.ndet_max_store)then
-            !             ndet_max=ndet_max_store
-            !         end if
-            !         ndet_max_store_counter_flg=0
-            !         reduc=reduc*1d1
-            !         ! if(reduc.gt.1.0d-5)then
-            !         !     reduc=1.0d-5
-            !         ! end if
-            !         lr_loop_max=lr_loop_max-2
-            !         if(lr_loop_max.lt.3)then
-            !             lr_loop_max=3
-            !         end if
-            !         token=0
-            !         chng_chng2=0
-            !     end if
-            ! end if
-
+           
             if((chng_chng2.le.0).or.(rjct_cnt_global.gt.3*(lr_loop_max)))then
-                ! if((abs(comp-grad_fin%prev_erg).lt.reduc*1d4).or.(grad_fin%prev_erg.gt.comp))then
                 if(grad_fin%prev_erg.gt.comp)then
                     haml=haml_store
                     zstore=zstore_store
@@ -436,26 +378,15 @@ MODULE gradient_descent
                     grad_fin%prev_erg=comp
                     if((ndet.ge.ndet_max))then
                         reduc=reduc/10
-                        ! token=token+1
-                        ! if(lr_loop_max.lt.min_clone_lr)then
-                        !     lr_loop_max=lr_loop_max+1
-                        ! end if
-                        ! if(reduc.lt.1.0d-13)then
-                        !     reduc=0
-                        ! end if  
                     end if
-                else if(comp-grad_fin%prev_erg.gt.reduc*1d2)then    
-                    ! reduc=reduc*5
-                    ! if(reduc.gt.1.0d-11)then
-                    !     reduc=1.0d-11
-                    ! end if
-                    token=token-1
-                    comp=grad_fin%prev_erg
-                    haml_store=haml
-                    zstore_store=zstore
-                    do j=2,ndet
-                        call zombiewriter(zstore(j),j,zstore(j)%gram_num)
-                    end do
+                ! else if(comp-grad_fin%prev_erg.gt.reduc*1d2)then    
+                
+                !     comp=grad_fin%prev_erg
+                !     haml_store=haml
+                !     zstore_store=zstore
+                !     do j=2,ndet
+                !         call zombiewriter(zstore(j),j,zstore(j)%gram_num)
+                !     end do
                 else 
                     comp=grad_fin%prev_erg
                     haml_store=haml
@@ -464,8 +395,8 @@ MODULE gradient_descent
                         call zombiewriter(zstore(j),j,zstore(j)%gram_num)
                     end do
                 end if
+
                 if((ndet.lt.ndet_max))then
-                    ! reduc=reduc_in
                     deallocate(picker,stat=ierr)
                     allocate(picker(ndet+ndet_increase-1),stat=ierr)
                     picker(ndet_increase+1:)=scramble(ndet-1)
@@ -489,7 +420,6 @@ MODULE gradient_descent
                     call alloczs(zstore_store,ndet)
                     haml_store=haml
                     zstore_store=zstore
-                    
                     if(grad_fin%prev_erg.lt.comp)then
                         comp=grad_fin%prev_erg
                     end if
@@ -498,71 +428,38 @@ MODULE gradient_descent
                         if(lr_loop_max.lt.3)then
                             lr_loop_max=3
                         end if
-                        token=0
                         chng_chng2=0
                     end if
-                    ! if(ndet.eq.ndet_max)then
-                    !     if(ndet.lt.ndet_max_store)then
-                    !         ndet_max_store_counter_flg=1
-                    !         ndet_max_store_counter=blind_clone_num*10
-                    !     end if
-                    ! end if 
-                ! else if(lr_loop_max.lt.min_clone_lr)then
-                !     lr_loop_max=lr_loop_max+1
+                else
+                    if((lr_loop_max.lt.min_clone_lr))then
+                        lr_loop_max=lr_loop_max+1
+                    end if 
                 end if
-                if((lr_loop_max.lt.min_clone_lr).and.token.gt.6)then
-                    lr_loop_max=lr_loop_max+1
-                    token=0
-                else if((lr_loop_max.eq.min_clone_lr).and.token.gt.6)then
-                    lr=0.0d0
-                end if 
                 
                 if(reduc.eq.0)then
                     reduc=reduc_store
                 end if
-                ! comp=grad_fin%prev_erg
+        
                 tracker=-1
                 lralt_extra=0
                 lralt_zs=0
-                chng_chng=6!12 !25  !blind_clone_num/4
+                chng_chng=6
                 chng_chng2=blind_clone_num
                 lralt_extra2=lr_loop_max
                 reduc2=0
-                if(norb_store.ne.norb)then
-                    if((ndet.ge.ndet_max).and.(epoc_cnt.gt.600))then
-                        norb_store=norb
-                        ! call zombie_orbital_change(zstore,norb_store)
-                        ! call dealloc_grad_do(temp)
-                        ! call dealloc_grad_do(thread)
-                        ! return
-                    !     blind_clone_num=blind_clone_num/2
-                    end if
-                end if
-            ! else if((chng_chng.le.0))then
-            !     lralt_zs=0
-            !     reduc2=0
-            !     lralt_extra=0
-            !     chng_chng=25  !blind_clone_num/4
-            !     lralt_extra2=lr_loop_max
-            !     if(grad_fin%prev_erg.gt.comp)then
-            !     ! if(((comp-grad_fin%prev_erg).lt.reduc*1d4).or.(grad_fin%prev_erg.gt.comp))then
-            !         reduc=reduc/10
-            !         chng_chng2=chng_chng2+25
-            !     else 
-            !         comp=grad_fin%prev_erg
-            !     end if 
-                ! comp=grad_fin%prev_erg
+                
             end if 
-            if(modulo(epoc_cnt,20).eq.0)then 
-                reduc_store=reduc
-                reduc=0
-            end if 
+
+            ! if(modulo(epoc_cnt,20).eq.0)then 
+            !     reduc_store=reduc
+            !     reduc=0
+            ! end if 
+
             if((lralt_zs.gt.lralt_extra2))then
                 picker=scramble(ndet-1)
                 lralt_zs=lralt_extra
                 extra_flag=0
                 reduc2=0
-                ! comp=grad_fin%prev_erg
                 if((acpt_cnt_2.lt.((ndet)/3)).or.(tracker.lt.0))then
                     tracker=tracker+1
                 end if    
