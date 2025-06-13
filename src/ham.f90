@@ -237,19 +237,6 @@ MODULE ham
         if(sm==0)then
             !$omp simd
             do j=1,norb
-                dd=z1d(j+norb)*z2d(norb+j)
-                bth(j)=z1d(j)*z2d(j)
-                perts(1,j)=z1d(j+norb)*z2d(j)
-                perts(2,j)=z1d(j+norb)*z2d(j)
-                perts(3,j)=z1d(j)*z2d(j)
-                perts(4,j)=(-bth(j)+dd)
-
-            end do
-            !$omp end simd
-            ham_tot=elecs%hnuc
-        else 
-            !$omp simd
-            do j=1,norb
                 aa=z1d(j)*z2d(j)
                 dd=z1d(j+norb)*z2d(norb+j)
                 ad=z1d(j)*z2d(norb+j)
@@ -259,16 +246,34 @@ MODULE ham
                 perts(2,j)=ad/div(j) 
                 perts(3,j)=aa/div(j)
                 perts(4,j)=(-aa+dd)/div(j)
-                ovrlp=ovrlp*div(j)
             end do
             !$omp end simd
+            ham_tot=elecs%hnuc
+        else 
+            do j=1,norb
+                aa=z1d(j)*z2d(j)
+                dd=z1d(j+norb)*z2d(norb+j)
+                ad=z1d(j)*z2d(norb+j)
+                da=z1d(j+norb)*z2d(j)
+                div(j)=aa+dd
+                if(div(j).eq.0.0d0)then
+                    ovrlp=0.0d0
+                    ham_tot=0.0d0
+                    return
+                end if
+                perts(1,j)=da/div(j)
+                perts(2,j)=ad/div(j) 
+                perts(3,j)=aa/div(j)
+                perts(4,j)=(-aa+dd)/div(j)
+                ovrlp=ovrlp*div(j)
+            end do
+           
             ham_tot=ovrlp*elecs%hnuc
         end if 
         
         ovrlp_vec=ovrlp
         !$omp simd
         do k=1,norb
-            !!$omp parallel do shared(ovrlp_vec,elecs), private(l,ov,j) 
             do l=1,elecs%orbital_choice2(0,k)
                 ov=ovrlp_vec(elecs%orbital_choice2(k,(l*2)-1))*&
                 perts(elecs%orbital_choice(k,elecs%orbital_choice2(k,(l*2)-1)),elecs%orbital_choice3(k))
@@ -276,16 +281,16 @@ MODULE ham
                     ovrlp_vec(j)=ov
                 end do
             end do
-            !!$omp end parallel do
+           
         end do
         !$omp end simd
-        !!$omp parallel do reduction(+:ham_tot)
+        
         !$omp simd
         do j=1,elecs%num
             ham_tot=ham_tot+(ovrlp_vec(j)*elecs%integrals(j))
         end do
-                  !$omp end simd
-        !!$omp end parallel do
+        !$omp end simd
+       
 
     
         return 
@@ -306,31 +311,37 @@ MODULE ham
         
         ov=1.0d0
         if(sm==0)then
-            !$omp simd
-            do j=1,norb
-                dd=z1d(j+norb)*z2d(norb+j)
-                bth(j)=z1d(j)*z2d(j)
-                perts(1,j)=z1d(j+norb)*z2d(j)
-                perts(2,j)=z1d(j+norb)*z2d(j)
-                perts(3,j)=z1d(j)*z2d(j)
-                perts(4,j)=(-bth(j)+dd)
-            end do
-            !$omp end simd
-            ham_tot=elecs%hnuc
-        else 
+            ovrlp=1.0d0
             !$omp simd
             do j=1,norb
                 aa=z1d(j)*z2d(j)
                 dd=z1d(j+norb)*z2d(norb+j)
                 ad=z1d(j)*z2d(norb+j)
                 da=z1d(j+norb)*z2d(j)
+                perts(1,j)=da
+                perts(2,j)=ad 
+                perts(3,j)=aa
+                perts(4,j)=(-aa+dd)
+            end do
+            !$omp end simd
+            ham_tot=elecs%hnuc
+        else 
+            do j=1,norb
+                aa=z1d(j)*z2d(j)
+                dd=z1d(j+norb)*z2d(norb+j)
+                ad=z1d(j)*z2d(norb+j)
+                da=z1d(j+norb)*z2d(j)
                 div(j)=aa+dd
+                if(div(j).eq.0.0d0)then
+                    ovrlp=0.0d0
+                    ham_tot=0.0d0
+                    return
+                end if
                 perts(1,j)=da/div(j)
                 perts(2,j)=ad/div(j) 
                 perts(3,j)=aa/div(j)
                 perts(4,j)=(-aa+dd)/div(j)
             end do
-            !$omp end simd
             ovrlp=ovrlp*div(orb)
             ham_tot=ovrlp*elecs%hnuc
         end if 
@@ -339,7 +350,6 @@ MODULE ham
 
         !$omp simd
         do k=1,norb
-            !!$omp parallel do shared(ovrlp_vec,elecs), private(l,ov,j) 
             do l=1,elecs%orbital_choice2(0,k)
                 ov=ovrlp_vec(elecs%orbital_choice2(k,(l*2)-1))*&
                 perts(elecs%orbital_choice(k,elecs%orbital_choice2(k,(l*2)-1)),elecs%orbital_choice3(k))
@@ -347,20 +357,95 @@ MODULE ham
                     ovrlp_vec(j)=ov
                 end do
             end do
-            !!$omp end parallel do
         end do
-        !!$omp end simd
-        !$omp simd
-        !!$omp parallel do reduction(+:ham_tot)
+        !$omp end simd
+       
         do j=1,elecs%num
             ham_tot=ham_tot+(ovrlp_vec(j)*elecs%integrals(j))
         end do
-        !!$omp end simd
-        !!$omp end parallel do
+       
        
         return 
       
     end subroutine haml_vals_2_orb
 
+    subroutine haml_vals_3_orb(z1d_old,z2d_old,z_new,ovrlp,ham_tot,elecs,sm,orb)
+        implicit none 
+        type(zombiest),intent(in)::z1d_old,z2d_old,z_new
+        real(wp),intent(inout)::ovrlp,ham_tot
+        type(elecintrgl),intent(in)::elecs
+        integer,intent(in)::sm,orb
+        real(wp),dimension(0:4)::perts
+        real(wp)::aa,dd,ad,da,div
+        integer::j,k,l
+        
+        div=ham_tot/elecs%num
+        if(sm==0)then
+            ! ovrlp=1.0d0
+            ! perts(0)=(z_new%val(orb)*z_new%val(orb)+z_new%val(orb+norb)*z_new%val(orb+norb))/&
+            ! (z1d_old%val(orb)*z1d_old%val(orb)+z1d_old%val(orb+norb)*z1d_old%val(orb+norb))
+            ! perts(1)=(z_new%val(orb+norb)*z_new%val(orb))/(z1d_old%val(orb+norb)*z1d_old%val(orb))
+            ! perts(2)=(z_new%val(orb)*z_new%val(orb+norb))/(z1d_old%val(orb)*z1d_old%val(orb+norb)) 
+            ! perts(3)=(z_new%val(orb)*z_new%val(orb))/(z1d_old%val(orb)*z1d_old%val(orb))
+            ! perts(4)=(-z_new%val(orb)*z_new%val(orb)+z_new%val(orb+norb)*z_new%val(orb+norb))/&
+            !             (-z1d_old%val(orb)*z1d_old%val(orb)+z1d_old%val(orb+norb)*z1d_old%val(orb+norb))
+
+            perts(0)=(z1d_old%val(orb)*z1d_old%val(orb)+z1d_old%val(orb+norb)*z1d_old%val(orb+norb))
+            if(perts(0).ne.0.0)then
+                perts(0)=(z_new%val(orb)*z_new%val(orb)+z_new%val(orb+norb)*z_new%val(orb+norb))/perts(0)
+            end if
+            perts(1)=(z1d_old%val(orb+norb)*z1d_old%val(orb))
+            if(perts(1).ne.0.0)then
+                perts(1)=(z_new%val(orb+norb)*z_new%val(orb))/perts(1)
+            end if
+            perts(2)=(z1d_old%val(orb)*z1d_old%val(orb+norb)) 
+            if(perts(2).ne.0.0)then
+                perts(2)=(z_new%val(orb)*z_new%val(orb+norb))/perts(2)
+            end if 
+            perts(3)=(z1d_old%val(orb)*z1d_old%val(orb))
+            if(perts(3).ne.0.0)then
+                perts(3)=(z_new%val(orb)*z_new%val(orb))/perts(3)
+            end if
+            perts(4)= (-z1d_old%val(orb)*z1d_old%val(orb)+z1d_old%val(orb+norb)*z1d_old%val(orb+norb))
+            if(perts(4).ne.0.0)then
+                perts(4)= (-z_new%val(orb)*z_new%val(orb)+z_new%val(orb+norb)*z_new%val(orb+norb))/perts(4)
+            end if 
+        else
+            perts(0)=(z1d_old%val(orb)*z2d_old%val(orb)+z1d_old%val(orb+norb)*z2d_old%val(orb+norb))
+            if(perts(0).ne.0.0)then
+                perts(0)=(z_new%val(orb)*z2d_old%val(orb)+z_new%val(orb+norb)*z2d_old%val(orb+norb))/perts(0)
+            end if
+            perts(1)=(z1d_old%val(orb+norb)*z2d_old%val(orb))
+            if(perts(1).ne.0.0)then
+              perts(1)=(z_new%val(orb+norb)*z2d_old%val(orb))/perts(1)
+            end if
+            perts(2)=(z1d_old%val(orb)*z2d_old%val(orb+norb)) 
+            if(perts(2).ne.0.0)then
+                perts(2)=(z_new%val(orb)*z2d_old%val(orb+norb))/perts(2)
+            end if 
+            perts(3)=(z1d_old%val(orb)*z2d_old%val(orb))
+            if(perts(3).ne.0.0)then
+                perts(3)=(z_new%val(orb)*z2d_old%val(orb))/perts(3)
+            end if
+            perts(4)= (-z1d_old%val(orb)*z2d_old%val(orb)+z1d_old%val(orb+norb)*z2d_old%val(orb+norb))
+            if(perts(4).ne.0.0)then
+                perts(4)= (-z_new%val(orb)*z2d_old%val(orb)+z_new%val(orb+norb)*z2d_old%val(orb+norb))/perts(4)
+            end if 
+            
+            ovrlp=ovrlp*perts(0)
+            ham_tot=ovrlp*elecs%hnuc
+        end if
+       
+        
+        do j=1,elecs%num
+            ham_tot=ham_tot+(div*perts(elecs%orbital_choice(orb,j)))
+        end do
+       
+        return 
+      
+    end subroutine haml_vals_3_orb
+
+
+  
 
 END MODULE ham

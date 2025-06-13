@@ -5,7 +5,7 @@
 
 F90=gfortran
 # FFLAGS= -Wall -Wextra -ffast-math -ftree-vectorize -march=native -Ofast -O3 -fopenmp 
-FFLAGS= -Ofast -O3 -ffast-math -funroll-loops -march=native -fopenmp 
+FFLAGS= -Ofast -O3 -ffast-math -funroll-loops -fopenmp 
 FLINKS= -lblas -llapack
 VPATH=../src
 

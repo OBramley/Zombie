@@ -10,7 +10,7 @@ MODULE gradient_descent
     use infnan_mod
     use zom
     use operators 
-    ! use neural_network
+
 
     implicit none 
    
@@ -38,12 +38,10 @@ MODULE gradient_descent
         real(dp),allocatable,dimension(:)::WORK1
         integer::ierr=0
 
-
         if (errorflag .ne. 0) return
         if(orb.eq.0)then
              call haml_ovrlp_column(temp,zstore,ndet,elecs,pick)
         else
-            ! call haml_vals_2_orb_2(zstore,temp,elecs,pick,orb)
             call haml_ovrlp_column_orb(temp,zstore,ndet,elecs,pick,orb)    
         end if
         temp%inv=temp%ovrlp
@@ -252,7 +250,7 @@ MODULE gradient_descent
             chng_trk=0
             acpt_cnt_2=0  
             t=lr*(lr_alpha**lralt_zs)
-            picker=scramble(ndet-1)
+            ! picker=scramble(ndet-1)
             do j=1,ndet-1
                 write(stdout,'(i3)',advance='no') j
                 erg_str=grad_fin%prev_erg
@@ -264,13 +262,23 @@ MODULE gradient_descent
                 call haml_to_grad_do(haml,dvecs,thread)
 
                 do n=1, norb
-                    pickorb=pickerorb(n)
+                    pickorb= pickerorb(n)
                     call grad_calculate(haml,dvecs,zstore,grad_fin,pickorb)
 
                     thread%zom=zstore(pick)
                     temp=thread
                     temp%zom%phi(pickorb) = thread%zom%phi(pickorb)-(t*grad_fin%vars(pick,pickorb))
-                    
+                    if((temp%zom%phi(pickorb).lt.0))then
+                        do while (temp%zom%phi(pickorb).lt.0)
+                            temp%zom%phi(pickorb) = temp%zom%phi(pickorb)+2*pirl
+                        continue 
+                        cycle
+                        end do 
+                    else if((temp%zom%phi(pickorb).gt.2*pirl) )then
+                        do while (temp%zom%phi(pickorb).gt.2*pirl)
+                            temp%zom%phi(pickorb) = temp%zom%phi(pickorb)-2*pirl
+                        end do
+                    end if
                     call val_set(temp%zom,pickorb)
                     call he_full_row(temp,zstore,elect,ndet,pickorb)
                     call imaginary_time(temp,ndet)
@@ -796,93 +804,7 @@ MODULE gradient_descent
 
     end subroutine zombie_orbital_change
 
-    ! subroutine gram_ovrlp_var_temp(gramstore,wf_ovrlp,z1d,state,var)
-    !     implicit none
-    !     type(gram),dimension(:),intent(in)::gramstore
-    !     real(wp),dimension(:,:,:),intent(inout)::wf_ovrlp
-    !     type(zombiest),intent(in)::z1d
-    !     integer,intent(in)::state,var
-    !     integer::j,k
 
-    !     if(errorflag.ne.0) return
-    !     do j=1,state-1
-    !         do k=1,ndet
-    !             wf_ovrlp(j,k,var)=product(gramstore(state)%zstore(k)%val(1:norb)*&
-    !             z1d%val(1:norb)+gramstore(state)%zstore(k)%val(1+norb:2*norb)*z1d%val(1+norb:2*norb))
-    !           wf_ovrlp(j,var,k)=wf_ovrlp(j,k,var)
-    !         end do
-    !     end do
-
-    ! end subroutine gram_ovrlp_var_temp
-
-    ! subroutine nn_haml(zstore,neural_net,temp,pickorb,hnuc)
-    !     implicit none
-    !     type(neural_network_layer),dimension(:),intent(inout)::neural_net
-    !     type(grad_do),intent(inout)::temp
-    !     type(zombiest),dimension(:)::zstore
-    !     real(dp),intent(in)::hnuc
-    !     integer,intent(in)::pickorb
-    !     real(wp),dimension((2*norb)+5)::input_features
-    !     ! real(wp),dimension(5)::input_features
-    !     integer::j
-    !     integer, allocatable,dimension(:)::IPIV1
-    !     real(dp),allocatable,dimension(:)::WORK1
-    !     integer::ierr=0
-
-
-    !     if (errorflag .ne. 0) return
-        
-    !     input_features(1)=temp%zom%val(pickorb+norb)
-    !     input_features(2)=temp%zom%val(pickorb)
-    !     input_features(4)=pickorb
-    !     input_features(5)=0
-    !     input_features((7+norb):)=temp%zom%val(1:norb)
-    !     do j=1,ndet
-    !         input_features(3)=temp%hjk(pick,j)
-    !         if(j==pick)then
-    !             input_features(5)=1
-    !             temp%ovrlp(j,pick)=1.0d0
-    !             input_features(6:(6+norb))=temp%zom%val(1:norb)
-    !         else 
-    !             input_features(5)=0
-    !             input_features(6:(6+norb))=zstore(j)%val(1:norb)
-    !             temp%ovrlp(j,pick)=product((zstore(j)%val(1:norb)*temp%zom%val(1:norb))+&
-    !                                        (zstore(j)%val(1+norb:2*norb)*temp%zom%val(1+norb:2*norb)))
-    !         end if
-    !         temp%hjk(j,pick)=forward_result(neural_net,input_features)
-    !     end do 
-        
-    !     temp%ovrlp(pick,:)=temp%ovrlp(:,pick)
-    !     temp%hjk(:,pick)=temp%hjk(:,pick)+temp%ovrlp(:,pick)*hnuc
-    !     temp%hjk(pick,:)= temp%hjk(:,pick)
-    !     temp%inv=temp%ovrlp
-       
-    !     allocate(WORK1(ndet),IPIV1(ndet),stat=ierr)
-    !     if (ierr/=0) then
-    !         write(stderr,"(a,i0)") "Error in IPIV or WORK1 vector allocation . ierr had value ", ierr
-    !         errorflag=1
-    !     end if 
-
-    !     Call dgetrf(ndet, ndet, temp%inv, ndet, IPIV1, ierr)
-    !     if (ierr/=0) then
-    !         write(stderr,"(a,i0)")"Error in DGETRF",ierr
-    !     end if
-    !     if (ierr==0) call dgetri(ndet,temp%inv,ndet,IPIV1,WORK1,ndet,ierr)
-    !     if (ierr/=0) then
-    !         write(stderr,"(a,i0)")"Error in DGETRF",ierr
-    !     end if
-
-    !     deallocate(WORK1,IPIV1,stat=ierr)
-    !     if (ierr/=0) then
-    !         write(stderr,"(a,i0)") "Error in IPIV or WORK1 vector deallocation . ierr had value ", ierr
-    !         errorflag=1
-    !     end if
-       
-    !     call DGEMM("N","N",ndet,ndet,ndet,1.d0,temp%inv,ndet,temp%hjk,ndet,0.d0,temp%kinvh,ndet)
-
-    !     return
-
-    ! end subroutine nn_haml
 
 
 END MODULE gradient_descent

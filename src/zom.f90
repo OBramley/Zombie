@@ -85,7 +85,8 @@ MODULE zom
         count=2
         !$omp parallel shared(count,zstore,combs2,errorflag) private(combs,j,k,total,ierr)
         !$omp do
-        do j=1,norb
+        ! do j=1,norb
+        do j=nel, nel 
             if(errorflag==1) then
                 cycle
             end if
@@ -97,13 +98,13 @@ MODULE zom
                 cycle
             end if
             call combinations(norb,j,combs,total)
-            
-            !$omp critical 
-            do k=1, total
-                combs2(count,1:j)=combs(k,:)
-                count=count+1
-            end do
-            !$omp end critical
+            combs2(1:ndet,1:nel)=combs(1:ndet,:)
+            ! !$omp critical 
+            ! do k=1, total
+            !     combs2(count,1:j)=combs(k,:)
+            !     count=count+1
+            ! end do
+            ! !$omp end critical
           
             deallocate(combs,stat=ierr)
             if(ierr/=0) then
@@ -240,7 +241,7 @@ MODULE zom
 
 
         zom%val(1+norb:2*norb)=1.0d0
-        zom%val(1:norb)=0.0d0
+        zom%val(1:norb)=0.0d0 !1.0d-16
         zom%phi(1:norb)=0
 
         do j=1, norb
@@ -257,172 +258,98 @@ MODULE zom
         return
 
     end subroutine zomhf
-    ! subroutine biased_func(z1)
-    !     implicit none
-    !     type(zombiest),intent(inout)::z1
-    !     integer::k
-    !     real(wp)::mu((norb/2)),sig(norb/2)
-    !     real(wp)::val
-
-    !     call musig(mu,sig)
-    !     do k=1,norb/2
-    !         val=2*pirl*random_normal(mu(k),sig(k)) 
-    !         if((is_nan(val).eqv..true.))then
-    !             val=2*pirl*(ZBQLU01())
-    !         end if 
-    !         z1%phi(2*k-1)=val
-    !         val=2*pirl*random_normal(mu(k),sig(k))
-    !         if((is_nan(val).eqv..true.))then
-    !             val=2*pirl*(ZBQLU01()) 
-    !         end if 
-    !         z1%phi(2*k)=val
-    !     end do
-        
-    !     call val_set(z1)
-    !     return
-    ! end subroutine 
+ 
 
     subroutine biased_func(z1)
         implicit none
         type(zombiest),intent(inout)::z1
-        integer::k,mult,a1,a2,a3,a4
+        integer::k,mult,a1,a2,a3,a4,a5,a6,a7,a8
         real(wp)::step
 
-        ! z1%phi=0.001
-        ! z1%phi(1:nel)=0.5*pirl
-        ! z1%phi(nel+1:)=1.0d-4
-        ! do k=1,nel
-        !     if (ZBQLU01().gt.0.5) then
-        !         z1%phi(k)=z1%phi(k)+0.01*ZBQLU01()
-        !     else
-        !         z1%phi(k)=z1%phi(k)-0.01*ZBQLU01()
-        !     end if
-
-        ! end do
-        ! do k=nel+1,norb
-        !     z1%phi(k)=z1%phi(k)*ZBQLU01()
-        ! end do
-        ! return 
-        z1%phi=0 !1.0d-10
-        if(nel.gt.10)then 
-            z1%phi(1:4)=0.5*pirl
-            a1=5
-            a2=18 
-            a3=nel-4
-
-            a3=5
-            a4=nel
-            a1=11
-            a2=18
-        ! else if(nel.gt.8)then 
-        !     z1%phi(1:2)=0.5*pirl
-        !     a1=3 
-        !     a2=12 
-        !     a3=nel-2 
-
-            ! a3=3
-            ! a4=nel
-            ! a1=11
-            ! a2=12
-        else if(nel.gt.6)then
-            z1%phi(1:2)=0.5*pirl
-            a1=3
-            a2=12
-            a3=nel-2 
-
-            ! a3=3
-            ! a4=nel
-            ! a1=5
-            ! a2=12
-        else if(nel.gt.3)then
-            z1%phi(1:2)=0.5*pirl
-            a1=3 
-            a2=10
-            a3=nel-2
-
-            ! a3=3
-            ! a4=4
-            ! a1=5
-            ! a2=10
+       
+        z1%phi=0
+  
+        if(nel.gt.10)then
+            a1=5 !1s2s
+            a2=11 !2p
+            a3=13 !3s
+            a4=19 !3p
+            a5=29 !3d
+            a6=31 !4s
+            a7=37 !4p  
+            a8=47 !4d
+        else if(nel.gt.4)then
+            a1=3 !1s
+            a2=5 !2s
+            a3=11 !2p
+            a4=13 !3s
+            a5=19 !3p
+            a6=29 !3d  
+            a7=31 !4s
+            a8=37 !4p
         else if(nel.gt.2)then
-            a1=1
-            a2=4
-            a3=nel
-            ! z1%phi(1:2)=0.5*pirl
-            ! a3=1
-            ! a4=3
-            ! a1=5
-            ! a2=4 !10    
+            a1=2 !1s1
+            a2=5 !1s22s
+            a3=11 !2p
+            a4=13 !3s
+            a5=19 !3p
+            a6=29 !3d  
+            a7=31 !4s
+            a8=37 !4p
         else
-            a1=1 
-            a2=4
-            a3=nel
-            
-            ! a3=1
-            ! a4=2
-            ! a1=5
-            ! a2=10
+            a1=0
+            a2=3 !1s
+            a3=5 !2s
+            a4=11 !2p
+            a5=13 !3s
+            a6=19 !3p
+            a7=29 !3d
+            a8=37 !4s
+    
         end if
-        a4=(a2-a1)
-        do k=a1,a2 
-            ! if (ZBQLU01().gt.0.9) then
-            !     z1%phi(k)=0.4*pirl+0.25*pirl*ZBQLU01()
-            ! else
-                z1%phi(k)=1d-15*ZBQLU01()
-            ! end if
+       
+        do k=1,norb
+            if(k .lt.a1)then 
+                z1%phi(k)=0.5*pirl
+            else if( k .lt. a2 )then 
+                z1%phi(k)= value_maker(1) 
+            else if( k .lt. a3 )then
+                z1%phi(k)=value_maker(2)
+            else if( k .lt. a4 )then 
+                z1%phi(k)=value_maker(3) 
+            else if( k .lt. a5 )then 
+                ! z1%phi(k)=value_maker(4) 
+                z1%phi(k)=1.0d-10*ZBQLU01()
+            else if( k .lt. a6 )then 
+                ! z1%phi(k)=value_maker(5) 
+                z1%phi(k)=1.0d-12*ZBQLU01()
+            else if( k .lt. a7 )then 
+                ! z1%phi(k)=value_maker(6)
+                z1%phi(k)=0.0d0 !1.0d-13*ZBQLU01()
+            else if( k .lt. a8 )then 
+                ! z1%phi(k)=value_maker(7)
+                z1%phi(k)=1.0d-11*ZBQLU01()
+            end if 
         end do 
-        do k=a2+1,norb_store
-            if (ZBQLU01().gt.0.75) then
-                    z1%phi(k)=ZBQLU01()
-            end if
-        end do
-        do k=norb_store,norb
-            if (ZBQLU01().gt.0.95) then
-                    z1%phi(k)=ZBQLU01()
-            end if
-        end do
-        do k=1,a3
-            mult =int(a1 + a4*ZBQLU01())
-            if (ZBQLU01().gt.0.5) then
-                    z1%phi(mult)=0.5*pirl+0.01*ZBQLU01()
-            else
-                    z1%phi(mult)=0.5*pirl-0.01*ZBQLU01()
-            end if
-        end do
 
-        ! do k=a3,a2!norb
-        !     ! z1%phi(k)=0
-        !     if (ZBQLU01().gt.0.9) then
-        !     !     ! z1%phi(k)=0.5*pirl !*ZBQLU01()
-        !         z1%phi(k)=0.4*pirl+0.25*pirl*ZBQLU01()
-        !     else
-        !         z1%phi(k)=1d-15*ZBQLU01()
-        !     end if
-        !     ! z1%phi(k)=z1%phi(k)*ZBQLU01()
-        ! end do
-        ! do k=1,(nel-a3+1)
-        !     mult =int(a3 + ( (a2-a3)*ZBQLU01() ))
-        !     if (ZBQLU01().gt.0.5) then
-        !             z1%phi(mult)=0.5*pirl+0.01*ZBQLU01()
-        !     else
-        !             z1%phi(mult)=0.5*pirl-0.01*ZBQLU01()
-        !     end if
-        ! end do
-        ! do k=a2+1,norb
-           
-        !     if (ZBQLU01().gt.0.9) then
-        !     !     ! z1%phi(k)=0.5*pirl !*ZBQLU01()
-        !         z1%phi(k)=ZBQLU01()
-        !     ! else
-        !         ! z1%phi(k)=1d-15*ZBQLU01()
-        !     end if
-        !     ! z1%phi(k)=z1%phi(k)*ZBQLU01()
-        ! end do
-      
-        
         return 
 
     end subroutine biased_func
+
+    function value_maker(num) result(val)
+        implicit none
+        integer::num
+        real(wp)::val,val2
+    
+        val=0
+        do while(val == 0) 
+            val2=abs((num-ZBQLU01())/(nel*ZBQLU01())*nel)!*ZBQLU01()*2))
+            val=0.5*pirl*exp(-val2)
+            if((is_nan(val).eqv..true.).or.(is_inf(val).eqv..true.))then
+                val=0
+            end if
+        end do
+    end function value_maker
 
     subroutine gen_biased_zs(zstore)
 
@@ -435,58 +362,19 @@ MODULE zom
 
         if (errorflag .ne. 0) return
  
-        call musig(mu,sig)
-     
         if(imagflg=='n') then
             do j=1, ndet
                 call biased_func(zstore(j))
-                ! do k=1,norb/2
-                !     ! val=-1
-                !     ! do while(val.lt.0)
-                !     val=2*pirl*random_normal(mu(k),sig(k)) 
-                !     ! end do
-                    
-                    
-                !     if((is_nan(val).eqv..true.))then
-                !         val=2*pirl*(ZBQLU01())
-                !         print*, 'here'
-                !     end if 
-               
-                !     zstore(j)%phi(2*k-1)=val
-                !     ! val=-1
-                !     ! do while(val.lt.0)
-                !         val=2*pirl*random_normal(mu(k),sig(k))
-                !     ! end do
-                        
-                !     if((is_nan(val).eqv..true.))then
-                !         val=2*pirl*(ZBQLU01()) 
-                !     end if 
-                !     zstore(j)%phi(2*k)=val
-                ! end do
-                
                 call val_set(zstore(j))
                 
             end do
             if(rhf_1=='y') then
-                !if(nel.eq.5)then
-                !   do j = 1, 6
-                !        zstore(j)%phi=0
-                !        zstore(j)%phi(1:4)=0.5*pirl
-                !        zstore(j)%val(1:norb)=0
-                !        zstore(j)%val(norb+1:)=1
-                !        zstore(j)%val(1:4)=1
-                !        zstore(j)%val(1+norb:4+norb)=0
-                !        zstore(j)%val(4+j)=1
-                !        zstore(j)%val(4+j+norb)=1.0d-15
-                !    end do
-                !else 
-                    zstore(1)%phi(1:nel)=0.5*pirl
-                    zstore(1)%phi(nel+1:)=0
-                    zstore(1)%val(1:norb)=0 
-                    zstore(1)%val(norb+1:)=1 
-                    zstore(1)%val(1:nel)=1
-                    zstore(1)%val(norb+1:norb+nel)=0
-                !end if
+                zstore(1)%phi(1:nel)=0.5*pirl
+                zstore(1)%phi(nel+1:)=0
+                zstore(1)%val(1:norb)=0 
+                zstore(1)%val(norb+1:)=1 
+                zstore(1)%val(1:nel)=1
+                zstore(1)%val(norb+1:norb+nel)=0
             end if 
         else if(imagflg=='y')then
             print*,"not yet written"
@@ -498,42 +386,6 @@ MODULE zom
 
     end subroutine gen_biased_zs
 
-    subroutine musig(mu,sig)
-
-        implicit none
-        real(wp),dimension(:),intent(inout)::mu,sig
-        integer::alive,j
-        real(wp)::asrt,aend,dsrt,dend,val
-
-
-        alive=int(nel/2)
-        mu(1:alive)=0.25
-        mu(alive+1:)=0
-
-        val=(norb/10)
-
-        asrt=0.0001/ceiling(val)
-        aend=0.17/ceiling(val)  
-        dsrt=0.2/ceiling(val)  
-        dend= 0.001/ceiling(val)   
-        ! dsrt=0.35/ceiling(val)  
-        ! dend= 0.15/ceiling(val)
-
-       
-        
-        do j=0, (alive-1)
-            sig(j+1)=((aend-asrt)/(alive-1)*j)+asrt
-        end do
-
-        do j=0, (((norb/2)-alive)-1)
-            ! mu(j+1+alive)=((dend-dsrt)/(((norb/2)-alive)-1)*j)+dsrt
-            sig(j+1+alive)=((dend-dsrt)/(((norb/2)-alive)-1)*j)+dsrt
-        end do
-        ! sig(1)=0.1
-        
-        return
-
-    end subroutine
 
     subroutine genzf(zstore,num)
         
@@ -559,43 +411,6 @@ MODULE zom
         return
     
     end subroutine genzf
-
-    FUNCTION random_normal(MU,SIGMA)
-        !
-        !       Returns a random number Normally distributed with mean
-        !       MU and standard deviation |SIGMA|, using the Box-Muller
-        !       algorithm
-        !
-        DOUBLE PRECISION THETA,R,ZBQLNOR,random_normal,PI,MU,SIGMA
-        DOUBLE PRECISION SPARE
-        INTEGER STATUS
-        SAVE STATUS,SPARE,PI
-        DOUBLE PRECISION p
-        DATA STATUS /-1/
-        
-        IF (STATUS.EQ.-1) PI = 4.0D0*DATAN(1.0D0)
-
-        IF (STATUS.LE.0) THEN
-        call random_number(p)
-        THETA = 2.0D0*PI*p 
-        call random_number(p)
-
-        R = DSQRT( -2.0D0*DLOG(p) )
-
-        ZBQLNOR = (R*DCOS(THETA))
-        SPARE = (R*DSIN(THETA))
-        STATUS = 1
-        ELSE
-        ZBQLNOR = SPARE
-        STATUS = 0
-        ENDIF
-
-        ZBQLNOR = MU + (SIGMA*ZBQLNOR)
-        random_normal=ZBQLNOR
-
-    END FUNCTION random_normal
-    
-
 
 
 END MODULE zom

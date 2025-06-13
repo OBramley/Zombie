@@ -170,7 +170,10 @@ def pyscf_do(pyscf_ins,norbs,EXDIR1):
             # # Scalar nuclear repulsion energy
             # Hnuc = myhf.energy_nuc()
        
+    mo_energies = myhf.mo_energy
 
+# Print the individual molecular orbital energies
+   
     elec_writer(h1e,eri_full,norbs,EXDIR1)
 
     with open(EXDIR1+"/integrals/hnuc.csv",'w', newline='')as csvfile:
